@@ -18,6 +18,19 @@
     "debug": "डिबग",
     "about": "बारेमा"
   },
+  "nav": {
+    "primaryAriaLabel": "मुख्य नेभिगेसन",
+    "settingsTabsAriaLabel": "सेटिङ खण्डहरू",
+    "dictate": "डिक्टेसन",
+    "meetings": "बैठकहरू",
+    "projects": "परियोजनाहरू",
+    "history": "डिक्टेसन इतिहास",
+    "settings": "सेटिङहरू",
+    "about": "सहायता र बारे",
+    "activeMeeting": "रेकर्डिङ चलिरहेको छ · {{duration}}",
+    "meetingsEmptyBody": "मिटिङ मोडसँगै बैठकहरू आउनेछन्। डिक्टेसन पहिलेझरूमै काम गर्छ।",
+    "projectsEmptyBody": "परियोजनाले स्थिति, कार्य, बैठक र आयात गरिएका स्रोतहरू एकैठाउँमा राख्नेछ।"
+  },
   "onboarding": {
     "subtitle": "सुरु गर्न, एउटा ट्रान्सक्रिप्सन मोडेल छान्नुहोस्",
     "existingModelsTitle": "मिल्दा मोडेलहरू",

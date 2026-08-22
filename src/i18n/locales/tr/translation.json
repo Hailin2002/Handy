@@ -18,6 +18,19 @@
     "debug": "Hata Ayıklama",
     "about": "Hakkında"
   },
+  "nav": {
+    "primaryAriaLabel": "Ana gezinme",
+    "settingsTabsAriaLabel": "Ayarlar bölümleri",
+    "dictate": "Dikte",
+    "meetings": "Toplantılar",
+    "projects": "Projeler",
+    "history": "Dikte geçmişi",
+    "settings": "Ayarlar",
+    "about": "Yardım ve Hakkında",
+    "activeMeeting": "Kayıt sürüyor · {{duration}}",
+    "meetingsEmptyBody": "Toplantılar toplantı moduyla gelecek. Dikte her zamanki gibi çalışacak.",
+    "projectsEmptyBody": "Projeler; durumu, görevleri, toplantıları ve içe aktarılan kaynakları bir araya getirecek."
+  },
   "onboarding": {
     "subtitle": "Başlamak için bir transkripsiyon modeli seçin",
     "existingModelsTitle": "Uyumlu Modeller",

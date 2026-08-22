@@ -18,6 +18,19 @@
     "debug": "Ladění",
     "about": "O aplikaci"
   },
+  "nav": {
+    "primaryAriaLabel": "Hlavní navigace",
+    "settingsTabsAriaLabel": "Sekce nastavení",
+    "dictate": "Diktování",
+    "meetings": "Schůze",
+    "projects": "Projekty",
+    "history": "Historie diktátů",
+    "settings": "Nastavení",
+    "about": "Nápověda a informace",
+    "activeMeeting": "Probíhá nahrávání · {{duration}}",
+    "meetingsEmptyBody": "Schůze přijdou s režimem schůzí. Diktování funguje jako dosud.",
+    "projectsEmptyBody": "Projekty spojí stav, úkoly, schůze a importované zdroje."
+  },
   "onboarding": {
     "subtitle": "Pro začátek vyberte model pro přepis",
     "existingModelsTitle": "Kompatibilní modely",

@@ -18,6 +18,19 @@
     "debug": "Probleemoplossing",
     "about": "Over Handy"
   },
+  "nav": {
+    "primaryAriaLabel": "Hoofdnavigatie",
+    "settingsTabsAriaLabel": "Secties in instellingen",
+    "dictate": "Dicteren",
+    "meetings": "Vergaderingen",
+    "projects": "Projecten",
+    "history": "Dicteergeschiedenis",
+    "settings": "Instellingen",
+    "about": "Help & Over",
+    "activeMeeting": "Opname bezig · {{duration}}",
+    "meetingsEmptyBody": "Vergaderingen komen met de vergadermodus. Dicteren werkt zoals gewoonlijk.",
+    "projectsEmptyBody": "Projecten bundelen status, taken, vergaderingen en geïmporteerde bronnen."
+  },
   "onboarding": {
     "subtitle": "Kies een transcriptiemodel om aan de slag te gaan",
     "existingModelsTitle": "Compatibele modellen",

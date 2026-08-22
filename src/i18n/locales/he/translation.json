@@ -18,6 +18,19 @@
     "debug": "ניפוי שגיאות",
     "about": "אודות"
   },
+  "nav": {
+    "primaryAriaLabel": "ניווט ראשי",
+    "settingsTabsAriaLabel": "מקטעי הגדרות",
+    "dictate": "הכתבה",
+    "meetings": "פגישות",
+    "projects": "פרויקטים",
+    "history": "היסטוריית ההכתבות",
+    "settings": "הגדרות",
+    "about": "עזרה ומידע",
+    "activeMeeting": "הקלטה מתבצעת · {{duration}}",
+    "meetingsEmptyBody": "פגישות יגיעו עם מצב הפגישות. ההכתבה פועלת כרגיל.",
+    "projectsEmptyBody": "פרויקטים יאחדו סטטוס, משימות, פגישות ומקורות שיובאו."
+  },
   "onboarding": {
     "subtitle": "כדי להתחיל, בחר מודל תמלול",
     "existingModelsTitle": "מודלים תואמים",

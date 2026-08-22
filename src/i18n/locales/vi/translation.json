@@ -18,6 +18,19 @@
     "debug": "Gỡ lỗi",
     "about": "Giới thiệu"
   },
+  "nav": {
+    "primaryAriaLabel": "Điều hướng chính",
+    "settingsTabsAriaLabel": "Phần cài đặt",
+    "dictate": "Đọc chính tả",
+    "meetings": "Cuộc họp",
+    "projects": "Dự án",
+    "history": "Lịch sử đọc chính tả",
+    "settings": "Cài đặt",
+    "about": "Trợ giúp và giới thiệu",
+    "activeMeeting": "Đang ghi âm · {{duration}}",
+    "meetingsEmptyBody": "Cuộc họp sẽ ra mắt cùng chế độ họp. Việc đọc chính tả hoạt động như bình thường.",
+    "projectsEmptyBody": "Dự án sẽ kết hợp trạng thái, tác vụ, cuộc họp và nguồn đã nhập."
+  },
   "onboarding": {
     "subtitle": "Để bắt đầu, hãy chọn một mô hình chuyển đổi giọng nói",
     "existingModelsTitle": "Mô hình tương thích",

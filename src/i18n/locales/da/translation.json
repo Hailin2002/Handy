@@ -18,6 +18,19 @@
     "debug": "Fejlfinding",
     "about": "Om"
   },
+  "nav": {
+    "primaryAriaLabel": "Hovednavigation",
+    "settingsTabsAriaLabel": "Indstillingsafsnit",
+    "dictate": "Diktering",
+    "meetings": "Møder",
+    "projects": "Projekter",
+    "history": "Dikteringshistorik",
+    "settings": "Indstillinger",
+    "about": "Hjælp & om",
+    "activeMeeting": "Optagelse i gang · {{duration}}",
+    "meetingsEmptyBody": "Møder kommer med mødetilstanden. Diktering fungerer som sædvanlig.",
+    "projectsEmptyBody": "Projekter samler status, opgaver, møder og importerede kilder."
+  },
   "onboarding": {
     "subtitle": "For at komme i gang skal du vælge en transskriptionsmodel",
     "existingModelsTitle": "Kompatible modeller",

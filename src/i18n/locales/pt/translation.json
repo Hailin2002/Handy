@@ -18,6 +18,19 @@
     "debug": "Depuração",
     "about": "Sobre"
   },
+  "nav": {
+    "primaryAriaLabel": "Navegação principal",
+    "settingsTabsAriaLabel": "Seções de configurações",
+    "dictate": "Ditar",
+    "meetings": "Reuniões",
+    "projects": "Projetos",
+    "history": "Histórico de ditados",
+    "settings": "Configurações",
+    "about": "Ajuda e sobre",
+    "activeMeeting": "Gravação em andamento · {{duration}}",
+    "meetingsEmptyBody": "As reuniões chegarão com o modo de reunião. O ditado funciona normalmente.",
+    "projectsEmptyBody": "Os projetos reunirão status, tarefas, reuniões e fontes importadas."
+  },
   "onboarding": {
     "subtitle": "Para começar, escolha um modelo de transcrição",
     "existingModelsTitle": "Modelos compatíveis",

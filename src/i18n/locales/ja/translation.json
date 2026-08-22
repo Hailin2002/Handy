@@ -18,6 +18,19 @@
     "debug": "デバッグ",
     "about": "概要"
   },
+  "nav": {
+    "primaryAriaLabel": "メインナビゲーション",
+    "settingsTabsAriaLabel": "設定セクション",
+    "dictate": "ディクテーション",
+    "meetings": "ミーティング",
+    "projects": "プロジェクト",
+    "history": "ディクテーション履歴",
+    "settings": "設定",
+    "about": "ヘルプ・情報",
+    "activeMeeting": "録音中 · {{duration}}",
+    "meetingsEmptyBody": "ミーティングはミーティングモードと共に提供されます。ディクテーションはこれまでどおり利用できます。",
+    "projectsEmptyBody": "プロジェクトではステータス・タスク・ミーティング・読み込んだソースをまとめて管理できます。"
+  },
   "onboarding": {
     "subtitle": "開始するには、文字起こしのモデルを選択してください",
     "existingModelsTitle": "互換性のあるモデル",

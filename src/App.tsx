@@ -14,7 +14,17 @@ import SecureInputWarning from "./components/SecureInputWarning";
 import Footer from "./components/footer";
 import Onboarding, { AccessibilityOnboarding } from "./components/onboarding";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { Sidebar, SidebarSection, SECTIONS_CONFIG } from "./components/Sidebar";
+import { Sidebar } from "./components/Sidebar";
+import {
+  ProductPlaceholder,
+  SettingsPage,
+  type ProductViewId,
+} from "./components/shell";
+import {
+  AboutSettings,
+  GeneralSettings,
+  HistorySettings,
+} from "./components/settings";
 import { WhatsNewGate } from "./components/whats-new";
 import { useSettings } from "./hooks/useSettings";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -24,10 +34,34 @@ import { useAzureSpeechStream } from "@/hooks/useAzureSpeechStream";
 
 type OnboardingStep = "accessibility" | "model" | "done";
 
-const renderSettingsContent = (section: SidebarSection) => {
-  const ActiveComponent =
-    SECTIONS_CONFIG[section]?.component || SECTIONS_CONFIG.general.component;
-  return <ActiveComponent />;
+// Content router for the product navigation views (plan §6.3). Dictation
+// keeps its proven workflow: "Diktieren" shows the same home content as
+// before, and the global shortcut start/stop flow is untouched.
+const renderProductContent = (view: ProductViewId) => {
+  switch (view) {
+    case "dictate":
+      return <GeneralSettings />;
+    case "meetings":
+      return (
+        <ProductPlaceholder
+          titleKey="nav.meetings"
+          bodyKey="nav.meetingsEmptyBody"
+        />
+      );
+    case "projects":
+      return (
+        <ProductPlaceholder
+          titleKey="nav.projects"
+          bodyKey="nav.projectsEmptyBody"
+        />
+      );
+    case "history":
+      return <HistorySettings />;
+    case "settings":
+      return <SettingsPage />;
+    case "about":
+      return <AboutSettings />;
+  }
 };
 
 function App() {
@@ -39,8 +73,7 @@ function App() {
   // Track if this is a returning user who just needs to grant permissions
   // (vs a new user who needs full onboarding including model selection)
   const [isReturningUser, setIsReturningUser] = useState(false);
-  const [currentSection, setCurrentSection] =
-    useState<SidebarSection>("general");
+  const [currentView, setCurrentView] = useState<ProductViewId>("dictate");
   const { settings, updateSetting } = useSettings();
   const direction = getLanguageDirection(i18n.language);
   const refreshAudioDevices = useSettingsStore(
@@ -301,17 +334,14 @@ function App() {
         </ErrorBoundary>
         {/* Main content area that takes remaining space */}
         <div className="flex-1 flex overflow-hidden">
-          <Sidebar
-            activeSection={currentSection}
-            onSectionChange={setCurrentSection}
-          />
+          <Sidebar activeView={currentView} onViewChange={setCurrentView} />
           {/* Scrollable content area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto">
               <div className="flex flex-col items-center p-4 gap-4">
                 <AccessibilityPermissions />
                 <SecureInputWarning />
-                {renderSettingsContent(currentSection)}
+                {renderProductContent(currentView)}
               </div>
             </div>
           </div>

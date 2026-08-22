@@ -18,6 +18,19 @@
     "debug": "调试",
     "about": "关于"
   },
+  "nav": {
+    "primaryAriaLabel": "主导航",
+    "settingsTabsAriaLabel": "设置分区",
+    "dictate": "听写",
+    "meetings": "会议",
+    "projects": "项目",
+    "history": "听写历史",
+    "settings": "设置",
+    "about": "帮助与关于",
+    "activeMeeting": "录音中 · {{duration}}",
+    "meetingsEmptyBody": "会议功能将随会议模式推出。听写功能照常可用。",
+    "projectsEmptyBody": "项目将汇总状态、任务、会议和导入的来源。"
+  },
   "onboarding": {
     "subtitle": "请选择一个转录模型以开始使用",
     "existingModelsTitle": "兼容的模型",

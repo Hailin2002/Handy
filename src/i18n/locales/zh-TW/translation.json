@@ -18,6 +18,19 @@
     "debug": "偵錯",
     "about": "關於"
   },
+  "nav": {
+    "primaryAriaLabel": "主導覽",
+    "settingsTabsAriaLabel": "設定分區",
+    "dictate": "聽寫",
+    "meetings": "會議",
+    "projects": "專案",
+    "history": "聽寫歷史",
+    "settings": "設定",
+    "about": "說明與關於",
+    "activeMeeting": "錄音中 · {{duration}}",
+    "meetingsEmptyBody": "會議功能將隨會議模式推出。聽寫功能照常可用。",
+    "projectsEmptyBody": "專案將彙整狀態、任務、會議與匯入的來源。"
+  },
   "onboarding": {
     "subtitle": "首先，請選擇一種模型",
     "existingModelsTitle": "相容的模型",

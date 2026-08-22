@@ -18,6 +18,19 @@
     "debug": "Debug",
     "about": "Info"
   },
+  "nav": {
+    "primaryAriaLabel": "Hauptnavigation",
+    "settingsTabsAriaLabel": "Einstellungsbereiche",
+    "dictate": "Diktieren",
+    "meetings": "Meetings",
+    "projects": "Projekte",
+    "history": "Diktatverlauf",
+    "settings": "Einstellungen",
+    "about": "Hilfe & Über",
+    "activeMeeting": "Aufnahme läuft · {{duration}}",
+    "meetingsEmptyBody": "Meetings folgen mit dem Meeting-Modus. Diktieren funktioniert wie gewohnt.",
+    "projectsEmptyBody": "Projekte bündeln Status, Aufgaben, Meetings und importierte Quellen."
+  },
   "onboarding": {
     "subtitle": "Wähle ein Transkriptionsmodell, um loszulegen",
     "existingModelsTitle": "Kompatible Modelle",

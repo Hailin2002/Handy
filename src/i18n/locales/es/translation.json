@@ -18,6 +18,19 @@
     "debug": "Depuración",
     "about": "Acerca de"
   },
+  "nav": {
+    "primaryAriaLabel": "Navegación principal",
+    "settingsTabsAriaLabel": "Secciones de ajustes",
+    "dictate": "Dictar",
+    "meetings": "Reuniones",
+    "projects": "Proyectos",
+    "history": "Historial de dictados",
+    "settings": "Ajustes",
+    "about": "Ayuda y acerca de",
+    "activeMeeting": "Grabación en curso · {{duration}}",
+    "meetingsEmptyBody": "Las reuniones llegarán con el modo de reuniones. El dictado funciona con normalidad.",
+    "projectsEmptyBody": "Los proyectos combinarán estado, tareas, reuniones y fuentes importadas."
+  },
   "onboarding": {
     "subtitle": "Para comenzar, elige un modelo de transcripción",
     "existingModelsTitle": "Modelos compatibles",

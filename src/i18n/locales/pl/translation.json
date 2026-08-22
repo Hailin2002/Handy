@@ -18,6 +18,19 @@
     "debug": "Debugowanie",
     "about": "O programie"
   },
+  "nav": {
+    "primaryAriaLabel": "Nawigacja główna",
+    "settingsTabsAriaLabel": "Sekcje ustawień",
+    "dictate": "Dykowanie",
+    "meetings": "Spotkania",
+    "projects": "Projekty",
+    "history": "Historia dyktowania",
+    "settings": "Ustawienia",
+    "about": "Pomoc i informacje",
+    "activeMeeting": "Nagrywanie · {{duration}}",
+    "meetingsEmptyBody": "Spotkania pojawią się wraz z trybem spotkań. Dyktowanie działa jak zwykle.",
+    "projectsEmptyBody": "Projekty połączą stan, zadania, spotkania i zaimportowane źródła."
+  },
   "onboarding": {
     "subtitle": "Aby rozpocząć, wybierz model transkrypcji",
     "existingModelsTitle": "Zgodne modele",

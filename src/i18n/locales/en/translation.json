@@ -18,6 +18,19 @@
     "debug": "Debug",
     "about": "About"
   },
+  "nav": {
+    "primaryAriaLabel": "Main navigation",
+    "settingsTabsAriaLabel": "Settings sections",
+    "dictate": "Dictate",
+    "meetings": "Meetings",
+    "projects": "Projects",
+    "history": "Dictation History",
+    "settings": "Settings",
+    "about": "Help & About",
+    "activeMeeting": "Recording · {{duration}}",
+    "meetingsEmptyBody": "Meetings are coming with meeting mode. Dictation works as usual.",
+    "projectsEmptyBody": "Projects will combine status, tasks, meetings, and imported sources."
+  },
   "onboarding": {
     "subtitle": "To get started, choose a transcription model",
     "existingModelsTitle": "Compatible Models",

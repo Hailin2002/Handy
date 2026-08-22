@@ -18,6 +18,19 @@
     "debug": "Debug",
     "about": "Informazioni"
   },
+  "nav": {
+    "primaryAriaLabel": "Navigazione principale",
+    "settingsTabsAriaLabel": "Sezioni delle impostazioni",
+    "dictate": "Dettare",
+    "meetings": "Riunioni",
+    "projects": "Progetti",
+    "history": "Cronologia dettati",
+    "settings": "Impostazioni",
+    "about": "Aiuto e informazioni",
+    "activeMeeting": "Registrazione · {{duration}}",
+    "meetingsEmptyBody": "Le riunioni arriveranno con la modalità riunione. Il dettato funziona come al solito.",
+    "projectsEmptyBody": "I progetti riuniranno stato, attività, riunioni e fonti importate."
+  },
   "onboarding": {
     "subtitle": "Per cominciare, scegli un modello di riconoscimento vocale",
     "existingModelsTitle": "Modelli compatibili",

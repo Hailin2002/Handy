@@ -18,6 +18,19 @@
     "about": "حول",
     "models": "النماذج"
   },
+  "nav": {
+    "primaryAriaLabel": "التنقل الرئيسي",
+    "settingsTabsAriaLabel": "أقسام الإعدادات",
+    "dictate": "الإملاء",
+    "meetings": "الاجتماعات",
+    "projects": "المشاريع",
+    "history": "سجل الإملاءات",
+    "settings": "الإعدادات",
+    "about": "المساعدة وحول",
+    "activeMeeting": "جارٍ التسجيل · {{duration}}",
+    "meetingsEmptyBody": "ستتوفر الاجتماعات مع وضع الاجتماعات. يعمل الإملاء كالمعتاد.",
+    "projectsEmptyBody": "ستجمع المشاريع الحالة والمهام والاجتماعات والمصادر المستوردة."
+  },
   "onboarding": {
     "subtitle": "للبدء، اختر نموذج التفريغ الصوتي",
     "existingModelsTitle": "النماذج المتوافقة",

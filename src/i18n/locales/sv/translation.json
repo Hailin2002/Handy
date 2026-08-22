@@ -18,6 +18,19 @@
     "debug": "Felsökning",
     "about": "Om"
   },
+  "nav": {
+    "primaryAriaLabel": "Huvudnavigation",
+    "settingsTabsAriaLabel": "Inställningsavsnitt",
+    "dictate": "Diktering",
+    "meetings": "Möten",
+    "projects": "Projekt",
+    "history": "Dikteringshistorik",
+    "settings": "Inställningar",
+    "about": "Hjälp & om",
+    "activeMeeting": "Inspelning pågår · {{duration}}",
+    "meetingsEmptyBody": "Möten kommer med mötesläget. Dikteringen fungerar som vanligt.",
+    "projectsEmptyBody": "Projekt samlar status, uppgifter, möten och importerade källor."
+  },
   "onboarding": {
     "subtitle": "För att komma igång, välj en transkriptionsmodell",
     "existingModelsTitle": "Kompatibla modeller",

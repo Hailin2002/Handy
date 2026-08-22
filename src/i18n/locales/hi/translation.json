@@ -18,6 +18,19 @@
     "debug": "डिबग",
     "about": "के बारे में"
   },
+  "nav": {
+    "primaryAriaLabel": "मुख्य नेविगेशन",
+    "settingsTabsAriaLabel": "सेटिंग अनुभाग",
+    "dictate": "डिक्टेशन",
+    "meetings": "मीटिंग",
+    "projects": "प्रोजेक्ट",
+    "history": "डिक्टेशन इतिहास",
+    "settings": "सेटिंग्स",
+    "about": "सहायता और परिचय",
+    "activeMeeting": "रिकॉर्डिंग चल रही है · {{duration}}",
+    "meetingsEmptyBody": "मीटिंग मोड के साथ मीटिंग सुविधा आएगी। डिक्टेशन पहले जैसा काम करेगा।",
+    "projectsEmptyBody": "प्रोजेक्ट में स्थिति, कार्य, मीटिंग और आयातित स्रोत एक साथ मिलेंगे।"
+  },
   "onboarding": {
     "subtitle": "शुरू करने के लिए, एक ट्रांसक्रिप्शन मॉडल चुनें",
     "existingModelsTitle": "संगत मॉडल",
