@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useId, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { IconButton } from "./IconButton";
 import { Tooltip } from "./Tooltip";
@@ -7,6 +7,10 @@ interface SettingContainerProps {
   title: string;
   description: string;
   children: React.ReactNode;
+  /**
+   * "inline" (default) keeps the description visible without hover so the
+   * setting is self-explanatory; "tooltip" hides it behind an info button.
+   */
   descriptionMode?: "inline" | "tooltip";
   grouped?: boolean;
   layout?: "horizontal" | "stacked";
@@ -18,38 +22,19 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
   title,
   description,
   children,
-  descriptionMode = "tooltip",
+  descriptionMode = "inline",
   grouped = false,
   layout = "horizontal",
   disabled = false,
   tooltipPosition = "top",
 }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
+  // Stable id shared between the trigger's `aria-describedby` and the
+  // tooltip node, so screen readers announce the description when the
+  // info button is focused or hovered.
+  const tooltipId = useId();
   const tooltipRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
   const infoLabel = t("common.moreInformation");
-
-  // Handle click outside to close tooltip
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        tooltipRef.current &&
-        !tooltipRef.current.contains(event.target as Node)
-      ) {
-        setShowTooltip(false);
-      }
-    };
-
-    if (showTooltip) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showTooltip]);
-
-  const toggleTooltip = () => {
-    setShowTooltip(!showTooltip);
-  };
 
   const containerClasses = grouped
     ? "px-4 p-2"
@@ -65,15 +50,10 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
             >
               {title}
             </h3>
-            <div
-              ref={tooltipRef}
-              className="relative"
-              onMouseEnter={() => setShowTooltip(true)}
-              onMouseLeave={() => setShowTooltip(false)}
-            >
+            <div ref={tooltipRef} className="relative">
               <IconButton
                 aria-label={infoLabel}
-                onClick={toggleTooltip}
+                aria-describedby={tooltipId}
                 className="text-mid-gray hover:bg-transparent hover:text-logo-primary"
               >
                 <svg
@@ -91,13 +71,11 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
                   />
                 </svg>
               </IconButton>
-              {showTooltip && (
-                <Tooltip targetRef={tooltipRef} position="top">
-                  <p className="text-sm text-center leading-relaxed">
-                    {description}
-                  </p>
-                </Tooltip>
-              )}
+              <Tooltip targetRef={tooltipRef} id={tooltipId} position="top">
+                <p className="text-sm text-center leading-relaxed">
+                  {description}
+                </p>
+              </Tooltip>
             </div>
           </div>
           <div className="w-full">{children}</div>
@@ -135,15 +113,10 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
             >
               {title}
             </h3>
-            <div
-              ref={tooltipRef}
-              className="relative"
-              onMouseEnter={() => setShowTooltip(true)}
-              onMouseLeave={() => setShowTooltip(false)}
-            >
+            <div ref={tooltipRef} className="relative">
               <IconButton
                 aria-label={infoLabel}
-                onClick={toggleTooltip}
+                aria-describedby={tooltipId}
                 className="text-mid-gray hover:bg-transparent hover:text-logo-primary"
               >
                 <svg
@@ -161,13 +134,15 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
                   />
                 </svg>
               </IconButton>
-              {showTooltip && (
-                <Tooltip targetRef={tooltipRef} position={tooltipPosition}>
-                  <p className="text-sm text-center leading-relaxed">
-                    {description}
-                  </p>
-                </Tooltip>
-              )}
+              <Tooltip
+                targetRef={tooltipRef}
+                id={tooltipId}
+                position={tooltipPosition}
+              >
+                <p className="text-sm text-center leading-relaxed">
+                  {description}
+                </p>
+              </Tooltip>
             </div>
           </div>
         </div>
