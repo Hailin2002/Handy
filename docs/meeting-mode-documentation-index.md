@@ -49,6 +49,7 @@ meeting-mode-Dokument anlegt, **muss** diese Tabelle um eine Zeile ergänzen.
 | `docs/meeting-mode-architecture/stt-provider-contract.md` | §8 (Transkriptionspipeline), §9 (`meeting_stt_jobs`) | `spec contract` | Normatives Einzel-Trait-Konzept `MeetingSttProvider` (Local/Azure Fast Transcription/Custom Multipart) inkl. Jobzustandsmaschine und Retry-Idempotenz; Eigenangabe: „Architekturvertrag, Phase 5 nicht implementiert"; der bestehende Short-Audio-Pfad bleibt von diesem Vertrag unberührt. |
 | `docs/meeting-mode-architecture/coexistence-contract.md` | §6.10 (Gleichzeitige Nutzung beider Werkzeuge), §6 (Startvalidierung: `selected_output_device`), §6.9 (Shortcut-Konzept), §8 (Ressourcenlogik zwischen Meeting und Diktat, Lokale Verarbeitung), §13 Phase 4/5, §14 (Zeile „Diktat wird während lokaler Meetingverarbeitung ausgelöst") | `spec contract` | Normativer Koexistenzvertrag Diktat ↔ Meeting: Engine-Lease-Erweiterung mit Pause-an-Segmentgrenze/Auto-Resume/Timeouts und Strukturbeweis „Capture wartet nie auf Inferenz", Mikrofon-Tap mit Ein-Gerät-offen-Invariante (Fälle Meeting-aktiv/-pausiert/ohne Meeting), Start-Mutual-Exclusion mit Nutzerentscheidung, Settings-Trennung inkl. expliziter Erhaltung von `selected_output_device` für Feedback-Sounds und Session-Snapshot-Isolation, Shortcut-Namespace (`meeting_*`) mit Verfügbarkeits-Precheck und Blockierung identischer Bindings; Touch-Point-Inventar mit Codebelegen markiert jede Stelle als Zukunftsphase, null Codeänderungen durch den Vertrag selbst. |
 | `docs/meeting-mode-architecture/module-placement-map.md` | §5 („Zielarchitektur": alle Backend-Komponenten, Plan-Zeilen 219–308; Frontend-Komponentenliste, Plan-Zeilen 310–333) | `spec contract` | Normative Modulplatzierung: genau ein kanonischer Pfad je Plan-§5-Komponente (B1–B11, F1–F22) plus Re-export-/Sichtbarkeitsregeln (E1–E5, F1), adjudiziert den Pfadkonflikt `MeetingRecorder` (Plan §5 `audio_toolkit/audio/meeting_recorder.rs` vs. Ledger task-0011 `src-tauri/src/meeting_recorder`) zugunsten des Plan-Pfads gemäß Autoritätsordnung „Plan schlägt Verträge", und cross-checkt jede Platzierung gegen die Scope-Abschnitte von recorder-, asset-store- und repository-boundary-contract; Eigenangabe: „spec contract — no implementation yet … changes no source code". |
+| `docs/meeting-mode-architecture/job-scheduler-contract.md` | §5 (`MeetingTranscriptionQueue`, Plan-Zeilen 245–252), §8 (Lokale Verarbeitung Zeilen 1059–1067, Ressourcenlogik Zeilen 1089–1099, Azure-Jobs Zeilen 1121–1128), §9 (`meeting_stt_jobs` Zeilen 1190–1199, `processing_jobs` Zeilen 1313–1318), Fehlerverhalten/Stoppen (Zeilen 936–961) | `spec contract` | Normativer Cross-Subsystem-Scheduler-Vertrag über `MeetingSttProvider` und `MeetingSummaryService`: genau drei Konkurrenzklassen (L1 = genau ein lokaler Engine-Lease gemäß Coexistence-Vertrag, C1 = begrenzte Cloud-STT-Slots, S1 = begrenzte LLM-Slots), Prioritäts-/Fairnessregeln (Timeline-Reihenfolge, Mic/System-Alteration, Per-Meeting-Rotation), Cancellation-Propagierung für queued/leased/running mit idempotenten Ergebnissen, Lease-Timeouts per Deadline-Sweep, Retry-Backoff-Ownership (Klassifikation an den Providern, Uhren ausschließlich im Scheduler) und Invariante P1 „Job-Zeilen sind der einzige Persistenzpunkt" inkl. Strukturbeweis CAP1 „Capture wartet nie auf Scheduling"; konsistent mit stt-provider-contract (Zustandsmaschine STT-§3) und summary-evidence-contract (Idempotency-Keys SEC-§2); explizite Non-Goals/Komplexitätsbudget; Eigenangabe: „spec contract — no implementation yet … changes no source code". |
 
 ### Verwandte, aber keine .md-Dokumente (keine Tabellenzeilen)
 
@@ -78,11 +79,17 @@ kein Dokument.
 5. **`docs/meeting-mode-architecture/stt-provider-contract.md`** — der
    Providervertrag (Queue ↔ Local/Azure/Custom); Pflichtlektüre vor Arbeit an
    Phase 5/6.
-6. **`docs/meeting-mode-ux-copy-catalog.md`** — Textvorschläge für alle
+6. **`docs/meeting-mode-architecture/job-scheduler-contract.md`** — der
+   Scheduler-/Cancellation-Vertrag über Provider- und Summary-Jobs
+   (Konkurrenzklassen, Fairness, Leases, Backoff-Ownership, Persistenzpunkt);
+   Pflichtlektüre vor jeder Änderung an `meeting_transcription.rs`,
+   `processing_jobs` oder Cancellation-Flows.
+7. **`docs/meeting-mode-ux-copy-catalog.md`** — Textvorschläge für alle
    Randzustände; konsultieren, sobald UI-Texte oder i18n-Keys für den
    Meeting-Modus angelegt werden.
 
-Kurzregel: **Plan → Baseline → Recorder → Daten → Provider → UX-Texte.**
+Kurzregel: **Plan → Baseline → Recorder → Daten → Provider → Scheduler →
+UX-Texte.**
 Jedes Vertragdokument nennt im Kopf seine Plan-Anker; bei Konflikten gilt die
 Reihenfolge: Plan schlägt Verträge, Verträge schlagen Kataloge, und nichts
 schlägt den tatsächlichen Code (der seinerseits nur durch code-zitierte
