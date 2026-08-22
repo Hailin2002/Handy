@@ -426,6 +426,111 @@ meter { width: 120px; height: 10px; }
   border: 0;
 }
 
+/* ---------- Ersteinrichtung (Plan §6.6) ---------- */
+.setup-step { margin-bottom: 16px; }
+.step-heading { display: flex; align-items: center; gap: 10px; margin-top: 0; font-size: 17px; }
+.step-num {
+  width: 26px; height: 26px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  display: inline-grid; place-items: center;
+  font-size: 14px;
+}
+.option-cards { display: grid; gap: 10px; border: none; padding: 0; margin: 0 0 8px; }
+.option-card {
+  display: flex; gap: 10px; align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+}
+.option-card:hover { border-color: var(--brand); }
+.option-card input[type="radio"] { width: 18px; height: 18px; margin-top: 3px; flex-shrink: 0; }
+.option-body { display: grid; gap: 4px; }
+.rec-badge { justify-self: start; font-size: 11px; padding: 2px 8px; margin-right: 0; }
+.more-options summary { cursor: pointer; color: var(--brand); padding: 6px 0; }
+.more-options .option-card { margin-top: 8px; }
+
+.audio-test-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.audio-test-label { min-width: 110px; color: var(--muted); font-weight: 600; }
+.audio-test-row meter { width: 140px; height: 10px; }
+.test-result { min-width: 180px; font-size: 14px; }
+.test-ok  { color: var(--ok-green); font-weight: 600; }
+.test-fail { color: var(--danger); font-weight: 600; }
+
+.hint-box {
+  background: #fdf3e3;
+  border: 1px solid #e5c07b;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: grid; gap: 8px;
+  font-size: 13px;
+  margin-top: 10px;
+  justify-items: start;
+}
+
+.mock-fieldset {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-size: 13px; color: var(--muted);
+  margin: 14px 0 0;
+}
+.mock-fieldset legend { font-size: 12px; padding: 0 6px; }
+.mock-fieldset label { display: flex; align-items: center; gap: 6px; }
+
+.alt-shortcuts { list-style: none; padding: 0; margin: 8px 0 0; display: flex; gap: 10px; }
+
+/* ---------- Mini-Picker im Startdialog (Plan §6.7) ---------- */
+.picker-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfbfd;
+  padding: 12px;
+  margin: 8px 0 14px;
+  display: grid;
+  gap: 6px;
+}
+.picker-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.picker-head h3 { margin: 0; font-size: 15px; }
+.picker-option {
+  display: grid; gap: 2px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.picker-option:hover { border-color: var(--brand); }
+.picker-option[aria-pressed="true"] { border-color: var(--brand); background: #e8edfb; }
+.opt-sub { color: var(--muted); font-size: 13px; }
+.picker-divider { border-top: 1px dashed var(--border); margin: 6px 0; }
+.sim-note { color: var(--muted); font-size: 13px; margin: 4px 0; }
+.picker-sim { font-size: 13px; color: var(--muted); justify-self: start; min-height: 36px; }
+/* „Kein Projekt“ bleibt sichtbar unterschieden: gestrichelt + gedämpft (Gate G2) */
+.picker-none-opt { border-style: dashed; background: #fffdf4; }
+.chip-none { border-style: dashed; color: var(--muted); font-weight: 400; }
+
+.warn-text { color: #9a5b00; font-weight: 600; }
+.start-blocker {
+  background: #fdf3e3;
+  border: 1px solid #e5c07b;
+  color: #7a5200;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rec-dot { animation: none; }
   * { transition: none !important; }

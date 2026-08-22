@@ -40,7 +40,8 @@
 
   /* ---------- Routing ---------- */
   var ROUTES = ["diktieren", "meetings", "meeting-aktiv", "verarbeitung",
-                "projekte", "diktatverlauf", "einstellungen", "hilfe"];
+                "projekte", "diktatverlauf", "einstellungen", "hilfe",
+                "meeting-einrichtung"];
 
   function currentRoute() {
     var h = location.hash.replace(/^#\/?/, "").split("/")[0];
@@ -64,6 +65,7 @@
       return;
     }
     if (route === "meetings") renderMeetings();
+    if (route === "meeting-einrichtung") initSetupView();
     tick();
   }
 
@@ -164,6 +166,261 @@
   var startDialog = $("#start-dialog");
   var lastFocus = null;
 
+  /* Dialog-Zustand – überlebt jeden geöffneten Mini-Picker (Gate G1) */
+  var dlg = {
+    mic: { ok: true, name: "Standardmikrofon" },
+    sys: { ok: true, name: "Lautsprecher / Headset" },
+    provider: "lokal",          // lokal | azure | custom
+    azureKey: false,
+    lang: "Deutsch",
+    project: null               // null = Kein Projekt (gültiger Zustand → Eingang)
+  };
+  var inputDevices = [{ name: "Standardmikrofon" }, { name: "USB-Headset" }];
+  var outputDevices = [{ name: "Lautsprecher / Headset" }, { name: "HDMI-Monitor" }];
+  var projects = ["BDNA Club", "Atlas GmbH"];
+  var openPicker = null;        // 'mic' | 'sys' | 'provider' | 'lang' | 'project' | null
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function resetDialogState() {
+    // Provider-Auswahl aus der Ersteinrichtung (§6.6) bleibt erhalten
+    var keepProvider = dlg.provider || "lokal";
+    dlg.mic = { ok: true, name: "Standardmikrofon" };
+    dlg.sys = { ok: true, name: "Lautsprecher / Headset" };
+    dlg.provider = keepProvider;
+    dlg.azureKey = false;
+    dlg.lang = "Deutsch";
+    dlg.project = null;
+    openPicker = null;
+    $("#row-picker").hidden = true;
+    $("#project-picker").hidden = true;
+    renderDialog();
+  }
+
+  function providerValueHtml() {
+    if (dlg.provider === "azure") {
+      return "Azure Cloud " + (dlg.azureKey
+        ? '<span class="ok">✓ Schlüssel vorhanden</span>'
+        : '<span class="warn-text">⚠ Schlüssel fehlt</span>');
+    }
+    if (dlg.provider === "custom") return 'Custom <span class="muted">Eigener Endpoint</span>';
+    return 'Lokal · Meeting-Modell <span class="muted">Auf diesem Gerät</span>';
+  }
+
+  /* Gründe, warum „Meeting starten“ gerade deaktiviert ist (Gate G3) */
+  function startBlockers() {
+    var b = [];
+    if (!dlg.mic.ok) b.push("Kein Mikrofon verfügbar – in der Zeile „Mikrofon“ beheben.");
+    if (!dlg.sys.ok) b.push("Kein Systemaudio-Gerät – in der Zeile „Systemaudio“ beheben.");
+    if (dlg.provider === "azure" && !dlg.azureKey)
+      b.push("Azure-Schlüssel fehlt – in der Zeile „Transkription“ hinzufügen.");
+    return b;
+  }
+
+  function renderDialog() {
+    $("#row-mic-value").innerHTML = dlg.mic.ok
+      ? esc(dlg.mic.name) + ' <span class="ok">✓ funktioniert</span>'
+      : '<span class="warn-text">' + esc(dlg.mic.name) + ' ⚠ Aufmerksamkeit nötig</span>';
+    $("#row-sys-value").innerHTML = dlg.sys.ok
+      ? esc(dlg.sys.name) + ' <span class="ok">✓ funktioniert</span>'
+      : '<span class="warn-text">' + esc(dlg.sys.name) + ' ⚠ Aufmerksamkeit nötig</span>';
+    $("#row-provider-value").innerHTML = providerValueHtml();
+    $("#row-lang-value").innerHTML =
+      esc(dlg.lang) + ' <span class="link-like">Ändern</span>';
+
+    var chip = $("#project-chip");
+    chip.textContent = dlg.project || "Kein Projekt";
+    chip.classList.toggle("chip-selected", !!dlg.project);
+    chip.classList.toggle("chip-none", !dlg.project);
+
+    var blockers = startBlockers();
+    $("#btn-meeting-starten").disabled = blockers.length > 0;
+    var bl = $("#start-blocker");
+    bl.hidden = blockers.length === 0;
+    bl.textContent = blockers.join(" ");
+  }
+
+  /* ---------- Mini-Picker (§6.7: eine Zeile = eine Entscheidung) ---------- */
+  function optionButton(label, sub, selected, onClick, extraClass) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "picker-option" + (extraClass ? " " + extraClass : "");
+    b.setAttribute("aria-pressed", String(!!selected));
+    b.innerHTML = "<strong>" + esc(label) + "</strong>" + (sub ? '<span class="opt-sub">' + sub + "</span>" : "");
+    b.addEventListener("click", onClick);
+    return b;
+  }
+  function backButton(host) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-ghost btn-small picker-back";
+    b.textContent = "Zurück";
+    b.addEventListener("click", function () { closePicker(true); });
+    return b;
+  }
+  function pickerHead(title) {
+    var head = document.createElement("div");
+    head.className = "picker-head";
+    var h = document.createElement("h3");
+    h.textContent = title;
+    head.appendChild(h);
+    head.appendChild(backButton());
+    return head;
+  }
+  function divider() {
+    var d = document.createElement("div");
+    d.className = "picker-divider";
+    return d;
+  }
+
+  function devicePickerHtml(host, kind) {
+    var key = kind === "mic" ? "mic" : "sys";
+    var devices = kind === "mic" ? inputDevices : outputDevices;
+    host.appendChild(pickerHead(kind === "mic" ? "Mikrofon wählen" : "Systemaudio-Gerät wählen"));
+    devices.forEach(function (d) {
+      host.appendChild(optionButton(
+        d.name,
+        kind === "mic" ? "Eingabe" : "Ausgabe · Loopback",
+        dlg[key].ok && dlg[key].name === d.name,
+        function () {
+          dlg[key] = { ok: true, name: d.name };
+          renderDialog(); refreshPicker(d.name);
+          announce(d.name + " ausgewählt.");
+        }));
+    });
+    host.appendChild(divider());
+    if (!dlg[key].ok) {
+      var note = document.createElement("p");
+      note.className = "sim-note warn-text";
+      note.textContent = "Kein Gerät verbunden – „Meeting starten“ ist deaktiviert.";
+      host.appendChild(note);
+    } else {
+      host.appendChild(optionButton(
+        "Simulation: Gerät entfernen",
+        "Prototyp-Mock: zeigt den deaktivierten Start-Button (Gate G3)",
+        false,
+        function () {
+          dlg[key] = { ok: false, name: "Kein Gerät" };
+          renderDialog(); refreshPicker("Simulation: Gerät entfernen");
+          announce("Simuliert: kein Gerät. Meeting starten ist deaktiviert.");
+        }, "picker-sim"));
+    }
+  }
+
+  function providerPickerInto(host) {
+    host.appendChild(pickerHead("Verarbeitung wählen"));
+    host.appendChild(optionButton(
+      "Lokal auf diesem Gerät", "Datenschutzfreundliche Empfehlung · Auf diesem Gerät",
+      dlg.provider === "lokal",
+      function () { dlg.provider = "lokal"; renderDialog(); refreshPicker("Lokal auf diesem Gerät"); announce("Verarbeitung: lokal."); }));
+    host.appendChild(optionButton(
+      "Azure Cloud",
+      dlg.azureKey ? "Schlüssel vorhanden ✓" : "Audio wird hochgeladen · Schlüssel fehlt ⚠",
+      dlg.provider === "azure",
+      function () { dlg.provider = "azure"; renderDialog(); refreshPicker(); announce("Verarbeitung: Azure Cloud."); }));
+    if (dlg.provider === "azure" && !dlg.azureKey) {
+      host.appendChild(optionButton(
+        "Azure-Schlüssel hinzufügen (Mock)",
+        "Setzt im Prototyp einen vorhandenen Schlüssel",
+        false,
+        function () { dlg.azureKey = true; renderDialog(); refreshPicker("Azure-Schlüssel hinzufügen (Mock)"); announce("Azure-Schlüssel gesetzt. Meeting starten aktiviert."); },
+        "picker-sim"));
+    }
+    var more = document.createElement("details");
+    more.className = "more-options";
+    more.innerHTML = "<summary>Weitere Optionen</summary>";
+    more.appendChild(optionButton(
+      "Custom", "Eigener Provider mit Endpoint und Schlüssel",
+      dlg.provider === "custom",
+      function () { dlg.provider = "custom"; renderDialog(); refreshPicker("Custom"); announce("Verarbeitung: Custom."); }));
+    host.appendChild(more);
+  }
+
+  function langPickerInto(host) {
+    host.appendChild(pickerHead("Sprache wählen"));
+    ["Deutsch", "English", "Français", "Español"].forEach(function (l) {
+      host.appendChild(optionButton(l, "", dlg.lang === l, function () {
+        dlg.lang = l; renderDialog(); refreshPicker(l); announce("Sprache: " + l);
+      }));
+    });
+  }
+
+  function projectPickerInto(host) {
+    host.appendChild(pickerHead("Projekt wählen"));
+    // „Kein Projekt“ ist gültig und sichtbar unterschieden (gestrichelt, Eingang-Hinweis)
+    host.appendChild(optionButton(
+      "📥 Kein Projekt", "Ohne Zuordnung – landet im Eingang",
+      !dlg.project,
+      function () { dlg.project = null; renderDialog(); refreshPicker("📥 Kein Projekt"); announce("Kein Projekt gewählt. Meeting landet im Eingang."); },
+      "picker-none-opt"));
+    projects.forEach(function (p) {
+      host.appendChild(optionButton(p, "Projekt", dlg.project === p, function () {
+        dlg.project = p; renderDialog(); refreshPicker(p); announce("Projekt: " + p);
+      }));
+    });
+  }
+
+  function buildPicker(host, row) {
+    host.innerHTML = "";
+    if (row === "mic" || row === "sys") devicePickerHtml(host, row);
+    else if (row === "provider") providerPickerInto(host);
+    else if (row === "lang") langPickerInto(host);
+    else if (row === "project") projectPickerInto(host);
+  }
+
+  function setTriggerExpanded(row, expanded) {
+    var trigger = row === "project"
+      ? $("#project-chip")
+      : document.querySelector('.status-line-btn[data-row="' + row + '"]');
+    if (trigger) trigger.setAttribute("aria-expanded", String(!!expanded));
+  }
+
+  function openRowPicker(row) {
+    closePicker(false);
+    openPicker = row;
+    var host = row === "project" ? $("#project-picker") : $("#row-picker");
+    buildPicker(host, row);
+    host.hidden = false;
+    setTriggerExpanded(row, true);
+    var fb = host.querySelector("button");
+    if (fb) fb.focus();
+  }
+  function closePicker(refocus) {
+    $("#row-picker").hidden = true;
+    $("#project-picker").hidden = true;
+    var prev = openPicker;
+    openPicker = null;
+    if (prev) setTriggerExpanded(prev, false);
+    if (refocus !== false && prev) {
+      var target = prev === "project"
+        ? $("#project-chip")
+        : document.querySelector('.status-line-btn[data-row="' + prev + '"]');
+      if (target) target.focus();
+    }
+  }
+  /* Picker-Inhalt nach Zustandsänderung neu zeichnen, Fokus möglichst halten */
+  function refreshPicker(focusLabel) {
+    if (!openPicker) return;
+    var host = openPicker === "project" ? $("#project-picker") : $("#row-picker");
+    buildPicker(host, openPicker);
+    if (focusLabel) {
+      var btns = Array.prototype.filter.call(host.querySelectorAll("button"), function (b) {
+        return b.textContent.indexOf(focusLabel.replace("📥 ", "")) !== -1 ||
+               b.textContent === focusLabel;
+      });
+      if (btns.length) btns[0].focus();
+    }
+  }
+
+  /* §6.7: Der Dialog merkt sich die letzte Konfiguration über mehrere
+     Öffnungen; nur der allererste Open (und „Mock zurücksetzen“) startet
+     von den Defaults. */
+  var dlgInitialized = false;
+
   function openStartDialog() {
     // Nur ein Meeting gleichzeitig (Plan §6.5: aktives Meeting steht immer oben)
     if (state.sessionActive) {
@@ -172,6 +429,12 @@
       return;
     }
     lastFocus = document.activeElement;
+    if (!dlgInitialized) {
+      resetDialogState();
+      dlgInitialized = true;
+    } else {
+      closePicker(false);   // keinen veralteten Mini-Picker in den Dialog schleppen
+    }
     startDialog.hidden = false;
     var ts = new Date();
     $("#meeting-title-input").value = ts.toLocaleDateString("de-DE") + " " +
@@ -179,17 +442,39 @@
     $("#meeting-title-input").focus();
   }
   window.closeStartDialog = function () {
+    closePicker(false);
     startDialog.hidden = true;
     if (lastFocus) lastFocus.focus();
   };
   ["btn-neues-meeting", "btn-neues-meeting-empty"].forEach(function (id) {
     $("#" + id).addEventListener("click", openStartDialog);
   });
-  startDialog.addEventListener("click", function (e) {
-    if (e.target === startDialog) window.closeStartDialog();
+
+  /* Statuszeilen: komplett anklickbar → scoped Mini-Picker (Gate G1) */
+  document.querySelectorAll(".status-line-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (openPicker === this.dataset.row) closePicker(true);
+      else openRowPicker(this.dataset.row);
+    });
   });
+  $("#project-chip").addEventListener("click", function () {
+    if (openPicker === "project") closePicker(true);
+    else openRowPicker("project");
+  });
+  $("#btn-weitere-einstellungen").addEventListener("click", function () {
+    announce("Weitere Einstellungen – im Prototyp nicht implementiert.");
+  });
+
+  startDialog.addEventListener("click", function (e) {
+    if (e.target !== startDialog) return;
+    if (openPicker) { closePicker(true); return; }   // erster Klick schließt nur den Picker
+    window.closeStartDialog();
+  });
+  /* Escape schließt zuerst den Mini-Picker, erst dann den Dialog (Zustand bleibt) */
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !startDialog.hidden) window.closeStartDialog();
+    if (e.key !== "Escape" || startDialog.hidden) return;
+    if (openPicker) closePicker(true);
+    else window.closeStartDialog();
   });
 
   /* Einfacher Fokus-Fall: Tab bleibt im offenen modalen Dialog (§6.14). */
@@ -205,12 +490,6 @@
     var first = focusables[0], last = focusables[focusables.length - 1];
     if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
     else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
-  });
-
-  $("#project-chip").addEventListener("click", function () {
-    var next = this.classList.contains("chip-selected") ? "Kein Projekt" : "BDNA Club";
-    this.textContent = next;
-    this.classList.toggle("chip-selected", next !== "Kein Projekt");
   });
 
   $("#start-form").addEventListener("submit", function (e) {
@@ -365,6 +644,147 @@
     }
   }, 700);
 
+  /* ---------- Meeting-Ersteinrichtung (§6.6) ---------- */
+  var setupTimers = [];
+
+  function clearSetupTimers() {
+    setupTimers.forEach(function (t) { window.clearTimeout(t); window.clearInterval(t); });
+    setupTimers = [];
+  }
+  /* Livepegel-Mock: animiert ~2 s und ruft dann done() auf */
+  function animateMeter(meter, done) {
+    meter.value = 30;
+    var iv = window.setInterval(function () {
+      meter.value = 25 + Math.round(Math.random() * 55);
+    }, 130);
+    setupTimers.push(iv);
+    setupTimers.push(window.setTimeout(function () {
+      window.clearInterval(iv);
+      meter.value = 0;
+      done();
+    }, 2000));
+  }
+
+  function showAudioHint(html) {
+    var box = $("#setup-audio-hints");
+    box.innerHTML = html;
+    box.hidden = false;
+    box.querySelectorAll("[data-fix]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var fix = b.dataset.fix;
+        if (fix === "mic-denied") $("#sim-mic-denied").checked = false;
+        if (fix === "no-mic") $("#sim-no-mic").checked = false;
+        if (fix === "no-output") $("#sim-no-output").checked = false;
+        runMicTest(); runSysTest();
+      });
+    });
+  }
+  function hideAudioHint() {
+    $("#setup-audio-hints").hidden = true;
+    $("#setup-audio-hints").innerHTML = "";
+  }
+
+  function runMicTest() {
+    var res = $("#result-mic"), meter = $("#setup-mic-level");
+    var denied = $("#sim-mic-denied").checked, missing = $("#sim-no-mic").checked;
+    hideAudioHint();
+    if (missing || denied) {
+      meter.value = 0;
+      res.textContent = denied
+        ? "✗ Zugriff auf das Mikrofon wurde verweigert"
+        : "✗ Kein Mikrofon erkannt";
+      res.className = "test-result test-fail";
+      showAudioHint(
+        "<strong>" + (denied
+          ? "Speak hat keinen Zugriff auf dein Mikrofon."
+          : "Es ist kein Mikrofon angeschlossen.") + "</strong>" +
+        "<button type='button' class='btn btn-secondary btn-small' data-fix='" +
+          (denied ? "mic-denied" : "no-mic") + "'>" +
+          (denied ? "Berechtigung in den Systemeinstellungen erteilen (Mock)"
+                  : "Mikrofon anschließen (Mock)") + "</button>");
+      return;
+    }
+    res.textContent = "Pegel wird gemessen …";
+    res.className = "test-result";
+    animateMeter(meter, function () {
+      res.textContent = "✓ funktioniert";
+      res.className = "test-result test-ok";
+    });
+  }
+
+  function runSysTest() {
+    var res = $("#result-sys"), meter = $("#setup-sys-level");
+    hideAudioHint();
+    if ($("#sim-no-output").checked) {
+      meter.value = 0;
+      res.textContent = "✗ Kein Ausgabegerät erkannt";
+      res.className = "test-result test-fail";
+      showAudioHint(
+        "<strong>Es ist kein Ausgabegerät angeschlossen.</strong>" +
+        "<button type='button' class='btn btn-secondary btn-small' data-fix='no-output'>Ausgabegerät anschließen (Mock)</button>");
+      return;
+    }
+    res.textContent = "Testton wird abgespielt …";
+    res.className = "test-result";
+    animateMeter(meter, function () {
+      // Kurzer Speak-Testton; Loopback empfängt ihn (Mock)
+      res.textContent = "✓ Testton abgespielt · Loopback empfängt";
+      res.className = "test-result test-ok";
+    });
+  }
+
+  function checkShortcut() {
+    var st = $("#shortcut-cand-status");
+    st.textContent = "Wird geprüft …";   // Registrierung vor Anzeige prüfen (§6.6)
+    st.className = "test-result";
+    setupTimers.push(window.setTimeout(function () {
+      if ($("#sim-shortcut-taken").checked) {
+        st.textContent = "✗ nicht verfügbar – bereits belegt";
+        st.className = "test-result test-fail";
+        $("#shortcut-alternatives").hidden = false;
+      } else {
+        st.textContent = "✓ verfügbar";
+        st.className = "test-result test-ok";
+        $("#shortcut-alternatives").hidden = true;
+      }
+    }, 500));
+  }
+
+  function initSetupView() {
+    clearSetupTimers();
+    ["#result-mic", "#result-sys"].forEach(function (sel) {
+      var el = $(sel); el.textContent = ""; el.className = "test-result";
+    });
+    $("#setup-mic-level").value = 0;
+    $("#setup-sys-level").value = 0;
+    hideAudioHint();
+    checkShortcut();
+  }
+
+  $("#btn-test-mic").addEventListener("click", runMicTest);
+  $("#btn-test-sys").addEventListener("click", runSysTest);
+  $("#btn-shortcut-check").addEventListener("click", checkShortcut);
+  document.querySelectorAll(".alt-pick").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("#shortcut-cand-key").textContent = b.textContent;
+      $("#shortcut-cand-status").textContent = b.textContent + " gewählt ✓";
+      $("#shortcut-cand-status").className = "test-result test-ok";
+      $("#shortcut-alternatives").hidden = true;
+      announce("Shortcut " + b.textContent + " gewählt.");
+    });
+  });
+
+  $("#btn-setup-finish").addEventListener("click", function () {
+    var chosen = document.querySelector('input[name="setup-provider"]:checked');
+    dlg.provider = chosen ? chosen.value : "lokal";
+    location.hash = "#/meetings";
+    openStartDialog();   // §6.6: nach Abschluss direkt in den kompakten Startdialog
+  });
+  $("#btn-setup-later").addEventListener("click", function () {
+    announce("Einrichtung übersprungen.");
+    location.hash = "#/meetings";
+  });
+
   /* ---------- Diktieren-Seite (§6.4) ---------- */
   $("#btn-dictat-testen").addEventListener("click", function () {
     var preview = $("#dict-preview");
@@ -405,6 +825,10 @@
     state.sessionActive = false; state.paused = false;
     state.seconds = 0;
     stopSegments();
+    resetDialogState();
+    dlgInitialized = true;   // Defaults sind gerade explizit hergestellt
+    ["#sim-no-mic", "#sim-mic-denied", "#sim-no-output", "#sim-shortcut-taken"]
+      .forEach(function (sel) { $(sel).checked = false; });
     location.hash = "#/diktieren";
     render();
     announce("Prototyp-Zustand zurückgesetzt.");

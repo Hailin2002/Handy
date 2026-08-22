@@ -119,6 +119,8 @@
 
       <div class="toolbar">
         <button type="button" class="btn btn-primary" id="btn-neues-meeting">+ Neues Meeting</button>
+        <a href="#/meeting-einrichtung" class="btn btn-ghost btn-small" id="btn-open-setup"
+           title="Meeting-Ersteinrichtung (Plan §6.6)">Ersteinrichtung</a>
         <label class="sr-only" for="meeting-search">Meetings durchsuchen</label>
         <input type="search" id="meeting-search" placeholder="Meetings durchsuchen …">
         <div class="filter-group" role="group" aria-label="Meeting-Filter">
@@ -136,6 +138,7 @@
         <h2>Noch keine Meetings</h2>
         <p>Nehme Besprechungen auf und erhalte automatisch Transkript und Zusammenfassung.</p>
         <button type="button" class="btn btn-primary btn-large" id="btn-neues-meeting-empty">Neues Meeting</button>
+        <a href="#/meeting-einrichtung" class="btn btn-ghost">Ersteinrichtung öffnen</a>
         <button type="button" class="btn btn-ghost" disabled title="In dieser Prototyp-Version nicht freigegeben">Audiodatei importieren</button>
         <p class="privacy-note">🔒 Datenschutzstatus: Standard lokal auf diesem Gerät.</p>
       </div>
@@ -254,6 +257,99 @@
       </ul>
     </section>
 
+    <!-- ========== Ansicht: Meeting-Ersteinrichtung (Plan §6.6) ========== -->
+    <section class="view" id="view-meeting-einrichtung" hidden>
+      <header class="view-header">
+        <h1>Meeting-Ersteinrichtung</h1>
+        <p class="subtitle">Erscheint nur beim ersten Öffnen von Meetings – drei kurze Schritte. Danach direkt in den kompakten Startdialog.</p>
+      </header>
+
+      <!-- Schritt 1: Verarbeitung wählen -->
+      <div class="card setup-step">
+        <h2 class="step-heading"><span class="step-num" aria-hidden="true">1</span> Verarbeitung wählen</h2>
+        <fieldset class="option-cards">
+          <legend class="sr-only">Verarbeitung wählen</legend>
+          <label class="option-card">
+            <input type="radio" name="setup-provider" value="lokal" checked>
+            <span class="option-body">
+              <strong>Lokal auf diesem Gerät</strong>
+              <span class="status-chip status-ready rec-badge">Empfehlung · datenschutzfreundlich</span>
+              <span class="muted small">Audio verlässt das Gerät nicht.</span>
+            </span>
+          </label>
+          <label class="option-card">
+            <input type="radio" name="setup-provider" value="azure">
+            <span class="option-body">
+              <strong>Azure Cloud</strong>
+              <span class="muted small">Audio wird für die Transkription hochgeladen. Benötigt einen Azure-Schlüssel.</span>
+            </span>
+          </label>
+        </fieldset>
+        <details class="more-options">
+          <summary>Weitere Optionen</summary>
+          <label class="option-card">
+            <input type="radio" name="setup-provider" value="custom">
+            <span class="option-body">
+              <strong>Custom</strong>
+              <span class="muted small">Eigener Provider mit Endpoint und Schlüssel.</span>
+            </span>
+          </label>
+        </details>
+        <p class="muted small">Die Auswahl kann später für jedes Meeting geändert werden.</p>
+      </div>
+
+      <!-- Schritt 2: Audio prüfen -->
+      <div class="card setup-step">
+        <h2 class="step-heading"><span class="step-num" aria-hidden="true">2</span> Audio prüfen</h2>
+        <div class="audio-test-row">
+          <span class="audio-test-label" id="lbl-test-mic">Mikrofon</span>
+          <meter id="setup-mic-level" min="0" max="100" value="0" aria-labelledby="lbl-test-mic"></meter>
+          <button type="button" class="btn btn-secondary btn-small" id="btn-test-mic">Mikrofon testen</button>
+          <span class="test-result" id="result-mic" role="status"></span>
+        </div>
+        <div class="audio-test-row">
+          <span class="audio-test-label" id="lbl-test-sys">Systemaudio</span>
+          <meter id="setup-sys-level" min="0" max="100" value="0" aria-labelledby="lbl-test-sys"></meter>
+          <button type="button" class="btn btn-secondary btn-small" id="btn-test-sys">Systemaudio testen</button>
+          <span class="test-result" id="result-sys" role="status"></span>
+        </div>
+        <p class="muted small">Der Systemtest spielt einen kurzen Testton über das ausgewählte Ausgabegerät und bestätigt, dass Loopback ihn empfängt.</p>
+        <div id="setup-audio-hints" class="hint-box" hidden></div>
+        <fieldset class="mock-fieldset">
+          <legend>Prototyp-Simulation (nur im Mock)</legend>
+          <label><input type="checkbox" id="sim-no-mic"> Mikrofon fehlt</label>
+          <label><input type="checkbox" id="sim-mic-denied"> Mikrofon-Berechtigung verweigert</label>
+          <label><input type="checkbox" id="sim-no-output"> Kein Ausgabegerät</label>
+        </fieldset>
+      </div>
+
+      <!-- Schritt 3: Meeting-Shortcut -->
+      <div class="card setup-step">
+        <h2 class="step-heading"><span class="step-num" aria-hidden="true">3</span> Meeting-Shortcut einrichten</h2>
+        <div class="setting-row-inline">
+          <span class="keycap" id="shortcut-cand-key">Ctrl + Alt + Space</span>
+          <span class="test-result" id="shortcut-cand-status" role="status">Wird geprüft …</span>
+          <button type="button" class="btn btn-neutral btn-small" id="btn-shortcut-check">Erneut prüfen</button>
+        </div>
+        <div id="shortcut-alternatives" hidden>
+          <p class="small">Der Kandidat ist auf diesem Gerät belegt. Konfliktfrei registrierbare Alternativen:</p>
+          <ul class="alt-shortcuts" role="list">
+            <li><button type="button" class="keycap alt-pick">Ctrl + Alt + M</button></li>
+            <li><button type="button" class="keycap alt-pick">Ctrl + Alt + 7</button></li>
+          </ul>
+        </div>
+        <p class="muted small">Kann übersprungen werden. Der Diktier-Shortcut (<span class="keycap">Ctrl + Space</span>) und AI-Diktat (<span class="keycap">Ctrl + Shift + Space</span>) bleiben unverändert.</p>
+        <label class="mock-fieldset" style="display:inline-flex">
+          <input type="checkbox" id="sim-shortcut-taken"> „Ctrl + Alt + Space“ als belegt simulieren
+        </label>
+      </div>
+
+      <div class="row-gap">
+        <button type="button" class="btn btn-primary btn-large" id="btn-setup-finish">Abschließen – zum Startdialog</button>
+        <button type="button" class="btn btn-ghost" id="btn-setup-later">Später</button>
+      </div>
+    </section>
+
     <!-- ========== Ansicht: Einstellungen (sekundäre Tabs, Plan §6.3) ========== -->
     <section class="view" id="view-einstellungen" hidden>
       <header class="view-header"><h1>Einstellungen</h1></header>
@@ -313,39 +409,53 @@
 <div class="modal-backdrop" id="start-dialog" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="start-title">
     <h2 id="start-title">Meeting starten</h2>
-    <!-- Gültiges Markup: Buttons innerhalb einer Liste statt dt/dd im Button -->
+    <!-- Vier Statuszeilen; jede komplett anklickbar und öffnet einen Mini-Picker,
+         der auf diese eine Entscheidung begrenzt ist (§6.7). -->
     <ul class="clickable-lines" role="list">
-      <li><button type="button" class="status-line-btn" title="Mikrofon wechseln">
+      <li><button type="button" class="status-line-btn" data-row="mic" id="row-mic"
+                  aria-expanded="false" title="Mikrofon wechseln">
         <span class="line-label">Mikrofon</span>
-        <span>Standardmikrofon <span class="ok">✓ funktioniert</span></span>
+        <span class="line-value" id="row-mic-value"></span>
       </button></li>
-      <li><button type="button" class="status-line-btn" title="Systemaudio wechseln">
+      <li><button type="button" class="status-line-btn" data-row="sys" id="row-sys"
+                  aria-expanded="false" title="Systemaudio wechseln">
         <span class="line-label">Systemaudio</span>
-        <span>Lautsprecher / Headset <span class="ok">✓ funktioniert</span></span>
+        <span class="line-value" id="row-sys-value"></span>
       </button></li>
-      <li><button type="button" class="status-line-btn" title="Verarbeitung wechseln">
+      <li><button type="button" class="status-line-btn" data-row="provider" id="row-provider"
+                  aria-expanded="false" title="Verarbeitung wechseln">
         <span class="line-label">Transkription</span>
-        <span>Lokal · Meeting-Modell <span class="muted">Auf diesem Gerät</span></span>
+        <span class="line-value" id="row-provider-value"></span>
       </button></li>
-      <li><button type="button" class="status-line-btn" title="Sprache wechseln">
+      <li><button type="button" class="status-line-btn" data-row="lang" id="row-lang"
+                  aria-expanded="false" title="Sprache wechseln">
         <span class="line-label">Sprache</span>
-        <span>Deutsch <span class="link-like">Ändern</span></span>
+        <span class="line-value" id="row-lang-value"></span>
       </button></li>
     </ul>
+
+    <!-- Aufgeschobener Mini-Picker für Statuszeilen (behält den Dialog-Zustand) -->
+    <div id="row-picker" class="picker-panel" role="group" aria-label="Auswahl" hidden></div>
+
     <form id="start-form">
       <label for="meeting-title-input">Titel <span class="muted">(optional)</span></label>
       <input type="text" id="meeting-title-input" placeholder="Meeting am …">
       <div class="chip-line">
         <span class="muted">Projekt:</span>
-        <button type="button" class="chip" id="project-chip">Kein Projekt</button>
+        <button type="button" class="chip chip-none" id="project-chip"
+                aria-expanded="false">Kein Projekt</button>
       </div>
+      <!-- Projekt-Mini-Picker -->
+      <div id="project-picker" class="picker-panel" role="group" aria-label="Projekt wählen" hidden></div>
       <div class="setting-row-inline">
         <input type="checkbox" id="summarize-toggle" checked>
         <label for="summarize-toggle">Nach dem Meeting zusammenfassen</label>
       </div>
-      <p class="privacy-note">💾 Speicherbedarf ca. 120 MB/Stunde · Standard: lokal auf diesem Gerät.</p>
+      <p class="privacy-note">💾 Speicherbedarf ca. 120&nbsp;MB/Stunde · Standard: lokal auf diesem Gerät.</p>
+      <!-- Grund, warum Start gerade deaktiviert ist (Gate G3) -->
+      <p class="start-blocker" id="start-blocker" role="status" hidden></p>
       <div class="row-between">
-        <button type="button" class="btn btn-ghost" onclick="closeStartDialog()">Weitere Einstellungen</button>
+        <button type="button" class="btn btn-ghost" id="btn-weitere-einstellungen">Weitere Einstellungen</button>
         <button type="submit" class="btn btn-primary btn-large" id="btn-meeting-starten">Meeting starten</button>
       </div>
     </form>

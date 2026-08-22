@@ -28,6 +28,8 @@ Primärnavigation gemäß Plan §6.3:
 | --- | --- |
 | **Diktieren** | Statuszeilen, Shortcut-Keycap, `Diktat testen` mit reiner Vorschau; bewusst kein Meeting-Startbutton (§6.4) |
 | **Meetings** | Leerer Zustand, Liste mit Suche/Filter, sichtbarem Drei-Punkte-Menü; aktives Meeting immer oben (§6.5) |
+| **Meeting-Ersteinrichtung** | Drei Schritte: Verarbeitung wählen (Lokal empfohlen, Azure mit Upload-Hinweis, Custom unter „Weitere Optionen“), Audio prüfen mit Livepegel-Mocks und Korrekturaktionen bei fehlendem Gerät/verweigerter Berechtigung, Meeting-Shortcut mit Verfügbarkeitsprüfung und konfliktfreien Alternativen (§6.6) |
+| **Kompakter Startdialog** | Vier komplett anklickbare Statuszeilen mit Mini-Pickern (eine Zeile = eine Entscheidung), Projektauswahl per Chip inkl. sichtbar unterschiedenem „Kein Projekt“, Summary-Schalter, Speicherhinweis, genau ein Primärbutton `Meeting starten` mit nachvollziehbarem Deaktivierungsgrund (§6.7) |
 | **Projekte** | Karten inkl. Eingang „Nicht zugeordnet“ mit Zähler-Badge (§6.16) |
 | **Diktatverlauf** | kurzer Verlauf mit Kopieren-Mock |
 | **Einstellungen** | eigene Seite mit sekundären Tabs: Diktieren · Meetings · Modelle & Provider · Allgemein · Erweitert |
@@ -38,11 +40,25 @@ angeheftete Eintrag **„Aufnahme läuft · 00:00:12“** mit rotem Statuspunkt
 
 ## Ablauf zum Ausprobieren
 
-1. `Meetings` → `Neues Meeting` öffnet den kompakten Startdialog (§6.7).
-2. `Meeting starten` wechselt zur Laufendansicht (§6.11) und aktiviert den Pin.
-3. `Meeting beenden` fragt erst nach (`Meeting wirklich beenden?`, §6.9), dann
+1. `Meetings` → `Ersteinrichtung` führt durch die Meeting-Ersteinrichtung
+   (§6.6); `Abschließen` landet direkt im kompakten Startdialog.
+2. `Meetings` → `Neues Meeting` öffnet den kompakten Startdialog (§6.7).
+3. `Meeting starten` wechselt zur Laufendansicht (§6.11) und aktiviert den Pin.
+4. `Meeting beenden` fragt erst nach (`Meeting wirklich beenden?`, §6.9), dann
    läuft die Verarbeitungs-Checkliste (§6.12).
-4. Der Pin verschwindet; das Meeting erscheint in der Liste als „In Verarbeitung“.
+5. Der Pin verschwindet; das Meeting erscheint in der Liste als „In Verarbeitung“.
+
+Im Startdialog ist jede Statuszeile (Mikrofon, Systemaudio, Transkription,
+Sprache) komplett anklickbar und öffnet einen Mini-Picker, der auf diese eine
+Entscheidung begrenzt ist – der Dialog-Zustand (Titel, Projekt, Schalter)
+bleibt erhalten. Fehlende Geräte oder ein fehlender Azure-Schlüssel lassen
+sich direkt im Picker beheben; solange etwas fehlt, ist `Meeting starten`
+deaktiviert und nennt den Grund (Gate G3).
+
+Der Startdialog merkt sich die letzte Konfiguration über mehrere Öffnungen
+(§6.7); nur der allererste Öffnungsvorgang und `Mock zurücksetzen` starten von
+den Defaults. Der Titel wird bei jedem Öffnen mit Datum und Uhrzeit
+vorbefüllt.
 
 ## Mock-Steuerung
 
@@ -51,7 +67,7 @@ Prototyp zurück.
 
 ## Verifizierung (in scope)
 
-`verify.html` ist ein In-Browser-Prüfharness für die Gates G1/G2: Er lädt
+`verify.html` ist ein In-Browser-Prüfharness für die Gates G1–G4: Er lädt
 `index.html` in einem iframe und schreibt `PASS`/`FAIL`-Zeilen ins DOM. Ohne
 Server ausführbar, z. B.:
 
@@ -64,7 +80,13 @@ Server ausführbar, z. B.:
 
 In der Ausgabe muss am Ende `RESULT: PASS` stehen. `verify.cjs` ist das
 äquivalente Playwright-Harness (`node prototype\meeting-mode\verify.cjs` aus dem
-Repo-Stamm; benötigt die Playwright-Chromium-Browser).
+Repo-Stamm; benötigt die Playwright-Chromium-Browser). Es findet die installierte
+Chromium-Version automatisch unter `%LOCALAPPDATA%\ms-playwright`. Falls
+Playwrights Pipe-Transport blockiert ist (EPERM), startet es selbst einen
+Chromium mit TCP-Debugport; mit `VERIFY_CDP_URL=http://127.0.0.1:9333` hängt es
+sich an einen extern gestarteten Chromium an. In restriktiven Sandboxes, in
+denen Chromium keine Kindprozesse/Crashpad starten darf, ist der Lauf mit
+erweiterten Prozessrechten auszuführen.
 
 ## Bewusste Nicht-Ziele (Scope dieses Blattes)
 

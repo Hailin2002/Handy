@@ -7,11 +7,27 @@ const fs = require("fs");
 const { chromium } = require(path.join(__dirname, "..", "..", "node_modules", "playwright"));
 
 const exeRoot = path.join(process.env.LOCALAPPDATA, "ms-playwright");
-const candidates = [
-  ["chromium_headless_shell-1234", "chrome-headless-shell-win64", "chrome-headless-shell.exe"],
-  ["chromium-1234", "chrome-win64", "chrome.exe"],
-].map((parts) => path.join(exeRoot, ...parts));
-const exe = candidates.find((p) => fs.existsSync(p) && fs.statSync(p).isFile());
+// Discover whatever build is actually installed instead of hardcoding a
+// version: concurrent `playwright install` runs prune old build dirs.
+function findExe() {
+  if (!fs.existsSync(exeRoot)) return null;
+  const dirs = fs.readdirSync(exeRoot)
+    .filter((d) => /^(chromium|chromium_headless_shell)-/.test(d))
+    .sort()
+    .reverse(); // newest build number first
+  const inner = [
+    ["chrome-headless-shell-win64", "chrome-headless-shell.exe"],
+    ["chrome-win64", "chrome.exe"],
+  ];
+  for (const d of dirs) {
+    for (const [sub, exe] of inner) {
+      const p = path.join(exeRoot, d, sub, exe);
+      if (fs.existsSync(p) && fs.statSync(p).isFile()) return p;
+    }
+  }
+  return null;
+}
+const exe = findExe();
 if (!exe) { console.error("No Chromium found under", exeRoot); process.exit(1); }
 console.log("Using browser:", exe);
 
@@ -176,6 +192,170 @@ async function launchBrowser() {
   await page.click("#btn-neues-meeting");
   await page.keyboard.press("Escape");
   check("Escape closes start dialog",
+        await page.evaluate(() => document.getElementById("start-dialog").hidden === true));
+
+  /* ===== task-0178 Blatt: §6.6 Ersteinrichtung + §6.7 Startdialog ===== */
+
+  // G4: setup screen navigable from prototype scaffold
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(100);
+  await page.click("#btn-open-setup");
+  await page.waitForTimeout(100);
+  check("G4 setup view reachable from Meetings scaffold",
+        await page.evaluate(() => {
+          const v = document.getElementById("view-meeting-einrichtung");
+          return v && !v.hidden && !!v.offsetParent;
+        }));
+  check("§6.6 provider default 'Lokal' preselected",
+        await page.evaluate(() =>
+          document.querySelector('input[name="setup-provider"][value="lokal"]').checked));
+  check("§6.6 Azure explains upload",
+        await page.evaluate(() =>
+          /hochgeladen/.test(document.querySelector("#view-meeting-einrichtung").textContent)));
+  check("§6.6 Custom sits under 'Weitere Optionen'",
+        await page.evaluate(() => {
+          const d = document.querySelector("#view-meeting-einrichtung details.more-options");
+          return !!d && !d.open &&
+            !!d.querySelector('input[name="setup-provider"][value="custom"]');
+        }));
+
+  // §6.6 audio test with live-level mocks
+  await page.click("#btn-test-mic");
+  const micRunning = await page.evaluate(() =>
+    Number(document.getElementById("setup-mic-level").value) > 0);
+  check("§6.6 mic test shows live level", micRunning);
+  await page.waitForTimeout(2400);
+  check("§6.6 mic test passes",
+        /funktioniert/.test(await page.textContent("#result-mic")));
+  await page.click("#btn-test-sys");
+  await page.waitForTimeout(2400);
+  check("§6.6 system test confirms loopback",
+        /Loopback empfängt/.test(await page.textContent("#result-sys")));
+
+  // §6.6 understandable correction action on missing device
+  await page.check("#sim-no-mic");
+  await page.click("#btn-test-mic");
+  check("§6.6 missing device yields fail status",
+        /Kein Mikrofon erkannt/.test(await page.textContent("#result-mic")));
+  check("§6.6 correction action offered",
+        await page.evaluate(() => {
+          const h = document.getElementById("setup-audio-hints");
+          return !h.hidden && !!h.querySelector("button[data-fix]");
+        }));
+  await page.uncheck("#sim-no-mic");
+
+  // §6.6 shortcut candidate availability
+  await page.waitForTimeout(700);
+  check("§6.6 shortcut candidate Ctrl+Alt+Space checked and available",
+        /verfügbar/.test(await page.textContent("#shortcut-cand-status")));
+  await page.check("#sim-shortcut-taken");
+  await page.click("#btn-shortcut-check");
+  await page.waitForTimeout(700);
+  check("§6.6 taken candidate offers conflict-free alternatives",
+        await page.evaluate(() =>
+          !document.getElementById("shortcut-alternatives").hidden &&
+          document.querySelectorAll(".alt-pick").length >= 2));
+  await page.uncheck("#sim-shortcut-taken");
+
+  // §6.6 finish lands directly in compact start dialog
+  await page.click("#btn-setup-finish");
+  await page.waitForTimeout(150);
+  check("§6.6 finish opens compact start dialog",
+        await page.evaluate(() => !document.getElementById("start-dialog").hidden));
+
+  // G1: all four status rows clickable, scoped picker, dialog state preserved
+  const titleBefore = await page.inputValue("#meeting-title-input");
+  const rows = ["mic", "sys", "provider", "lang"];
+  for (const row of rows) {
+    await page.click('#row-' + row);
+    await page.waitForTimeout(50);
+    const open = await page.evaluate(() =>
+      !document.getElementById("row-picker").hidden &&
+      document.querySelectorAll("#row-picker .picker-option").length > 0);
+    check(`G1 row '${row}' opens scoped picker`, open);
+    await page.click("#row-picker .picker-back");
+    await page.waitForTimeout(50);
+    check(`G1 row '${row}' picker closes back to dialog`,
+          await page.evaluate(() =>
+            document.getElementById("row-picker").hidden === true &&
+            !document.getElementById("start-dialog").hidden));
+  }
+  check("G1 dialog state preserved across pickers (title unchanged)",
+        (await page.inputValue("#meeting-title-input")) === titleBefore);
+
+  // Picker selection updates row without closing dialog state
+  await page.click("#row-mic");
+  await page.locator("#row-picker .picker-option", { hasText: "USB-Headset" }).click();
+  await page.waitForTimeout(50);
+  check("G1 picking a device updates its row live",
+        /USB-Headset/.test(await page.textContent("#row-mic-value")));
+  check("G1 dialog still open after pick",
+        await page.evaluate(() => !document.getElementById("start-dialog").hidden));
+
+  // G2: 'Kein Projekt' selectable and visibly distinct
+  await page.click("#project-chip");
+  await page.waitForTimeout(50);
+  check("G2 project picker opens from chip",
+        await page.evaluate(() => !document.getElementById("project-picker").hidden));
+  const noneOpt = page.locator("#project-picker .picker-none-opt");
+  check("G2 'Kein Projekt' option present and distinct (dashed)",
+        (await noneOpt.count()) === 1 &&
+        (await noneOpt.evaluate((el) => getComputedStyle(el).borderStyle)) === "dashed");
+  await page.locator("#project-picker .picker-option", { hasText: "BDNA Club" }).click();
+  check("G2 selecting a project reflects on chip",
+        (await page.textContent("#project-chip")).trim() === "BDNA Club");
+  // Picker bleibt nach einer Auswahl geöffnet (scoped Mini-Picker) – direkt
+  // „Kein Projekt“ wählen, ohne den Chip zu klicken (der würde ihn schließen).
+  await noneOpt.click();
+  await page.waitForTimeout(50);
+  check("G2 'Kein Projekt' selectable again, chip visibly unassigned",
+        (await page.textContent("#project-chip")).trim() === "Kein Projekt" &&
+        (await page.getAttribute("#project-chip", "class")).includes("chip-none"));
+
+  // G3: start disabled for mocked missing device
+  await page.click("#row-mic");
+  await page.getByRole("button", { name: /Simulation: Gerät entfernen/ }).click();
+  await page.waitForTimeout(50);
+  check("G3 start disabled while mic missing",
+        await page.evaluate(() => document.getElementById("btn-meeting-starten").disabled));
+  check("G3 blocker names the fix location",
+        await page.evaluate(() => {
+          const b = document.getElementById("start-blocker");
+          return !b.hidden && /Mikrofon/.test(b.textContent);
+        }));
+  check("G3 row shows attention state",
+        /Aufmerksamkeit/.test(await page.textContent("#row-mic-value")));
+  // fix inside the same picker without losing dialog
+  await page.getByRole("button", { name: /Simulation zurücksetzen|Standardmikrofon/ }).first().click();
+  await page.waitForTimeout(50);
+  check("G3 fixing device re-enables start, dialog intact",
+        await page.evaluate(() =>
+          !document.getElementById("btn-meeting-starten").disabled &&
+          !document.getElementById("start-dialog").hidden));
+
+  // G3: start disabled for cloud provider without key
+  await page.click("#row-provider");
+  await page.locator("#row-picker .picker-option", { hasText: "Azure Cloud" }).click();
+  await page.waitForTimeout(50);
+  check("G3 azure without key disables start",
+        await page.evaluate(() => document.getElementById("btn-meeting-starten").disabled));
+  await page.getByRole("button", { name: /Azure-Schlüssel hinzufügen/ }).click();
+  await page.waitForTimeout(50);
+  check("G3 adding key re-enables start",
+        await page.evaluate(() => !document.getElementById("btn-meeting-starten").disabled));
+  await page.getByRole("button", { name: /^Lokal auf diesem Gerät/ }).click();
+
+  // Escape first closes only the picker; second press closes the dialog
+  await page.click("#row-lang");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(50);
+  check("Escape closes picker but keeps dialog open",
+        await page.evaluate(() =>
+          document.getElementById("row-picker").hidden === true &&
+          !document.getElementById("start-dialog").hidden));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(50);
+  check("second Escape closes dialog",
         await page.evaluate(() => document.getElementById("start-dialog").hidden === true));
 
   console.log(results.map(([s, n]) => `${s}  ${n}`).join("\n"));
