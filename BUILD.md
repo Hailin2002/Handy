@@ -258,6 +258,118 @@ Artifacts then land in `C:\h\release\...` instead of the repo's
 it is only picked up by freshly started processes. Then `bun run tauri dev`
 and `bun run tauri build` work normally.
 
+On top of that workaround, this repository additionally enforces a
+**serial** native build — see
+[Windows native build fails silently inside MSBuild](#windows-native-build-fails-silently-inside-msbuild-transcribe-cpp-sys-serial-build-enforced)
+below, which also covers the `VULKAN_SDK` requirement for non-inherited
+shells.
+
+### Windows native build fails silently inside MSBuild (`transcribe-cpp-sys`, serial build enforced)
+
+Independently of the path-limit errors above, on some Windows machines the
+cmake-driven native build of `transcribe-cpp-sys` (the Whisper/ggml tree,
+including its nested `ggml`/Vulkan sub-builds) aborts with exit code 1 and
+**no visible compiler error** as soon as MSBuild worker parallelism is
+involved. A differential measurement against the same CMake build directory
+showed:
+
+| Invocation | Result |
+| --- | --- |
+| `cmake --build <dir> --target install --config Release` (serial) | succeeds, exit 0 |
+| same command plus `--parallel 20` (what the build script issues by default) | fails, exit 1, right after `Checking File Globs`, zero diagnostics |
+
+Two independent stressors were confirmed on this machine via an MSBuild
+diagnostic log (`/v:diag /flp /m:2`):
+
+1. **MSBuild worker nodes (`/m`) fail silently** — even `/m:1`. The nested
+   `GetNativeManifest` sub-builds of the ggml tree end with exit 1 and no
+   diagnostic output whenever worker parallelism is enabled; the identical
+   tree builds serially.
+2. **FileTracker `MAX_PATH` overflow** — Windows' `LongPathsEnabled`
+   registry flag is ignored by MSBuild's FileTracker for `.tlog`
+   full-path computation (`FTK1011`), and the Vulkan `ExternalProject`
+   try-compile scratch dirs under Cargo's deep `OUT_DIR` exceed the classic
+   260-character limit.
+
+#### What this repository does about it
+
+Because Cargo always overwrites the build script's `NUM_JOBS` with its own
+job count ([rust-lang/cargo#9972](https://github.com/rust-lang/cargo/issues/9972))
+and upstream `cmake-rs` 0.1.x has no knob for it, the enforced serial build
+is implemented with two committed config changes:
+
+1. **Vendored `cmake-rs` 0.1.57** lives at [`vendor/cmake`](vendor/cmake)
+   (with `src/lib.rs` marked `LOCAL PATCH (Speak)`). It honors
+   `CMAKE_BUILD_PARALLEL_LEVEL` ahead of `NUM_JOBS` when passing
+   `--parallel <N>` to `cmake --build`, and additionally relocates long
+   Windows build directories (>120 chars) behind a short NTFS junction in
+   `%TEMP%\cmake-rs-short-build\<hash>` to defuse the FileTracker
+   `MAX_PATH` issue. It is wired up via the `[patch.crates-io]` table in
+   [`src-tauri/Cargo.toml`](src-tauri/Cargo.toml) (~line 194):
+   `cmake = { path = "../vendor/cmake" }`.
+2. **Pinned parallelism** via the `[env]` table in
+   [`.cargo/config.toml`](.cargo/config.toml) (line 11):
+   `CMAKE_BUILD_PARALLEL_LEVEL = "1"`, so every `cargo` invocation from the
+   repository root builds the native tree deterministically serially.
+
+Both files carry comments explaining the rationale; raise the value only
+after re-verifying MSBuild parallelism works on your machine.
+
+**Tradeoff:** the native `transcribe-cpp-sys` compilation is single-threaded,
+which makes it noticeably slower than an out-of-the-box parallel build. This
+is deliberate: a slow-but-reliable build was preferred over a fast one that
+fails without diagnostics on affected machines. Machines where MSBuild
+parallelism works can set `CMAKE_BUILD_PARALLEL_LEVEL` to their core count
+in `.cargo/config.toml`.
+
+#### Requirements for the native build
+
+- **CMake** must be on `PATH` (see Prerequisites above).
+- **Vulkan SDK**: a fresh CMake configure pass needs `VULKAN_SDK` (or
+  `glslc`) in the environment or `FindVulkan` fails with
+  `Could NOT find Vulkan`. Normally installed user shells inherit the
+  machine-wide `VULKAN_SDK` variable set by the SDK installer. Restricted
+  shells that do **not** inherit machine environment variables (CI steps,
+  sandboxed harnesses, custom service accounts) must set it explicitly,
+  e.g.:
+  ```powershell
+  $env:VULKAN_SDK = 'C:\VulkanSDK\1.4.357.0'   # adjust to your SDK version
+  $env:PATH    = "$env:VULKAN_SDK\Bin;$env:PATH"
+  ```
+- **Junction write access**: `transcribe-cpp-sys` creates its own short-path
+  junction under `%LOCALAPPDATA%\tcs\<hash>`, and the vendored cmake-rs
+  creates `%TEMP%\cmake-rs-short-build\<hash>` junctions. If either is
+  blocked by permissions/policy you'll see a corresponding
+  `cargo:warning=... could not create short build junction ...`; the build
+  then continues through the deep `OUT_DIR` and can hit the `MAX_PATH`
+  errors described above.
+
+#### Verifying your setup
+
+From the repository root, a plain:
+
+```powershell
+cargo test --manifest-path src-tauri/Cargo.toml
+```
+
+picks up `.cargo/config.toml` automatically (Cargo discovers `.cargo/`
+config files by walking up from the **current working directory**, so run
+this from the repository root). On the reference machine this
+was verified green after the fix: **208 tests passed** in `speak_app_lib`
+plus **12 tests** in `meeting_loopback_spike`, 0 failures;
+`cargo clippy --all-targets` passed with 0 warnings; `cargo fmt --check`
+passed. The raw verification logs are recorded in
+[`docs/meeting-mode-phase0-baseline.md` section 2.3](docs/meeting-mode-phase0-baseline.md)
+(log paths `src-tauri/target/baseline-tools/logs/11-cargo-test-serial-fix.log`
+and `13-`/`14-cargo-clippy-final.log`; the `target/` directory itself is not
+committed).
+
+If `cargo test` still fails with the silent-exit pattern, first confirm no
+environment variable overrides `CMAKE_BUILD_PARALLEL_LEVEL`
+(`Get-ChildItem Env:CMAKE_BUILD_PARALLEL_LEVEL` should print the value from
+`.cargo/config.toml` unless you deliberately changed it), then re-run with
+`cargo test -vv` to capture the cmake output for a bug report.
+
 ### Windows `tauri build` fails at bundling with `program not found`
 
 If the build compiles all the way to `Built application at: ...\handy.exe` and
