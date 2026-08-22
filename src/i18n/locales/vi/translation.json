@@ -719,6 +719,8 @@
     "open": "Mở",
     "copy": "Sao chép",
     "clear": "Xóa",
+    "moreInformation": "Thông tin thêm",
+    "reset": "Đặt lại",
     "noOptionsFound": "Không tìm thấy tùy chọn"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "Đang chuyển đổi...",
-    "processing": "Đang xử lý..."
+    "processing": "Đang xử lý...",
+    "cancel": "Hủy"
   },
   "whatsNew": {
     "title": "Điểm mới trong Handy v{{version}}"

@@ -719,6 +719,8 @@
     "open": "열기",
     "copy": "복사",
     "clear": "지우기",
+    "moreInformation": "자세한 정보",
+    "reset": "재설정",
     "noOptionsFound": "옵션을 찾을 수 없습니다"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "텍스트로 변환 중...",
-    "processing": "처리 중..."
+    "processing": "처리 중...",
+    "cancel": "취소"
   },
   "whatsNew": {
     "title": "Handy v{{version}}의 새 소식"

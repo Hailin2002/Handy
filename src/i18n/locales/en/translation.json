@@ -722,6 +722,8 @@
     "open": "Open",
     "copy": "Copy",
     "clear": "Clear",
+    "reset": "Reset",
+    "moreInformation": "More information",
     "noOptionsFound": "No options found"
   },
   "accessibility": {
@@ -761,7 +763,8 @@
   },
   "overlay": {
     "transcribing": "Transcribing...",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "cancel": "Cancel"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} may be blocking 1 shortcut",

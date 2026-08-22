@@ -719,6 +719,8 @@
     "open": "Отваряне",
     "copy": "Копиране",
     "clear": "Изчистване",
+    "moreInformation": "Повече информация",
+    "reset": "Нулиране",
     "noOptionsFound": "Няма намерени опции"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "Транскрибиране...",
-    "processing": "Обработка..."
+    "processing": "Обработка...",
+    "cancel": "Отказ"
   },
   "whatsNew": {
     "title": "Ново в Handy v{{version}}"

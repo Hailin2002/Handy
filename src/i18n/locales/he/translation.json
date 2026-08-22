@@ -719,6 +719,8 @@
     "open": "פתח",
     "copy": "העתק",
     "clear": "נקה",
+    "moreInformation": "מידע נוסף",
+    "reset": "איפוס",
     "noOptionsFound": "לא נמצאו אפשרויות"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "מתמלל...",
-    "processing": "מעבד..."
+    "processing": "מעבד...",
+    "cancel": "ביטול"
   },
   "whatsNew": {
     "title": "חדש ב-Handy v{{version}}"

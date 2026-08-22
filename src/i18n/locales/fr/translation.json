@@ -719,6 +719,8 @@
     "open": "Ouvrir",
     "copy": "Copier",
     "clear": "Effacer",
+    "moreInformation": "Plus d'informations",
+    "reset": "Réinitialiser",
     "noOptionsFound": "Aucune option trouvée"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "Transcription...",
-    "processing": "Traitement..."
+    "processing": "Traitement...",
+    "cancel": "Annuler"
   },
   "whatsNew": {
     "title": "Nouveautés de Handy v{{version}}"

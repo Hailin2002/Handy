@@ -722,6 +722,8 @@
     "open": "Åbn",
     "copy": "Kopiér",
     "clear": "Ryd",
+    "moreInformation": "Mere information",
+    "reset": "Nulstil",
     "noOptionsFound": "Ingen muligheder fundet"
   },
   "accessibility": {
@@ -761,7 +763,8 @@
   },
   "overlay": {
     "transcribing": "Transskriberer...",
-    "processing": "Behandler..."
+    "processing": "Behandler...",
+    "cancel": "Annuller"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokerer muligvis 1 genvej",

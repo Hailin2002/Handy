@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { IconButton } from "./IconButton";
 import { Tooltip } from "./Tooltip";
 
 interface SettingContainerProps {
@@ -24,6 +26,8 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
+  const infoLabel = t("common.moreInformation");
 
   // Handle click outside to close tooltip
   useEffect(() => {
@@ -66,30 +70,27 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
               className="relative"
               onMouseEnter={() => setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}
-              onClick={toggleTooltip}
             >
-              <svg
-                className="w-4 h-4 text-mid-gray cursor-help hover:text-logo-primary transition-colors duration-200 select-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-label="More information"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleTooltip();
-                  }
-                }}
+              <IconButton
+                aria-label={infoLabel}
+                onClick={toggleTooltip}
+                className="text-mid-gray hover:bg-transparent hover:text-logo-primary"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+                <svg
+                  className="w-4 h-4 select-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </IconButton>
               {showTooltip && (
                 <Tooltip targetRef={tooltipRef} position="top">
                   <p className="text-sm text-center leading-relaxed">
@@ -139,30 +140,27 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
               className="relative"
               onMouseEnter={() => setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}
-              onClick={toggleTooltip}
             >
-              <svg
-                className="w-4 h-4 text-mid-gray cursor-help hover:text-logo-primary transition-colors duration-200 select-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-label="More information"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleTooltip();
-                  }
-                }}
+              <IconButton
+                aria-label={infoLabel}
+                onClick={toggleTooltip}
+                className="text-mid-gray hover:bg-transparent hover:text-logo-primary"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+                <svg
+                  className="w-4 h-4 select-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </IconButton>
               {showTooltip && (
                 <Tooltip targetRef={tooltipRef} position={tooltipPosition}>
                   <p className="text-sm text-center leading-relaxed">

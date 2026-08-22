@@ -719,6 +719,8 @@
     "open": "Otevřít",
     "copy": "Kopírovat",
     "clear": "Vymazat",
+    "moreInformation": "Více informací",
+    "reset": "Resetovat",
     "noOptionsFound": "Nenalezeny žádné možnosti"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "Přepisuji...",
-    "processing": "Zpracovávám..."
+    "processing": "Zpracovávám...",
+    "cancel": "Zrušit"
   },
   "whatsNew": {
     "title": "Novinky v Handy v{{version}}"

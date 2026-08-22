@@ -722,6 +722,8 @@
     "open": "खोलें",
     "copy": "कॉपी करें",
     "clear": "मिटाएं",
+    "moreInformation": "अधिक जानकारी",
+    "reset": "रीसेट करें",
     "noOptionsFound": "कोई विकल्प नहीं मिला"
   },
   "accessibility": {
@@ -761,7 +763,8 @@
   },
   "overlay": {
     "transcribing": "ट्रांसक्राइब हो रहा है...",
-    "processing": "प्रोसेस हो रहा है..."
+    "processing": "प्रोसेस हो रहा है...",
+    "cancel": "रद्द करें"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} शायद 1 शॉर्टकट को ब्लॉक कर रहा है",

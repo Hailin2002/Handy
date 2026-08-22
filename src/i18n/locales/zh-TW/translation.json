@@ -719,6 +719,8 @@
     "open": "開啟",
     "copy": "複製",
     "clear": "清除",
+    "moreInformation": "更多資訊",
+    "reset": "重設",
     "noOptionsFound": "未找到選項"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "正在轉錄...",
-    "processing": "處理中..."
+    "processing": "處理中...",
+    "cancel": "取消"
   },
   "whatsNew": {
     "title": "Handy v{{version}} 新功能"

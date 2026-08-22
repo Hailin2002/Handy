@@ -722,6 +722,8 @@
     "open": "खोल्नुहोस्",
     "copy": "कपी गर्नुहोस्",
     "clear": "खाली गर्नुहोस्",
+    "moreInformation": "थप जानकारी",
+    "reset": "रिसेट",
     "noOptionsFound": "कुनै विकल्प भेटिएन"
   },
   "accessibility": {
@@ -761,7 +763,8 @@
   },
   "overlay": {
     "transcribing": "ट्रान्सक्राइब गरिँदैछ...",
-    "processing": "प्रशोधन गरिँदैछ..."
+    "processing": "प्रशोधन गरिँदैछ...",
+    "cancel": "रद्द गर्नुहोस्"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} ले 1 सर्टकट रोकिरहेको हुन सक्छ",

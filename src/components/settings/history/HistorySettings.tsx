@@ -14,27 +14,7 @@ import { useOsType } from "@/hooks/useOsType";
 import { formatDateTime } from "@/utils/dateFormat";
 import { AudioPlayer, AudioPlayerGroup } from "../../ui/AudioPlayer";
 import { Button } from "../../ui/Button";
-
-const IconButton: React.FC<{
-  onClick: () => void;
-  title: string;
-  disabled?: boolean;
-  active?: boolean;
-  children: React.ReactNode;
-}> = ({ onClick, title, disabled, active, children }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`p-1.5 rounded-md flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed disabled:text-text/20 ${
-      active
-        ? "text-logo-primary hover:text-logo-primary/80"
-        : "text-text/50 hover:text-logo-primary"
-    }`}
-    title={title}
-  >
-    {children}
-  </button>
-);
+import { IconButton } from "../../ui/IconButton";
 
 const PAGE_SIZE = 30;
 
@@ -363,6 +343,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
           <IconButton
             onClick={handleCopyText}
             disabled={!hasTranscription || retrying}
+            aria-label={t("settings.history.copyToClipboard")}
             title={t("settings.history.copyToClipboard")}
           >
             {showCopied ? (
@@ -375,6 +356,11 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
             onClick={onToggleSaved}
             disabled={retrying}
             active={entry.saved}
+            aria-label={
+              entry.saved
+                ? t("settings.history.unsave")
+                : t("settings.history.save")
+            }
             title={
               entry.saved
                 ? t("settings.history.unsave")
@@ -390,6 +376,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
           <IconButton
             onClick={handleRetranscribe}
             disabled={retrying}
+            aria-label={t("settings.history.retranscribe")}
             title={t("settings.history.retranscribe")}
           >
             <RotateCcw
@@ -405,6 +392,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
           <IconButton
             onClick={handleDeleteEntry}
             disabled={retrying}
+            aria-label={t("settings.history.delete")}
             title={t("settings.history.delete")}
           >
             <Trash2 width={16} height={16} />

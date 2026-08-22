@@ -719,6 +719,8 @@
     "open": "Öppna",
     "copy": "Kopiera",
     "clear": "Rensa",
+    "moreInformation": "Mer information",
+    "reset": "Återställ",
     "noOptionsFound": "Inga alternativ hittades"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "Transkriberar...",
-    "processing": "Bearbetar..."
+    "processing": "Bearbetar...",
+    "cancel": "Avbryt"
   },
   "whatsNew": {
     "title": "Nytt i Handy v{{version}}"

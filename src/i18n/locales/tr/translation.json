@@ -719,6 +719,8 @@
     "open": "Aç",
     "copy": "Kopyala",
     "clear": "Temizle",
+    "moreInformation": "Daha fazla bilgi",
+    "reset": "Sıfırla",
     "noOptionsFound": "Seçenek bulunamadı"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "Transkribe ediliyor...",
-    "processing": "İşleniyor..."
+    "processing": "İşleniyor...",
+    "cancel": "İptal"
   },
   "whatsNew": {
     "title": "Handy v{{version}} yenilikleri"

@@ -719,6 +719,8 @@
     "open": "開く",
     "copy": "コピー",
     "clear": "クリア",
+    "moreInformation": "詳細情報",
+    "reset": "リセット",
     "noOptionsFound": "オプションが見つかりません"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "文字起こし中…",
-    "processing": "処理中…"
+    "processing": "処理中…",
+    "cancel": "キャンセル"
   },
   "whatsNew": {
     "title": "Handy v{{version}} の新機能"

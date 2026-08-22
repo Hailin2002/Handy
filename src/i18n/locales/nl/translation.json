@@ -722,6 +722,8 @@
     "open": "Openen",
     "copy": "Kopiëren",
     "clear": "Wissen",
+    "moreInformation": "Meer informatie",
+    "reset": "Opnieuw instellen",
     "noOptionsFound": "Geen opties gevonden"
   },
   "accessibility": {
@@ -761,7 +763,8 @@
   },
   "overlay": {
     "transcribing": "Transcriberen...",
-    "processing": "Verwerken..."
+    "processing": "Verwerken...",
+    "cancel": "Annuleren"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokkeert mogelijk 1 sneltoets",

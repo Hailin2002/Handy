@@ -719,6 +719,8 @@
     "open": "Öffnen",
     "copy": "Kopieren",
     "clear": "Leeren",
+    "moreInformation": "Mehr Informationen",
+    "reset": "Zurücksetzen",
     "noOptionsFound": "Keine Optionen gefunden"
   },
   "accessibility": {
@@ -758,7 +760,8 @@
   },
   "overlay": {
     "transcribing": "Transkribiere...",
-    "processing": "Verarbeite..."
+    "processing": "Verarbeite...",
+    "cancel": "Abbrechen"
   },
   "whatsNew": {
     "title": "Neu in Handy v{{version}}"
