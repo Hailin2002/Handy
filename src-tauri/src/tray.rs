@@ -8,8 +8,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::image::Image;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::tray::TrayIcon;
-use tauri::{AppHandle, Manager, Theme};
+use tauri::tray::{TrayIcon, TrayIconBuilder};
+use tauri::{AppHandle, Emitter, Manager, Theme};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -339,6 +339,126 @@ fn last_transcript_text(entry: &HistoryEntry) -> &str {
         .post_processed_text
         .as_deref()
         .unwrap_or(&entry.transcription_text)
+}
+
+/// Builds the tray icon, registers the menu event handler (including the
+/// model-switching business logic), and manages the resulting [`TrayIcon`].
+///
+/// Returns a configured-but-hidden tray when `visible` is `false`; callers
+/// apply `--no-tray` / the `show_tray_icon` setting via
+/// [`set_tray_visibility`] afterwards. Errors are returned instead of
+/// unwrapped so a tray failure degrades to a logged error rather than
+/// aborting startup.
+pub fn init_tray(app: &AppHandle) -> tauri::Result<()> {
+    let initial_theme = get_current_theme(app);
+
+    // Choose the appropriate initial icon based on theme
+    let initial_icon_path = get_icon_path(initial_theme, TrayIconState::Idle, false);
+
+    let mut tray_builder = TrayIconBuilder::new()
+        .icon(Image::from_path(app.path().resolve(
+            initial_icon_path,
+            tauri::path::BaseDirectory::Resource,
+        )?)?)
+        .tooltip(tray_tooltip())
+        .icon_as_template(true);
+
+    // Windows notification-area convention: left click opens the app, right click
+    // shows the menu. Elsewhere (macOS menu bar, Linux) the menu stays on left click.
+    #[cfg(target_os = "windows")]
+    {
+        tray_builder = tray_builder
+            .show_menu_on_left_click(false)
+            .on_tray_icon_event(|tray, event| {
+                use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
+                let opens_window = matches!(
+                    event,
+                    TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } | TrayIconEvent::DoubleClick {
+                        button: MouseButton::Left,
+                        ..
+                    }
+                );
+                if opens_window {
+                    crate::utils::show_main_window(tray.app_handle());
+                }
+            });
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        tray_builder = tray_builder.show_menu_on_left_click(true);
+    }
+
+    let tray = tray_builder
+        .on_menu_event(|app, event| handle_menu_event(app, event.id.as_ref()))
+        .build(app)?;
+    app.manage(tray);
+    Ok(())
+}
+
+fn handle_menu_event(app: &AppHandle, id: &str) {
+    match id {
+        "settings" => {
+            crate::utils::show_main_window(app);
+        }
+        "secure_input_warning" => {
+            // Full explanation lives in the settings-window banner
+            crate::utils::show_main_window(app);
+        }
+        "check_updates" => {
+            let settings = settings::get_settings(app);
+            if settings.update_checks_enabled {
+                crate::utils::show_main_window(app);
+                let _ = app.emit("check-for-updates", ());
+            }
+        }
+        "copy_last_transcript" => {
+            copy_last_transcript(app);
+        }
+        "unload_model" => {
+            let transcription_manager = app.state::<Arc<TranscriptionManager>>();
+            if !transcription_manager.is_model_loaded() {
+                log::warn!("No model is currently loaded.");
+                return;
+            }
+            match transcription_manager.unload_model() {
+                Ok(()) => log::info!("Model unloaded via tray."),
+                Err(e) => log::error!("Failed to unload model via tray: {}", e),
+            }
+        }
+        "cancel" => {
+            use crate::utils::cancel_current_operation;
+
+            // Use centralized cancellation that handles all operations
+            cancel_current_operation(app);
+        }
+        "quit" => {
+            app.exit(0);
+        }
+        id if id.starts_with("model_select:") => {
+            let model_id = id.strip_prefix("model_select:").unwrap().to_string();
+            let current_model = settings::get_settings(app).selected_model;
+            if model_id == current_model {
+                return;
+            }
+            let app_clone = app.clone();
+            std::thread::spawn(move || {
+                match crate::commands::models::switch_active_model(&app_clone, &model_id) {
+                    Ok(()) => {
+                        log::info!("Model switched to {} via tray.", model_id);
+                    }
+                    Err(e) => {
+                        log::error!("Failed to switch model via tray: {}", e);
+                    }
+                }
+                update_tray_menu(&app_clone, None);
+            });
+        }
+        _ => {}
+    }
 }
 
 pub fn set_tray_visibility(app: &AppHandle, visible: bool) {

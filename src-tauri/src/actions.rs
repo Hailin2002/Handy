@@ -7,7 +7,9 @@ use crate::managers::history::HistoryManager;
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::StreamWorkKind;
 use crate::managers::transcription::TranscriptionManager;
-use crate::settings::{get_settings, AppSettings, OverlayStyle, APPLE_INTELLIGENCE_PROVIDER_ID};
+use crate::settings::{
+    get_settings, AppSettings, OverlayStyle, SpeechInputProvider, APPLE_INTELLIGENCE_PROVIDER_ID,
+};
 use crate::shortcut;
 use crate::tray::{change_tray_icon, TrayIconState};
 use crate::utils::{
@@ -179,11 +181,9 @@ async fn post_process_transcription(settings: &AppSettings, transcription: &str)
         provider.id, model
     );
 
-    let api_key = settings
-        .post_process_api_keys
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
+    let api_key =
+        crate::secret_store::get_secret(crate::secret_store::POST_PROCESS_SCOPE, &provider.id)
+            .unwrap_or_default();
 
     // Ask these providers to skip reasoning/thinking — post-processing rarely
     // benefits from it and it adds seconds of latency. llm_client picks the
@@ -424,6 +424,15 @@ pub(crate) async fn process_transcription_output(
     transcription: &str,
     post_process: bool,
 ) -> ProcessedTranscription {
+    process_transcription_output_with_translation(app, transcription, post_process, None).await
+}
+
+pub(crate) async fn process_transcription_output_with_translation(
+    app: &AppHandle,
+    transcription: &str,
+    post_process: bool,
+    live_translation: Option<String>,
+) -> ProcessedTranscription {
     let settings = get_settings(app);
     let mut final_text = transcription.to_string();
     let mut post_processed_text: Option<String> = None;
@@ -437,6 +446,26 @@ pub(crate) async fn process_transcription_output(
         maybe_convert_chinese_variant(&effective_language, transcription).await
     {
         final_text = converted_text;
+    }
+
+    if let Some(translated) = live_translation.filter(|text| !text.trim().is_empty()) {
+        post_processed_text = Some(translated.clone());
+        final_text = translated;
+    } else {
+        match crate::speech_pipeline::maybe_translate_with_deepl(&final_text, &settings).await {
+            Ok(Some(translated)) => {
+                post_processed_text = Some(translated.clone());
+                final_text = translated;
+            }
+            Ok(None) => {}
+            Err(err) => {
+                warn!("DeepL translation failed; using the source transcript: {err}");
+                let _ = app.emit(
+                    "transcription-error",
+                    format!("DeepL translation failed: {err}"),
+                );
+            }
+        }
     }
 
     if post_process {
@@ -454,7 +483,7 @@ pub(crate) async fn process_transcription_output(
                 }
             }
         }
-    } else if final_text != transcription {
+    } else if post_processed_text.is_none() && final_text != transcription {
         post_processed_text = Some(final_text.clone());
     }
 
@@ -473,10 +502,14 @@ impl ShortcutAction for TranscribeAction {
         // Load model in the background
         let tm = app.state::<Arc<TranscriptionManager>>();
         let rm = app.state::<Arc<AudioRecordingManager>>();
+        let azure_stream = app.state::<Arc<crate::speech_pipeline::AzureSpeechStreamManager>>();
+        let settings = get_settings(app);
 
         // Load ASR model and VAD model in parallel
         let kickoff_started = Instant::now();
-        tm.initiate_model_load();
+        if settings.speech_input_provider == SpeechInputProvider::Local {
+            tm.initiate_model_load();
+        }
         let rm_clone = Arc::clone(&rm);
         std::thread::spawn(move || {
             if let Err(e) = rm_clone.preload_vad() {
@@ -492,12 +525,14 @@ impl ShortcutAction for TranscribeAction {
 
         // Get the microphone mode to determine audio feedback timing
         let plan_started = Instant::now();
-        let settings = get_settings(app);
         let is_always_on = settings.always_on_microphone;
 
-        let selected_model_info = app
-            .state::<Arc<ModelManager>>()
-            .get_model_info(&settings.selected_model);
+        let selected_model_info = if settings.speech_input_provider == SpeechInputProvider::Local {
+            app.state::<Arc<ModelManager>>()
+                .get_model_info(&settings.selected_model)
+        } else {
+            None
+        };
 
         // Use the app-facing model capability as the single pre-recording source
         // for live streaming decisions. Unknown support is represented as false
@@ -506,7 +541,14 @@ impl ShortcutAction for TranscribeAction {
             .as_ref()
             .map(|m| m.supports_streaming)
             .unwrap_or(false);
+        let azure_supports_streaming = settings.speech_input_provider == SpeechInputProvider::Azure;
+        let supports_live_stream = model_supports_streaming || azure_supports_streaming;
         let vad_policy = if !settings.vad_enabled {
+            VadPolicy::Disabled
+        } else if azure_supports_streaming {
+            // Azure performs its own endpointing. Preserve real silence so the
+            // service can finalize phrases reliably instead of concatenating
+            // VAD-filtered speech into one artificial utterance.
             VadPolicy::Disabled
         } else if model_supports_streaming {
             VadPolicy::Streaming
@@ -523,7 +565,7 @@ impl ShortcutAction for TranscribeAction {
         // pill instead of an oversized transparent live window.
         let overlay_started = Instant::now();
         match settings.overlay_style {
-            OverlayStyle::Live if model_supports_streaming => utils::show_streaming_overlay(app),
+            OverlayStyle::Live if supports_live_stream => utils::show_streaming_overlay(app),
             OverlayStyle::Live | OverlayStyle::Minimal => show_recording_overlay(app),
             OverlayStyle::None => {} // show_overlay_state no-ops on None anyway
         }
@@ -538,10 +580,22 @@ impl ShortcutAction for TranscribeAction {
         );
         debug!("Microphone mode - always_on: {}", is_always_on);
 
-        let mut recording_error: Option<String> = None;
+        let mut recording_error: Option<String> = if azure_supports_streaming {
+            azure_stream
+                .start(&settings)
+                .err()
+                .map(|error| error.to_string())
+        } else {
+            None
+        };
         let recording_start_time = Instant::now();
-        match rm.try_start_recording(&binding_id, vad_policy) {
-            Ok(readiness) => {
+        let recording_start = if recording_error.is_none() {
+            Some(rm.try_start_recording(&binding_id, vad_policy))
+        } else {
+            None
+        };
+        match recording_start {
+            Some(Ok(readiness)) => {
                 debug!(
                     "Recording request accepted in {:?}; waiting for first microphone samples",
                     recording_start_time.elapsed()
@@ -590,10 +644,11 @@ impl ShortcutAction for TranscribeAction {
                     }
                 });
             }
-            Err(e) => {
+            Some(Err(e)) => {
                 debug!("Failed to start recording: {}", e);
                 recording_error = Some(e);
             }
+            None => {}
         }
 
         if recording_error.is_none() {
@@ -603,6 +658,7 @@ impl ShortcutAction for TranscribeAction {
             // Starting failed (for example due to blocked microphone permissions).
             // Revert UI state so we don't stay stuck in the recording overlay.
             tm.cancel_stream();
+            azure_stream.cancel();
             utils::hide_recording_overlay(app);
             change_tray_icon(app, TrayIconState::Idle);
             if let Some(err) = recording_error {
@@ -644,6 +700,8 @@ impl ShortcutAction for TranscribeAction {
         let ah = app.clone();
         let rm = Arc::clone(&app.state::<Arc<AudioRecordingManager>>());
         let tm = Arc::clone(&app.state::<Arc<TranscriptionManager>>());
+        let azure_stream =
+            Arc::clone(&app.state::<Arc<crate::speech_pipeline::AzureSpeechStreamManager>>());
         let hm = Arc::clone(&app.state::<Arc<HistoryManager>>());
 
         change_tray_icon(app, TrayIconState::Transcribing);
@@ -651,10 +709,12 @@ impl ShortcutAction for TranscribeAction {
         // the larger panel, but it still switches from listening to a working
         // spinner while the stream finalizes. Non-streaming paths use the
         // compact transcribing pill (None no-ops in show_*).
-        let style = get_settings(app).overlay_style;
+        let settings = get_settings(app);
+        let style = settings.overlay_style;
         // Capture this before finalizing the stream so every later working state
         // targets the same overlay that was shown for this transcription.
-        let use_streaming_overlay = should_use_streaming_overlay(style, tm.is_streaming());
+        let use_streaming_overlay =
+            should_use_streaming_overlay(style, tm.is_streaming() || azure_stream.is_active());
         if use_streaming_overlay {
             tm.emit_stream_working(StreamWorkKind::Transcribing);
         } else {
@@ -689,6 +749,7 @@ impl ShortcutAction for TranscribeAction {
                 if rm.was_cancelled_since(cancel_generation) {
                     debug!("Transcription operation cancelled after recording stop");
                     tm.cancel_stream();
+                    azure_stream.cancel();
                     utils::hide_recording_overlay(&ah);
                     change_tray_icon(&ah, TrayIconState::Idle);
                     return;
@@ -699,12 +760,13 @@ impl ShortcutAction for TranscribeAction {
                     // Tear down any streaming worker so its channel doesn't leak
                     // and block the next start_stream.
                     tm.cancel_stream();
+                    azure_stream.cancel();
                     utils::hide_recording_overlay(&ah);
                     change_tray_icon(&ah, TrayIconState::Idle);
                 } else {
                     // Save WAV concurrently with transcription
                     let sample_count = samples.len();
-                    let file_name = format!("handy-{}.wav", chrono::Utc::now().timestamp());
+                    let file_name = format!("speak-{}.wav", chrono::Utc::now().timestamp());
                     let wav_path = hm.recordings_dir().join(&file_name);
                     let wav_path_for_verify = wav_path.clone();
                     let samples_for_wav = samples.clone();
@@ -716,17 +778,32 @@ impl ShortcutAction for TranscribeAction {
                     // running, finalize it and use its text (all audio was already
                     // fed to the stream); otherwise batch-transcribe the samples.
                     let transcription_time = Instant::now();
-                    let transcription_result = match tm.finalize_stream() {
-                        // A finalized stream with usable text wins. An empty result
-                        // (no active stream, produced nothing, or a finalize error
-                        // after the engine was returned) falls back to a full batch
-                        // transcription of the same audio. A finalize timeout is
-                        // surfaced instead — the worker may still hold the engine,
-                        // so a batch fallback would contend with it.
-                        Ok(Some(text)) if !text.trim().is_empty() => Ok(text),
-                        Ok(_) => tm.transcribe(samples),
-                        Err(err) => Err(err),
-                    };
+                    let (transcription_result, live_translation) =
+                        if settings.speech_input_provider == SpeechInputProvider::Local {
+                            match tm.finalize_stream() {
+                                // A finalized stream with usable text wins. An empty result
+                                // (no active stream, produced nothing, or a finalize error
+                                // after the engine was returned) falls back to a full batch
+                                // transcription of the same audio. A finalize timeout is
+                                // surfaced instead — the worker may still hold the engine,
+                                // so a batch fallback would contend with it.
+                                Ok(Some(text)) if !text.trim().is_empty() => (Ok(text), None),
+                                Ok(_) => (tm.transcribe(samples), None),
+                                Err(err) => (Err(err), None),
+                            }
+                        } else if settings.speech_input_provider == SpeechInputProvider::Azure {
+                            tm.cancel_stream();
+                            match azure_stream.finalize().await {
+                                Ok(result) => (Ok(result.source_text), result.translated_text),
+                                Err(error) => (Err(error), None),
+                            }
+                        } else {
+                            tm.cancel_stream();
+                            (
+                                crate::speech_pipeline::transcribe_cloud(&samples, &settings).await,
+                                None,
+                            )
+                        };
 
                     // Await WAV save and verify
                     let wav_saved = match wav_handle.await {
@@ -775,7 +852,12 @@ impl ShortcutAction for TranscribeAction {
                                 }
                             }
                             let Some(processed) = complete_unless_cancelled(
-                                process_transcription_output(&ah, &transcription, post_process),
+                                process_transcription_output_with_translation(
+                                    &ah,
+                                    &transcription,
+                                    post_process,
+                                    live_translation,
+                                ),
                                 || rm.was_cancelled_since(cancel_generation),
                             )
                             .await
@@ -843,6 +925,7 @@ impl ShortcutAction for TranscribeAction {
                             }
                         }
                         Err(err) => {
+                            azure_stream.cancel();
                             if rm.was_cancelled_since(cancel_generation) {
                                 debug!(
                                     "Transcription operation cancelled after transcription error"
@@ -877,6 +960,7 @@ impl ShortcutAction for TranscribeAction {
                 debug!("No samples retrieved from recording stop");
                 // Tear down any streaming worker so its channel doesn't leak.
                 tm.cancel_stream();
+                azure_stream.cancel();
                 utils::hide_recording_overlay(&ah);
                 change_tray_icon(&ah, TrayIconState::Idle);
             }

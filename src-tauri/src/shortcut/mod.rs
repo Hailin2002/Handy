@@ -22,8 +22,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::settings::APPLE_INTELLIGENCE_DEFAULT_MODEL_ID;
 use crate::settings::{
     self, get_settings, AutoSubmitKey, ClipboardHandling, KeyboardImplementation, LLMPrompt,
-    OverlayPosition, OverlayStyle, PasteMethod, ShortcutBinding, SoundTheme, Theme, TypingTool,
-    APPLE_INTELLIGENCE_PROVIDER_ID,
+    OverlayPosition, OverlayStyle, PasteMethod, ShortcutBinding, SoundTheme, SpeechInputProvider,
+    Theme, TypingTool, APPLE_INTELLIGENCE_PROVIDER_ID,
 };
 use crate::tray;
 
@@ -635,6 +635,148 @@ pub fn change_selected_language_setting(app: AppHandle, language: String) -> Res
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_speech_input_provider_setting(
+    app: AppHandle,
+    provider: SpeechInputProvider,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.speech_input_provider = provider;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_azure_speech_endpoint_setting(
+    app: AppHandle,
+    endpoint: String,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.azure_speech_endpoint = endpoint.trim().to_string();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_azure_speech_language_setting(
+    app: AppHandle,
+    language: String,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.azure_speech_language = language.trim().to_string();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_azure_stable_partial_threshold_setting(
+    app: AppHandle,
+    threshold: u32,
+) -> Result<(), String> {
+    if !(1..=5).contains(&threshold) {
+        return Err("Azure stable partial threshold must be between 1 and 5".to_string());
+    }
+    let mut settings = settings::get_settings(&app);
+    settings.azure_stable_partial_threshold = threshold;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_azure_segmentation_silence_setting(
+    app: AppHandle,
+    milliseconds: u32,
+) -> Result<(), String> {
+    if !(300..=5_000).contains(&milliseconds) {
+        return Err("Azure phrase silence must be between 300 and 5000 ms".to_string());
+    }
+    let mut settings = settings::get_settings(&app);
+    settings.azure_segmentation_silence_ms = milliseconds;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_custom_stt_endpoint_setting(app: AppHandle, endpoint: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.custom_stt_endpoint = endpoint.trim().to_string();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_speech_pipeline_api_key_setting(
+    _app: AppHandle,
+    provider_id: String,
+    api_key: String,
+) -> Result<(), String> {
+    if !matches!(provider_id.as_str(), "azure" | "custom" | "deepl") {
+        return Err(format!(
+            "Unsupported speech pipeline provider: {provider_id}"
+        ));
+    }
+    // Keys never enter the settings store; they live in the OS keychain.
+    if api_key.trim().is_empty() {
+        crate::secret_store::delete_secret(
+            crate::secret_store::SPEECH_PIPELINE_SCOPE,
+            &provider_id,
+        );
+        Ok(())
+    } else {
+        crate::secret_store::set_secret(
+            crate::secret_store::SPEECH_PIPELINE_SCOPE,
+            &provider_id,
+            &api_key,
+        )
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_deepl_translation_enabled_setting(
+    app: AppHandle,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.deepl_translation_enabled = enabled;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_deepl_target_language_setting(
+    app: AppHandle,
+    language: String,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.deepl_target_language = language.trim().to_uppercase();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_deepl_sentence_delay_setting(
+    app: AppHandle,
+    milliseconds: u64,
+) -> Result<(), String> {
+    if milliseconds > 10_000 {
+        return Err("DeepL sentence delay must not exceed 10000 ms".to_string());
+    }
+    let mut settings = settings::get_settings(&app);
+    settings.deepl_sentence_delay_ms = milliseconds;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_overlay_position_setting(app: AppHandle, position: String) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     let parsed = match position.as_str() {
@@ -693,7 +835,7 @@ pub fn change_debug_mode_setting(app: AppHandle, enabled: bool) -> Result<(), St
 
     // Keep webview log streaming in sync: the live log viewer only exists in
     // debug mode, so logs are forwarded to the frontend only while it is on.
-    crate::WEBVIEW_LOG_STREAMING.store(enabled, std::sync::atomic::Ordering::Relaxed);
+    crate::logging::set_webview_log_streaming(enabled);
 
     // Emit event to notify frontend of debug mode change
     let _ = app.emit(
@@ -1064,11 +1206,19 @@ pub fn change_post_process_api_key_setting(
     provider_id: String,
     api_key: String,
 ) -> Result<(), String> {
-    let mut settings = settings::get_settings(&app);
+    let settings = settings::get_settings(&app);
     validate_provider_exists(&settings, &provider_id)?;
-    settings.post_process_api_keys.insert(provider_id, api_key);
-    settings::write_settings(&app, settings);
-    Ok(())
+    // Keys never enter the settings store; they live in the OS keychain.
+    if api_key.trim().is_empty() {
+        crate::secret_store::delete_secret(crate::secret_store::POST_PROCESS_SCOPE, &provider_id);
+        Ok(())
+    } else {
+        crate::secret_store::set_secret(
+            crate::secret_store::POST_PROCESS_SCOPE,
+            &provider_id,
+            &api_key,
+        )
+    }
 }
 
 #[tauri::command]
@@ -1199,11 +1349,9 @@ pub async fn fetch_post_process_models(
     }
 
     // Get API key
-    let api_key = settings
-        .post_process_api_keys
-        .get(&provider_id)
-        .cloned()
-        .unwrap_or_default();
+    let api_key =
+        crate::secret_store::get_secret(crate::secret_store::POST_PROCESS_SCOPE, &provider_id)
+            .unwrap_or_default();
 
     // Skip fetching if no API key for providers that typically need one
     if api_key.trim().is_empty() && provider.id != "custom" {

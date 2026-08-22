@@ -1,4 +1,4 @@
-pub mod audio;
+﻿pub mod audio;
 pub mod history;
 pub mod models;
 pub mod transcription;
@@ -56,10 +56,7 @@ pub fn set_log_level(app: AppHandle, level: LogLevel) -> Result<(), String> {
     let tauri_log_level: tauri_plugin_log::LogLevel = level.into();
     let log_level: log::Level = tauri_log_level.into();
     // Update the file log level atomic so the filter picks up the new level
-    crate::FILE_LOG_LEVEL.store(
-        log_level.to_level_filter() as u8,
-        std::sync::atomic::Ordering::Relaxed,
-    );
+    crate::logging::set_file_log_level(log_level.to_level_filter());
 
     let mut settings = get_settings(&app);
     settings.log_level = level;
@@ -109,6 +106,26 @@ pub fn open_app_data_dir(app: AppHandle) -> Result<(), String> {
         .open_path(path, None::<String>)
         .map_err(|e| format!("Failed to open app data directory: {}", e))?;
 
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn trigger_update_check(app: AppHandle) -> Result<(), String> {
+    use tauri::Emitter;
+
+    if !get_settings(&app).update_checks_enabled {
+        return Ok(());
+    }
+    app.emit("check-for-updates", ())
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn show_main_window_command(app: AppHandle) -> Result<(), String> {
+    crate::utils::show_main_window(&app);
     Ok(())
 }
 

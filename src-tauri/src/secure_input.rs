@@ -20,7 +20,10 @@
 
 use serde::Serialize;
 use specta::Type;
-use tauri::{AppHandle, Emitter, Manager};
+// Emitter is only used by the macOS implementation's status events.
+#[cfg(target_os = "macos")]
+use tauri::Emitter;
+use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Serialize, Type)]
 pub struct SecureInputStatus {

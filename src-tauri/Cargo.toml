@@ -1,11 +1,11 @@
 [package]
-name = "handy"
+name = "speak"
 version = "0.9.5"
-description = "Handy"
+description = "Speak"
 authors = ["cjpais"]
 edition = "2021"
 license = "MIT"
-default-run = "handy"
+default-run = "speak"
 
 [profile.dev]
 incremental = true # Compile your binary in smaller steps.
@@ -16,7 +16,7 @@ incremental = true # Compile your binary in smaller steps.
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "handy_app_lib"
+name = "speak_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 # [[bin]]
@@ -50,6 +50,7 @@ serde_json = "1"
 rdev = { git = "https://github.com/rustdesk-org/rdev" }
 cpal = "0.16.0"
 anyhow = "1.0.95"
+base64 = "0.22"
 rubato = "0.16.2"
 hound = "3.5.1"
 log = "0.4.25"
@@ -91,6 +92,17 @@ hf-hub = { git = "https://github.com/cjpais/hf-hub", branch = "cancellable-downl
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = "0.3"
+
+# API keys live in the OS credential store where one is guaranteed
+# (Windows Credential Manager / macOS Keychain). Linux falls back to a
+# dedicated secrets file inside secret_store.rs — no keyring feature there,
+# since sync-secret-service pulls in D-Bus build requirements that would
+# complicate the Nix/Linux CI builds for marginal benefit.
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+keyring = { version = "3", default-features = false, features = [
+  "windows-native",
+  "apple-native",
+] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2.5.1"

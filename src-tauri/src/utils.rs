@@ -2,9 +2,39 @@ use crate::managers::audio::AudioRecordingManager;
 use crate::managers::transcription::TranscriptionManager;
 use crate::shortcut;
 use crate::TranscriptionCoordinator;
-use log::info;
+use log::{error, info};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
+
+/// Brings the main settings window to the front, un-minimizing and focusing
+/// it. On macOS also restores the regular activation policy so the app can
+/// take focus again after living as a tray accessory.
+pub fn show_main_window(app: &AppHandle) {
+    if let Some(main_window) = app.get_webview_window("main") {
+        if let Err(e) = main_window.unminimize() {
+            error!("Failed to unminimize webview window: {}", e);
+        }
+        if let Err(e) = main_window.show() {
+            error!("Failed to show webview window: {}", e);
+        }
+        if let Err(e) = main_window.set_focus() {
+            error!("Failed to focus webview window: {}", e);
+        }
+        #[cfg(target_os = "macos")]
+        {
+            if let Err(e) = app.set_activation_policy(tauri::ActivationPolicy::Regular) {
+                error!("Failed to set activation policy to Regular: {}", e);
+            }
+        }
+        return;
+    }
+
+    let webview_labels = app.webview_windows().keys().cloned().collect::<Vec<_>>();
+    error!(
+        "Main window not found. Webview labels: {:?}",
+        webview_labels
+    );
+}
 
 // Re-export all utility modules for easy access
 // pub use crate::audio_feedback::*;
@@ -87,6 +117,11 @@ pub fn cancel_current_operation(app: &AppHandle) {
     // Abandon any live streaming transcription
     let tm = app.state::<Arc<TranscriptionManager>>();
     tm.cancel_stream();
+    if let Some(azure_stream) =
+        app.try_state::<Arc<crate::speech_pipeline::AzureSpeechStreamManager>>()
+    {
+        azure_stream.cancel();
+    }
 
     // Update tray icon and hide overlay
     change_tray_icon(app, crate::tray::TrayIconState::Idle);

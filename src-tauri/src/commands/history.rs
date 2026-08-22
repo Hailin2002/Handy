@@ -1,9 +1,10 @@
-use crate::actions::process_transcription_output;
+use crate::actions::{process_transcription_output, process_transcription_output_with_translation};
 use crate::managers::{
     history::{HistoryManager, PaginatedHistory},
     transcription::TranscriptionManager,
 };
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{AppHandle, State};
 
 #[tauri::command]
@@ -65,6 +66,7 @@ pub async fn retry_history_entry_transcription(
     app: AppHandle,
     history_manager: State<'_, Arc<HistoryManager>>,
     transcription_manager: State<'_, Arc<TranscriptionManager>>,
+    azure_stream: State<'_, Arc<crate::speech_pipeline::AzureSpeechStreamManager>>,
     id: i64,
 ) -> Result<(), String> {
     let entry = history_manager
@@ -81,20 +83,58 @@ pub async fn retry_history_entry_transcription(
         return Err("Recording has no audio samples".to_string());
     }
 
-    transcription_manager.initiate_model_load();
-
-    let tm = Arc::clone(&transcription_manager);
-    let transcription = tauri::async_runtime::spawn_blocking(move || tm.transcribe(samples))
-        .await
-        .map_err(|e| format!("Transcription task panicked: {}", e))?
-        .map_err(|e| e.to_string())?;
+    let settings = crate::settings::get_settings(&app);
+    let (transcription, live_translation) = match settings.speech_input_provider {
+        crate::settings::SpeechInputProvider::Azure => {
+            azure_stream
+                .start(&settings)
+                .map_err(|error| error.to_string())?;
+            for chunk in samples.chunks(480) {
+                azure_stream.feed(chunk);
+            }
+            match azure_stream
+                .finalize_with_timeout(Duration::from_secs(10 * 60))
+                .await
+            {
+                Ok(result) => (result.source_text, result.translated_text),
+                Err(error) => {
+                    azure_stream.cancel();
+                    return Err(error.to_string());
+                }
+            }
+        }
+        crate::settings::SpeechInputProvider::Custom => {
+            let text = crate::speech_pipeline::transcribe_cloud(&samples, &settings)
+                .await
+                .map_err(|error| error.to_string())?;
+            (text, None)
+        }
+        crate::settings::SpeechInputProvider::Local => {
+            transcription_manager.initiate_model_load();
+            let tm = Arc::clone(&transcription_manager);
+            let text = tauri::async_runtime::spawn_blocking(move || tm.transcribe(samples))
+                .await
+                .map_err(|e| format!("Transcription task panicked: {}", e))?
+                .map_err(|e| e.to_string())?;
+            (text, None)
+        }
+    };
 
     if transcription.is_empty() {
         return Err("Recording contains no speech".to_string());
     }
 
-    let processed =
-        process_transcription_output(&app, &transcription, entry.post_process_requested).await;
+    let processed = if live_translation.is_some() {
+        process_transcription_output_with_translation(
+            &app,
+            &transcription,
+            entry.post_process_requested,
+            live_translation,
+        )
+        .await
+    } else {
+        process_transcription_output(&app, &transcription, entry.post_process_requested).await
+    };
     history_manager
         .update_transcription(
             id,
