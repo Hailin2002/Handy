@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dropdown } from "../ui/Dropdown";
-import { SettingContainer } from "../ui/SettingContainer";
+import { Dropdown } from "../../ui/Dropdown";
+import { SettingContainer } from "../../ui/SettingContainer";
 import { commands } from "@/bindings";
-import { useSettings } from "../../hooks/useSettings";
+import { useSettings } from "../../../hooks/useSettings";
 
 interface ChannelSelectorProps {
   descriptionMode?: "inline" | "tooltip";

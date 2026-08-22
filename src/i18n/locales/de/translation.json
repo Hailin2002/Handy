@@ -158,6 +158,94 @@
     "modelSettings": {
       "title": "{{model}}-Einstellungen"
     },
+    "speechPipeline": {
+      "title": "Sprach-Pipeline",
+      "description": "Lege fest, wie Audio zu Text wird und ob das Ergebnis vor dem Einfügen übersetzt wird.",
+      "preview": {
+        "terminology": "Fachwörter",
+        "translation": "DeepL",
+        "paste": "Einfügen"
+      },
+      "provider": {
+        "title": "Speech-to-Text-Anbieter",
+        "description": "Nutze ein lokales Modell, Azure Speech oder deinen eigenen HTTP-Endpunkt.",
+        "local": "Lokales Modell",
+        "azure": "Azure Speech",
+        "custom": "Eigener STT-Endpunkt"
+      },
+      "azure": {
+        "endpoint": {
+          "title": "Azure-Region oder Endpunkt",
+        "description": "Trage deine Azure-Speech-Region ein. Die kontinuierliche Erkennung unterstützt lange Diktate und Meetings.",
+          "placeholder": "germanywestcentral"
+        },
+        "language": {
+          "title": "Erkennungssprache",
+          "description": "Azure-Gebietsschema für die Spracherkennung, zum Beispiel de-DE.",
+          "placeholder": "de-DE"
+        },
+        "apiKey": {
+          "title": "Azure-API-Schlüssel",
+          "description": "Abonnementschlüssel der konfigurierten Azure-Speech-Region oder Ressource.",
+          "placeholder": "Azure-Speech-Schlüssel eingeben"
+        }
+      },
+      "azureValidation": {
+        "title": "Azure speichern und testen",
+      "description": "Speichert alle Azure-Felder und prüft die konfigurierte Speech-Ressource.",
+        "button": "Speichern & Verbindung testen",
+        "testing": "Wird gespeichert und getestet…",
+        "success": "Azure Speech ist korrekt eingerichtet.",
+        "failed": "Azure-Test fehlgeschlagen: {{error}}"
+      },
+      "custom": {
+        "endpoint": {
+          "title": "Eigener Endpunkt",
+          "description": "Empfängt Mono-WAV mit 16 kHz und gibt Klartext oder ein unterstütztes JSON-Transkript zurück.",
+          "placeholder": "https://dein-dienst.example/transcribe"
+        },
+        "token": {
+          "title": "Bearer-Token",
+          "description": "Optionaler Autorisierungs-Token für deinen Endpunkt.",
+          "placeholder": "Optionaler Token"
+        }
+      },
+      "deepl": {
+        "enabled": {
+          "title": "Mit DeepL übersetzen",
+          "description": "Übersetzt das Transkript vor der optionalen KI-Nachbearbeitung und dem Einfügen."
+        },
+        "apiKey": {
+          "title": "DeepL-API-Schlüssel",
+          "description": "Funktioniert mit DeepL API Free und Pro.",
+          "placeholder": "DeepL-API-Schlüssel eingeben"
+        },
+        "target": {
+          "title": "Zielsprache",
+          "description": "Sprache, die DeepL für die restliche Pipeline erzeugt."
+        },
+        "targetEnglish": "Englisch",
+        "targetEnglishBritish": "Englisch (Britisch)",
+        "targetEnglishAmerican": "Englisch (Amerikanisch)",
+      "targetGerman": "Deutsch"
+    },
+    "advanced": {
+      "title": "Erweiterte Live-Pipeline",
+      "description": "Satzstabilität, Abschluss und Übersetzungs-Timing",
+      "stability": {
+        "title": "Stabilität des Live-Texts",
+        "description": "Anzahl übereinstimmender Azure-Zwischenergebnisse, bevor Wörter als stabil gelten. Die Konferenz-Pipeline verwendete 3."
+      },
+      "phraseSilence": {
+        "title": "Stille bis zum Satzabschluss",
+        "description": "Wie lange Azure bei Stille wartet, bevor die aktuelle Phrase final wird. Länger erhält mehr Satzkontext, kürzer reagiert schneller."
+      },
+      "translationDelay": {
+        "title": "DeepL-Satzverzögerung",
+        "description": "Wartet nach einem von Azure finalisierten Satz und sammelt weitere finale Segmente, bevor der Text einmal an DeepL geht. Zwischenergebnisse werden nie berechnet."
+      }
+    }
+    },
     "models": {
       "title": "Transkriptionsmodelle",
       "description": "Wähle ein Transkriptionsmodell aus oder lade zusätzliche Modelle herunter. Verschiedene Modelle bieten unterschiedliche Genauigkeits- und Geschwindigkeitsstufen.",
@@ -181,7 +269,7 @@
     "general": {
       "title": "Allgemein",
       "shortcut": {
-        "title": "Handy-Tastenkürzel",
+        "title": "Speak-Tastenkürzel",
         "description": "Tastenkürzel für die Sprachaufnahme konfigurieren",
         "loading": "Tastenkürzel werden geladen...",
         "none": "Keine Tastenkürzel konfiguriert",

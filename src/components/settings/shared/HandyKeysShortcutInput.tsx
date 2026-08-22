@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
-import { formatKeyCombination } from "../../lib/utils/keyboard";
-import { ResetButton } from "../ui/ResetButton";
-import { SettingContainer } from "../ui/SettingContainer";
-import { useSettings } from "../../hooks/useSettings";
-import { useOsType } from "../../hooks/useOsType";
+import { formatKeyCombination } from "../../../lib/utils/keyboard";
+import { ResetButton } from "../../ui/ResetButton";
+import { SettingContainer } from "../../ui/SettingContainer";
+import { useSettings } from "../../../hooks/useSettings";
+import { useOsType } from "../../../hooks/useOsType";
 import { commands } from "@/bindings";
 import { toast } from "sonner";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { SECURE_INPUT_HELP_URL } from "../SecureInputWarning";
+import { SECURE_INPUT_HELP_URL } from "../../SecureInputWarning";
 
 interface HandyKeysShortcutInputProps {
   descriptionMode?: "inline" | "tooltip";

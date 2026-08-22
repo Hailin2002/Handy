@@ -1,8 +1,8 @@
-import { type FC, useEffect, useState } from "react";
+﻿import { type FC, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SettingContainer } from "../ui/SettingContainer";
-import { Dropdown, type DropdownOption } from "../ui/Dropdown";
-import { useSettings } from "../../hooks/useSettings";
+import { SettingContainer } from "../../ui/SettingContainer";
+import { Dropdown, type DropdownOption } from "../../ui/Dropdown";
+import { useSettings } from "../../../hooks/useSettings";
 import { commands } from "@/bindings";
 import type {
   TranscribeAcceleratorSetting,
@@ -24,9 +24,9 @@ interface AccelerationSelectorProps {
 
 /**
  * transcribe.cpp dropdown encodes accelerator + device in a single value:
- *   "auto"       → accelerator=auto, gpu_device=null
- *   "cpu"        → accelerator=cpu,  gpu_device=null
- *   "gpu:<id>"   → accelerator=gpu, stable opaque device identity
+ *   "auto"       â†’ accelerator=auto, gpu_device=null
+ *   "cpu"        â†’ accelerator=cpu,  gpu_device=null
+ *   "gpu:<id>"   â†’ accelerator=gpu, stable opaque device identity
  */
 function encodeTranscribeValue(
   accelerator: TranscribeAcceleratorSetting,

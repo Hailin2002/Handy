@@ -1,8 +1,8 @@
-import React from "react";
+﻿import React from "react";
 import { useTranslation } from "react-i18next";
-import { Dropdown } from "../ui/Dropdown";
-import { SettingContainer } from "../ui/SettingContainer";
-import { useSettings } from "../../hooks/useSettings";
+import { Dropdown } from "../../ui/Dropdown";
+import { SettingContainer } from "../../ui/SettingContainer";
+import { useSettings } from "../../../hooks/useSettings";
 import type { ClipboardHandling } from "@/bindings";
 
 interface ClipboardHandlingProps {

@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
-import { AppDataDirectory } from "../AppDataDirectory";
-import { AppLanguageSelector } from "../AppLanguageSelector";
-import { ShowWhatsNewOnUpdate } from "../ShowWhatsNewOnUpdate";
-import { ThemeSelector } from "../ThemeSelector";
+import { AppDataDirectory } from "./AppDataDirectory";
+import { AppLanguageSelector } from "./AppLanguageSelector";
+import { ShowWhatsNewOnUpdate } from "./ShowWhatsNewOnUpdate";
+import { ThemeSelector } from "./ThemeSelector";
 import { LogDirectory } from "../debug";
 
 export const AboutSettings: React.FC = () => {

@@ -1,8 +1,8 @@
-import React from "react";
+﻿import React from "react";
 import { useTranslation } from "react-i18next";
-import { useSettings } from "../../hooks/useSettings";
-import { Input } from "../ui/Input";
-import { SettingContainer } from "../ui/SettingContainer";
+import { useSettings } from "../../../hooks/useSettings";
+import { Input } from "../../ui/Input";
+import { SettingContainer } from "../../ui/SettingContainer";
 
 interface HistoryLimitProps {
   descriptionMode?: "tooltip" | "inline";

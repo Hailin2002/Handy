@@ -6,6 +6,7 @@ import type {
   AudioDevice,
   TranscribeAcceleratorSetting,
   OrtAcceleratorSetting,
+  SpeechInputProvider,
 } from "@/bindings";
 import { commands } from "@/bindings";
 
@@ -123,6 +124,24 @@ const settingUpdaters: {
     commands.changeTranslateToEnglishSetting(value as boolean),
   selected_language: (value) =>
     commands.changeSelectedLanguageSetting(value as string),
+  speech_input_provider: (value) =>
+    commands.changeSpeechInputProviderSetting(value as SpeechInputProvider),
+  azure_speech_endpoint: (value) =>
+    commands.changeAzureSpeechEndpointSetting(value as string),
+  azure_speech_language: (value) =>
+    commands.changeAzureSpeechLanguageSetting(value as string),
+  azure_stable_partial_threshold: (value) =>
+    commands.changeAzureStablePartialThresholdSetting(value as number),
+  azure_segmentation_silence_ms: (value) =>
+    commands.changeAzureSegmentationSilenceSetting(value as number),
+  custom_stt_endpoint: (value) =>
+    commands.changeCustomSttEndpointSetting(value as string),
+  deepl_translation_enabled: (value) =>
+    commands.changeDeeplTranslationEnabledSetting(value as boolean),
+  deepl_target_language: (value) =>
+    commands.changeDeeplTargetLanguageSetting(value as string),
+  deepl_sentence_delay_ms: (value) =>
+    commands.changeDeeplSentenceDelaySetting(value as number),
   overlay_position: (value) =>
     commands.changeOverlayPositionSetting(value as string),
   debug_mode: (value) => commands.changeDebugModeSetting(value as boolean),

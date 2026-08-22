@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { commands } from "@/bindings";
-import { SettingContainer } from "../ui/SettingContainer";
-import { PathDisplay } from "../ui/PathDisplay";
+import { SettingContainer } from "../../ui/SettingContainer";
+import { PathDisplay } from "../../ui/PathDisplay";
 
 interface AppDataDirectoryProps {
   descriptionMode?: "tooltip" | "inline";

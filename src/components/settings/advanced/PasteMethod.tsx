@@ -1,10 +1,10 @@
-import React from "react";
+﻿import React from "react";
 import { useTranslation } from "react-i18next";
-import { Dropdown, type DropdownOption } from "../ui/Dropdown";
-import { SettingContainer } from "../ui/SettingContainer";
-import { Input } from "../ui/Input";
-import { useSettings } from "../../hooks/useSettings";
-import { useOsType } from "../../hooks/useOsType";
+import { Dropdown, type DropdownOption } from "../../ui/Dropdown";
+import { SettingContainer } from "../../ui/SettingContainer";
+import { Input } from "../../ui/Input";
+import { useSettings } from "../../../hooks/useSettings";
+import { useOsType } from "../../../hooks/useOsType";
 import type { PasteMethod } from "@/bindings";
 
 interface PasteMethodProps {

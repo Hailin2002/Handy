@@ -155,6 +155,94 @@
     "legacy": "Застаріле"
   },
   "settings": {
+    "speechPipeline": {
+      "title": "Speech pipeline",
+      "description": "Choose how audio becomes text and optionally translate the result before it is pasted.",
+      "preview": {
+        "terminology": "Terminology",
+        "translation": "DeepL",
+        "paste": "Paste"
+      },
+      "provider": {
+        "title": "Speech-to-text provider",
+        "description": "Use an on-device model, Azure Speech, or your own HTTP endpoint.",
+        "local": "Local model",
+        "azure": "Azure Speech",
+        "custom": "Custom STT endpoint"
+      },
+      "azure": {
+        "endpoint": {
+          "title": "Azure endpoint",
+          "description": "The complete short-audio REST endpoint of your Azure Speech resource.",
+          "placeholder": "https://…/stt/speech/recognition/conversation/cognitiveservices/v1"
+        },
+        "language": {
+          "title": "Recognition locale",
+          "description": "Azure locale used for speech recognition, for example de-DE.",
+          "placeholder": "de-DE"
+        },
+        "apiKey": {
+          "title": "Azure API key",
+          "description": "Subscription key for the configured Azure Speech resource.",
+          "placeholder": "Enter Azure Speech key"
+        }
+      },
+      "azureValidation": {
+        "title": "Save and test Azure",
+        "description": "Saves the Azure fields and verifies the exact configuration with a short connection test.",
+        "button": "Save & test connection",
+        "testing": "Saving and testing…",
+        "success": "Azure Speech is configured correctly.",
+        "failed": "Azure test failed: {{error}}"
+      },
+      "custom": {
+        "endpoint": {
+          "title": "Custom endpoint",
+          "description": "Receives 16 kHz mono WAV audio and returns plain text or a supported JSON transcript.",
+          "placeholder": "https://your-service.example/transcribe"
+        },
+        "token": {
+          "title": "Bearer token",
+          "description": "Optional authorization token sent to your endpoint.",
+          "placeholder": "Optional token"
+        }
+      },
+      "deepl": {
+        "enabled": {
+          "title": "Translate with DeepL",
+          "description": "Translate the transcript before optional AI post-processing and pasting."
+        },
+        "apiKey": {
+          "title": "DeepL API key",
+          "description": "Works with both DeepL API Free and Pro keys.",
+          "placeholder": "Enter DeepL API key"
+        },
+        "target": {
+          "title": "Translation target",
+          "description": "Language produced by DeepL before the text enters the remaining pipeline."
+        },
+        "targetEnglish": "English",
+        "targetEnglishBritish": "English (British)",
+        "targetEnglishAmerican": "English (American)",
+        "targetGerman": "German"
+      },
+      "advanced": {
+        "title": "Advanced live pipeline",
+        "description": "Sentence stability, endpointing and translation timing",
+        "stability": {
+          "title": "Live text stability",
+          "description": "Number of matching Azure partial results required before words are treated as stable. The conference pipeline used 3."
+        },
+        "phraseSilence": {
+          "title": "Sentence-final silence",
+          "description": "How long Azure waits through silence before finalizing the current phrase. Longer values preserve sentence context; shorter values react faster."
+        },
+        "translationDelay": {
+          "title": "DeepL sentence delay",
+          "description": "Wait after an Azure-final sentence and combine any additional final segments before sending the text once to DeepL. Interim text is never billed."
+        }
+      }
+    },
     "modelSettings": {
       "title": "Налаштування {{model}}"
     },

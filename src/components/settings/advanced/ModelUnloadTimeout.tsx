@@ -1,9 +1,9 @@
-import React, { useMemo } from "react";
+﻿import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useSettings } from "../../hooks/useSettings";
+import { useSettings } from "../../../hooks/useSettings";
 import { commands, type ModelUnloadTimeout } from "@/bindings";
-import { Dropdown } from "../ui/Dropdown";
-import { SettingContainer } from "../ui/SettingContainer";
+import { Dropdown } from "../../ui/Dropdown";
+import { SettingContainer } from "../../ui/SettingContainer";
 
 interface ModelUnloadTimeoutProps {
   descriptionMode?: "tooltip" | "inline";

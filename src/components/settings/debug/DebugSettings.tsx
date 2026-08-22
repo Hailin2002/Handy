@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { useTranslation } from "react-i18next";
 import { WordCorrectionThreshold } from "./WordCorrectionThreshold";
 import { LogLevelSelector } from "./LogLevelSelector";
@@ -7,10 +7,10 @@ import { PasteDelay } from "./PasteDelay";
 import { ReliablePasteToggle } from "./ReliablePaste";
 import { RecordingBuffer } from "./RecordingBuffer";
 import { SettingsGroup } from "../../ui/SettingsGroup";
-import { AlwaysOnMicrophone } from "../AlwaysOnMicrophone";
-import { SoundPicker } from "../SoundPicker";
-import { ClamshellMicrophoneSelector } from "../ClamshellMicrophoneSelector";
-import { UpdateChecksToggle } from "../UpdateChecksToggle";
+import { AlwaysOnMicrophone } from "./AlwaysOnMicrophone";
+import { SoundPicker } from "../shared/SoundPicker";
+import { ClamshellMicrophoneSelector } from "./ClamshellMicrophoneSelector";
+import { UpdateChecksToggle } from "./UpdateChecksToggle";
 import { WhatsNewPreview } from "./WhatsNewPreview";
 import { KeyboardDiagnostic } from "./KeyboardDiagnostic";
 

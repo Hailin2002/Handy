@@ -1,7 +1,7 @@
-import React from "react";
-import { useSettings } from "../../hooks/useSettings";
-import { GlobalShortcutInput } from "./GlobalShortcutInput";
-import { HandyKeysShortcutInput } from "./HandyKeysShortcutInput";
+﻿import React from "react";
+import { useSettings } from "../../../hooks/useSettings";
+import { GlobalShortcutInput } from "../shared/GlobalShortcutInput";
+import { HandyKeysShortcutInput } from "../shared/HandyKeysShortcutInput";
 
 interface ShortcutInputProps {
   descriptionMode?: "inline" | "tooltip";

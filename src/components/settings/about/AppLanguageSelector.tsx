@@ -1,12 +1,12 @@
-import React from "react";
+﻿import React from "react";
 import { useTranslation } from "react-i18next";
-import { Dropdown } from "../ui/Dropdown";
-import { SettingContainer } from "../ui/SettingContainer";
+import { Dropdown } from "../../ui/Dropdown";
+import { SettingContainer } from "../../ui/SettingContainer";
 import {
   SUPPORTED_LANGUAGES,
   getSupportedLanguage,
   type SupportedLanguageCode,
-} from "../../i18n";
+} from "../../../i18n";
 import { useSettings } from "@/hooks/useSettings";
 
 interface AppLanguageSelectorProps {

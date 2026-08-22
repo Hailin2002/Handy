@@ -20,6 +20,7 @@ import { useSettings } from "./hooks/useSettings";
 import { useSettingsStore } from "./stores/settingsStore";
 import { commands } from "@/bindings";
 import { getLanguageDirection, initializeRTL } from "@/lib/utils/rtl";
+import { useAzureSpeechStream } from "@/hooks/useAzureSpeechStream";
 
 type OnboardingStep = "accessibility" | "model" | "done";
 
@@ -30,6 +31,7 @@ const renderSettingsContent = (section: SidebarSection) => {
 };
 
 function App() {
+  useAzureSpeechStream();
   const { t, i18n } = useTranslation();
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep | null>(
     null,

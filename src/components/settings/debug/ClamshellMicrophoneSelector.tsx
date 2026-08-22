@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { commands } from "@/bindings";
-import { Dropdown } from "../ui/Dropdown";
-import { SettingContainer } from "../ui/SettingContainer";
-import { ResetButton } from "../ui/ResetButton";
-import { useSettings } from "../../hooks/useSettings";
+import { Dropdown } from "../../ui/Dropdown";
+import { SettingContainer } from "../../ui/SettingContainer";
+import { ResetButton } from "../../ui/ResetButton";
+import { useSettings } from "../../../hooks/useSettings";
 
 interface ClamshellMicrophoneSelectorProps {
   descriptionMode?: "inline" | "tooltip";

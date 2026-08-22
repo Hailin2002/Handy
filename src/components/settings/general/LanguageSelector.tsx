@@ -1,14 +1,14 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+﻿import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { SettingContainer } from "../ui/SettingContainer";
-import { ResetButton } from "../ui/ResetButton";
-import { useSettings } from "../../hooks/useSettings";
+import { SettingContainer } from "../../ui/SettingContainer";
+import { ResetButton } from "../../ui/ResetButton";
+import { useSettings } from "../../../hooks/useSettings";
 import {
   getLanguageLabel,
   recognitionLanguage,
   SELECTABLE_LANGUAGES,
   supportsLanguageCode,
-} from "../../lib/constants/languages";
+} from "../../../lib/constants/languages";
 
 interface LanguageSelectorProps {
   descriptionMode?: "inline" | "tooltip";
