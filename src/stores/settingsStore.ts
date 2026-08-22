@@ -6,6 +6,7 @@ import type {
   AudioDevice,
   TranscribeAcceleratorSetting,
   OrtAcceleratorSetting,
+  Result,
   SpeechInputProvider,
 } from "@/bindings";
 import { commands } from "@/bindings";
@@ -74,8 +75,42 @@ const DEFAULT_AUDIO_DEVICE: AudioDevice = {
   is_default: true,
 };
 
+const requireCommandSuccess = <T>(result: Result<T, string>): T => {
+  if (result.status === "error") {
+    throw new Error(result.error);
+  }
+  return result.data;
+};
+
+// Preserve user order for repeated edits of the same setting. The version
+// guard prevents an older failed request from rolling back a newer optimistic
+// value while its command is still queued or in flight.
+const settingUpdateQueues = new Map<string, Promise<void>>();
+const settingUpdateVersions = new Map<string, number>();
+
+const enqueueSettingUpdate = <T>(
+  key: string,
+  update: () => Promise<T>,
+): Promise<T> => {
+  const previous = settingUpdateQueues.get(key) ?? Promise.resolve();
+  const result = previous.then(update, update);
+  const tail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  settingUpdateQueues.set(key, tail);
+  void tail.then(() => {
+    if (settingUpdateQueues.get(key) === tail) {
+      settingUpdateQueues.delete(key);
+    }
+  });
+  return result;
+};
+
 const settingUpdaters: {
-  [K in keyof Settings]?: (value: Settings[K]) => Promise<unknown>;
+  [K in keyof Settings]?: (
+    value: Settings[K],
+  ) => Promise<Result<unknown, string>>;
 } = {
   always_on_microphone: (value) =>
     commands.updateMicrophoneMode(value as boolean),
@@ -100,14 +135,8 @@ const settingUpdaters: {
         ? "default"
         : (value as string),
     ),
-  selected_channel: async (value) => {
-    const result = await commands.setSelectedChannel(
-      (value as number | null | undefined) ?? null,
-    );
-    if (result.status === "error") {
-      throw new Error(result.error);
-    }
-  },
+  selected_channel: (value) =>
+    commands.setSelectedChannel((value as number | null | undefined) ?? null),
   clamshell_microphone: (value) =>
     commands.setClamshellMicrophone(
       (value as string) === "Default" ? "default" : (value as string),
@@ -317,6 +346,8 @@ export const useSettingsStore = create<SettingsStore>()(
       const { settings, setUpdating } = get();
       const updateKey = String(key);
       const originalValue = settings?.[key];
+      const updateVersion = (settingUpdateVersions.get(updateKey) ?? 0) + 1;
+      settingUpdateVersions.set(updateKey, updateVersion);
 
       setUpdating(updateKey, true);
 
@@ -327,17 +358,29 @@ export const useSettingsStore = create<SettingsStore>()(
 
         const updater = settingUpdaters[key];
         if (updater) {
-          await updater(value);
+          requireCommandSuccess(
+            await enqueueSettingUpdate(updateKey, () => updater(value)),
+          );
         } else if (key !== "bindings" && key !== "selected_model") {
           console.warn(`No handler for setting: ${String(key)}`);
         }
       } catch (error) {
         console.error(`Failed to update setting ${String(key)}:`, error);
-        if (settings) {
-          set({ settings: { ...settings, [key]: originalValue } });
+        if (
+          settings &&
+          settingUpdateVersions.get(updateKey) === updateVersion
+        ) {
+          set((state) => ({
+            settings: state.settings
+              ? { ...state.settings, [key]: originalValue }
+              : null,
+          }));
         }
       } finally {
-        setUpdating(updateKey, false);
+        if (settingUpdateVersions.get(updateKey) === updateVersion) {
+          setUpdating(updateKey, false);
+          settingUpdateVersions.delete(updateKey);
+        }
       }
     },
 
@@ -424,7 +467,10 @@ export const useSettingsStore = create<SettingsStore>()(
       setUpdating(updateKey, true);
 
       try {
-        await commands.resetBinding(id);
+        const result = requireCommandSuccess(await commands.resetBinding(id));
+        if (!result.success) {
+          throw new Error(result.error ?? "Failed to reset binding");
+        }
         await refreshSettings();
       } catch (error) {
         console.error(`Failed to reset binding ${id}:`, error);
@@ -458,7 +504,9 @@ export const useSettingsStore = create<SettingsStore>()(
       setPostProcessModelOptions(providerId, []);
 
       try {
-        await commands.setPostProcessProvider(providerId);
+        requireCommandSuccess(
+          await commands.setPostProcessProvider(providerId),
+        );
         await refreshSettings();
       } catch (error) {
         console.error("Failed to set post-process provider:", error);
@@ -487,11 +535,17 @@ export const useSettingsStore = create<SettingsStore>()(
 
       try {
         if (settingType === "base_url") {
-          await commands.changePostProcessBaseUrlSetting(providerId, value);
+          requireCommandSuccess(
+            await commands.changePostProcessBaseUrlSetting(providerId, value),
+          );
         } else if (settingType === "api_key") {
-          await commands.changePostProcessApiKeySetting(providerId, value);
+          requireCommandSuccess(
+            await commands.changePostProcessApiKeySetting(providerId, value),
+          );
         } else if (settingType === "model") {
-          await commands.changePostProcessModelSetting(providerId, value);
+          requireCommandSuccess(
+            await commands.changePostProcessModelSetting(providerId, value),
+          );
         }
         await refreshSettings();
       } catch (error) {
@@ -512,26 +566,16 @@ export const useSettingsStore = create<SettingsStore>()(
 
       try {
         // Persist the new base URL first.
-        const urlResult = await commands.changePostProcessBaseUrlSetting(
-          providerId,
-          baseUrl,
+        requireCommandSuccess(
+          await commands.changePostProcessBaseUrlSetting(providerId, baseUrl),
         );
-        if (urlResult.status === "error") {
-          console.error("Failed to persist base URL:", urlResult.error);
-          return;
-        }
 
         // Reset the stored model since the previous value is almost certainly
         // invalid for the new endpoint (e.g. switching Custom from Groq to
         // Cerebras). Only proceed if the reset succeeds.
-        const modelResult = await commands.changePostProcessModelSetting(
-          providerId,
-          "",
+        requireCommandSuccess(
+          await commands.changePostProcessModelSetting(providerId, ""),
         );
-        if (modelResult.status === "error") {
-          console.error("Failed to reset model setting:", modelResult.error);
-          return;
-        }
 
         // Clear cached model options only after both backend writes succeed.
         set((state) => ({
