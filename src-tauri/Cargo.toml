@@ -194,6 +194,12 @@ transcribe-cpp = { version = "0.2.0", default-features = false, features = [
 [patch.crates-io]
 tao = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08c95c3b6f8d4bde052b876" }
 tao-macros = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08c95c3b6f8d4bde052b876" }
+# Vendored cmake-rs with a local patch: honors CMAKE_BUILD_PARALLEL_LEVEL ahead
+# of NUM_JOBS (which cargo always overwrites for build scripts). Required on
+# Windows because MSBuild worker nodes (/m) fail the transcribe-cpp-sys build
+# silently; .cargo/config.toml pins CMAKE_BUILD_PARALLEL_LEVEL=1 so the native
+# build runs serially. See docs/meeting-mode-phase0-baseline.md section 2.3.
+cmake = { path = "../vendor/cmake" }
 
 [dev-dependencies]
 tempfile = "3"

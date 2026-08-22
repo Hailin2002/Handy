@@ -42,10 +42,10 @@ enthalten und müssen vor Phase 1 gesichert oder committet werden.
 
 ## 2. Automatisierte Baseline-Ergebnisse
 
-Alle Ergebnisse stammen aus tatsächlich am 22.08.2026 auf dieser Maschine
-ausgeführten Kommandos (Windows x64, rustc 1.98.0, Node v24.19.0). `bun` ist in
-dieser Shell-Umgebung nicht im PATH, daher wurden die Paket-Skripte über die
-äquivalenten lokalen Binaries aus `node_modules\.bin` bzw. direkt ausgeführt.
+Erste Messung vom Morgen des 22.08.2026 (Windows x64, rustc 1.98.0,
+Node v24.19.0); `bun` ist in dieser Shell-Umgebung nicht im PATH, daher wurden
+die Paket-Skripte über die äquivalenten lokalen Binaries aus
+`node_modules\.bin` bzw. direkt ausgeführt.
 
 | # | Kommando | Arbeitsverzeichnis | Ergebnis | Exit-Code |
 | --- | --- | --- | --- | --- |
@@ -53,7 +53,25 @@ dieser Shell-Umgebung nicht im PATH, daher wurden die Paket-Skripte über die
 | 2 | `node_modules\.bin\prettier.cmd --check .` (Teil von `bun run format:check`) | Repo-Root | **FAIL** | 1 |
 | 3 | `cargo fmt -- --check` (Teil von `bun run format:check`) | `src-tauri` | **PASS** | 0 |
 | 4 | `node scripts/check-translations.ts` (`bun run check:translations`) | Repo-Root | **PASS** | 0 |
-| 5 | `cargo test` | `src-tauri` | **FAIL** (Build-Skript) | 101 |
+| 5 | `cargo test` | `src-tauri` | **FAIL** (Build-Skript, siehe 2.3) | 101 |
+
+Nach der Behebung des `transcribe-cpp-sys`-Buildproblems (Abschnitt 2.3) wurde
+die Backend-Baseline am selben Tag erneut ausgeführt:
+
+| # | Kommando | Arbeitsverzeichnis | Ergebnis | Exit-Code |
+| --- | --- | --- | --- | --- |
+| 6 | `cargo test` | `src-tauri` | **PASS** — 220 Tests: 208 (lib) + 12 (bin `meeting_loopback_spike`) bestanden, 0 fehlgeschlagen; Log `src-tauri/target/baseline-tools/logs/11-cargo-test-serial-fix.log` | 0 |
+| 7 | `cargo clippy --all-targets` | `src-tauri` | **PASS** — 0 Warnungen nach Fix der 6 Doc-Kommentar-Indentierungs-Warnungen in `src/bin/meeting_loopback_spike.rs`; Logs `13-cargo-clippy-final.log` / `14-cargo-clippy-final.log` im selben Verzeichnis | 0 |
+| 8 | `cargo fmt -- --check` (nach Clippy-Fix) | `src-tauri` | **PASS** | 0 |
+| 9 | `cargo test` (unabhängiger Verifikationslauf, 22.08.2026 08:0x +02:00) | `src-tauri` | **PASS** — erneut 208 (lib) + 12 (`meeting_loopback_spike`) = 220 bestanden, 0 fehlgeschlagen; Log `15-cargo-test-verification.log` | 0 |
+| 10 | `cargo clippy --all-targets` (Verifikationslauf) | `src-tauri` | **PASS** — 0 Lint-Warnungen (einzige „warning:"-Zeilen sind Build-Skript-`cargo:warning=`-Ausgaben); Log `16-cargo-clippy-verification.log` | 0 |
+| 11 | `cargo fmt -- --check` (Verifikationslauf) | `src-tauri` | **PASS** | 0 |
+
+Die Zeilen 9–11 sind ein unabhängiger Wiederholungslauf in einer frischen
+Sandbox-Shell ohne geerbte Maschinen-Umgebung: `VULKAN_SDK` musste dort wie in
+Abschnitt 2.3 beschrieben explizit auf `C:\VulkanSDK\1.4.357.0` gesetzt werden.
+Der serielle Native-Build von `transcribe-cpp-sys` lief damit reproduzierbar
+durch — der Fix ist nicht an eine bestimmte Shell gebunden.
 
 ### 2.1 Prettier-Formatfehler (Kommando 2)
 
@@ -76,7 +94,9 @@ HE, HI, IT, JA, KO, NE, NL, PL, PT, RU, SV, TR, UK, VI, ZH, ZH-TW) vollständig:
 ✓ All 23 languages have complete translations!
 ```
 
-### 2.3 Backend-Testlauf blockiert durch `transcribe-cpp-sys` (Kommando 5)
+### 2.3 Backend-Testlauf: `transcribe-cpp-sys`-Buildfehler — Ursache und Behebung
+
+#### Ursprünglicher Fehler (Kommando 5, erste Messung)
 
 `cargo test` brach vor dem Kompilieren der Crate ab — das Build-Skript von
 `transcribe-cpp-sys v0.2.0` schlug fehl (cargo exit 101). Relevanter
@@ -103,12 +123,70 @@ reproduzierbar. Eine gezielte Differentialmessung am selben CMake-Build-Verzeich
 | `cmake --build <dir> --target install --config Release` (seriell) | **erfolgreich**, Exit 0; installiert u. a. `transcribe.dll`, `ggml-vulkan.dll`, `transcribe-link.json` |
 | `cmake --build <dir> --target install --config Release --parallel 20` (wie vom Build-Skript aufgerufen) | **Fehler**, Exit 1; MSBuild bricht direkt nach `Checking File Globs` ab, ohne sichtbare Compilerfehlermeldung |
 
-Folgerung für Phase 1: Der Backend-Testlauf ist auf dieser Maschine durch ein
-reproduzierbares Parallelitäts-/Umgebungsproblem im nativen `transcribe-cpp-sys`-
-Build blockiert, nicht durch Rust-Testfehler. Die Ursache (MSBuild unter
-`--parallel 20` vs. seriell) muss vom Engineering geklärt werden, bevor
-`cargo test`/`cargo clippy` als Phase-0-Abnahme herangezogen werden können.
-Keine Rust-Unit-Testergebnisse liegen daher in dieser Baseline vor.
+Eine zusätzliche MSBuild-Diagnose-Aufzeichnung (`msbuild.log`, `/v:diag /flp`,
+`/m:2`) bestätigte zwei unabhängige Belastungsfaktoren auf dieser Maschine:
+
+1. **MSBuild-Worker-Knoten (`/m`) schlagen lautlos fehl.** Die verschachtelten
+   `GetNativeManifest`-Sub-Builds des ggml-Bäums enden mit Exit 1 und ohne
+   Diagnoseausgabe, sobald Worker-Parallelität aktiv ist; seriell läuft
+   derselbe Baum durch.
+2. **MAX_PATH im FileTracker.** Der Windows-Registry-Schlüssel
+   `LongPathsEnabled` ist zwar gesetzt, MSBuilds `GetOutOfDateItems`/FileTracker
+   ignoriert ihn jedoch für die `.tlog`-`%(FullPath)`-Berechnung
+   (FTK1011); die tiefen Pfade unter dem Cargo-`OUT_DIR`
+   (Vulkan-`ExternalProject`-TryCompile-Scratchdirs) überschreiten die
+   klassische 260-Zeichen-Grenze.
+
+#### Umgesetzte Lösung: erzwungener serieller Native-Build
+
+Da `NUM_JOBS` von Cargo für Build-Skripte immer überschrieben wird
+(rust-lang/cargo#9972) und cmake-rs 0.1.x keinen Konfigurationsknopf dafür
+besitzt, wurde cmake-rs 0.1.57 nach `vendor/cmake` kopiert und per
+`[patch.crates-io]` in `src-tauri/Cargo.toml` ersetzt. Der lokale Patch:
+
+1. Ehrt `CMAKE_BUILD_PARALLEL_LEVEL` vor `NUM_JOBS` und übergibt es als
+   `--parallel <N>` an `cmake --build`.
+2. Verlegt lange Build-Verzeichnisse (>120 Zeichen) unter Windows best-effort
+   über ein kurzes NTFS-Junction im Temp-Verzeichnis (`%TEMP%\cmake-rs-short-build\<fnv-hash>`),
+   um den FileTracker-MAX_PATH-Träger zu entschärfen.
+
+`.cargo/config.toml` (Repo-Root) pinnt darüber hinaus:
+
+```toml
+[env]
+CMAKE_BUILD_PARALLEL_LEVEL = "1"
+```
+
+Damit läuft der Native-Build von `transcribe-cpp-sys` deterministisch seriell;
+das ist auf dieser Maschine verifiziert stabil. Erhöhung von `--parallel`
+nur nach erneuter Verifikation der MSBuild-Parallelität.
+
+#### Maschinenvoraussetzungen für den Native-Build
+
+- **Vulkan SDK:** Ein frischer CMake-Konfigurierungslauf benötigt
+  `VULKAN_SDK` bzw. `glslc` in der Umgebung. Auf dieser Maschine ist das SDK
+  maschinenweit registriert (`C:\VulkanSDK\1.4.357.0`), aber eingeschränkte
+  Shells (z. B. Sandbox-Harness) erben die Maschinen-Umgebung nicht — dort muss
+  `$env:VULKAN_SDK = 'C:\VulkanSDK\1.4.357.0'` (+ `\Bin` im PATH) explizit
+  gesetzt werden, sonst schlägt `FindVulkan` mit
+  `Could NOT find Vulkan` fehl. Normale Nutzer-Shells erben die Variable.
+- **Junction-Schreibrechte:** `transcribe-cpp-sys` legt sein eigenes
+  Kurzpfad-Junction unter `%LOCALAPPDATA%\tcs\<hash>` an. In
+  beschränkten Shells kann das an Berechtigungen scheitern ("Access is
+  denied"); dann baut die Crate im tiefen `OUT_DIR` weiter und das
+  cmake-rs-Junction aus dem lokalen Patch hält den Pfad kurz. Beide Pfade
+  wurden verifiziert.
+
+#### Ergebnis nach der Behebung
+
+`cargo test`: **PASS**, Exit 0 — 208 Tests in `speak_app_lib` plus 12 Tests in
+`meeting_loopback_spike`, 0 fehlgeschlagen (Log
+`src-tauri/target/baseline-tools/logs/11-cargo-test-serial-fix.log`).
+`cargo clippy --all-targets`: **PASS**, Exit 0 mit 0 Warnungen, nachdem sechs
+Doc-Kommentar-Indentierungswarnungen in `src/bin/meeting_loopback_spike.rs`
+behoben wurden (Logs `13-`/`14-cargo-clippy-final.log`). `cargo fmt --check`
+weiterhin PASS. Damit steht die Rust-Baseline als Phase-0-Abnahme zur
+Verfügung.
 
 ## 3. Diktier-Baseline — Reproduktionsschritte
 
@@ -214,7 +292,10 @@ ist.
    erweitern oder Commit erstellen).
 2. Prettier-Formatfehler in 4 Dateien beheben (`bun run format` bzw.
    `prettier --write` für die in Abschnitt 2.1 genannten Dateien).
-3. `transcribe-cpp-sys`-Buildfehler unter `--parallel 20` klären, damit
-   `cargo test`/`cargo clippy` als Backend-Baseline lauffähig sind.
+3. ~~`transcribe-cpp-sys`-Buildfehler unter `--parallel 20` klären~~ **erledigt
+   am 22.08.2026:** erzwungener serieller Native-Build über den
+   `cmake`-Patch (`vendor/cmake`) und `.cargo/config.toml`
+   (`CMAKE_BUILD_PARALLEL_LEVEL=1`); `cargo test` und
+   `cargo clippy --all-targets` laufen, siehe Abschnitt 2.3.
 4. Diktier-Baseline manuell nach Abschnitt 3 auf der Zielhardware ausführen und
    Ergebnisse ergänzen (in dieser Baseline nicht ausgeführt).

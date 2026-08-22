@@ -31,18 +31,18 @@
 //!
 //! Arguments:
 //!
-//! - `--list-devices`          print input and output devices (with indices and
-//!                             the default flag) and exit.
-//! - `--duration <SECONDS>`    bounded capture duration; default 7200 (120 min),
-//!                             hard-capped at 86400 (24 h).
-//! - `--output-log <PATH>`     CSV log path; default
-//!                             `meeting_loopback_spike_<YYYYMMDD_HHMMSS>.csv`.
-//! - `--output-device <X>`     output (loopback) device by index or name
-//!                             substring; default = system default output device.
-//! - `--input-device <X>`      microphone by index or name substring; default =
-//!                             system default input device.
+//! - `--list-devices` print input and output devices (with indices and
+//!   the default flag) and exit.
+//! - `--duration <SECONDS>` bounded capture duration; default 7200 (120 min),
+//!   hard-capped at 86400 (24 h).
+//! - `--output-log <PATH>` CSV log path; default
+//!   `meeting_loopback_spike_<YYYYMMDD_HHMMSS>.csv`.
+//! - `--output-device <X>` output (loopback) device by index or name
+//!   substring; default = system default output device.
+//! - `--input-device <X>` microphone by index or name substring; default =
+//!   system default input device.
 //! - `--silence-threshold <F>` peak amplitude below which a callback counts as
-//!                             silent; default 0.0001.
+//!   silent; default 0.0001.
 //!
 //! # How to run the 120-minute measurement
 //!
