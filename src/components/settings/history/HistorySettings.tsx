@@ -14,6 +14,7 @@ import { useOsType } from "@/hooks/useOsType";
 import { formatDateTime } from "@/utils/dateFormat";
 import { AudioPlayer, AudioPlayerGroup } from "../../ui/AudioPlayer";
 import { Button } from "../../ui/Button";
+import { Dialog } from "../../ui/Dialog";
 import { IconButton } from "../../ui/IconButton";
 
 const PAGE_SIZE = 30;
@@ -45,7 +46,12 @@ export const HistorySettings: React.FC = () => {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
+  // Entry staged for deletion: non-null while the confirmation dialog is open.
+  const [pendingDeleteEntry, setPendingDeleteEntry] =
+    useState<HistoryEntry | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Keyboard focus fallback when no row survives a confirmed deletion (G3/G4).
+  const listContainerRef = useRef<HTMLDivElement>(null);
   const entriesRef = useRef<HistoryEntry[]>([]);
   const loadingRef = useRef(false);
 
@@ -181,19 +187,67 @@ export const HistorySettings: React.FC = () => {
     [osType],
   );
 
-  const deleteAudioEntry = async (id: number) => {
-    // Optimistically remove
+  const deleteAudioEntry = async (id: number): Promise<boolean> => {
+    // Optimistically remove (only after explicit confirmation).
     setEntries((prev) => prev.filter((e) => e.id !== id));
     try {
       const result = await commands.deleteHistoryEntry(id);
       if (result.status !== "ok") {
+        toast.error(t("settings.history.deleteError"));
         // Reload on failure
         loadPage();
+        return false;
       }
+      return true;
     } catch (error) {
       console.error("Failed to delete entry:", error);
+      toast.error(t("settings.history.deleteError"));
       loadPage();
+      return false;
     }
+  };
+
+  const requestDeleteEntry = useCallback((entry: HistoryEntry) => {
+    // Opens the confirmation dialog; nothing is deleted yet (G1).
+    setPendingDeleteEntry(entry);
+  }, []);
+
+  /**
+   * G3/G4: after a confirmed deletion the originating row unmounts, so the
+   * dialog's built-in focus restore lands on a removed node. Move focus to
+   * the closest surviving row's delete button instead (next, else previous).
+   * If the deleted entry was the last one, focus the list container so the
+   * keyboard-only flow never drops focus to <body>. If the backend delete
+   * failed, the row is restored by loadPage(), so return focus to its own
+   * delete button.
+   */
+  const confirmDeleteEntry = async () => {
+    const entry = pendingDeleteEntry;
+    if (!entry) return;
+
+    const ids = entriesRef.current.map((e) => e.id);
+    const index = ids.indexOf(entry.id);
+    const neighborId =
+      index >= 0 ? (ids[index + 1] ?? ids[index - 1] ?? null) : null;
+
+    // Close first: the Dialog restores focus while the row still exists.
+    setPendingDeleteEntry(null);
+
+    const deleted = await deleteAudioEntry(entry.id);
+
+    const fallbackTargetId =
+      neighborId !== null && neighborId !== entry.id
+        ? neighborId
+        : deleted
+          ? null
+          : entry.id;
+    const target =
+      fallbackTargetId !== null
+        ? document.querySelector<HTMLElement>(
+            `[data-history-delete="${fallbackTargetId}"]`,
+          )
+        : null;
+    (target ?? listContainerRef.current)?.focus();
   };
 
   const retryHistoryEntry = async (id: number) => {
@@ -240,7 +294,7 @@ export const HistorySettings: React.FC = () => {
                 onToggleSaved={() => toggleSaved(entry.id)}
                 onCopyText={() => copyToClipboard(entry.transcription_text)}
                 getAudioUrl={getAudioUrl}
-                deleteAudio={deleteAudioEntry}
+                onRequestDelete={requestDeleteEntry}
                 retryTranscription={retryHistoryEntry}
               />
             ))}
@@ -266,10 +320,49 @@ export const HistorySettings: React.FC = () => {
             label={t("settings.history.openFolder")}
           />
         </div>
-        <div className="bg-background border border-mid-gray/20 rounded-lg overflow-visible">
+        <div
+          ref={listContainerRef}
+          tabIndex={-1}
+          className="bg-background border border-mid-gray/20 rounded-lg overflow-visible outline-none"
+        >
           {content}
         </div>
       </div>
+
+      {/* Named destructive confirmation (G1/G2): Escape, the close button,
+          the backdrop and Cancel all keep the entry intact; only the explicit
+          "Delete permanently" action removes it. */}
+      <Dialog
+        open={pendingDeleteEntry !== null}
+        title={t("settings.history.deleteConfirmTitle")}
+        description={t("settings.history.deleteConfirmIrreversible")}
+        closeLabel={t("settings.history.deleteCancel")}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteEntry(null);
+        }}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setPendingDeleteEntry(null)}
+            >
+              {t("settings.history.deleteCancel")}
+            </Button>
+            <Button variant="danger" onClick={confirmDeleteEntry}>
+              {t("settings.history.deleteConfirmAction")}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm">
+          <p>{t("settings.history.deleteConfirmWarning")}</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>{t("settings.history.deleteArtifactAudio")}</li>
+            <li>{t("settings.history.deleteArtifactTranscript")}</li>
+            <li>{t("settings.history.deleteArtifactSummary")}</li>
+          </ul>
+        </div>
+      </Dialog>
     </div>
   );
 };
@@ -279,7 +372,7 @@ interface HistoryEntryProps {
   onToggleSaved: () => void;
   onCopyText: () => void;
   getAudioUrl: (fileName: string) => Promise<string | null>;
-  deleteAudio: (id: number) => Promise<void>;
+  onRequestDelete: (entry: HistoryEntry) => void;
   retryTranscription: (id: number) => Promise<void>;
 }
 
@@ -288,7 +381,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
   onToggleSaved,
   onCopyText,
   getAudioUrl,
-  deleteAudio,
+  onRequestDelete,
   retryTranscription,
 }) => {
   const { t, i18n } = useTranslation();
@@ -310,15 +403,6 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     onCopyText();
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2000);
-  };
-
-  const handleDeleteEntry = async () => {
-    try {
-      await deleteAudio(entry.id);
-    } catch (error) {
-      console.error("Failed to delete entry:", error);
-      toast.error(t("settings.history.deleteError"));
-    }
   };
 
   const handleRetranscribe = async () => {
@@ -390,10 +474,11 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
             />
           </IconButton>
           <IconButton
-            onClick={handleDeleteEntry}
+            onClick={() => onRequestDelete(entry)}
             disabled={retrying}
             aria-label={t("settings.history.delete")}
             title={t("settings.history.delete")}
+            data-history-delete={entry.id}
           >
             <Trash2 width={16} height={16} />
           </IconButton>
