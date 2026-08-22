@@ -1,6 +1,6 @@
 # Meeting-Modus — Phase-0-Baseline
 
-Status: **Baseline-Aufzeichnung, Phase 1 noch nicht gestartet**
+Status: **Baseline-Aufzeichnung, Phase-1-Vorbereitung (Checkpoint-Arbeitsstand gesichert)**
 Plan: [docs/meeting-mode-plan.md](meeting-mode-plan.md), Phase 0 (Abschnitt 13) und
 Testmatrix (Abschnitt 14)
 Aufgenommen am: 22.08.2026, 06:13 (+02:00)
@@ -37,8 +37,16 @@ Zum Zeitpunkt der Baseline-Ausführung enthielt der Arbeitbaum auf
  M src/stores/settingsStore.ts
 ```
 
-Diese Änderungen gehen nicht verloren; sie sind im Checkpoint-Commit noch nicht
-enthalten und müssen vor Phase 1 gesichert oder committet werden.
+**Aktualisierung (22.08.2026):** Diese Änderungen sind inzwischen gesichert.
+Die 14 Dateien sind auf `feat/custom-stt-pipeline` im Bereich
+`checkpoint/custom-stt-pre-meeting..HEAD` committet — 13 Dateien durch
+`b677107` (`refactor: make settings persistence transactional`) und
+`src/stores/settingsStore.ts` durch `a7226b6`
+(`fix: serialize settings store updates and surface backend errors`); die
+zugehörige Dokumentation liegt in `8fd9dee`
+(`feat: add meeting loopback measurement spike binary`) und `beb286e`
+(`docs: record meeting-mode phase-0 baseline`). Vor dieser Dokumentaktualisierung
+war der Arbeitsbaum sauber (`git status`: nothing to commit, working tree clean).
 
 ## 2. Automatisierte Baseline-Ergebnisse
 
@@ -288,14 +296,19 @@ ist.
 
 ## 5. Offene Punkte aus der Baseline
 
-1. 14 uncommittete Dateien auf `feat/custom-stt-pipeline` sichern (Checkpoint
-   erweitern oder Commit erstellen).
+1. ~~14 uncommittete Dateien auf `feat/custom-stt-pipeline` sichern (Checkpoint
+   erweitern oder Commit erstellen).~~ **erledigt am 22.08.2026:** gesichert
+   durch die Commits `b677107`, `a7226b6`, `8fd9dee`, `beb286e` auf
+   `feat/custom-stt-pipeline` (Bereich
+   `checkpoint/custom-stt-pre-meeting..HEAD`), siehe Abschnitt 1.
 2. Prettier-Formatfehler in 4 Dateien beheben (`bun run format` bzw.
-   `prettier --write` für die in Abschnitt 2.1 genannten Dateien).
+   `prettier --write` für die in Abschnitt 2.1 genannten Dateien) — **offen**,
+   Owner: task-0010.
 3. ~~`transcribe-cpp-sys`-Buildfehler unter `--parallel 20` klären~~ **erledigt
    am 22.08.2026:** erzwungener serieller Native-Build über den
    `cmake`-Patch (`vendor/cmake`) und `.cargo/config.toml`
    (`CMAKE_BUILD_PARALLEL_LEVEL=1`); `cargo test` und
    `cargo clippy --all-targets` laufen, siehe Abschnitt 2.3.
 4. Diktier-Baseline manuell nach Abschnitt 3 auf der Zielhardware ausführen und
-   Ergebnisse ergänzen (in dieser Baseline nicht ausgeführt).
+   Ergebnisse ergänzen (in dieser Baseline nicht ausgeführt) — **offen**,
+   Owner: task-0009.
