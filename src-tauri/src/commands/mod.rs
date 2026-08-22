@@ -3,7 +3,7 @@ pub mod history;
 pub mod models;
 pub mod transcription;
 
-use crate::settings::{get_settings, write_settings, AppSettings, LogLevel};
+use crate::settings::{get_settings, update_settings, AppSettings, LogLevel};
 use crate::utils::cancel_current_operation;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_opener::OpenerExt;
@@ -58,9 +58,7 @@ pub fn set_log_level(app: AppHandle, level: LogLevel) -> Result<(), String> {
     // Update the file log level atomic so the filter picks up the new level
     crate::logging::set_file_log_level(log_level.to_level_filter());
 
-    let mut settings = get_settings(&app);
-    settings.log_level = level;
-    write_settings(&app, settings);
+    update_settings(&app, |settings| settings.log_level = level);
 
     Ok(())
 }

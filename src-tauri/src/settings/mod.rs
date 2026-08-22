@@ -17,6 +17,6 @@ pub use schema::{get_default_settings, AppSettings};
 pub use store::SETTINGS_STORE_PATH;
 pub use store::{
     get_bindings, get_history_limit, get_recording_retention_period, get_settings,
-    get_stored_binding, load_or_create_app_settings, write_settings,
+    get_stored_binding, load_or_create_app_settings, try_update_settings, update_settings,
 };
 pub use types::*;

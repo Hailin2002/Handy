@@ -8,7 +8,7 @@ use crate::audio_toolkit::{
 };
 use crate::helpers::clamshell;
 use crate::managers::transcription::StreamRouter;
-use crate::settings::{get_settings, write_settings, AppSettings};
+use crate::settings::{get_settings, AppSettings};
 use crate::speech_pipeline::AzureSpeechStreamManager;
 use crate::utils;
 use log::{debug, error, info, trace, warn};
@@ -515,13 +515,17 @@ impl AudioRecordingManager {
     /// fallback. Re-read first so recovery cannot clear a microphone the user
     /// selected concurrently while the stream was being rebuilt.
     fn persist_default_microphone_after_fallback(&self, unavailable_name: &str) {
-        let mut settings = get_settings(&self.app_handle);
-        if settings.selected_microphone.as_deref() != Some(unavailable_name) {
+        let changed = crate::settings::update_settings(&self.app_handle, |settings| {
+            if settings.selected_microphone.as_deref() != Some(unavailable_name) {
+                return false;
+            }
+
+            settings.selected_microphone = None;
+            true
+        });
+        if !changed {
             return;
         }
-
-        settings.selected_microphone = None;
-        write_settings(&self.app_handle, settings);
         let _ = self.app_handle.emit(
             "settings-changed",
             serde_json::json!({

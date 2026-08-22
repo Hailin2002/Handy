@@ -6,6 +6,7 @@ use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
 use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex, MutexGuard};
 
 use super::schema::AppSettings;
 use super::schema::{default_transcribe_gpu_device, CURRENT_SETTINGS_SCHEMA_VERSION};
@@ -13,6 +14,17 @@ use super::schema::{ensure_post_process_defaults, get_default_settings};
 use super::types::*;
 
 pub const SETTINGS_STORE_PATH: &str = "settings_store.json";
+
+/// Serializes settings transactions inside this process. The store plugin
+/// protects individual reads and writes, but a read-modify-write sequence still
+/// needs one lock around the whole transaction to avoid lost updates.
+static SETTINGS_TRANSACTION_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
+fn lock_settings_transaction() -> MutexGuard<'static, ()> {
+    SETTINGS_TRANSACTION_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 /// Startup entry point. Same load-or-create/salvage/migrate behavior as
 /// `get_settings`; kept as a named alias for call-site clarity, plus a
@@ -24,6 +36,11 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
 }
 
 pub fn get_settings(app: &AppHandle) -> AppSettings {
+    let _transaction = lock_settings_transaction();
+    get_settings_unlocked(app)
+}
+
+fn get_settings_unlocked(app: &AppHandle) -> AppSettings {
     let store = app
         .store(crate::portable::store_path(SETTINGS_STORE_PATH))
         .expect("Failed to initialize store");
@@ -190,12 +207,33 @@ pub(super) fn apply_settings_migrations(
     updated
 }
 
-pub fn write_settings(app: &AppHandle, settings: AppSettings) {
+fn write_settings_unlocked(app: &AppHandle, settings: &AppSettings) {
     let store = app
         .store(crate::portable::store_path(SETTINGS_STORE_PATH))
         .expect("Failed to initialize store");
 
-    store.set("settings", serde_json::to_value(&settings).unwrap());
+    store.set("settings", serde_json::to_value(settings).unwrap());
+}
+
+/// Atomically loads, mutates, and persists settings.
+pub fn update_settings<R>(app: &AppHandle, update: impl FnOnce(&mut AppSettings) -> R) -> R {
+    let _transaction = lock_settings_transaction();
+    let mut settings = get_settings_unlocked(app);
+    let result = update(&mut settings);
+    write_settings_unlocked(app, &settings);
+    result
+}
+
+/// Atomic settings transaction which persists only when the mutation succeeds.
+pub fn try_update_settings<R, E>(
+    app: &AppHandle,
+    update: impl FnOnce(&mut AppSettings) -> Result<R, E>,
+) -> Result<R, E> {
+    let _transaction = lock_settings_transaction();
+    let mut settings = get_settings_unlocked(app);
+    let result = update(&mut settings)?;
+    write_settings_unlocked(app, &settings);
+    Ok(result)
 }
 
 pub fn get_bindings(app: &AppHandle) -> HashMap<String, ShortcutBinding> {

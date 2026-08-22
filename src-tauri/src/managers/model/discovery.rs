@@ -26,8 +26,12 @@ impl ModelManager {
                     "Selected model '{}' not found in available models, clearing selection",
                     settings.selected_model
                 );
-                settings.selected_model = String::new();
-                write_settings(&self.app_handle, settings.clone());
+                let unavailable_model = std::mem::take(&mut settings.selected_model);
+                crate::settings::update_settings(&self.app_handle, |current| {
+                    if current.selected_model == unavailable_model {
+                        current.selected_model.clear();
+                    }
+                });
             }
         }
 
@@ -52,10 +56,12 @@ impl ModelManager {
                     available_model.id, available_model.name
                 );
 
-                // Update settings with the selected model
-                let mut updated_settings = settings;
-                updated_settings.selected_model = available_model.id.clone();
-                write_settings(&self.app_handle, updated_settings);
+                crate::settings::update_settings(&self.app_handle, |settings| {
+                    // Respect a selection made concurrently while discovery ran.
+                    if settings.selected_model.is_empty() {
+                        settings.selected_model = available_model.id.clone();
+                    }
+                });
 
                 info!("Successfully auto-selected model: {}", available_model.id);
             }

@@ -1,7 +1,7 @@
 use super::model_capabilities::{
     CapabilityProbe, CapabilityProber, Compatibility, GgufHeaderProber,
 };
-use crate::settings::{get_settings, write_settings};
+use crate::settings::get_settings;
 use anyhow::Result;
 use hf_hub::api::tokio::CancellationToken;
 use hf_hub::Cache;

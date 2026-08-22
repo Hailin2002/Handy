@@ -324,8 +324,8 @@ impl Serialize for SecretMap {
     /// Secrets never reach disk through this type: API keys live in the OS
     /// keychain (see [`crate::secret_store`]). Serializing as an empty map is
     /// defense in depth — even if a value is still present in memory (legacy
-    /// migration input, placeholder defaults), `write_settings` can only ever
-    /// persist `{}`.
+    /// migration input, placeholder defaults), settings persistence can only
+    /// ever write `{}`.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

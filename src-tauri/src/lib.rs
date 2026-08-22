@@ -49,8 +49,6 @@ use tauri::{AppHandle, Listener, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_log::{Builder as LogBuilder, RotationStrategy, Target, TargetKind};
 
-use crate::settings::get_settings;
-
 use std::sync::atomic::Ordering;
 
 #[allow(unused_variables)]
@@ -507,14 +505,14 @@ pub fn run(cli_args: CliArgs) {
 
             win_builder.build()?;
 
-            let mut settings = get_settings(app.handle());
-
             // One-time migration: move plain-text API keys from the settings
-            // store into the OS keychain (secret_store). Re-persist only when
-            // something actually moved, so the emptied maps hit disk once.
-            if secret_store::migrate_legacy_settings_secrets(&mut settings) {
-                settings::write_settings(app.handle(), settings.clone());
-            }
+            // store into the OS keychain (secret_store). Keep the migration and
+            // persistence in one transaction so startup cannot overwrite a
+            // concurrent settings change.
+            let mut settings = settings::update_settings(app.handle(), |settings| {
+                secret_store::migrate_legacy_settings_secrets(settings);
+                settings.clone()
+            });
 
             // Apply the persisted appearance theme to the native title bar before
             // the window is shown, so it matches the in-app palette without a flash
