@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speak – Meeting-Mode Prototyp</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== Primärnavigation (Plan §6.3) ===== -->
+  <nav class="sidebar" aria-label="Hauptnavigation">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">S</span>
+      <span class="brand-name">Speak</span>
+    </div>
+
+    <ul class="nav-list" role="list">
+      <li><a href="#/diktieren" class="nav-item" data-route="diktieren">Diktieren</a></li>
+      <li><a href="#/meetings" class="nav-item" data-route="meetings">Meetings</a></li>
+      <!-- Angehefteter Eintrag während einer laufenden Aufnahme (Plan §6.3) -->
+      <li id="pinned-recording" hidden>
+        <a href="#/meeting-aktiv" class="nav-item nav-pinned" data-route="meeting-aktiv"
+           aria-live="off">
+          <span class="rec-dot" aria-hidden="true"></span>
+          <span class="pinned-label">Aufnahme läuft</span>
+          <span class="pinned-time" id="pinned-time">00:00:00</span>
+        </a>
+      </li>
+      <li><a href="#/projekte" class="nav-item" data-route="projekte">
+        Projekte
+        <span class="badge" id="eingang-badge" title="Nicht zugeordnete Elemente im Eingang">2</span>
+      </a></li>
+      <li><a href="#/diktatverlauf" class="nav-item" data-route="diktatverlauf">Diktatverlauf</a></li>
+    </ul>
+
+    <div class="nav-divider" role="separator" aria-hidden="true"></div>
+
+    <ul class="nav-list nav-secondary" role="list">
+      <li><a href="#/einstellungen" class="nav-item" data-route="einstellungen">Einstellungen</a></li>
+      <li><a href="#/hilfe" class="nav-item" data-route="hilfe">Hilfe &amp; Über</a></li>
+    </ul>
+
+    <!-- Mock-Steuerung: nur im Prototyp vorhanden -->
+    <div class="mock-controls">
+      <button type="button" class="btn btn-ghost btn-small" id="mock-reset"
+              title="Prototyp-Zustand zurücksetzen">Mock zurücksetzen</button>
+    </div>
+  </nav>
+
+  <!-- ===== Inhaltsbereich ===== -->
+  <main id="main" class="main" tabindex="-1">
+
+    <!-- ========== Ansicht: Diktieren (Plan §6.4) ========== -->
+    <section class="view" id="view-diktieren" hidden>
+      <header class="view-header">
+        <h1>Diktieren</h1>
+        <p class="subtitle">Schnelles Speech-to-Text – unabhängig vom Meeting-Modus.</p>
+      </header>
+
+      <div class="card card-primary-action-col">
+        <div class="dictation-status-row">
+          <span class="status-chip status-ready" id="dict-status-chip">
+            <span aria-hidden="true">●</span> Bereit
+          </span>
+          <span class="muted" id="dict-hint">Drücke den Shortcut, um zu starten.</span>
+        </div>
+
+        <dl class="status-lines">
+          <div class="status-line">
+            <dt>Diktier-Shortcut</dt>
+            <dd><button type="button" class="keycap" id="keycap-dictate"
+                        title="Shortcut in Einstellungen ändern">Ctrl + Space</button></dd>
+          </div>
+          <div class="status-line">
+            <dt>Modus</dt><dd>Gedrückt halten</dd>
+          </div>
+          <div class="status-line">
+            <dt>STT-Ziel</dt><dd>Lokal auf diesem Gerät</dd>
+          </div>
+          <div class="status-line">
+            <dt>Sprache · Modell</dt><dd>Deutsch · Whisper Small</dd>
+          </div>
+        </dl>
+
+        <div class="row-gap">
+          <button type="button" class="btn btn-primary" id="btn-dictat-testen">Diktat testen</button>
+          <button type="button" class="btn btn-ghost"
+                  onclick="location.hash = '#/einstellungen/diktieren'">Diktier-Einstellungen</button>
+        </div>
+
+        <div class="test-preview" id="dict-preview" hidden>
+          <h2 class="small-heading">Testvorschau <span class="muted">(wird nicht eingefügt)</span></h2>
+          <p id="dict-preview-text" class="preview-text"></p>
+        </div>
+        <p class="note">Diese Seite enthält absichtlich keinen Meeting-Startbutton.</p>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Meetings (Plan §6.5) ========== -->
+    <section class="view" id="view-meetings" hidden>
+      <header class="view-header">
+        <h1>Meetings</h1>
+        <p class="subtitle">Aufnehmen, transkribieren und zusammenfassen – Standard: lokal auf diesem Gerät.</p>
+      </header>
+
+      <!-- Aktives Meeting immer oben, nie durch Suche/Filter wegfilterbar -->
+      <div class="card active-meeting-card" id="active-meeting-card" hidden>
+        <div class="row-between">
+          <div>
+            <span class="status-chip status-recording"><span aria-hidden="true">●</span> Aufnahme läuft</span>
+            <strong id="am-title">Meeting</strong>
+            <span class="mono" id="am-duration">00:00:00</span>
+          </div>
+          <button type="button" class="btn btn-secondary" id="btn-open-active">Öffnen</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button type="button" class="btn btn-primary" id="btn-neues-meeting">+ Neues Meeting</button>
+        <label class="sr-only" for="meeting-search">Meetings durchsuchen</label>
+        <input type="search" id="meeting-search" placeholder="Meetings durchsuchen …">
+        <div class="filter-group" role="group" aria-label="Meeting-Filter">
+          <button type="button" class="chip chip-selected" data-filter="alle">Alle</button>
+          <button type="button" class="chip" data-filter="verarbeitung">In Verarbeitung</button>
+          <button type="button" class="chip" data-filter="fertig">Fertig</button>
+          <button type="button" class="chip" data-filter="fehler">Fehler</button>
+        </div>
+      </div>
+
+      <ul class="meeting-list" id="meeting-list" role="list"></ul>
+
+      <!-- Leerer Zustand -->
+      <div class="empty-state" id="meetings-empty" hidden>
+        <h2>Noch keine Meetings</h2>
+        <p>Nehme Besprechungen auf und erhalte automatisch Transkript und Zusammenfassung.</p>
+        <button type="button" class="btn btn-primary btn-large" id="btn-neues-meeting-empty">Neues Meeting</button>
+        <button type="button" class="btn btn-ghost" disabled title="In dieser Prototyp-Version nicht freigegeben">Audiodatei importieren</button>
+        <p class="privacy-note">🔒 Datenschutzstatus: Standard lokal auf diesem Gerät.</p>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Laufendes Meeting (Plan §6.11) ========== -->
+    <section class="view" id="view-meeting-aktiv" hidden>
+      <div class="fixed-statusbar" role="status">
+        <span class="status-chip status-recording"><span aria-hidden="true">●</span> Aufnahme läuft</span>
+        <span class="mono" id="live-duration">00:00:00</span>
+        <span>Lokal</span>
+        <span class="ok">Audio gespeichert</span>
+      </div>
+
+      <div class="transcript-area" aria-label="Live-Transkript">
+        <p class="listening-state" id="listening-state">Hört zu …</p>
+        <ul class="segments" id="live-segments" role="list"></ul>
+        <button type="button" class="btn btn-secondary" id="btn-zum-text" hidden>Zum aktuellen Text</button>
+      </div>
+
+      <div class="fixed-controls">
+        <button type="button" class="btn btn-neutral" id="btn-pause">Pause</button>
+        <button type="button" class="btn btn-danger" id="btn-beenden">⏹ Meeting beenden</button>
+        <div class="levels">
+          <label>Mikrofon <meter id="mic-level" min="0" max="100" value="40"></meter></label>
+          <label>Systemaudio <meter id="sys-level" min="0" max="100" value="65"></meter></label>
+        </div>
+      </div>
+
+      <!-- Bestätigung vor Beendigung (Plan §6.9) -->
+      <div class="modal-backdrop" id="stop-confirm" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="stop-confirm-title">
+          <h2 id="stop-confirm-title">Meeting wirklich beenden?</h2>
+          <p>Die Aufnahme wird gestoppt und die Verarbeitung gestartet.</p>
+          <div class="row-gap row-end">
+            <button type="button" class="btn btn-neutral" id="btn-stop-abbruch">Weiter aufnehmen</button>
+            <button type="button" class="btn btn-danger" id="btn-stop-ok">Beenden</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Verarbeitung nach Stop (Plan §6.12) ========== -->
+    <section class="view" id="view-verarbeitung" hidden>
+      <header class="view-header">
+        <h1 id="proc-title">Meeting wird verarbeitet</h1>
+        <p class="subtitle">Du kannst dieses Fenster schließen – die Arbeit läuft im Hintergrund weiter.</p>
+      </header>
+      <div class="card">
+        <ul class="checklist" id="proc-checklist" role="list" aria-live="polite">
+          <li data-step="saved" class="done">✓ Aufnahme sicher gespeichert</li>
+          <li data-step="chunks">○ Audioabschnitte vorbereiten …</li>
+          <li data-step="transcribe">○ Abschnitte transkribieren …</li>
+          <li data-step="summary">○ Zusammenfassung wartet</li>
+        </ul>
+        <div class="row-gap">
+          <button type="button" class="btn btn-secondary" onclick="location.hash='#/meetings'">Im Hintergrund weiterarbeiten</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Projekte (Plan §6.16) ========== -->
+    <section class="view" id="view-projekte" hidden>
+      <header class="view-header">
+        <h1>Projekte</h1>
+        <p class="subtitle">Status, Aufgaben und Meetings pro Projekt – Meetings können auch ohne Projekt aufgenommen werden.</p>
+      </header>
+      <div class="toolbar">
+        <button type="button" class="btn btn-primary">Projekt erstellen</button>
+        <button type="button" class="btn btn-ghost" disabled title="In dieser Prototyp-Version nicht freigegeben">WhatsApp-Export importieren</button>
+        <label class="sr-only" for="project-search">Projekte durchsuchen</label>
+        <input type="search" id="project-search" placeholder="Projekte durchsuchen …">
+        <label class="sr-only" for="project-sort">Sortierung</label>
+        <select id="project-sort">
+          <option value="aktiv">Zuletzt aktiv</option>
+          <option value="dringend">Dringendste Aufgabe</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
+      <ul class="project-list" id="project-list" role="list">
+        <li class="project-card inbox-card">
+          <a href="#/projekte/eingang" class="project-link">
+            <strong>Eingang – Nicht zugeordnet</strong>
+            <span class="badge badge-accent">2</span>
+            <span class="muted">2 Meetings ohne Projektzuordnung</span>
+          </a>
+        </li>
+        <li class="project-card">
+          <a href="#/projekte/bdna" class="project-link">
+            <strong>BDNA Club</strong>
+            <span class="status-chip status-processing">In Arbeit</span>
+            <span class="muted">Nächste Aufgabe: Einladungen versenden (überfällig)</span>
+            <span class="muted small">Zuletzt aktiv: heute · 3 ungeprüfte Vorschläge</span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ========== Ansicht: Diktatverlauf ========== -->
+    <section class="view" id="view-diktatverlauf" hidden>
+      <header class="view-header">
+        <h1>Diktatverlauf</h1>
+        <p class="subtitle">Kurzer Verlauf deiner Diktate.</p>
+      </header>
+      <ul class="history-list" role="list">
+        <li class="history-item">
+          <span class="muted">Heute, 14:32</span>
+          <p>Notiz für den Einkauf: Milch, Brot, Kaffeebohnen und ein neues USB-Kabel.</p>
+          <button type="button" class="btn btn-ghost btn-small copy-btn" data-copy="Notiz für den Einkauf: Milch, Brot, Kaffeebohnen und ein neues USB-Kabel.">Kopieren</button>
+        </li>
+        <li class="history-item">
+          <span class="muted">Gestern, 09:15</span>
+          <p>Entwurf der Antwort an Frau Berger mit Terminvorschlag für Dienstag.</p>
+          <button type="button" class="btn btn-ghost btn-small copy-btn" data-copy="Entwurf der Antwort an Frau Berger mit Terminvorschlag für Dienstag.">Kopieren</button>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ========== Ansicht: Einstellungen (sekundäre Tabs, Plan §6.3) ========== -->
+    <section class="view" id="view-einstellungen" hidden>
+      <header class="view-header"><h1>Einstellungen</h1></header>
+      <div class="tabs" role="tablist" aria-label="Einstellungsbereiche">
+        <button role="tab" class="tab" data-tab="diktieren" aria-selected="true">Diktieren</button>
+        <button role="tab" class="tab" data-tab="meetings" aria-selected="false">Meetings</button>
+        <button role="tab" class="tab" data-tab="modelle" aria-selected="false">Modelle &amp; Provider</button>
+        <button role="tab" class="tab" data-tab="allgemein" aria-selected="false">Allgemein</button>
+        <button role="tab" class="tab" data-tab="erweitert" aria-selected="false">Erweitert</button>
+      </div>
+
+      <div class="tabpanel" role="tabpanel" data-panel="diktieren">
+        <h2>Diktieren</h2>
+        <div class="setting-row"><label for="set-mode">Aufnahmemodus</label>
+          <select id="set-mode"><option>Gedrückt halten</option><option>Drücken zum Umschalten</option></select></div>
+        <div class="setting-row"><label for="set-lang">Sprache</label>
+          <select id="set-lang"><option>Deutsch</option><option>English</option></select></div>
+      </div>
+      <div class="tabpanel" role="tabpanel" data-panel="meetings" hidden>
+        <h2>Meetings</h2>
+        <div class="setting-row"><label for="set-mprov">Standard-Verarbeitung</label>
+          <select id="set-mprov"><option>Lokal auf diesem Gerät</option><option>Azure Cloud</option><option>Custom</option></select></div>
+        <div class="setting-row"><label for="set-mshort">Meeting-Shortcut</label>
+          <button type="button" class="keycap">Ctrl + Alt + Space</button></div>
+      </div>
+      <div class="tabpanel" role="tabpanel" data-panel="modelle" hidden>
+        <h2>Modelle &amp; Provider</h2>
+        <p class="muted">Whisper Small ist heruntergeladen und aktiv. Weitere Modelle und Provider werden hier verwaltet.</p>
+      </div>
+      <div class="tabpanel" role="tabpanel" data-panel="allgemein" hidden>
+        <h2>Allgemein</h2>
+        <div class="setting-row"><label for="set-sound">Audio-Feedback</label>
+          <input type="checkbox" id="set-sound" checked></div>
+      </div>
+      <div class="tabpanel" role="tabpanel" data-panel="erweitert" hidden>
+        <h2>Erweitert</h2>
+        <p class="muted">Debug-Funktionen sind nur im aktivierten Debug-Modus sichtbar.</p>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Hilfe & Über ========== -->
+    <section class="view" id="view-hilfe" hidden>
+      <header class="view-header"><h1>Hilfe &amp; Über</h1></header>
+      <div class="card">
+        <p>Speak Meeting-Mode – statischer Klick-Prototyp (Plan §6.3).</p>
+        <p class="muted">Version: Prototyp · Keine echte Aufnahme, alle Daten sind Mock-Daten.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Live-Region für Statusänderungen -->
+<div aria-live="polite" class="sr-only" id="live-region"></div>
+
+<!-- ========== Kompakter Startdialog (Plan §6.7) ========== -->
+<div class="modal-backdrop" id="start-dialog" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="start-title">
+    <h2 id="start-title">Meeting starten</h2>
+    <!-- Gültiges Markup: Buttons innerhalb einer Liste statt dt/dd im Button -->
+    <ul class="clickable-lines" role="list">
+      <li><button type="button" class="status-line-btn" title="Mikrofon wechseln">
+        <span class="line-label">Mikrofon</span>
+        <span>Standardmikrofon <span class="ok">✓ funktioniert</span></span>
+      </button></li>
+      <li><button type="button" class="status-line-btn" title="Systemaudio wechseln">
+        <span class="line-label">Systemaudio</span>
+        <span>Lautsprecher / Headset <span class="ok">✓ funktioniert</span></span>
+      </button></li>
+      <li><button type="button" class="status-line-btn" title="Verarbeitung wechseln">
+        <span class="line-label">Transkription</span>
+        <span>Lokal · Meeting-Modell <span class="muted">Auf diesem Gerät</span></span>
+      </button></li>
+      <li><button type="button" class="status-line-btn" title="Sprache wechseln">
+        <span class="line-label">Sprache</span>
+        <span>Deutsch <span class="link-like">Ändern</span></span>
+      </button></li>
+    </ul>
+    <form id="start-form">
+      <label for="meeting-title-input">Titel <span class="muted">(optional)</span></label>
+      <input type="text" id="meeting-title-input" placeholder="Meeting am …">
+      <div class="chip-line">
+        <span class="muted">Projekt:</span>
+        <button type="button" class="chip" id="project-chip">Kein Projekt</button>
+      </div>
+      <div class="setting-row-inline">
+        <input type="checkbox" id="summarize-toggle" checked>
+        <label for="summarize-toggle">Nach dem Meeting zusammenfassen</label>
+      </div>
+      <p class="privacy-note">💾 Speicherbedarf ca. 120 MB/Stunde · Standard: lokal auf diesem Gerät.</p>
+      <div class="row-between">
+        <button type="button" class="btn btn-ghost" onclick="closeStartDialog()">Weitere Einstellungen</button>
+        <button type="submit" class="btn btn-primary btn-large" id="btn-meeting-starten">Meeting starten</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

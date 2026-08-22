@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!-- In-browser verification harness for prototype/meeting-mode (Gates G1, G2).
+     Loads index.html into an iframe and runs the acceptance checks inside the
+     browser, so no inter-process debugging channel (named pipe / TCP CDP) is
+     needed. Results are written into the DOM as "PASS <name>" / "FAIL <name>"
+     lines; run with:
+       chrome-headless-shell --headless --allow-file-access-from-files \
+         --virtual-time-budget=25000 --dump-dom verify.html
+     and grep the dumped DOM for PASS/FAIL. -->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>verify-running</title>
+<style>
+  body { font-family: monospace; white-space: pre; }
+  iframe { width: 1200px; height: 800px; border: 0; }
+</style>
+</head>
+<body>
+<div id="out">STARTING</div>
+<iframe id="app" src="index.html"></iframe>
+<script>
+"use strict";
+(function () {
+  const out = [];
+  function check(name, ok) {
+    out.push((ok ? "PASS" : "FAIL") + "  " + name);
+    if (!ok) window.__failed = true;
+  }
+
+  window.addEventListener("load", function () {
+    const frame = document.getElementById("app");
+    const win = frame.contentWindow;
+    const doc = frame.contentDocument;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    async function showRoute(route) {
+      win.location.hash = "#/" + route;
+      await sleep(50);
+      return doc.getElementById("view-" + route);
+    }
+
+    (async () => {
+      try {
+        await sleep(300);
+
+        // G1: navigation between the five areas
+        const areas = ["diktieren", "meetings", "projekte", "diktatverlauf", "einstellungen"];
+        for (const route of areas) {
+          const view = await showRoute(route);
+          check("G1 nav: " + route + " visible",
+                view && !view.hidden && !!view.offsetParent);
+        }
+        // exactly one view visible at a time
+        await showRoute("projekte");
+        check("G1 only one view visible at a time",
+              [...doc.querySelectorAll(".view")].filter((v) => !v.hidden).length === 1);
+
+        // aria-current follows route
+        check("aria-current set on active nav item",
+              doc.querySelector('.nav-item[data-route="projekte"]').getAttribute("aria-current") === "page");
+
+        // G2: pinned entry hidden while no session
+        check("G2 pinned entry hidden initially",
+              doc.getElementById("pinned-recording").hidden === true);
+
+        // Start a mocked session via the start dialog
+        await showRoute("meetings");
+        doc.getElementById("btn-neues-meeting").click();
+        check("start dialog opens", !doc.getElementById("start-dialog").hidden);
+        doc.getElementById("btn-meeting-starten").click();
+
+        // G2: pinned entry visible with red dot and running timer
+        await sleep(1300);
+        const pin = doc.getElementById("pinned-recording");
+        const dotColor = win.getComputedStyle(pin.querySelector(".rec-dot")).backgroundColor;
+        const timer = pin.querySelector(".pinned-time").textContent;
+        check("G2 pinned entry visible during session", !pin.hidden);
+        check("G2 pinned label 'Aufnahme läuft'",
+              pin.querySelector(".pinned-label").textContent === "Aufnahme läuft");
+        check("G2 red status dot", dotColor === "rgb(179, 38, 30)");
+        check("G2 timer counts up (" + timer + ")", /^00:00:0[1-9]/.test(timer));
+        check("G2 pinned entry sits directly under Meetings",
+              pin.previousElementSibling.querySelector(".nav-item").dataset.route === "meetings");
+
+        // Pinned entry navigates to running-meeting view
+        doc.querySelector(".nav-pinned").click();
+        await sleep(100);
+        check("pinned entry navigates to meeting-aktiv view",
+              !doc.getElementById("view-meeting-aktiv").hidden);
+
+        // Stop flow: confirm dialog, processing checklist, pin gone
+        doc.getElementById("btn-beenden").click();
+        check("stop confirmation shown", !doc.getElementById("stop-confirm").hidden);
+        doc.getElementById("btn-stop-ok").click();
+        await sleep(200);
+        check("pin hidden after stop",
+              doc.getElementById("pinned-recording").hidden === true);
+        check("processing view reached",
+              !doc.getElementById("view-verarbeitung").hidden);
+        await sleep(3600);
+        check("checklist completes",
+              doc.querySelector('#proc-checklist li[data-step="summary"]').className === "done");
+        await showRoute("meetings");
+        check("finished meeting appears in list",
+              doc.querySelectorAll("#meeting-list .meeting-item").length >= 3);
+
+        // Settings tabs work
+        await showRoute("einstellungen");
+        doc.querySelector('.tab[data-tab="modelle"]').click();
+        check("settings tab switch works",
+              !doc.querySelector('.tabpanel[data-panel="modelle"]').hidden &&
+              doc.querySelector('.tab[data-tab="modelle"]').getAttribute("aria-selected") === "true");
+
+        // Escape closes start dialog without starting
+        await showRoute("meetings");
+        doc.getElementById("btn-neues-meeting").click();
+        doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await sleep(50);
+        check("Escape closes start dialog",
+              doc.getElementById("start-dialog").hidden === true);
+
+        out.forEach((l) => { const d = document.createElement("div"); d.textContent = l; document.body.appendChild(d); });
+        const summary = document.createElement("div");
+        summary.id = "summary";
+        summary.textContent = window.__failed ? "RESULT: FAIL" : "RESULT: PASS";
+        document.body.appendChild(summary);
+        document.title = summary.textContent;
+      } catch (e) {
+        const d = document.createElement("div");
+        d.id = "harness-error";
+        d.textContent = "HARNESS ERROR: " + (e && e.stack || e);
+        document.body.appendChild(d);
+        document.title = "HARNESS ERROR";
+      }
+    })();
+  });
+})();
+</script>
+</body>
+</html>
