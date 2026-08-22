@@ -176,7 +176,7 @@
       "azure": {
         "endpoint": {
           "title": "Azure region or endpoint",
-        "description": "Enter your Azure Speech region. Continuous recognition supports long dictations and meetings.",
+          "description": "Enter your Azure Speech region. Continuous recognition supports long dictations and meetings.",
           "placeholder": "germanywestcentral"
         },
         "language": {
@@ -192,7 +192,7 @@
       },
       "azureValidation": {
         "title": "Save and test Azure",
-      "description": "Saves the Azure fields and verifies the configured Speech resource.",
+        "description": "Saves the Azure fields and verifies the configured Speech resource.",
         "button": "Save & test connection",
         "testing": "Saving and testing…",
         "success": "Azure Speech is configured correctly.",
@@ -227,24 +227,24 @@
         "targetEnglish": "English",
         "targetEnglishBritish": "English (British)",
         "targetEnglishAmerican": "English (American)",
-      "targetGerman": "German"
-    },
-    "advanced": {
-      "title": "Advanced live pipeline",
-      "description": "Sentence stability, endpointing and translation timing",
-      "stability": {
-        "title": "Live text stability",
-        "description": "Number of matching Azure partial results required before words are treated as stable. The conference pipeline used 3."
+        "targetGerman": "German"
       },
-      "phraseSilence": {
-        "title": "Sentence-final silence",
-        "description": "How long Azure waits through silence before finalizing the current phrase. Longer values preserve sentence context; shorter values react faster."
-      },
-      "translationDelay": {
-        "title": "DeepL sentence delay",
-        "description": "Wait after an Azure-final sentence and combine any additional final segments before sending the text once to DeepL. Interim text is never billed."
+      "advanced": {
+        "title": "Advanced live pipeline",
+        "description": "Sentence stability, endpointing and translation timing",
+        "stability": {
+          "title": "Live text stability",
+          "description": "Number of matching Azure partial results required before words are treated as stable. The conference pipeline used 3."
+        },
+        "phraseSilence": {
+          "title": "Sentence-final silence",
+          "description": "How long Azure waits through silence before finalizing the current phrase. Longer values preserve sentence context; shorter values react faster."
+        },
+        "translationDelay": {
+          "title": "DeepL sentence delay",
+          "description": "Wait after an Azure-final sentence and combine any additional final segments before sending the text once to DeepL. Interim text is never billed."
+        }
       }
-    }
     },
     "general": {
       "title": "General",

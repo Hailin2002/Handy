@@ -96,15 +96,15 @@ zeigt standardmäßig ein chronologisches Transkript ohne erfundene Personenzuor
 
 ### Jetzt bauen und später ermöglichen
 
-| Jetzt verbindlich bauen | Jetzt nur architektonisch vorbereiten |
-| --- | --- |
-| Windows-Aufnahme, lokale/Azure/Custom-STT | macOS, Linux und iPhone-Aufnahme |
-| lokale SQLite-Datenbank und lokaler Dateispeicher | Server-Datenbank, Objektspeicher und Synchronisation |
-| Meetings, Projekte, Aufgaben, Status und Quellenbelege | gemeinsamer Zugriff von mehreren Geräten |
-| WhatsApp-ZIP/TXT als manueller Import | direkte WhatsApp- und E-Mail-Connectoren |
-| lokale oder bewusst gewählte Cloud-KI | zentrale serverseitige Verarbeitung |
-| lokale Volltextsuche mit SQLite FTS5 | Embeddings und Vektorsuche |
-| interne Service-Schnittstellen | authentifizierter Remote-MCP-Server für Codex |
+| Jetzt verbindlich bauen                                | Jetzt nur architektonisch vorbereiten                |
+| ------------------------------------------------------ | ---------------------------------------------------- |
+| Windows-Aufnahme, lokale/Azure/Custom-STT              | macOS, Linux und iPhone-Aufnahme                     |
+| lokale SQLite-Datenbank und lokaler Dateispeicher      | Server-Datenbank, Objektspeicher und Synchronisation |
+| Meetings, Projekte, Aufgaben, Status und Quellenbelege | gemeinsamer Zugriff von mehreren Geräten             |
+| WhatsApp-ZIP/TXT als manueller Import                  | direkte WhatsApp- und E-Mail-Connectoren             |
+| lokale oder bewusst gewählte Cloud-KI                  | zentrale serverseitige Verarbeitung                  |
+| lokale Volltextsuche mit SQLite FTS5                   | Embeddings und Vektorsuche                           |
+| interne Service-Schnittstellen                         | authentifizierter Remote-MCP-Server für Codex        |
 
 Die rechte Spalte erzeugt in v1 weder Servercode noch ungenutzte UI-Schalter. Sie
 bestimmt nur stabile IDs, Datenbeziehungen und Schnittstellengrenzen.
@@ -786,7 +786,7 @@ zurückgesetzt.
 - Der Startdialog merkt sich das zuletzt verwendete Projekt, wählt es bei einem
   neuen Meeting aber nur sichtbar vor; ein Klick entfernt die Auswahl.
 - Nach genügend Transkript oder nach dem Stop kann Speak `Projekt BDNA Club
-  vorgeschlagen` anzeigen. Der Vorschlag enthält Confidence und zwei kurze Belege.
+vorgeschlagen` anzeigen. Der Vorschlag enthält Confidence und zwei kurze Belege.
 - Standardaktion ist `Zuordnen`; `Anderes Projekt` und `Ohne Projekt lassen` sind
   gleichwertig erreichbar. Ohne Eingabe findet keine automatische Verschiebung
   statt.
@@ -826,7 +826,7 @@ Cloudaufruf. Ein gesamtes Archiv wird nie blind an einen Provider gesendet:
 - Video wird in v1 gespeichert und als Metadatum/Thumbnail angezeigt, nicht
   automatisch vollständig analysiert;
 - nicht unterstützte Dateien bleiben verfügbar und werden klar als `nicht
-  analysiert` markiert.
+analysiert` markiert.
 
 Der Nutzer kann einen Export vollständig lokal importieren und durchsuchen, selbst
 wenn Bilder nicht interpretiert werden. Bei OpenRouter werden private lokale Bilder
@@ -1801,13 +1801,13 @@ Beim Anklicken einer Aufgabe öffnet sich ein Detail-Drawer mit:
 Die Aufgabenliste zeigt die Ausführbarkeit sofort, aber niemals ausschließlich durch
 Farbe:
 
-| Anzeige | Bedeutung |
-| --- | --- |
-| Blau + Person-Symbol + `Für mich` | sinnvoll oder zwingend durch den Nutzer zu erledigen |
-| Violett + Spark-/Agent-Symbol + `Speak kann helfen` | Assistent kann einen Entwurf, Recherche oder Teilarbeit liefern |
-| Grün + Agent-Symbol + `Speak kann erledigen` | vollständig ausführbar; erforderliche Fähigkeiten sind verbunden |
+| Anzeige                                               | Bedeutung                                                              |
+| ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| Blau + Person-Symbol + `Für mich`                     | sinnvoll oder zwingend durch den Nutzer zu erledigen                   |
+| Violett + Spark-/Agent-Symbol + `Speak kann helfen`   | Assistent kann einen Entwurf, Recherche oder Teilarbeit liefern        |
+| Grün + Agent-Symbol + `Speak kann erledigen`          | vollständig ausführbar; erforderliche Fähigkeiten sind verbunden       |
 | Orange + Schloss-Symbol + `Freigabe/Verbindung nötig` | grundsätzlich möglich, aber Konto, Berechtigung oder Bestätigung fehlt |
-| Grau + Fragezeichen + `Erst klären` | Ziel oder Erfolgskriterium ist nicht eindeutig genug |
+| Grau + Fragezeichen + `Erst klären`                   | Ziel oder Erfolgskriterium ist nicht eindeutig genug                   |
 
 Die Bewertung stammt aus einem `CapabilityRegistry`-Service und berücksichtigt zur
 Laufzeit:

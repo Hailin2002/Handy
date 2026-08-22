@@ -176,7 +176,7 @@
       "azure": {
         "endpoint": {
           "title": "Azure-Region oder Endpunkt",
-        "description": "Trage deine Azure-Speech-Region ein. Die kontinuierliche Erkennung unterstützt lange Diktate und Meetings.",
+          "description": "Trage deine Azure-Speech-Region ein. Die kontinuierliche Erkennung unterstützt lange Diktate und Meetings.",
           "placeholder": "germanywestcentral"
         },
         "language": {
@@ -192,7 +192,7 @@
       },
       "azureValidation": {
         "title": "Azure speichern und testen",
-      "description": "Speichert alle Azure-Felder und prüft die konfigurierte Speech-Ressource.",
+        "description": "Speichert alle Azure-Felder und prüft die konfigurierte Speech-Ressource.",
         "button": "Speichern & Verbindung testen",
         "testing": "Wird gespeichert und getestet…",
         "success": "Azure Speech ist korrekt eingerichtet.",
@@ -227,24 +227,24 @@
         "targetEnglish": "Englisch",
         "targetEnglishBritish": "Englisch (Britisch)",
         "targetEnglishAmerican": "Englisch (Amerikanisch)",
-      "targetGerman": "Deutsch"
-    },
-    "advanced": {
-      "title": "Erweiterte Live-Pipeline",
-      "description": "Satzstabilität, Abschluss und Übersetzungs-Timing",
-      "stability": {
-        "title": "Stabilität des Live-Texts",
-        "description": "Anzahl übereinstimmender Azure-Zwischenergebnisse, bevor Wörter als stabil gelten. Die Konferenz-Pipeline verwendete 3."
+        "targetGerman": "Deutsch"
       },
-      "phraseSilence": {
-        "title": "Stille bis zum Satzabschluss",
-        "description": "Wie lange Azure bei Stille wartet, bevor die aktuelle Phrase final wird. Länger erhält mehr Satzkontext, kürzer reagiert schneller."
-      },
-      "translationDelay": {
-        "title": "DeepL-Satzverzögerung",
-        "description": "Wartet nach einem von Azure finalisierten Satz und sammelt weitere finale Segmente, bevor der Text einmal an DeepL geht. Zwischenergebnisse werden nie berechnet."
+      "advanced": {
+        "title": "Erweiterte Live-Pipeline",
+        "description": "Satzstabilität, Abschluss und Übersetzungs-Timing",
+        "stability": {
+          "title": "Stabilität des Live-Texts",
+          "description": "Anzahl übereinstimmender Azure-Zwischenergebnisse, bevor Wörter als stabil gelten. Die Konferenz-Pipeline verwendete 3."
+        },
+        "phraseSilence": {
+          "title": "Stille bis zum Satzabschluss",
+          "description": "Wie lange Azure bei Stille wartet, bevor die aktuelle Phrase final wird. Länger erhält mehr Satzkontext, kürzer reagiert schneller."
+        },
+        "translationDelay": {
+          "title": "DeepL-Satzverzögerung",
+          "description": "Wartet nach einem von Azure finalisierten Satz und sammelt weitere finale Segmente, bevor der Text einmal an DeepL geht. Zwischenergebnisse werden nie berechnet."
+        }
       }
-    }
     },
     "models": {
       "title": "Transkriptionsmodelle",
