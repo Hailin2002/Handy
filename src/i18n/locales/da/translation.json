@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Møder kommer med mødetilstanden. Diktering fungerer som sædvanlig.",
     "projectsEmptyBody": "Projekter samler status, opgaver, møder og importerede kilder."
   },
+  "meetings": {
+    "emptyBenefit": "Optag dine møder og få transskriptioner og resuméer uden at forlade appen.",
+    "newMeeting": "Nyt møde",
+    "importAudio": "Importér lydfil",
+    "privacyLocal": "Standard: lokalt på denne enhed"
+  },
   "onboarding": {
     "subtitle": "For at komme i gang skal du vælge en transskriptionsmodel",
     "existingModelsTitle": "Kompatible modeller",

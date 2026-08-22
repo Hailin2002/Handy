@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Les réunions arriveront avec le mode réunion. La dictée fonctionne normalement.",
     "projectsEmptyBody": "Les projets réuniront statut, tâches, réunions et sources importées."
   },
+  "meetings": {
+    "emptyBenefit": "Enregistrez vos réunions et obtenez des transcriptions et des résumés sans quitter l'application.",
+    "newMeeting": "Nouvelle réunion",
+    "importAudio": "Importer un fichier audio",
+    "privacyLocal": "Par défaut : local sur cet appareil"
+  },
   "onboarding": {
     "subtitle": "Pour commencer, choisissez un modèle de transcription",
     "existingModelsTitle": "Modèles compatibles",

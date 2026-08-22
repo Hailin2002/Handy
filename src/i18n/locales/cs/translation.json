@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Schůze přijdou s režimem schůzí. Diktování funguje jako dosud.",
     "projectsEmptyBody": "Projekty spojí stav, úkoly, schůze a importované zdroje."
   },
+  "meetings": {
+    "emptyBenefit": "Nahrávejte schůze a získávejte přepisy a shrnutí, aniž byste opustili aplikaci.",
+    "newMeeting": "Nová schůze",
+    "importAudio": "Importovat zvukový soubor",
+    "privacyLocal": "Výchozí: místně na tomto zařízení"
+  },
   "onboarding": {
     "subtitle": "Pro začátek vyberte model pro přepis",
     "existingModelsTitle": "Kompatibilní modely",

@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Toplantılar toplantı moduyla gelecek. Dikte her zamanki gibi çalışacak.",
     "projectsEmptyBody": "Projeler; durumu, görevleri, toplantıları ve içe aktarılan kaynakları bir araya getirecek."
   },
+  "meetings": {
+    "emptyBenefit": "Toplantılarınızı kaydedin ve uygulamadan ayrılmadan transkriptler ve özetler alın.",
+    "newMeeting": "Yeni toplantı",
+    "importAudio": "Ses dosyasını içe aktar",
+    "privacyLocal": "Varsayılan: bu cihazda yerel"
+  },
   "onboarding": {
     "subtitle": "Başlamak için bir transkripsiyon modeli seçin",
     "existingModelsTitle": "Uyumlu Modeller",

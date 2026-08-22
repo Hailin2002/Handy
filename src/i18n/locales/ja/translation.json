@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "ミーティングはミーティングモードと共に提供されます。ディクテーションはこれまでどおり利用できます。",
     "projectsEmptyBody": "プロジェクトではステータス・タスク・ミーティング・読み込んだソースをまとめて管理できます。"
   },
+  "meetings": {
+    "emptyBenefit": "アプリを離れずに会議を録音し、文字起こしと要約を取得できます。",
+    "newMeeting": "新しいミーティング",
+    "importAudio": "音声ファイルを読み込む",
+    "privacyLocal": "デフォルト：このデバイス上でローカル処理"
+  },
   "onboarding": {
     "subtitle": "開始するには、文字起こしのモデルを選択してください",
     "existingModelsTitle": "互換性のあるモデル",

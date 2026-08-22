@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Cuộc họp sẽ ra mắt cùng chế độ họp. Việc đọc chính tả hoạt động như bình thường.",
     "projectsEmptyBody": "Dự án sẽ kết hợp trạng thái, tác vụ, cuộc họp và nguồn đã nhập."
   },
+  "meetings": {
+    "emptyBenefit": "Ghi âm các cuộc họp và nhận bản chép lời cùng tóm tắt mà không cần rời ứng dụng.",
+    "newMeeting": "Cuộc họp mới",
+    "importAudio": "Nhập tệp âm thanh",
+    "privacyLocal": "Mặc định: cục bộ trên thiết bị này"
+  },
   "onboarding": {
     "subtitle": "Để bắt đầu, hãy chọn một mô hình chuyển đổi giọng nói",
     "existingModelsTitle": "Mô hình tương thích",

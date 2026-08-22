@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Meetings folgen mit dem Meeting-Modus. Diktieren funktioniert wie gewohnt.",
     "projectsEmptyBody": "Projekte bündeln Status, Aufgaben, Meetings und importierte Quellen."
   },
+  "meetings": {
+    "emptyBenefit": "Nehmen Sie Meetings auf und erhalten Sie Transkripte und Zusammenfassungen, ohne die App zu verlassen.",
+    "newMeeting": "Neues Meeting",
+    "importAudio": "Audiodatei importieren",
+    "privacyLocal": "Standard: lokal auf diesem Gerät"
+  },
   "onboarding": {
     "subtitle": "Wähle ein Transkriptionsmodell, um loszulegen",
     "existingModelsTitle": "Kompatible Modelle",

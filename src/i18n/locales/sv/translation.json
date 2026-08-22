@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Möten kommer med mötesläget. Dikteringen fungerar som vanligt.",
     "projectsEmptyBody": "Projekt samlar status, uppgifter, möten och importerade källor."
   },
+  "meetings": {
+    "emptyBenefit": "Spela in dina möten och få transkriptioner och sammanfattningar utan att lämna appen.",
+    "newMeeting": "Nytt möte",
+    "importAudio": "Importera ljudfil",
+    "privacyLocal": "Standard: lokalt på den här enheten"
+  },
   "onboarding": {
     "subtitle": "För att komma igång, välj en transkriptionsmodell",
     "existingModelsTitle": "Kompatibla modeller",

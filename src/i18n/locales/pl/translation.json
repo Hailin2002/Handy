@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Spotkania pojawią się wraz z trybem spotkań. Dyktowanie działa jak zwykle.",
     "projectsEmptyBody": "Projekty połączą stan, zadania, spotkania i zaimportowane źródła."
   },
+  "meetings": {
+    "emptyBenefit": "Nagrywaj spotkania i otrzymuj transkrypcje oraz podsumowania bez opuszczania aplikacji.",
+    "newMeeting": "Nowe spotkanie",
+    "importAudio": "Importuj plik audio",
+    "privacyLocal": "Domyślnie: lokalnie na tym urządzeniu"
+  },
   "onboarding": {
     "subtitle": "Aby rozpocząć, wybierz model transkrypcji",
     "existingModelsTitle": "Zgodne modele",

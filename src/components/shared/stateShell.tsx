@@ -33,6 +33,8 @@ export interface StateAction {
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   /** Defaults: first action renders as `primary`, later ones as `secondary`. */
   variant?: "primary" | "primary-soft" | "secondary" | "ghost";
+  /** Optional button size; defaults to `md` (plan §6.5 uses `lg` for hero actions). */
+  size?: "sm" | "md" | "lg";
   /** Optional small leading glyph, purely decorative (aria-hidden). */
   icon?: React.ReactNode;
   disabled?: boolean;
@@ -116,6 +118,7 @@ export const StateShell: React.FC<
           <Button
             key={index}
             variant={action.variant ?? (index === 0 ? "primary" : "secondary")}
+            size={action.size}
             onClick={action.onClick}
             disabled={action.disabled}
           >

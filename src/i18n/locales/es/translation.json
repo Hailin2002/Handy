@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Las reuniones llegarán con el modo de reuniones. El dictado funciona con normalidad.",
     "projectsEmptyBody": "Los proyectos combinarán estado, tareas, reuniones y fuentes importadas."
   },
+  "meetings": {
+    "emptyBenefit": "Grabe sus reuniones y obtenga transcripciones y resúmenes sin salir de la aplicación.",
+    "newMeeting": "Nueva reunión",
+    "importAudio": "Importar archivo de audio",
+    "privacyLocal": "Predeterminado: local en este dispositivo"
+  },
   "onboarding": {
     "subtitle": "Para comenzar, elige un modelo de transcripción",
     "existingModelsTitle": "Modelos compatibles",

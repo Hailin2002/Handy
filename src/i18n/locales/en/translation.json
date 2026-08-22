@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Meetings are coming with meeting mode. Dictation works as usual.",
     "projectsEmptyBody": "Projects will combine status, tasks, meetings, and imported sources."
   },
+  "meetings": {
+    "emptyBenefit": "Record your meetings and get transcripts and summaries without leaving the app.",
+    "newMeeting": "New Meeting",
+    "importAudio": "Import audio file",
+    "privacyLocal": "Default: local on this device"
+  },
   "onboarding": {
     "subtitle": "To get started, choose a transcription model",
     "existingModelsTitle": "Compatible Models",

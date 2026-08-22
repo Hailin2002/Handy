@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "會議功能將隨會議模式推出。聽寫功能照常可用。",
     "projectsEmptyBody": "專案將彙整狀態、任務、會議與匯入的來源。"
   },
+  "meetings": {
+    "emptyBenefit": "錄製會議並取得逐字稿與摘要，無需離開應用程式。",
+    "newMeeting": "新增會議",
+    "importAudio": "匯入音訊檔案",
+    "privacyLocal": "預設：在此裝置上本機處理"
+  },
   "onboarding": {
     "subtitle": "首先，請選擇一種模型",
     "existingModelsTitle": "相容的模型",

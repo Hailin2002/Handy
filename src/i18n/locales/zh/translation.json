@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "会议功能将随会议模式推出。听写功能照常可用。",
     "projectsEmptyBody": "项目将汇总状态、任务、会议和导入的来源。"
   },
+  "meetings": {
+    "emptyBenefit": "录制会议并获得转录和摘要，无需离开应用。",
+    "newMeeting": "新建会议",
+    "importAudio": "导入音频文件",
+    "privacyLocal": "默认：在本设备上本地处理"
+  },
   "onboarding": {
     "subtitle": "请选择一个转录模型以开始使用",
     "existingModelsTitle": "兼容的模型",

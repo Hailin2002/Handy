@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "회의는 회의 모드와 함께 제공됩니다. 받아쓰기는 평소와 같이 작동합니다.",
     "projectsEmptyBody": "프로젝트에서는 상태, 작업, 회의, 가져온 소스를 한곳에서 관리합니다."
   },
+  "meetings": {
+    "emptyBenefit": "앱을 벗어나지 않고 회의를 녹음하고 받아쓰기와 요약을 받아보세요.",
+    "newMeeting": "새 회의",
+    "importAudio": "오디오 파일 가져오기",
+    "privacyLocal": "기본값: 이 기기에서 로컬로 처리"
+  },
   "onboarding": {
     "subtitle": "시작하려면 음성 인식 모델을 선택하세요",
     "existingModelsTitle": "호환 가능한 모델",

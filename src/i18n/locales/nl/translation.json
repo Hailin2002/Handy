@@ -31,6 +31,12 @@
     "meetingsEmptyBody": "Vergaderingen komen met de vergadermodus. Dicteren werkt zoals gewoonlijk.",
     "projectsEmptyBody": "Projecten bundelen status, taken, vergaderingen en geïmporteerde bronnen."
   },
+  "meetings": {
+    "emptyBenefit": "Neem uw vergaderingen op en ontvang transcripties en samenvattingen zonder de app te verlaten.",
+    "newMeeting": "Nieuwe vergadering",
+    "importAudio": "Audiobestand importeren",
+    "privacyLocal": "Standaard: lokaal op dit apparaat"
+  },
   "onboarding": {
     "subtitle": "Kies een transcriptiemodel om aan de slag te gaan",
     "existingModelsTitle": "Compatibele modellen",
