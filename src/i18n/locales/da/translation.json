@@ -273,7 +273,9 @@
           "restore": "Kunne ikke gendanne den oprindelige genvej",
           "set": "Kunne ikke indstille genvej: {{error}}",
           "reset": "Kunne ikke nulstille genvej til oprindelig indstilling"
-        }
+        },
+        "recordButtonAria": "Ændr genvej for {{name}}, i øjeblikket {{shortcut}}",
+        "escapeHint": "Optager genvej. Tryk på Escape for at annullere."
       },
       "language": {
         "title": "Sprog",

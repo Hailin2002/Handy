@@ -293,7 +293,9 @@
           "restore": "Error al restaurar el atajo original",
           "set": "Error al configurar el atajo: {{error}}",
           "reset": "Error al restablecer el atajo al valor original"
-        }
+        },
+        "recordButtonAria": "Cambiar el atajo de {{name}}, actualmente {{shortcut}}",
+        "escapeHint": "Grabando atajo. Presione Escape para cancelar."
       },
       "language": {
         "title": "Idioma",

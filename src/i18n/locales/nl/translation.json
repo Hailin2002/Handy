@@ -273,7 +273,9 @@
           "restore": "Herstellen van originele sneltoets mislukt",
           "set": "Instellen van sneltoets mislukt: {{error}}",
           "reset": "Sneltoets terugzetten naar standaardwaarde mislukt"
-        }
+        },
+        "recordButtonAria": "{{name}}-sneltoets wijzigen, momenteel {{shortcut}}",
+        "escapeHint": "Sneltoets wordt opgenomen. Druk op Escape om te annuleren."
       },
       "language": {
         "title": "Taal",

@@ -273,7 +273,9 @@
           "restore": "Failed to restore original shortcut",
           "set": "Failed to set shortcut: {{error}}",
           "reset": "Failed to reset shortcut to original value"
-        }
+        },
+        "recordButtonAria": "Change {{name}} shortcut, currently {{shortcut}}",
+        "escapeHint": "Recording shortcut. Press Escape to cancel."
       },
       "language": {
         "title": "Language",

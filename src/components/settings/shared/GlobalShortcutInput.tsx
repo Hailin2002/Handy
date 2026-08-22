@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   getKeyName,
@@ -34,7 +34,13 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
     null,
   );
   const [originalBinding, setOriginalBinding] = useState<string>("");
-  const shortcutRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  // The chip that shows the live capture while recording (kept mounted so
+  // its aria-live region announces state changes to screen readers)
+  const recordingChipRef = useRef<HTMLElement | null>(null);
+  // The shortcut button; regains focus when capture ends via the keyboard
+  const shortcutButtonRef = useRef<HTMLButtonElement | null>(null);
+  // Set when capture ends so focus is handed back to the shortcut button
+  const restoreFocusOnEndRef = useRef(false);
   const osType = useOsType();
 
   const bindings = getSetting("bindings") || {};
@@ -50,6 +56,25 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
       if (cleanup) return;
       if (e.repeat) return; // ignore auto-repeat
       e.preventDefault();
+
+      // Escape aborts capture without changing the stored shortcut
+      if (e.key === "Escape") {
+        restoreFocusOnEndRef.current = true;
+        if (editingShortcutId && originalBinding) {
+          try {
+            await updateBinding(editingShortcutId, originalBinding);
+          } catch (error) {
+            console.error("Failed to restore original binding:", error);
+            toast.error(t("settings.general.shortcut.errors.restore"));
+          }
+        }
+        await commands.resumeAllBindings().catch(console.error);
+        setEditingShortcutId(null);
+        setKeyPressed([]);
+        setRecordedKeys([]);
+        setOriginalBinding("");
+        return;
+      }
 
       // Get the key with OS-specific naming and normalize it
       const rawKey = getKeyName(e, osType);
@@ -128,7 +153,8 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
           // registered; re-registering it fails cleanly and is ignored)
           await commands.resumeAllBindings().catch(console.error);
 
-          // Exit editing mode and reset states
+          // Exit editing mode and reset states (focus returns to the button)
+          restoreFocusOnEndRef.current = true;
           setEditingShortcutId(null);
           setKeyPressed([]);
           setRecordedKeys([]);
@@ -140,7 +166,7 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
     // Add click outside handler
     const handleClickOutside = async (e: MouseEvent) => {
       if (cleanup) return;
-      const activeElement = shortcutRefs.current.get(editingShortcutId);
+      const activeElement = recordingChipRef.current;
       if (activeElement && !activeElement.contains(e.target as Node)) {
         // Cancel shortcut recording and restore original binding
         if (editingShortcutId && originalBinding) {
@@ -203,10 +229,14 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
     return formatKeyCombination(recordedKeys.join("+"), osType);
   };
 
-  // Store references to shortcut elements
-  const setShortcutRef = (id: string, ref: HTMLDivElement | null) => {
-    shortcutRefs.current.set(id, ref);
-  };
+  // Hand keyboard focus back to the shortcut button once capture ends,
+  // so keyboard users aren't left without a focused control
+  useEffect(() => {
+    if (editingShortcutId === null && restoreFocusOnEndRef.current) {
+      restoreFocusOnEndRef.current = false;
+      shortcutButtonRef.current?.focus();
+    }
+  }, [editingShortcutId]);
 
   // If still loading, show loading state
   if (isLoading) {
@@ -276,21 +306,35 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
       layout="horizontal"
     >
       <div className="flex items-center space-x-1">
-        {editingShortcutId === shortcutId ? (
-          <div
-            ref={(ref) => setShortcutRef(shortcutId, ref)}
-            className="px-2 py-1 text-sm font-semibold border border-logo-primary bg-logo-primary/30 rounded-md"
-          >
-            {formatCurrentKeys()}
-          </div>
-        ) : (
-          <div
-            className="px-2 py-1 text-sm font-semibold bg-mid-gray/10 border border-mid-gray/80 hover:bg-logo-primary/10 rounded-md cursor-pointer hover:border-logo-primary"
-            onClick={() => startRecording(shortcutId)}
-          >
-            {formatKeyCombination(binding.current_binding, osType)}
-          </div>
-        )}
+        {/* Persistent live region: announces the transition into/out of
+            capture mode and each captured key to screen readers */}
+        <div aria-live="polite">
+          {editingShortcutId === shortcutId ? (
+            <span
+              ref={recordingChipRef}
+              className="inline-block px-2 py-1 text-sm font-semibold border border-logo-primary bg-logo-primary/30 rounded-md"
+            >
+              {formatCurrentKeys()}
+              <span className="sr-only">
+                {t("settings.general.shortcut.escapeHint")}
+              </span>
+            </span>
+          ) : (
+            <button
+              type="button"
+              ref={shortcutButtonRef}
+              disabled={disabled}
+              aria-label={t("settings.general.shortcut.recordButtonAria", {
+                name: translatedName,
+                shortcut: formatKeyCombination(binding.current_binding, osType),
+              })}
+              className="px-2 py-1 text-sm font-semibold bg-mid-gray/10 border border-mid-gray/80 hover:bg-logo-primary/10 rounded-md cursor-pointer hover:border-logo-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => startRecording(shortcutId)}
+            >
+              {formatKeyCombination(binding.current_binding, osType)}
+            </button>
+          )}
+        </div>
         <ResetButton
           onClick={() => resetBinding(shortcutId)}
           disabled={isUpdating(`binding_${shortcutId}`)}

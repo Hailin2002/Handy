@@ -37,7 +37,13 @@ export const HandyKeysShortcutInput: React.FC<HandyKeysShortcutInputProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [currentKeys, setCurrentKeys] = useState<string>("");
   const [originalBinding, setOriginalBinding] = useState<string>("");
-  const shortcutRef = useRef<HTMLDivElement | null>(null);
+  // The chip that shows the live capture while recording (kept mounted so
+  // its aria-live region announces state changes to screen readers)
+  const recordingChipRef = useRef<HTMLElement | null>(null);
+  // The shortcut button; regains focus when capture ends via the keyboard
+  const shortcutButtonRef = useRef<HTMLButtonElement | null>(null);
+  // Set when capture ends so focus is handed back to the shortcut button
+  const restoreFocusOnEndRef = useRef(false);
   const unlistenRef = useRef<(() => void) | null>(null);
   // Use a ref to track currentKeys for the event handler (avoids stale closure)
   const currentKeysRef = useRef<string>("");
@@ -55,6 +61,9 @@ export const HandyKeysShortcutInput: React.FC<HandyKeysShortcutInputProps> = ({
   // Handle cancellation
   const cancelRecording = useCallback(async () => {
     if (!isRecording) return;
+
+    // Hand focus back to the shortcut button once recording stops
+    restoreFocusOnEndRef.current = true;
 
     // Stop listening for backend events
     if (unlistenRef.current) {
@@ -113,7 +122,8 @@ export const HandyKeysShortcutInput: React.FC<HandyKeysShortcutInputProps> = ({
           }
         }
 
-        // Stop recording
+        // Stop recording (focus returns to the shortcut button)
+        restoreFocusOnEndRef.current = true;
         if (unlistenRef.current) {
           unlistenRef.current();
           unlistenRef.current = null;
@@ -196,16 +206,37 @@ export const HandyKeysShortcutInput: React.FC<HandyKeysShortcutInputProps> = ({
 
     const handleClickOutside = (e: MouseEvent) => {
       if (
-        shortcutRef.current &&
-        !shortcutRef.current.contains(e.target as Node)
+        recordingChipRef.current &&
+        !recordingChipRef.current.contains(e.target as Node)
       ) {
         cancelRecording();
       }
     };
 
+    // Escape aborts capture without changing the stored shortcut
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancelRecording();
+      }
+    };
+
     window.addEventListener("click", handleClickOutside);
-    return () => window.removeEventListener("click", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("click", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isRecording, cancelRecording]);
+
+  // Hand keyboard focus back to the shortcut button once capture ends,
+  // so keyboard users aren't left without a focused control
+  useEffect(() => {
+    if (!isRecording && restoreFocusOnEndRef.current) {
+      restoreFocusOnEndRef.current = false;
+      shortcutButtonRef.current?.focus();
+    }
+  }, [isRecording]);
 
   // Start recording a new shortcut
   const startRecording = async () => {
@@ -324,21 +355,35 @@ export const HandyKeysShortcutInput: React.FC<HandyKeysShortcutInputProps> = ({
       layout="horizontal"
     >
       <div className="flex items-center space-x-1">
-        {isRecording ? (
-          <div
-            ref={shortcutRef}
-            className="px-2 py-1 text-sm font-semibold border border-logo-primary bg-logo-primary/30 rounded-md"
-          >
-            {formatCurrentKeys()}
-          </div>
-        ) : (
-          <div
-            className="px-2 py-1 text-sm font-semibold bg-mid-gray/10 border border-mid-gray/80 hover:bg-logo-primary/10 rounded-md cursor-pointer hover:border-logo-primary"
-            onClick={startRecording}
-          >
-            {formatKeyCombination(binding.current_binding, osType)}
-          </div>
-        )}
+        {/* Persistent live region: announces the transition into/out of
+            capture mode and each captured key to screen readers */}
+        <div aria-live="polite">
+          {isRecording ? (
+            <span
+              ref={recordingChipRef}
+              className="inline-block px-2 py-1 text-sm font-semibold border border-logo-primary bg-logo-primary/30 rounded-md"
+            >
+              {formatCurrentKeys()}
+              <span className="sr-only">
+                {t("settings.general.shortcut.escapeHint")}
+              </span>
+            </span>
+          ) : (
+            <button
+              type="button"
+              ref={shortcutButtonRef}
+              disabled={disabled}
+              aria-label={t("settings.general.shortcut.recordButtonAria", {
+                name: translatedName,
+                shortcut: formatKeyCombination(binding.current_binding, osType),
+              })}
+              className="px-2 py-1 text-sm font-semibold bg-mid-gray/10 border border-mid-gray/80 hover:bg-logo-primary/10 rounded-md cursor-pointer hover:border-logo-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={startRecording}
+            >
+              {formatKeyCombination(binding.current_binding, osType)}
+            </button>
+          )}
+        </div>
         <ResetButton
           onClick={() => resetBinding(shortcutId)}
           disabled={isUpdating(`binding_${shortcutId}`)}

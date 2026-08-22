@@ -273,7 +273,9 @@
           "restore": "원래 단축키 복원에 실패했습니다",
           "set": "단축키 설정 실패: {{error}}",
           "reset": "단축키를 원래 값으로 재설정하는데 실패했습니다"
-        }
+        },
+        "recordButtonAria": "{{name}} 단축키 변경, 현재 {{shortcut}}",
+        "escapeHint": "단축키를 기록하는 중입니다. Esc 키를 누르면 취소됩니다."
       },
       "language": {
         "title": "언어",

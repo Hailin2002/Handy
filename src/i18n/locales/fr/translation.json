@@ -293,7 +293,9 @@
           "restore": "Échec de la restauration du raccourci original",
           "set": "Échec de la définition du raccourci : {{error}}",
           "reset": "Échec de la réinitialisation du raccourci à sa valeur d'origine"
-        }
+        },
+        "recordButtonAria": "Modifier le raccourci {{name}}, actuellement {{shortcut}}",
+        "escapeHint": "Enregistrement du raccourci. Appuyez sur Échap pour annuler."
       },
       "language": {
         "title": "Langue",

@@ -273,7 +273,9 @@
           "restore": "Falha ao restaurar atalho original",
           "set": "Falha ao definir atalho: {{error}}",
           "reset": "Falha ao redefinir atalho para o valor original"
-        }
+        },
+        "recordButtonAria": "Alterar o atalho de {{name}}, atualmente {{shortcut}}",
+        "escapeHint": "Gravando atalho. Pressione Escape para cancelar."
       },
       "language": {
         "title": "Idioma",

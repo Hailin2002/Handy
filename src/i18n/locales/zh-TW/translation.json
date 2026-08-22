@@ -273,7 +273,9 @@
           "restore": "無法還原原始快捷鍵",
           "set": "無法設定快捷鍵: {{error}}",
           "reset": "無法將快捷鍵重設為原始值"
-        }
+        },
+        "recordButtonAria": "變更{{name}}快捷鍵，目前為{{shortcut}}",
+        "escapeHint": "正在錄製快捷鍵。按 Esc 鍵取消。"
       },
       "language": {
         "title": "語言",

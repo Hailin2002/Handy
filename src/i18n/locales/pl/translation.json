@@ -293,7 +293,9 @@
           "restore": "Nie udało się przywrócić oryginalnego skrótu",
           "set": "Nie udało się ustawić skrótu: {{error}}",
           "reset": "Nie udało się zresetować skrótu do wartości domyślnej"
-        }
+        },
+        "recordButtonAria": "Zmień skrót {{name}}, obecnie {{shortcut}}",
+        "escapeHint": "Nagrywanie skrótu. Naciśnij Escape, aby anulować."
       },
       "language": {
         "title": "Język",

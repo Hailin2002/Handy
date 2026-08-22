@@ -293,7 +293,9 @@
           "restore": "Errore nel ripristino della scorciatoia originale",
           "set": "Errore nella configurazione della scorciatoia: {{error}}",
           "reset": "Errore nella reinizializzazione della scorciatoia al valore originale"
-        }
+        },
+        "recordButtonAria": "Modifica la scorciatoia di {{name}}, attualmente {{shortcut}}",
+        "escapeHint": "Registrazione della scorciatoia in corso. Premi Esc per annullare."
       },
       "language": {
         "title": "Lingua",

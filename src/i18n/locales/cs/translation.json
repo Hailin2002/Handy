@@ -293,7 +293,9 @@
           "restore": "Nepodařilo se obnovit původní zkratku",
           "set": "Nepodařilo se nastavit zkratku: {{error}}",
           "reset": "Nepodařilo se vrátit zkratku na původní hodnotu"
-        }
+        },
+        "recordButtonAria": "Změnit zkratku {{name}}, aktuálně {{shortcut}}",
+        "escapeHint": "Probíhá nahrávání zkratky. Stisknutím Esc zrušíte."
       },
       "language": {
         "title": "Jazyk",

@@ -293,7 +293,9 @@
           "restore": "Orijinal kısayol geri yüklenemedi",
           "set": "Kısayol ayarlanamadı: {{error}}",
           "reset": "Kısayol orijinal değerine sıfırlanamadı"
-        }
+        },
+        "recordButtonAria": "{{name}} kısayolunu değiştir, şu an {{shortcut}}",
+        "escapeHint": "Kısayol kaydediliyor. İptal etmek için Escape tuşuna basın."
       },
       "language": {
         "title": "Dil",

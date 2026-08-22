@@ -293,7 +293,9 @@
           "restore": "Ursprüngliches Tastenkürzel konnte nicht wiederhergestellt werden",
           "set": "Tastenkürzel konnte nicht gesetzt werden: {{error}}",
           "reset": "Tastenkürzel konnte nicht auf Originalwert zurückgesetzt werden"
-        }
+        },
+        "recordButtonAria": "{{name}}-Tastenkürzel ändern, aktuell {{shortcut}}",
+        "escapeHint": "Tastenkürzel wird aufgenommen. Drücken Sie Escape zum Abbrechen."
       },
       "language": {
         "title": "Sprache",
