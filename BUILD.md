@@ -291,6 +291,106 @@ diagnostic log (`/v:diag /flp /m:2`):
    try-compile scratch dirs under Cargo's deep `OUT_DIR` exceed the classic
    260-character limit.
 
+#### Recorded failure signature (`msbuild.log`)
+
+The investigation captured the failing parallel build with an MSBuild
+diagnostic log (`msbuild.log`, produced by
+`MSBuild.exe ... ALL_BUILD.vcxproj /m:2 /p:Configuration=Release /v:diag
+/flp:...`, MSBuild 17.14) at the repository root on the reference machine.
+That file is a local, untracked artifact (it is not committed); its decisive
+tail is quoted here verbatim because it is the defining symptom of this
+limitation — a hard build failure that reports **zero** diagnostics:
+
+```
+07:22:10.791     1>Done executing task "MSBuild" -- FAILED. (TaskId:11)
+07:22:10.791     3>Done executing task "MSBuild" -- FAILED. (TaskId:70)
+07:22:10.791     1>Done building target "ResolveProjectReferences" in project "ALL_BUILD.vcxproj" -- FAILED.: (TargetId:14)
+07:22:10.791     4>Done executing task "MSBuild" -- FAILED. (TaskId:81)
+07:22:10.791     4>Done building target "ResolveProjectReferences" in project "ggml-cpu-alderlake-feats.vcxproj" -- FAILED.: (TargetId:106)
+07:22:10.791     3>Done building target "ResolveProjectReferences" in project "ggml-cpu-alderlake.vcxproj" -- FAILED.: (TargetId:93)
+07:22:10.791     4>Done Building Project "...\tcs\32df4e9f173a51bb\build\ggml\src\ggml-cpu-alderlake-feats.vcxproj" (default targets) -- FAILED.
+07:22:10.791     3>Done Building Project "...\tcs\32df4e9f173a51bb\build\ggml\src\ggml-cpu-alderlake.vcxproj" (default targets) -- FAILED.
+07:22:10.791     1>Done Building Project "...\tcs\32df4e9f173a51bb\build\ALL_BUILD.vcxproj" (default targets) -- FAILED.
+
+Build FAILED.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:05.21
+```
+
+(The `C:\Users\<name>\AppData\Local` prefix of the three long paths is
+elided for readability; everything else is verbatim.)
+
+Note what precedes the summary: the nested `GetNativeManifest` sub-builds of
+the ggml tree (`ZERO_CHECK.vcxproj`, `ggml-cpu-alderlake.vcxproj`,
+`ggml-cpu-alderlake-feats.vcxproj`, all under the short-junction tree
+`%LOCALAPPDATA%\tcs\<hash>\build`) end `FAILED` with **no** compiler, linker,
+or FileTracker error anywhere in ~23,000 diagnostic lines. If your log shows
+actual compiler or linker diagnostics instead, you are dealing with a
+different problem than the one described here.
+
+#### Root-cause boundary: what is known vs. unknown
+
+Known: the failure requires MSBuild worker parallelism somewhere in the
+nested cmake → MSBuild → MSBuild chain (`/m` worker nodes and/or
+`BuildInParallel=True` sub-builds); the identical build directory builds
+cleanly when invoked serially. Unknown: the precise internal trigger inside
+MSBuild 17.x / the Visual Studio 2022 C++ targets — no actionable diagnostic
+is produced, so it cannot be fixed from this repository and would have to be
+pinned down upstream (CMake's Visual Studio generator or MSBuild itself).
+Until then, the serial pin below is a workaround, not a fix.
+
+#### Status: open limitation, workaround, verification
+
+This is tracked as an **open limitation** (entry L5 in the
+[known-limitations register](docs/meeting-mode-known-limitations.md)) and as
+resolved-by-workaround in
+[`docs/meeting-mode-phase0-baseline.md` §2.3](docs/meeting-mode-phase0-baseline.md).
+It expires — i.e., the serial pin can be lifted — when either a
+`cmake --build <dir> --target install --config Release --parallel N`
+invocation with `N > 1` succeeds against the native build tree on the
+reference machine, or a newer toolchain version is verified to no longer
+need the pin. Neither has happened yet.
+
+The enforced workaround is the **serial build** (`--parallel 1`, delivered
+via `CMAKE_BUILD_PARALLEL_LEVEL = "1"` in [`.cargo/config.toml`](.cargo/config.toml)).
+No extra steps are needed for normal use — run from the repository root,
+the following all pick up the pin automatically:
+
+```powershell
+# Fastest way to exercise the transcribe-cpp-sys build script:
+cargo test --manifest-path src-tauri/Cargo.toml
+
+# Full development / production builds:
+bun run tauri dev
+bun run tauri build
+```
+
+For an ad-hoc manual rebuild of just the native tree, pass the flag
+explicitly:
+
+```powershell
+cmake --build <path-to-cmake-build-dir> --target install --config Release --parallel 1
+```
+
+**Expected build-time impact:** the entire Whisper/ggml/Vulkan native tree
+compiles single-threaded, which is noticeably slower than a parallel build
+on any multi-core machine (see the tradeoff note below). The slowdown is
+deliberate and confined to the native dependency — the Rust crates and the
+frontend still build with full parallelism.
+
+**Confirming success:** the build passes silently through
+`transcribe-cpp-sys` (no `failed to run custom build command for
+transcribe-cpp-sys v0.2.0` exit-101 abort), `transcribe.dll` and
+`ggml-vulkan.dll` land under
+`src-tauri\target\<profile>\build\transcribe-cpp-sys-*\out\`, and the
+verification command above finishes green (on the reference machine:
+208 + 12 tests, 0 failures). If it still fails, first check that no
+environment variable overrides the pin
+(`Get-ChildItem Env:CMAKE_BUILD_PARALLEL_LEVEL`) — see
+[Verifying your setup](#verifying-your-setup).
+
 #### What this repository does about it
 
 Because Cargo always overwrites the build script's `NUM_JOBS` with its own
