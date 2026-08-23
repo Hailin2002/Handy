@@ -20,10 +20,14 @@ mod paste_tx;
 pub mod portable;
 mod secret_store;
 mod secure_input;
-mod settings;
+// Public for integration tests (src-tauri/tests): they exercise the cloud STT
+// client paths and need to construct `AppSettings`.
+pub mod settings;
 mod shortcut;
 mod signal_handle;
-mod speech_pipeline;
+// Public for integration tests (src-tauri/tests): negative-path STT tests call
+// `transcribe_cloud` against a local mock HTTP server.
+pub mod speech_pipeline;
 mod transcription_coordinator;
 mod tray;
 mod tray_i18n;
