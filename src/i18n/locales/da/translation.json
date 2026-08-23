@@ -723,6 +723,10 @@
           "details": "Handys lokale tale-til-tekst funktionalitet er bygget på transcribe.cpp og ggml. Tak for det fantastiske arbejde af Georgi Gerganov og bidragyderne."
         }
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modeller og udbydere",
+      "meetingsEmptyBody": "Mødeindstillinger kommer med mødetilstand."
     }
   },
   "footer": {

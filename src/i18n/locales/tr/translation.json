@@ -723,6 +723,10 @@
         "label": "Yenilikleri Göster",
         "description": "Handy güncellemelerinden sonra sürüm notlarını göster"
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modeller ve sağlayıcılar",
+      "meetingsEmptyBody": "Toplantı ayarları toplantı moduyla gelecektir."
     }
   },
   "footer": {

@@ -723,6 +723,10 @@
         "label": "Neuerungen anzeigen",
         "description": "Versionshinweise nach Handy-Updates anzeigen"
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modelle & Provider",
+      "meetingsEmptyBody": "Meeting-Einstellungen folgen mit dem Meeting-Modus."
     }
   },
   "footer": {

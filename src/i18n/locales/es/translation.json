@@ -723,6 +723,10 @@
         "label": "Mostrar novedades",
         "description": "Mostrar notas de la versión después de las actualizaciones de Handy"
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modelos y proveedores",
+      "meetingsEmptyBody": "Los ajustes de reuniones llegarán con el modo de reuniones."
     }
   },
   "footer": {

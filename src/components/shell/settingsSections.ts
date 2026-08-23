@@ -1,25 +1,40 @@
 import React from "react";
 import {
   AudioLines,
-  Cog,
+  Mic,
+  Settings,
+  SlidersHorizontal,
   Cpu,
   FlaskConical,
-  Mic2,
-  Sparkles,
 } from "lucide-react";
 import {
   AdvancedSettings,
   DebugSettings,
-  GeneralSettings,
-  ModelsSettings,
-  PostProcessingSettings,
-  SpeechPipelineSettings,
 } from "../settings";
+import {
+  AppGeneralTab,
+  DictationSettingsTab,
+  MeetingsSettingsTab,
+  ModelsAndProvidersTab,
+} from "../settings/tabs";
 
 /**
- * Settings sections, shown as secondary tabs on the Einstellungen page
- * (plan §6.3) instead of as primary navigation entries. History moved to the
- * top-level "Diktatverlauf" entry and About to "Hilfe & Über".
+ * Secondary tabs of the consolidated Einstellungen page (plan §6.3):
+ *
+ *   Diktieren | Meetings | Modelle & Provider | Allgemein | Erweitert
+ *
+ * plus Debug, which stays visible only while debug mode is enabled
+ * (Ctrl+Shift+D), exactly as before the consolidation.
+ *
+ * Mapping of the former primary-navigation sections:
+ *   - general        → Diktieren (dictation controls) / Allgemein (app prefs)
+ *   - postprocessing → Diktieren (visible while post-processing is enabled)
+ *   - speechPipeline → Modelle & Provider
+ *   - models         → Modelle & Provider
+ *   - advanced       → Erweitert; app-wide toggles moved to Allgemein
+ *   - debug          → Debug (unchanged)
+ * History and About are top-level views ("Diktatverlauf", "Hilfe & Über")
+ * and are not settings tabs.
  */
 export interface SettingsSectionConfig {
   labelKey: string;
@@ -33,35 +48,35 @@ export interface SettingsSectionConfig {
 }
 
 export const SECTIONS_CONFIG = {
-  general: {
-    labelKey: "sidebar.general",
-    icon: Mic2,
-    component: GeneralSettings,
+  dictate: {
+    labelKey: "nav.dictate",
+    icon: Mic,
+    component: DictationSettingsTab,
     enabled: () => true,
   },
-  speechPipeline: {
-    labelKey: "settings.speechPipeline.title",
+  meetings: {
+    labelKey: "nav.meetings",
     icon: AudioLines,
-    component: SpeechPipelineSettings,
+    component: MeetingsSettingsTab,
     enabled: () => true,
   },
-  models: {
-    labelKey: "sidebar.models",
+  modelsProviders: {
+    labelKey: "settings.tabs.modelsProviders",
     icon: Cpu,
-    component: ModelsSettings,
+    component: ModelsAndProvidersTab,
+    enabled: () => true,
+  },
+  app: {
+    labelKey: "sidebar.general",
+    icon: Settings,
+    component: AppGeneralTab,
     enabled: () => true,
   },
   advanced: {
     labelKey: "sidebar.advanced",
-    icon: Cog,
+    icon: SlidersHorizontal,
     component: AdvancedSettings,
     enabled: () => true,
-  },
-  postprocessing: {
-    labelKey: "sidebar.postProcessing",
-    icon: Sparkles,
-    component: PostProcessingSettings,
-    enabled: (settings) => settings?.post_process_enabled ?? false,
   },
   debug: {
     labelKey: "sidebar.debug",
@@ -73,12 +88,12 @@ export const SECTIONS_CONFIG = {
 
 export type SettingsSectionId = keyof typeof SECTIONS_CONFIG;
 
-/** Tab order on the Einstellungen page. */
+/** Tab order on the Einstellungen page (plan §6.3). */
 export const SETTINGS_TAB_ORDER: readonly SettingsSectionId[] = [
-  "general",
-  "speechPipeline",
-  "models",
+  "dictate",
+  "meetings",
+  "modelsProviders",
+  "app",
   "advanced",
-  "postprocessing",
   "debug",
 ];

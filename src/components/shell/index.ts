@@ -17,3 +17,8 @@ export {
   type SettingsSectionConfig,
   type SettingsSectionId,
 } from "./settingsSections";
+export {
+  buildSettingsHash,
+  hashTargetsSettingsView,
+  settingsSectionFromHash,
+} from "./settingsDeepLink";

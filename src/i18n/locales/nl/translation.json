@@ -723,6 +723,10 @@
           "details": "Handy's lokale spraak-naar-tekst is gebouwd op transcribe.cpp en ggml. Met dank aan het geweldige werk van Georgi Gerganov en alle bijdragers."
         }
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modellen en providers",
+      "meetingsEmptyBody": "Vergaderinstellingen komen met de vergadermodus."
     }
   },
   "footer": {

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Settings page test harness</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Stub the OS plugin internals before any module loads: GeneralSettings
+         calls type() from @tauri-apps/plugin-os synchronously during render,
+         which reads this global and throws outside the Tauri webview. -->
+    <script>
+      window.__TAURI_OS_PLUGIN_INTERNALS__ = { os_type: "windows" };
+    </script>
+    <script type="module" src="./settings-main.tsx"></script>
+  </body>
+</html>

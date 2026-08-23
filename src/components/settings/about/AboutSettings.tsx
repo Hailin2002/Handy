@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -6,9 +6,7 @@ import { SettingsGroup } from "../../ui/SettingsGroup";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
 import { AppDataDirectory } from "./AppDataDirectory";
-import { AppLanguageSelector } from "./AppLanguageSelector";
 import { ShowWhatsNewOnUpdate } from "./ShowWhatsNewOnUpdate";
-import { ThemeSelector } from "./ThemeSelector";
 import { LogDirectory } from "../debug";
 
 export const AboutSettings: React.FC = () => {
@@ -40,8 +38,8 @@ export const AboutSettings: React.FC = () => {
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <SettingsGroup title={t("settings.about.title")}>
-        <AppLanguageSelector descriptionMode="tooltip" grouped={true} />
-        <ThemeSelector descriptionMode="tooltip" grouped={true} />
+        {/* App language and theme moved to Einstellungen → Allgemein
+            (tabs/AppGeneralTab.tsx) as part of the plan §6.3 consolidation. */}
         <SettingContainer
           title={t("settings.about.version.title")}
           description={t("settings.about.version.description")}

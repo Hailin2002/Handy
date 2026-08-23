@@ -1,12 +1,8 @@
-﻿import React from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
-import { ShowOverlay } from "./ShowOverlay";
 import { ModelUnloadTimeoutSetting } from "./ModelUnloadTimeout";
 import { CustomWords } from "./CustomWords";
 import { SettingsGroup } from "../../ui/SettingsGroup";
-import { StartHidden } from "./StartHidden";
-import { AutostartToggle } from "./AutostartToggle";
-import { ShowTrayIcon } from "./ShowTrayIcon";
 import { PasteMethodSetting } from "./PasteMethod";
 import { TypingToolSetting } from "./TypingTool";
 import { ClipboardHandlingSetting } from "./ClipboardHandling";
@@ -23,6 +19,11 @@ import { AccelerationSelector } from "./AccelerationSelector";
 import { LazyStreamClose } from "./LazyStreamClose";
 import { FillerWordRemoval } from "./FillerWordRemoval";
 
+/**
+ * "Erweitert" tab of the Einstellungen page (plan §6.3). The app-wide
+ * window/tray toggles (start hidden, autostart, tray icon, overlay) moved
+ * to the "Allgemein" tab (see tabs/AppGeneralTab.tsx).
+ */
 export const AdvancedSettings: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting } = useSettings();
@@ -31,10 +32,6 @@ export const AdvancedSettings: React.FC = () => {
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <SettingsGroup title={t("settings.advanced.groups.app")}>
-        <StartHidden descriptionMode="tooltip" grouped={true} />
-        <AutostartToggle descriptionMode="tooltip" grouped={true} />
-        <ShowTrayIcon descriptionMode="tooltip" grouped={true} />
-        <ShowOverlay descriptionMode="tooltip" grouped={true} />
         <ModelUnloadTimeoutSetting descriptionMode="tooltip" grouped={true} />
         <ExperimentalToggle descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>

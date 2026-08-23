@@ -723,6 +723,10 @@
           "details": "Handy का लोकल स्पीच-टू-टेक्स्ट transcribe.cpp और ggml पर आधारित है. Georgi Gerganov और योगदान देने वालों के शानदार काम के लिए धन्यवाद."
         }
       }
+    },
+    "tabs": {
+      "modelsProviders": "मॉडल और प्रदाता",
+      "meetingsEmptyBody": "मीटिंग सेटिंग्स मीटिंग मोड के साथ आएंगी।"
     }
   },
   "footer": {

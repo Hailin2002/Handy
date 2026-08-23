@@ -19,6 +19,7 @@ import { Sidebar } from "./components/Sidebar";
 import {
   ProductPlaceholder,
   SettingsPage,
+  hashTargetsSettingsView,
   type ProductViewId,
 } from "./components/shell";
 import { AboutSettings, HistorySettings } from "./components/settings";
@@ -74,7 +75,12 @@ function App() {
   // Track if this is a returning user who just needs to grant permissions
   // (vs a new user who needs full onboarding including model selection)
   const [isReturningUser, setIsReturningUser] = useState(false);
-  const [currentView, setCurrentView] = useState<ProductViewId>("dictate");
+  // Deep links (plan §6.3): a hash like #/settings/models or a legacy
+  // section hash (#general, #/advanced) opens the app directly on the
+  // Einstellungen page with the mapped tab preselected.
+  const [currentView, setCurrentView] = useState<ProductViewId>(() =>
+    hashTargetsSettingsView(window.location.hash) ? "settings" : "dictate",
+  );
   const { settings, updateSetting } = useSettings();
   const direction = getLanguageDirection(i18n.language);
   const refreshAudioDevices = useSettingsStore(

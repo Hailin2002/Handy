@@ -723,6 +723,10 @@
         "label": "新機能を表示",
         "description": "Handy のアップデート後にリリースノートを表示"
       }
+    },
+    "tabs": {
+      "modelsProviders": "モデルとプロバイダー",
+      "meetingsEmptyBody": "会議設定は会議モードとともに提供されます。"
     }
   },
   "footer": {

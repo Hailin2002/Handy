@@ -723,6 +723,10 @@
         "label": "Pokaż nowości",
         "description": "Pokazuj informacje o wydaniu po aktualizacjach Handy"
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modele i dostawcy",
+      "meetingsEmptyBody": "Ustawienia spotkań pojawią się wraz z trybem spotkań."
     }
   },
   "footer": {

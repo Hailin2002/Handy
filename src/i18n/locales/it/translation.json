@@ -723,6 +723,10 @@
         "label": "Mostra novità",
         "description": "Mostra le note di rilascio dopo gli aggiornamenti di Handy"
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modelli e provider",
+      "meetingsEmptyBody": "Le impostazioni delle riunioni arriveranno con la modalità riunione."
     }
   },
   "footer": {

@@ -35,3 +35,10 @@ export { RecordingRetentionPeriodSelector } from "./history/RecordingRetentionPe
 export { AutostartToggle } from "./advanced/AutostartToggle";
 export { UpdateChecksToggle } from "./debug/UpdateChecksToggle";
 export { ShowWhatsNewOnUpdate } from "./about/ShowWhatsNewOnUpdate";
+
+// Composed secondary-tab contents of the consolidated Einstellungen page
+// (plan §6.3).
+export { DictationSettingsTab } from "./tabs/DictationSettingsTab";
+export { MeetingsSettingsTab } from "./tabs/MeetingsSettingsTab";
+export { ModelsAndProvidersTab } from "./tabs/ModelsAndProvidersTab";
+export { AppGeneralTab } from "./tabs/AppGeneralTab";

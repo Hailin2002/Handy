@@ -723,6 +723,10 @@
         "label": "Hiển thị điểm mới",
         "description": "Hiển thị ghi chú phát hành sau khi Handy cập nhật"
       }
+    },
+    "tabs": {
+      "modelsProviders": "Mô hình và nhà cung cấp",
+      "meetingsEmptyBody": "Cài đặt cuộc họp sẽ ra mắt cùng với chế độ họp."
     }
   },
   "footer": {

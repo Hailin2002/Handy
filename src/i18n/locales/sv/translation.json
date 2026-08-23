@@ -723,6 +723,10 @@
         "label": "Visa nyheter",
         "description": "Visa versionsinformation efter Handy-uppdateringar"
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modeller och leverantörer",
+      "meetingsEmptyBody": "Mötesinställningar kommer med mötesläget."
     }
   },
   "footer": {

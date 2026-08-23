@@ -723,6 +723,10 @@
         "label": "顯示新功能",
         "description": "Handy 更新後顯示版本資訊"
       }
+    },
+    "tabs": {
+      "modelsProviders": "模型與供應商",
+      "meetingsEmptyBody": "會議設定將隨會議模式一起推出。"
     }
   },
   "footer": {

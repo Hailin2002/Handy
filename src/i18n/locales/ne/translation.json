@@ -723,6 +723,10 @@
           "details": "Handy को स्थानीय स्पिच-टु-टेक्स्ट transcribe.cpp र ggml मा आधारित छ। Georgi Gerganov र योगदानकर्ताहरूको उत्कृष्ट कामका लागि धन्यवाद।"
         }
       }
+    },
+    "tabs": {
+      "modelsProviders": "मोडेलहरू र प्रदायकहरू",
+      "meetingsEmptyBody": "बैठक सेटिङहरू बैठक मोडसँगै आउनेछन्।"
     }
   },
   "footer": {

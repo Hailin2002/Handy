@@ -723,6 +723,10 @@
         "label": "הצג מה חדש",
         "description": "הצג הערות גרסה לאחר עדכוני Handy"
       }
+    },
+    "tabs": {
+      "modelsProviders": "מודלים וספקים",
+      "meetingsEmptyBody": "הגדרות פגישות יגיעו עם מצב הפגישות."
     }
   },
   "footer": {

@@ -723,6 +723,10 @@
         "label": "Zobrazovat novinky",
         "description": "Zobrazovat poznámky k vydání po aktualizacích Handy"
       }
+    },
+    "tabs": {
+      "modelsProviders": "Modely a poskytovatelé",
+      "meetingsEmptyBody": "Nastavení schůzek přijdou s režimem schůzek."
     }
   },
   "footer": {
