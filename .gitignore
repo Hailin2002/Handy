@@ -45,3 +45,9 @@ result
 
 # Python bytecode (scripts/)
 __pycache__/
+
+# Harness scratch directories (automation npm caches; break `git add --all`)
+.tmp-npm/
+.npm-cache/
+# Any future harness temp dirs following the same naming scheme
+.tmp-*/
