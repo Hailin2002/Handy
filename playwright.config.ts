@@ -16,6 +16,12 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      // Cross-engine smoke: verifies the dev-server surface boots outside
+      // Chromium. WebKit is unsupported on Windows and intentionally absent.
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
   ],
   webServer: {
     command: "npx vite dev",
