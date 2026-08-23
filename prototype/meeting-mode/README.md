@@ -1,9 +1,18 @@
 # Speak – Meeting-Mode Klick-Prototyp
 
-Statischer, selbständiger Prototyp der neuen Informationsarchitektur aus
-[Plan §6.3](../../../docs/meeting-mode-plan.md) (dekomponiert aus dem
-zeitüberschrittenen task-0025, Teil 1/5). Kein Build-Schritt, keine
-Abhängigkeiten, keine echten Aufnahmen – alle Daten sind Mock-Daten.
+> **Nur Mock – kein Produkt, kein Backend.** Dies ist ein statischer,
+> anklickbarer Klick-Prototyp aus HTML/JS/CSS ohne jegliches Backend:
+> keine echten Aufnahmen, keine Transkription, keine Netzwerk- oder
+> Provideraufrufe und keine Persistenz über einen Seitenneuladevorgang
+> hinaus (`app.js` verwendet weder `fetch` noch `localStorage` o. ä.).
+> Alle Daten, Zeiten, Zähler und Ergebnisse sind fest eingebaute
+> Mock-Daten. Der Prototyp illustriert die Informationsarchitektur aus
+> [Plan §6.3](../../../docs/meeting-mode-plan.md) (dekomponiert aus dem
+> zeitüberschrittenen task-0025, Teil 1/5) und dient allein der
+> Erprobung von Abläufen, Texten und Gate-Kriterien vor der
+> Implementierung – **sein Verhalten sagt nichts über das Verhalten,
+> die Performance oder die Zuverlässigkeit der späteren Anwendung
+> aus.** Kein Build-Schritt, keine Abhängigkeiten.
 
 ## Öffnen (in scope)
 
@@ -82,28 +91,108 @@ vorbefüllt.
 Der Sidebar-Button **Mock zurücksetzen** beendet eine Mock-Session und setzt den
 Prototyp zurück.
 
+## Vom Prototyp intendierte Usability-Gates (Plan §6.15, §6.21)
+
+Der Prototyp ist gebaut, um die Gate-Kriterien aus
+[Plan §6.15](../../../docs/meeting-mode-plan.md) (Anfänger- und
+Usability-Gates) und [§6.21](../../../docs/meeting-mode-plan.md)
+(erweiterte Usability-Gates) im Mock durchspielbar zu machen. Da alles
+Mock ist, kann der Prototyp diese Gates nur *vorbereiten* (Klickdurchlauf
+mit Testpersonen, automatisiertes Prüfen des Mock-Verhaltens); ob das
+echte Produkt sie erfüllt, entscheidet sich erst in der Implementierung.
+
+Pflichtaufgaben §6.15 – im Prototyp nachspielbar:
+
+| §6.15 | Aufgabe | Wo im Prototyp |
+| --- | --- | --- |
+| 1 | Normales Diktat starten/beenden | Ansicht `Diktieren` mit `Diktat testen` (reine Vorschau) |
+| 2 | Lokales Meeting mit Mikrofon + Systemaudio starten | Startdialog-Statuszeilen Mikrofon/Systemaudio, `Meeting starten` |
+| 3 | Azure wählen, Cloud-Hinweis verstehen | Provider-Zeile → Picker `Azure Cloud`; Upload-Hinweis auch in der Ersteinrichtung (§6.6) |
+| 4 | Meeting pausieren und sicher beenden | Laufendansicht `Pause/Fortsetzen`, `Meeting beenden` mit Bestätigung (§6.9) |
+| 5 | Fertige Zusammenfassung kopieren | Detailansicht-Tab `Übersicht`, Button `Kopieren` (Mock) |
+| 6 | Meeting-Shortcut ändern, ohne Diktier-Shortcut zu überschreiben | Ersteinrichtung Schritt 3; die Diktier-Shortcuts sind dort ausdrücklich als unverändert ausgewiesen |
+| 7 | Geräte-/Netzwerkfehler beheben | Simulationen in Ersteinrichtung/Startdialog: fehlendes Mikrofon, verweigerte Berechtigung, fehlender Azure-Schlüssel – jeweils mit Korrekturaktion direkt am Fehler |
+
+Nicht im Mock abbildbar: §6.15 Aufgabe 8 (unterbrochene Verarbeitung nach
+Neustart fortsetzen) – der Prototyp hat keinen Neustart und keine
+Persistenz. Auch die §6.15-Anforderung „Status aus Hauptfenster, Overlay
+und Tray eindeutig“ ist nur teilweise darstellbar: Es gibt Hauptfenster-
+Statuszeile und angehefteten Listeneintrag, aber kein Overlay- oder
+Tray-Mock.
+
+Erweiterte Gates §6.21 – im Prototyp nachspielbar:
+
+| §6.21 | Aufgabe | Wo im Prototyp |
+| --- | --- | --- |
+| 1 | Projekt erstellen | `Projekte` → `Projekt erstellen` (genau ein Pflichtfeld Name) |
+| 2 | Beim Meetingstart Projekt wählen/entfernen | Startdialog-Projektchip inkl. gestricheltem `Kein Projekt` |
+| 3 | Fertiges, nicht zugeordnetes Meeting zuweisen | Eingang `Nicht zugeordnet` mit Stapelzuordnung + Vorschau; KI-Vorschlag nach Verarbeitung |
+| 4 | WhatsApp-Export lokal importieren, Vorschau verstehen | Import-Assistent Schritte 1–4 inkl. Dedup-Vorschau und lokaler Offenlegung |
+| 5 | Erkennen, welche Bilder bei Cloud-Verarbeitung hochgeladen würden | Importschritt 3: Cloud-Offenlegung nennt Nachrichtentexte/Bilder (Base64)/Sprachnachrichten und was bleibt |
+| 6 | KI-Aufgabenvorschlag annehmen/ändern/verwerfen | Projekt-Detail `Aufgaben`: Annehmen/Erledigen/Verwerfen; Meeting-Vorschlag: `Zuordnen / Anderes Projekt … / Ohne Projekt lassen` |
+| 7 | Von Statusaussage zur Belegstelle springen | Jeder KI-Aussage/Jeder Aufgabe Beleglink → Quellenansicht mit hervorgehobener Zeile |
+| 8 | Gleiches Projekt im kleinen Fenster und maximiert | Nur teilweise: `Geteilte Ansicht` erscheint nur auf breiten Bildschirmen; responsives Verhalten selbst ist nicht Gegenstand der Mock-Prüfung |
+
+Release-Gates aus beiden Abschnitten, die der Prototyp mitprüft:
+Dedup ohne Dubletten bei Wiederholimport, keine Cloud-Verarbeitung vor
+expliziter verständlicher Bestätigung, keine Hauptfunktion nur per
+Hover/Drei-Punkte-Menü, Löschbestätigung nennt die betroffenen Artefakte,
+Fehlermeldungen nennen eine erkennbare nächste Aktion. Nicht im Prototyp
+prüfbar: Tastatur-/Screenreader-Zugänglichkeit des echten Produkts und
+die Verwechslungsfreiheit von Diktat- und Meetingstart unter echten
+Testpersonen (dazu braucht es den Testdurchlauf mit Personen, den §6.15
+vorsieht).
+
 ## Verifizierung (in scope)
 
-`verify.html` ist ein In-Browser-Prüfharness für die Gates G1–G4: Er lädt
-`index.html` in einem iframe und schreibt `PASS`/`FAIL`-Zeilen ins DOM. Ohne
-Server ausführbar, z. B.:
+Es gibt zwei Prüfharnesses in diesem Verzeichnis:
 
-```powershell
-& "$env:LOCALAPPDATA\ms-playwright\chromium_headless_shell-1234\chrome-headless-shell-win64\chrome-headless-shell.exe" `
-  --headless --no-sandbox --allow-file-access-from-files `
-  --virtual-time-budget=25000 --dump-dom `
-  "file:///<absoluter-Pfad>/prototype/meeting-mode/verify.html"
-```
+- **`verify.cjs`** – das vollständige Node/Playwright-Harness. Es prüft
+  alle dokumentierten Gates und Regressionen dieses Prototyps
+  (task-0179 bis task-0181: Navigation, Countdown, Farbsemantik,
+  Scroll-Lock, Stop-Bestätigung, Verarbeitungs-Checkliste, Listen-/
+  Detailansicht, Projekte, Zuordnung, WhatsApp-Import) gegen
+  `index.html` und gibt je Prüfung eine `PASS`-/`FAIL`-Zeile aus.
+  Aufruf aus dem Repo-Stamm:
 
-In der Ausgabe muss am Ende `RESULT: PASS` stehen. `verify.cjs` ist das
-äquivalente Playwright-Harness (`node prototype\meeting-mode\verify.cjs` aus dem
-Repo-Stamm; benötigt die Playwright-Chromium-Browser). Es findet die installierte
-Chromium-Version automatisch unter `%LOCALAPPDATA%\ms-playwright`. Falls
-Playwrights Pipe-Transport blockiert ist (EPERM), startet es selbst einen
-Chromium mit TCP-Debugport; mit `VERIFY_CDP_URL=http://127.0.0.1:9333` hängt es
-sich an einen extern gestarteten Chromium an. In restriktiven Sandboxes, in
-denen Chromium keine Kindprozesse/Crashpad starten darf, ist der Lauf mit
-erweiterten Prozessrechten auszuführen.
+  ```powershell
+  node prototype\meeting-mode\verify.cjs
+  ```
+
+  Voraussetzungen: einmal `bun install` im Repo-Stamm (liefert
+  Playwright über `@playwright/test`) sowie die installierten
+  Playwright-Chromium-Browser (`npx playwright install chromium`);
+  das Skript findet die installierte Chromium-Version selbständig unter
+  `%LOCALAPPDATA%\ms-playwright`. Erfolg = Exit-Code 0 ohne
+  `FAIL`-Zeilen. Das Skript lädt ausschließlich `index.html` per
+  `file://` – es startet kein Backend, weil es keines gibt.
+
+  Fehlersuche in restriktiven Umgebungen: Blockiert die Sandbox
+  Playwrights Pipe-Transport (EPERM), startet das Skript selbst einen
+  Chromium mit TCP-Debugport und hängt sich per CDP an. Mit
+  `VERIFY_CDP_URL=http://127.0.0.1:9333` verbindet es sich stattdessen
+  mit einem extern gestarteten Chromium unter dieser CDP-Adresse.
+  Darf Chromium keine Kindprozesse/Crashpad starten, ist der Lauf mit
+  erweiterten Prozessrechten auszuführen.
+
+- **`verify.html`** – ein schlankerer In-Browser-Prüfharness für einen
+  Teil der Prüfungen (task-0179-Gates G1–G4 plus Regressionen zu
+  Ersteinrichtung, Startdialog, Liste, Detail). Er lädt `index.html`
+  in einem iframe und schreibt `PASS`/`FAIL`-Zeilen ins DOM; am Ende
+  muss `RESULT: PASS` stehen. Ohne Server ausführbar, z. B. mit einem
+  beliebigen installierten Chromium/Chrome-Headless-Build (die
+  Versionsnummer im Pfad variiert):
+
+  ```powershell
+  & "$env:LOCALAPPDATA\ms-playwright\<chromium-build>\chrome-headless-shell-win64\chrome-headless-shell.exe" `
+    --headless --no-sandbox --allow-file-access-from-files `
+    --virtual-time-budget=25000 --dump-dom `
+    "file:///<absoluter-Pfad>/prototype/meeting-mode/verify.html"
+  ```
+
+Beide Harnesses prüfen nur das Mock-Verhalten des Prototyps – ein
+grüner Lauf besagt nichts darüber, ob die spätere Implementierung
+diese Verhaltensweisen erfüllt.
 
 ## Bewusste Nicht-Ziele (Scope dieses Blattes)
 
