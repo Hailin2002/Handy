@@ -17,6 +17,8 @@
     "test:playwright": "playwright test",
     "test:playwright:ui": "playwright test --ui",
     "check:translations": "node scripts/check-translations.ts",
+    "check:log-hygiene": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify/check-log-hygiene.ps1",
+    "check": "node scripts/check-translations.ts && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify/check-log-hygiene.ps1",
     "postinstall": "node scripts/check-nix-deps.ts"
   },
   "dependencies": {
