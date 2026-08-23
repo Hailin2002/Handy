@@ -171,7 +171,8 @@
       "translation": "Kan oversætte til engelsk",
       "translate": "Oversæt",
       "streaming": "Viser live transskription, mens du taler"
-    }
+    },
+    "downloadingGeneric": "Downloader..."
   },
   "settings": {
     "speechPipeline": {

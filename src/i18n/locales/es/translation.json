@@ -171,7 +171,8 @@
     },
     "cancel": "Cancelar",
     "cancelDownload": "Cancelar descarga",
-    "legacy": "Heredado"
+    "legacy": "Heredado",
+    "downloadingGeneric": "Descargando..."
   },
   "settings": {
     "speechPipeline": {

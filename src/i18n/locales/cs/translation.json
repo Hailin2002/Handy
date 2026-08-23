@@ -171,7 +171,8 @@
     },
     "cancel": "Zrušit",
     "cancelDownload": "Zrušit stahování",
-    "legacy": "Zastaralé"
+    "legacy": "Zastaralé",
+    "downloadingGeneric": "Stahování..."
   },
   "settings": {
     "speechPipeline": {

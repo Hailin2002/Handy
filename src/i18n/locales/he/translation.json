@@ -171,7 +171,8 @@
       "translate": "תרגם לאנגלית",
       "streaming": "מציג תמלול חי תוך כדי דיבור"
     },
-    "legacy": "מדור קודם"
+    "legacy": "מדור קודם",
+    "downloadingGeneric": "מוריד..."
   },
   "settings": {
     "speechPipeline": {

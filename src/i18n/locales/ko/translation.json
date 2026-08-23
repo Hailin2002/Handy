@@ -171,7 +171,8 @@
       "translate": "영어로 번역",
       "streaming": "말하는 동안 실시간으로 음성 인식 결과를 표시"
     },
-    "legacy": "레거시"
+    "legacy": "레거시",
+    "downloadingGeneric": "다운로드 중..."
   },
   "settings": {
     "speechPipeline": {

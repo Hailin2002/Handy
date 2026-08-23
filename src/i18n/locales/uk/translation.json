@@ -171,7 +171,8 @@
     },
     "cancel": "Скасувати",
     "cancelDownload": "Скасувати завантаження",
-    "legacy": "Застаріле"
+    "legacy": "Застаріле",
+    "downloadingGeneric": "Завантаження..."
   },
   "settings": {
     "speechPipeline": {

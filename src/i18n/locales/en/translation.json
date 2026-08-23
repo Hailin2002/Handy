@@ -171,7 +171,8 @@
       "translation": "Can translate to English",
       "translate": "Translate",
       "streaming": "Shows live transcription as you speak"
-    }
+    },
+    "downloadingGeneric": "Downloading..."
   },
   "settings": {
     "modelSettings": {

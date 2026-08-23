@@ -222,7 +222,9 @@ const RecordingOverlay: React.FC = () => {
       <div className="sbase-l">
         <span className="sspinner" />
       </div>
-      <span className="swork-label">{label}</span>
+      <span className="swork-label" role="status">
+        {label}
+      </span>
       <div className="sbase-r">{showCancel && cancelBtn}</div>
     </div>
   );
@@ -253,6 +255,7 @@ const RecordingOverlay: React.FC = () => {
                 className={`stext-cap ${overflowing ? "overflowing" : ""}`}
                 ref={capRef}
                 onScroll={handleStreamScroll}
+                aria-live="polite"
               >
                 <p>
                   <span className="committed">

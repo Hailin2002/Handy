@@ -7,6 +7,10 @@ import { useModelStore } from "../../stores/modelStore";
 import ModelStatusButton from "./ModelStatusButton";
 import ModelDropdown from "./ModelDropdown";
 import DownloadProgressDisplay from "./DownloadProgressDisplay";
+import {
+  useModelStatusAnnouncer,
+  getStatusAnnouncementText,
+} from "./useModelStatusAnnouncer";
 
 import { ModelStateEvent } from "@/lib/types/events";
 
@@ -242,13 +246,28 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onError }) => {
     return modelStatus;
   };
 
+  // Polite narration of persistent status transitions (ready / loading /
+  // downloading / error). Percentages are stripped from the announcement so
+  // progress ticks never reach the live region; the hook debounces flapping
+  // and never announces the startup state.
+  const displayText = getModelDisplayText();
+  const { message: statusAnnouncement, nonce: announcementNonce } =
+    useModelStatusAnnouncer(
+      getStatusAnnouncementText({
+        displayStatus: getDisplayStatus(),
+        downloadCount: Object.keys(downloadProgress).length,
+        displayText,
+        t,
+      }),
+    );
+
   return (
     <>
       {/* Model Status and Switcher */}
       <div className="relative" ref={dropdownRef}>
         <ModelStatusButton
           status={getDisplayStatus()}
-          displayText={getModelDisplayText()}
+          displayText={displayText}
           isDropdownOpen={showModelDropdown}
           onClick={() => setShowModelDropdown(!showModelDropdown)}
         />
@@ -268,6 +287,14 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onError }) => {
         downloadProgress={downloadProgress}
         downloadStats={downloadStats}
       />
+
+      {/* Polite status region: the only live region in the selector. It carries
+          nothing but the settled status text — never progress ticks. */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {statusAnnouncement ? (
+          <span key={announcementNonce}>{statusAnnouncement}</span>
+        ) : null}
+      </div>
     </>
   );
 };

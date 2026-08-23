@@ -171,7 +171,8 @@
     },
     "cancel": "İptal",
     "cancelDownload": "İndirmeyi iptal et",
-    "legacy": "Eski"
+    "legacy": "Eski",
+    "downloadingGeneric": "İndiriliyor..."
   },
   "settings": {
     "speechPipeline": {

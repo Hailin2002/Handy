@@ -171,7 +171,8 @@
       "translate": "ترجمة",
       "streaming": "يعرض النسخ المباشر أثناء التحدث"
     },
-    "legacy": "قديم"
+    "legacy": "قديم",
+    "downloadingGeneric": "جاري التنزيل..."
   },
   "settings": {
     "speechPipeline": {

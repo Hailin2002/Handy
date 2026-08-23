@@ -171,7 +171,8 @@
     },
     "cancel": "キャンセル",
     "cancelDownload": "ダウンロードをキャンセル",
-    "legacy": "旧式"
+    "legacy": "旧式",
+    "downloadingGeneric": "ダウンロード中…"
   },
   "settings": {
     "speechPipeline": {

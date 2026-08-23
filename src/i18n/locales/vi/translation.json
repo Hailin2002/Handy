@@ -171,7 +171,8 @@
     },
     "cancel": "Hủy",
     "cancelDownload": "Hủy tải xuống",
-    "legacy": "Cũ"
+    "legacy": "Cũ",
+    "downloadingGeneric": "Đang tải xuống..."
   },
   "settings": {
     "speechPipeline": {

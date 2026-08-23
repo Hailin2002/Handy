@@ -171,7 +171,8 @@
     },
     "cancel": "Abbrechen",
     "cancelDownload": "Download abbrechen",
-    "legacy": "Veraltet"
+    "legacy": "Veraltet",
+    "downloadingGeneric": "Wird heruntergeladen..."
   },
   "settings": {
     "modelSettings": {
