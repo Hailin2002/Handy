@@ -224,6 +224,25 @@
           <legend>Prototyp-Simulation (nur im Mock)</legend>
           <label><input type="checkbox" id="sim-chunk-error"> Einen Abschnitt fehlschlagen lassen</label>
         </fieldset>
+
+        <!-- KI-Projektvorschlag (Plan §6.18, Gate G2): erscheint erst nach
+             Abschluss der Verarbeitung, enthält Confidence + zwei Belege und
+             erfordert eine explizite Wahl – ohne Wahl wird nichts verschoben -->
+        <div class="suggestion-card" id="ai-suggestion" hidden>
+          <h2 class="small-heading">Projektvorschlag</h2>
+          <p id="suggestion-headline"></p>
+          <p class="muted small">Belege:</p>
+          <ul class="evidence-list" id="suggestion-evidence" role="list"></ul>
+          <!-- Drei gleichwertig erreichbare Aktionen; Standardaktion Zuordnen.
+               Keine automatische Verschiebung ohne Eingabe. -->
+          <div class="row-gap" id="suggestion-actions">
+            <button type="button" class="btn btn-primary" id="btn-suggest-zuordnen">Zuordnen</button>
+            <button type="button" class="btn btn-secondary" id="btn-suggest-other">Anderes Projekt …</button>
+            <button type="button" class="btn btn-ghost" id="btn-suggest-none">Ohne Projekt lassen</button>
+          </div>
+          <div id="suggest-other-picker" class="picker-panel" role="group" aria-label="Anderes Projekt wählen" hidden></div>
+          <p class="muted small" id="suggestion-note"></p>
+        </div>
       </div>
     </section>
 
@@ -315,9 +334,22 @@
         <h1>Projekte</h1>
         <p class="subtitle">Status, Aufgaben und Meetings pro Projekt – Meetings können auch ohne Projekt aufgenommen werden.</p>
       </header>
-      <div class="toolbar">
-        <button type="button" class="btn btn-primary">Projekt erstellen</button>
-        <button type="button" class="btn btn-ghost" disabled title="In dieser Prototyp-Version nicht freigegeben">WhatsApp-Export importieren</button>
+      <!-- Leerer Zustand (§6.16): Nutzen-Satz, genau eine Primäraktion,
+           Import bewusst sekundär -->
+      <div class="empty-state" id="projects-empty" hidden>
+        <h2>Noch keine Projekte</h2>
+        <p>Projekte bündeln Meetings, Quellen und Aufgaben – z.&nbsp;B. ein Verein, ein Kunde oder ein Thema.</p>
+        <div class="row-gap" style="justify-content:center">
+          <button type="button" class="btn btn-primary btn-large" id="btn-projekt-erstellen-empty">Projekt erstellen</button>
+          <button type="button" class="btn btn-ghost" id="btn-import-empty">WhatsApp-Export importieren</button>
+        </div>
+        <p class="muted small">Meetings können auch zunächst ohne Projekt aufgenommen werden – sie landen im Eingang „Nicht zugeordnet“.</p>
+      </div>
+
+      <div class="toolbar" id="projects-toolbar">
+        <button type="button" class="btn btn-primary" id="btn-projekt-erstellen">Projekt erstellen</button>
+        <!-- Import bleibt die einzige sekundäre Aktion (§6.16) -->
+        <button type="button" class="btn btn-ghost" id="btn-import-start">WhatsApp-Export importieren</button>
         <label class="sr-only" for="project-search">Projekte durchsuchen</label>
         <input type="search" id="project-search" placeholder="Projekte durchsuchen …">
         <label class="sr-only" for="project-sort">Sortierung</label>
@@ -327,23 +359,172 @@
           <option value="name">Name</option>
         </select>
       </div>
-      <ul class="project-list" id="project-list" role="list">
-        <li class="project-card inbox-card">
-          <a href="#/projekte/eingang" class="project-link">
-            <strong>Eingang – Nicht zugeordnet</strong>
-            <span class="badge badge-accent">2</span>
-            <span class="muted">2 Meetings ohne Projektzuordnung</span>
-          </a>
-        </li>
-        <li class="project-card">
-          <a href="#/projekte/bdna" class="project-link">
-            <strong>BDNA Club</strong>
-            <span class="status-chip status-processing">In Arbeit</span>
-            <span class="muted">Nächste Aufgabe: Einladungen versenden (überfällig)</span>
-            <span class="muted small">Zuletzt aktiv: heute · 3 ungeprüfte Vorschläge</span>
-          </a>
-        </li>
-      </ul>
+      <ul class="project-list" id="project-list" role="list"></ul>
+      <p class="note" id="projects-nosearch" hidden>Keine Projekte für diese Suche.</p>
+
+      <fieldset class="mock-fieldset">
+        <legend>Prototyp-Simulation (nur im Mock)</legend>
+        <label><input type="checkbox" id="sim-no-projects"> Leeren Zustand simulieren (Projekte ausblenden)</label>
+      </fieldset>
+    </section>
+
+    <!-- ========== Ansicht: Eingang – Nicht zugeordnet (Plan §6.16/§6.18) ========== -->
+    <section class="view" id="view-eingang" hidden>
+      <a href="#/projekte" class="btn btn-ghost">← Projekte</a>
+      <header class="view-header">
+        <h1>Eingang – Nicht zugeordnet</h1>
+        <p class="subtitle">Meetings und Importe ohne Projektzuordnung. Eine Zuordnung ändert nur die Verknüpfung – Transkript, Audio und Belege bleiben erhalten.</p>
+      </header>
+      <div class="card">
+        <ul class="inbox-list" id="eingang-list" role="list"></ul>
+        <div class="row-gap" style="margin-top:12px">
+          <label class="sr-only" for="eingang-target">Zielprojekt für Stapelzuordnung</label>
+          <select id="eingang-target"></select>
+          <button type="button" class="btn btn-primary" id="btn-eingang-assign">Ausgewählte zuweisen …</button>
+        </div>
+        <!-- §6.18: Stapelzuordnung immer mit Vorschau, nie eine
+             KI-Massenaktion ohne Bestätigung -->
+        <p class="muted small">Stapelzuordnung zeigt vorher eine Vorschau – es gibt keine automatische Massenzuordnung.</p>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Projekt-Detailansicht (Plan §6.17) ========== -->
+    <section class="view" id="view-projekt-detail" hidden>
+      <a href="#/projekte" class="btn btn-ghost" id="btn-projekt-back">← Projekte</a>
+      <header class="view-header">
+        <div class="row-between">
+          <h1 id="pd-name" style="margin:0">Projekt</h1>
+          <details class="more-options" id="pd-more-menu">
+            <summary>Weitere Aktionen</summary>
+            <div class="menu menu-static" role="menu">
+              <button type="button" role="menuitem" id="btn-pd-rename">Umbenennen …</button>
+              <button type="button" role="menuitem" class="menu-danger" id="btn-pd-delete">Projekt löschen …</button>
+            </div>
+          </details>
+        </div>
+        <!-- Belegbarer Kurzstatus + letzter KI-Lauf (§6.17); Belege als Links -->
+        <p class="subtitle" id="pd-statusline"></p>
+      </header>
+      <div class="row-gap detail-actions">
+        <button type="button" class="btn btn-secondary btn-small" id="btn-pd-add-source">Quelle hinzufügen</button>
+        <span class="muted small" id="pd-ai-last-run"></span>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Projekt-Bereiche">
+        <button role="tab" class="tab" data-ptab="uebersicht" aria-selected="true">Übersicht</button>
+        <button role="tab" class="tab" data-ptab="aufgaben" aria-selected="false">Aufgaben</button>
+        <button role="tab" class="tab" data-ptab="meetings" aria-selected="false">Meetings</button>
+        <button role="tab" class="tab" data-ptab="quellen" aria-selected="false">Quellen</button>
+      </div>
+
+      <div class="detail-body">
+        <div class="tabpanel" role="tabpanel" data-ppanel="uebersicht">
+          <div class="card" id="pd-overview"></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-ppanel="aufgaben" hidden>
+          <div id="pd-tasks"></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-ppanel="meetings" hidden>
+          <div class="card" id="pd-meetings"></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-ppanel="quellen" hidden>
+          <div class="card" id="pd-sources"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: WhatsApp-Importassistent (Plan §6.19) ==========
+         Vier Schritte; lokales Parsen/Deduplizieren immer vor jedem
+         Cloudaufruf; Schritt 3 listet exakt, was das Gerät verlässt. -->
+    <section class="view" id="view-import" hidden>
+      <a href="#/projekte" class="btn btn-ghost" id="btn-import-back">← Projekte</a>
+      <header class="view-header">
+        <h1>WhatsApp-Export importieren</h1>
+        <p class="subtitle">Lokales Parsen und Deduplizieren läuft immer vor einem möglichen Cloudaufruf. Ein Archiv wird nie blind an einen Provider gesendet.</p>
+      </header>
+
+      <ol class="wizard-steps" id="wizard-steps" aria-label="Importschritte">
+        <li data-wstep="1" class="current" aria-current="step">1 · Datei wählen</li>
+        <li data-wstep="2">2 · Erkanntes prüfen</li>
+        <li data-wstep="3">3 · Projekt &amp; Verarbeitung</li>
+        <li data-wstep="4">4 · Import bestätigen</li>
+      </ol>
+
+      <!-- Schritt 1: Datei wählen (.zip/.txt), noch keine Cloudübertragung -->
+      <div class="card" id="import-step-1">
+        <h2 class="small-heading">Schritt 1 · Datei wählen</h2>
+        <p>Export vom Handy wählen (<code>.zip</code> oder <code>.txt</code>). Der Parser erkennt Chatnamen, Teilnehmer und Zeitraum selbstständig.</p>
+        <div class="row-gap">
+          <button type="button" class="file-pick" id="pick-file-a"
+                  title="Erstimport – 48 Nachrichten, noch nicht importiert">📄 WhatsApp Export – BDNA Club.zip</button>
+          <button type="button" class="file-pick" id="pick-file-b"
+                  title="Überlappt mit dem bereits importierten Archiv – Dubletten-Demo">📄 BDNA Club Chat (Teil&nbsp;2).zip</button>
+        </div>
+        <p class="privacy-note">🔒 Es findet noch keine Cloudübertragung statt – die Datei bleibt auf diesem Gerät.</p>
+      </div>
+
+      <!-- Schritt 2: Erkanntes prüfen inkl. Dubletten-Vorschau -->
+      <div class="card" id="import-step-2" hidden>
+        <h2 class="small-heading">Schritt 2 · Erkanntes prüfen</h2>
+        <dl class="detected-grid" id="detected-grid"></dl>
+        <!-- Deduplizieren passiert lokal, bevor irgend etwas importiert wird;
+             die Vorschau zeigt genau welche Nachrichten übersprungen würden -->
+        <div class="hint-box" id="dedup-preview" hidden></div>
+        <div class="row-gap">
+          <button type="button" class="btn btn-neutral" id="btn-import-back1">← Zurück</button>
+          <button type="button" class="btn btn-primary" id="btn-to-step3">Weiter</button>
+        </div>
+      </div>
+
+      <!-- Schritt 3: Zielprojekt + Verarbeitung; exakte Cloud-Offenlegung -->
+      <div class="card" id="import-step-3" hidden>
+        <h2 class="small-heading">Schritt 3 · Projekt und Verarbeitung wählen</h2>
+        <label for="import-project">Zielprojekt</label>
+        <select id="import-project"></select>
+        <fieldset class="option-cards" style="margin-top:10px">
+          <legend class="sr-only">Verarbeitung wählen</legend>
+          <label class="option-card">
+            <input type="radio" name="import-mode" value="lokal" checked>
+            <span class="option-body">
+              <strong>Nur lokal importieren</strong>
+              <span class="status-chip status-ready rec-badge">Empfehlung · datenschutzfreundlich</span>
+              <span class="muted small">Nichts verlässt das Gerät. Parsen, Deduplizieren und Indexierung laufen lokal – der Import ist vollständig durchsuchbar.</span>
+            </span>
+          </label>
+          <label class="option-card">
+            <input type="radio" name="import-mode" value="cloud">
+            <span class="option-body">
+              <strong>Zusätzlich kompatibles Cloud-Modell nutzen</strong>
+              <span class="muted small">Modelle werden nach benötigten Eingabemodalitäten gefiltert. Sprachnachrichten werden erst nach ausdrücklicher Wahl verarbeitet; Video wird nur als Metadatum angezeigt.</span>
+            </span>
+          </label>
+        </fieldset>
+        <!-- Gate G3: exakt aufgelistet, welche Inhalte das Gerät verlassen -->
+        <div class="hint-box" id="cloud-disclosure" hidden>
+          <strong>Folgende Inhalte verlassen das Gerät:</strong>
+          <ul class="leaves-list" id="cloud-leaves-list" role="list"></ul>
+          <p class="muted small" id="cloud-cost"></p>
+        </div>
+        <div class="hint-box" id="local-disclosure">
+          <strong>Nichts verlässt das Gerät.</strong> Alle Nachrichten, Medien und Metadaten bleiben lokal gespeichert.
+        </div>
+        <div class="row-gap">
+          <button type="button" class="btn btn-neutral" id="btn-import-back2">← Zurück</button>
+          <button type="button" class="btn btn-primary" id="btn-to-step4">Weiter</button>
+        </div>
+      </div>
+
+      <!-- Schritt 4: Fortschritt pro Stufe + Ergebnis -->
+      <div class="card" id="import-step-4" hidden>
+        <h2 class="small-heading">Schritt 4 · Import bestätigen</h2>
+        <ul class="checklist" id="import-checklist" role="list" aria-live="polite"></ul>
+        <div class="hint-box" id="import-result" hidden></div>
+        <div class="row-gap">
+          <button type="button" class="btn btn-neutral" id="btn-import-back3" hidden>← Zurück</button>
+          <button type="button" class="btn btn-primary" id="btn-import-run">Import starten</button>
+          <button type="button" class="btn btn-ghost" id="btn-import-finish" hidden>Fertig – zurück zu den Projekten</button>
+        </div>
+      </div>
     </section>
 
     <!-- ========== Ansicht: Diktatverlauf ========== -->
@@ -585,6 +766,50 @@
     </p>
     <div class="row-gap row-end">
       <button type="button" class="btn btn-neutral" id="btn-countdown-abbruch">✕ Abbrechen (Esc)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Projekt erstellen (§6.16): genau ein Pflichtfeld Name -->
+<div class="modal-backdrop" id="project-create-dialog" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pc-title">
+    <h2 id="pc-title">Projekt erstellen</h2>
+    <form id="project-create-form">
+      <label for="project-name-input">Name <span class="muted">(einziges Pflichtfeld)</span></label>
+      <input type="text" id="project-name-input" required placeholder="z. B. BDNA Club">
+      <p class="muted small">Beschreibung, Farbe und weitere Metadaten sind optional und können später ergänzt werden.</p>
+      <p class="start-blocker" id="project-name-blocker" role="status" hidden>Bitte einen Namen eingeben.</p>
+      <div class="row-gap row-end">
+        <button type="button" class="btn btn-neutral" id="btn-pc-cancel">Abbrechen</button>
+        <button type="submit" class="btn btn-primary" id="btn-pc-create">Erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Quellenansicht (Gate G1): jeder KI-Beleg springt hierher und hebt die
+     gemockte Quellenstelle hervor -->
+<div class="modal-backdrop" id="source-viewer" hidden>
+  <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="sv-title">
+    <h2 id="sv-title">Quelle</h2>
+    <p class="muted small" id="sv-meta"></p>
+    <ul class="source-lines" id="sv-lines" role="list"></ul>
+    <div class="row-gap row-end">
+      <button type="button" class="btn btn-neutral" id="btn-sv-close">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stapelzuordnung mit Vorschau (§6.18) -->
+<div class="modal-backdrop" id="assign-preview" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+    <h2 id="assign-title">Zuordnung bestätigen</h2>
+    <p id="assign-preview-text"></p>
+    <ul id="assign-preview-list" role="list" class="evidence-list"></ul>
+    <p class="muted small">Es wird nur die Verknüpfung geändert. Transkript, Audio und Aufgabenbelege bleiben erhalten.</p>
+    <div class="row-gap row-end">
+      <button type="button" class="btn btn-neutral" id="btn-assign-cancel">Abbrechen</button>
+      <button type="button" class="btn btn-primary" id="btn-assign-ok">Zuweisen</button>
     </div>
   </div>
 </div>

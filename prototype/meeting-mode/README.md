@@ -31,7 +31,10 @@ Primärnavigation gemäß Plan §6.3:
 | **Meeting-Detailansicht** | Tabs `Übersicht` / `Transkript` / `Audio` / `Verarbeitung`; editierbarer Titel; Kopieren/Exportieren plus beschriftetes Menü „Weitere Aktionen“ inkl. Löschen mit benannten Artefakten; Transkript-Suche springt zur Segmentposition inkl. Audioposition; optionale `Geteilte Ansicht` nur auf breiten Bildschirmen (§6.13) |
 | **Meeting-Ersteinrichtung** | Drei Schritte: Verarbeitung wählen (Lokal empfohlen, Azure mit Upload-Hinweis, Custom unter „Weitere Optionen“), Audio prüfen mit Livepegel-Mocks und Korrekturaktionen bei fehlendem Gerät/verweigerter Berechtigung, Meeting-Shortcut mit Verfügbarkeitsprüfung und konfliktfreien Alternativen (§6.6) |
 | **Kompakter Startdialog** | Vier komplett anklickbare Statuszeilen mit Mini-Pickern (eine Zeile = eine Entscheidung), Projektauswahl per Chip inkl. sichtbar unterschiedenem „Kein Projekt“, Summary-Schalter, Speicherhinweis, genau ein Primärbutton `Meeting starten` mit nachvollziehbarem Deaktivierungsgrund (§6.7) |
-| **Projekte** | Karten inkl. Eingang „Nicht zugeordnet“ mit Zähler-Badge (§6.16) |
+| **Projekte** | Arbeitsübersicht mit Suche (Namen, Status, Aufgaben, normalisierte Quellentexte), Sortierung `Zuletzt aktiv` / `Dringendste Aufgabe` / `Name`, Karten mit Status und nächster dringender Aufgabe sowie Eingang „Nicht zugeordnet“ mit Zähler-Badge; Leerer Zustand mit genau einer Primäraktion `Projekt erstellen` und sekundärem Import (§6.16) |
+| **Projekt-Detailansicht** | Kopfzeile mit belegbarem Kurzstatus + letztem KI-Lauf, Tabs `Übersicht / Aufgaben / Meetings / Quellen`; jede KI-Aussage und jeder Task mit Beleglink in die gemockte Quelle, Aufgabenboard `Vorgeschlagen / Offen / Erledigt / Verworfen` mit direkt erreichbaren Aktionen und `Warum dringend?` inkl. Begründung + Belegen (§6.17) |
+| **Projektzuordnung** | Eingang mit Stapelzuordnung (immer mit Vorschau), KI-Projektvorschlag nach der Verarbeitung mit Confidence + zwei Belegen und den gleichwertigen Wahlen `Zuordnen / Anderes Projekt … / Ohne Projekt lassen` – ohne Wahl wird nichts verschoben (§6.18) |
+| **WhatsApp-Import** | Vier-Schritt-Assistent: Datei wählen → Erkanntes prüfen (inkl. Dubletten-Vorschau) → Projekt & Verarbeitung mit exakter Cloud-Offenlegung + Kostenschätzung → Import bestätigen mit Fortschritt und Ergebnis (importiert/übersprungen/fehlerhaft) (§6.19) |
 | **Diktatverlauf** | kurzer Verlauf mit Kopieren-Mock |
 | **Einstellungen** | eigene Seite mit sekundären Tabs: Diktieren · Meetings · Modelle & Provider · Allgemein · Erweitert |
 
@@ -104,11 +107,19 @@ erweiterten Prozessrechten auszuführen.
 
 ## Bewusste Nicht-Ziele (Scope dieses Blattes)
 
-- Keine echte Audio-, Transkriptions- oder Providerlogik.
-- Keine Projekt-Detailansicht, kein Importassistent (spätere Teilblätter von task-0025).
+- Keine echte Audio-, Transkriptions-, Parser- oder Providerlogik.
 - Kein Anschluss an die Tauri-App; vollständig losgelöst von `src/`.
 
-## Gates dieses Blattes (task-0180, Teil 4/5)
+## Gates dieses Blattes (task-0181, Teil 5/5)
+
+| Gate | Umsetzung | Nachweis |
+| --- | --- | --- |
+| G1 – Jede KI-Aussage und jeder Task zeigt ≥1 Beleglink zu einer gemockten Quelle | Übersicht (Status, Entscheidungen, Fragen), Aufgabenkarten, `Warum dringend?`, Detail-Kopfzeile und Projektvorschlag enthalten Beleglinks; Klick öffnet die Quellenansicht mit hervorgehobener Stelle | verify.cjs: „G1 every overview statement has ≥1 evidence link“, „G1 every task shows ≥1 evidence link“, „G1 evidence link opens mocked source with highlighted line“ |
+| G2 – KI-Projektvorschlag erfordert explizite Wahl | Nach der Verarbeitung erscheint der Vorschlag mit Confidence + zwei Belegen; `Zuordnen` / `Anderes Projekt …` / `Ohne Projekt lassen` sind gleichwertig erreichbar, ohne Wahl wird nichts verschoben | verify.cjs: „G2 suggestion appears after processing…“, „G2 exactly three equal choices…“, „G2 nothing is moved without an explicit user choice“ |
+| G3 – Importschritt 3 listet exakt, was das Gerät verlässt | Standard ist „Nur lokal importieren“; bei Cloud-Wahl listet die Offenlegung Nachrichten, Bilder, Sprachnachrichten und ausdrücklich, was bleibt (Video, nicht unterstützte Dateien), plus Kostenschätzung | verify.cjs: „G3 default is local-only…“, „G3 cloud choice discloses exactly which content leaves the device“, „G3 disclosure names what explicitly stays on the device“ |
+| G4 – Wiederholter Import zeigt Dedup-Vorschau, keine Dubletten | Datei 2 überlappt mit dem importierten Archiv; Schritt 2 listet jede Dublette vorab, Schritt 4 importiert nur neue Nachrichten und weist übersprungene aus | verify.cjs: „G4 repeated import shows dedup preview listing each duplicate“, „G4 result imports only new messages, skips duplicates without doubling“ |
+
+## Gates vorheriger Blätter (task-0180, Teil 4/5)
 
 | Gate | Umsetzung | Nachweis |
 | --- | --- | --- |

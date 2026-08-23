@@ -1,7 +1,16 @@
 // Verification harness for prototype/meeting-mode.
 // Covers the task-0179 leaf gates (G1 stop confirmation, G2 scroll lock,
-// G3 §6.8 colour semantics, G4 flows from start-dialog completion) plus
-// regression checks for task-0178 (§6.6 setup, §6.7 start dialog).
+// G3 §6.8 colour semantics, G4 flows from start-dialog completion),
+// regressions for task-0178 (§6.6 setup, §6.7 start dialog) and task-0180
+// (§6.12 checklist, §6.5 list, §6.13 detail), plus the task-0181 leaf gates:
+//   G1 – every AI status statement / task carries ≥1 evidence link that jumps
+//        to a highlighted mocked source line (§6.16–§6.17)
+//   G2 – AI project suggestion requires an explicit Zuordnen / Anderes
+//        Projekt / Ohne Projekt choice, never auto-moves (§6.18)
+//   G3 – import step 3 lists exactly which content would leave the device,
+//        with cost estimate; local is the default (§6.19)
+//   G4 – repeated-import demo shows a per-message dedup preview and imports
+//        without duplicating messages (§6.19)
 // Run from workspace root:  node prototype\meeting-mode\verify.cjs
 // Uses the repo's Playwright package with the locally installed Chromium build.
 "use strict";
@@ -85,12 +94,13 @@ async function launchBrowser() {
 
 // Kept at module scope so the catch handler can dump progress on failure.
 const results = [];
+const jsErrors = [];
 let page = null;
 
 (async () => {
   const { browser, cleanup } = await launchBrowser();
   page = await browser.newPage();
-  const errors = [];
+  const errors = jsErrors;
   page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
   page.on("console", (m) => { if (m.type() === "error") errors.push("console: " + m.text()); });
 
@@ -811,6 +821,362 @@ let page = null;
     if (el) el.checked = false;
   });
 
+  /* ===== task-0181 Blatt: §6.16 Projekte, §6.17 Detail, §6.18 Zuordnung,
+          §6.19 WhatsApp-Import ===== */
+
+  /* --- §6.16: Leerer und gefüllter Zustand, Sortierung, Eingang --- */
+  await page.goto(url + "#/projekte");
+  await page.waitForTimeout(120);
+  check("§6.16 populated home shows inbox entry 'Nicht zugeordnet' first",
+        await page.evaluate(() => {
+          const first = document.querySelector("#project-list .project-card");
+          return !!first && /Nicht zugeordnet/.test(first.textContent) &&
+            !!first.querySelector(".badge");
+        }));
+  await page.check("#sim-no-projects");
+  await page.waitForTimeout(80);
+  check("§6.16 empty state: primary create + secondary import, toolbar hidden",
+        await page.evaluate(() =>
+          !document.getElementById("projects-empty").hidden &&
+          document.getElementById("projects-toolbar").hidden &&
+          document.getElementById("btn-projekt-erstellen-empty") &&
+          /WhatsApp-Export importieren/.test(
+            document.getElementById("btn-import-empty").textContent)));
+  await page.uncheck("#sim-no-projects");
+  await page.waitForTimeout(60);
+
+  // Projekt erstellen: genau ein Pflichtfeld Name
+  const projCountBefore = await page.evaluate(
+    () => document.querySelectorAll("#project-list .project-card").length);
+  await page.click("#btn-projekt-erstellen");
+  await page.waitForTimeout(60);
+  check("§6.16 create dialog blocks empty name",
+        await page.evaluate(() =>
+          document.getElementById("btn-pc-create").disabled));
+  await page.fill("#project-name-input", "A-Testprojekt");
+  await page.waitForTimeout(40);
+  check("§6.16 create enables submit once name entered",
+        await page.evaluate(() => !document.getElementById("btn-pc-create").disabled));
+  await page.click("#btn-pc-create");
+  await page.waitForTimeout(80);
+  check("§6.16 created project appears in list",
+        (await page.evaluate(
+          () => document.querySelectorAll("#project-list .project-card").length)) ===
+        projCountBefore + 1);
+
+  // Sortierung 'Name': alphabetisch vor 'Zuletzt aktiv'
+  await page.selectOption("#project-sort", "name");
+  await page.waitForTimeout(80);
+  check("§6.16 sort by name puts created project first",
+        await page.evaluate(() => {
+          const cards = [...document.querySelectorAll("#project-list .project-card")]
+            .filter((c) => !c.classList.contains("inbox-card"));
+          return cards.length >= 2 && /^A-Testprojekt/.test(cards[0].textContent.trim());
+        }));
+  await page.selectOption("#project-sort", "aktiv");
+  await page.waitForTimeout(60);
+
+  // Suche trifft auch normalisierte Quellentexte/Status/Aufgaben
+  await page.fill("#project-search", "getränkekarten");
+  await page.waitForTimeout(80);
+  check("§6.16 search matches normalized source texts",
+        await page.evaluate(() => {
+          const cards = [...document.querySelectorAll("#project-list .project-card")]
+            .filter((c) => !c.classList.contains("inbox-card"));
+          return cards.length === 1 && /BDNA Club/.test(cards[0].textContent);
+        }));
+  await page.fill("#project-search", "");
+  await page.waitForTimeout(60);
+
+  /* --- §6.17 + Gate G1: jede KI-Aussage/Task mit Beleglink → Quellstelle --- */
+  await page.locator("#project-list .project-link[data-project]",
+                     { hasText: "BDNA Club" }).click();
+  await page.waitForTimeout(120);
+  check("§6.17 detail header shows status line with evidence link",
+        await page.evaluate(() => {
+          const sl = document.getElementById("pd-statusline");
+          return !!sl.querySelector("a.evidence-link") &&
+            /Letzter KI-Lauf/.test(document.getElementById("pd-ai-last-run").textContent);
+        }));
+  const g1Overview = await page.evaluate(() => {
+    const ov = document.getElementById("pd-overview");
+    const lists = [...ov.querySelectorAll(".evidence-list")];
+    return {
+      statements: ov.querySelectorAll(".small-heading").length,
+      allHaveLinks: lists.length > 0 && lists.every((l) => l.querySelectorAll("a.evidence-link").length >= 1),
+      urgentShown: /Dringende Aufgaben/.test(ov.textContent),
+      activityShown: /Letzte Aktivität/.test(ov.textContent),
+    };
+  });
+  check("G1 every overview statement has ≥1 evidence link",
+        g1Overview.allHaveLinks && g1Overview.statements >= 4 &&
+        g1Overview.urgentShown && g1Overview.activityShown);
+
+  await page.click('[data-ptab="aufgaben"]');
+  await page.waitForTimeout(80);
+  const g1Tasks = await page.evaluate(() => ({
+    groups: [...document.querySelectorAll("#pd-tasks .task-group .small-heading")]
+      .map((h) => h.textContent).join("|"),
+    cardCount: document.querySelectorAll("#pd-tasks .task-card").length,
+    allCardsHaveLinks:
+      [...document.querySelectorAll("#pd-tasks .task-card")].length > 0 &&
+      [...document.querySelectorAll("#pd-tasks .task-card")].every(
+        (c) => c.querySelectorAll("a.evidence-link").length >= 1),
+    whyBtns: document.querySelectorAll("#pd-tasks .why-btn").length,
+  }));
+  check("§6.17 task board has Vorgeschlagen/Offen/Erledigt/Verworfen groups",
+        ["Vorgeschlagen", "Offen", "Erledigt", "Verworfen"].every((g) =>
+          g1Tasks.groups.indexOf(g) !== -1));
+  check("G1 every task shows ≥1 evidence link",
+        g1Tasks.allCardsHaveLinks);
+  // „Warum dringend?“ klappt Begründung + Belege auf (§6.17)
+  await page.click("#pd-tasks .why-btn");
+  await page.waitForTimeout(60);
+  check("§6.17 'Warum dringend?' reveals reason with evidence links",
+        await page.evaluate(() => {
+          const box = document.querySelector("#pd-tasks .why-box:not([hidden])");
+          return !!box && /Warum dringend\?/.test(box.textContent) &&
+            box.querySelectorAll("a.evidence-link").length >= 1 &&
+            document.querySelector("#pd-tasks .why-btn").getAttribute("aria-expanded") === "true";
+        }));
+
+  // Belegklick springt zur gemockten Quellenstelle (Gate G1)
+  await page.click("#pd-tasks .task-card a.evidence-link");
+  await page.waitForTimeout(120);
+  check("G1 evidence link opens mocked source with highlighted line",
+        await page.evaluate(() => {
+          const sv = document.getElementById("source-viewer");
+          return !sv.hidden && !!sv.querySelector(".src-hit") &&
+            sv.querySelectorAll("#sv-lines li").length > 1;
+        }));
+  await page.click("#btn-sv-close");
+  await page.waitForTimeout(50);
+
+  // Aufgaben-Aktionen direkt erreichbar; Vorschlag annehmen (§6.17)
+  const sugBefore = await page.evaluate(() => {
+    const group = [...document.querySelectorAll("#pd-tasks .task-group")]
+      .find((g) => /Vorgeschlagen/.test(g.querySelector(".small-heading").textContent));
+    return group ? group.textContent : "";
+  });
+  check("§6.17 AI task starts as Vorgeschlagen with direct actions",
+        /Annehmen/.test(sugBefore) && /Erledigen/.test(sugBefore) &&
+        /Verwerfen/.test(sugBefore));
+  await page.locator('#pd-tasks [data-task-action="annehmen"]').first().click();
+  await page.waitForTimeout(80);
+  check("§6.17 accepting moves task to Offen",
+        await page.evaluate(() => {
+          const offen = [...document.querySelectorAll("#pd-tasks .task-group")]
+            .find((g) => /Offen/.test(g.querySelector(".small-heading").textContent));
+          return !!offen && /Zahlen bis Donnerstag prüfen/.test(offen.textContent);
+        }));
+
+  /* --- §6.19 + Gate G3: Schritt 3 listet exakt, was das Gerät verlässt --- */
+  await page.goto(url + "#/import");
+  await page.waitForTimeout(100);
+  check("§6.19 wizard starts at step 1 with two mock files",
+        await page.evaluate(() =>
+          !document.getElementById("import-step-1").hidden &&
+          document.querySelectorAll(".file-pick").length === 2));
+  await page.click("#pick-file-a");
+  await page.waitForTimeout(80);
+  check("§6.19 step 2 shows detected metadata",
+        await page.evaluate(() =>
+          !document.getElementById("import-step-2").hidden &&
+          /BDNA Club/.test(document.getElementById("detected-grid").textContent) &&
+          /Dubletten/.test(document.getElementById("detected-grid").textContent)));
+  check("§6.19 no dedup preview for fresh archive",
+        await page.evaluate(() => document.getElementById("dedup-preview").hidden));
+  await page.click("#btn-to-step3");
+  await page.waitForTimeout(80);
+  check("G3 default is local-only: nothing leaves the device",
+        await page.evaluate(() =>
+          !document.getElementById("local-disclosure").hidden &&
+          document.getElementById("cloud-disclosure").hidden &&
+          document.querySelector('input[name="import-mode"][value="lokal"]').checked));
+  check("§6.19 local import keeps everything on the device",
+        await page.evaluate(() =>
+          /Nichts verlässt das Gerät/.test(document.getElementById("local-disclosure").textContent) &&
+          /lokal gespeichert/.test(document.getElementById("local-disclosure").textContent)));
+  await page.check('input[name="import-mode"][value="cloud"]');
+  await page.dispatchEvent('input[name="import-mode"][value="cloud"]', "change");
+  await page.waitForTimeout(80);
+  const disclosure = await page.evaluate(() => ({
+    visible: !document.getElementById("cloud-disclosure").hidden,
+    localHidden: document.getElementById("local-disclosure").hidden,
+    text: document.getElementById("cloud-leaves-list").textContent +
+      " " + document.getElementById("cloud-cost").textContent,
+  }));
+  check("G3 cloud choice discloses exactly which content leaves the device",
+        disclosure.visible && disclosure.localHidden &&
+        /Nachrichtentexte/.test(disclosure.text) &&
+        /Base64/.test(disclosure.text) &&
+        /Sprachnachrichten/.test(disclosure.text) &&
+        /Kostenschätzung/.test(disclosure.text));
+  check("G3 disclosure names what explicitly stays on the device",
+        /Video/.test(disclosure.text) && /Gerät/.test(disclosure.text));
+
+  /* --- Gate G4: wiederholter Import zeigt Dedup-Vorschau, keine Dubletten --- */
+  await page.click("#btn-import-back2");   // Schritt 3 → 2
+  await page.waitForTimeout(60);
+  await page.click("#btn-import-back1");   // Schritt 2 → 1 (Dateiauswahl)
+  await page.waitForTimeout(60);
+  await page.click("#pick-file-b");   // überlappt mit bereits importiertem Archiv
+  await page.waitForTimeout(80);
+  check("G4 repeated import shows dedup preview listing each duplicate",
+        await page.evaluate(() => {
+          const dp = document.getElementById("dedup-preview");
+          return !dp.hidden &&
+            document.getElementById("detected-dup-count").textContent === "12" &&
+            dp.querySelectorAll(".dup-item").length === 12 &&
+            /schon vorhanden/.test(dp.textContent) &&
+            /idempotent/.test(dp.textContent);
+        }));
+  await page.click("#btn-to-step3");
+  await page.waitForTimeout(60);
+  // Lokal lassen (Empfehlung) und Import durchführen
+  const totalLine = await (async () => {
+    await page.click("#btn-to-step4");
+    await page.waitForTimeout(80);
+    check("§6.19 step 4 checklist runs local parse/dedup/index first",
+          await page.evaluate(() =>
+            !document.querySelector('#import-checklist li[data-istep="parse"]').hidden &&
+            /dedupliziert/.test(
+              document.querySelector('#import-checklist li[data-istep="dedup"]').textContent) &&
+            document.getElementById("btn-import-run").disabled === false));
+    await page.click("#btn-import-run");
+    await page.waitForFunction(() => !document.getElementById("import-result").hidden,
+                               null, { timeout: 5000 });
+    return page.evaluate(() => document.getElementById("import-result").textContent);
+  })();
+  check("G4 result imports only new messages, skips duplicates without doubling",
+        /Importiert: 14 Nachrichten/.test(totalLine) &&
+        /Übersprungen \(Dubletten\): 12/.test(totalLine) &&
+        /62/.test(totalLine) && /NICHT doppelt gespeichert/.test(totalLine));
+  await page.click("#btn-import-finish");
+  await page.waitForTimeout(100);
+
+  /* --- §6.16/§6.18: Eingang mit Stapelzuordnung + Vorschau --- */
+  await page.goto(url + "#/eingang");
+  await page.waitForTimeout(100);
+  const inboxBefore = await page.evaluate(
+    () => document.querySelectorAll("#eingang-list .inbox-item input:not(:checked)").length);
+  await page.locator("#eingang-list input[data-inbox-idx]").first().check();
+  const targetOptions = await page.evaluate(() =>
+    [...document.querySelectorAll("#eingang-target option")].map((o) => o.textContent));
+  check(`§6.18 target select lists existing projects (options=${JSON.stringify(targetOptions)})`,
+        targetOptions.some((t) => t.trim() === "Atlas GmbH"));
+  if (targetOptions.some((t) => t.trim() === "Atlas GmbH")) {
+    await page.selectOption("#eingang-target", { label: "Atlas GmbH" });
+    await page.click("#btn-eingang-assign");
+  await page.waitForTimeout(80);
+  check("§6.18 batch assignment always shows preview before moving",
+        await page.evaluate(() =>
+          !document.getElementById("assign-preview").hidden &&
+          /Atlas GmbH/.test(document.getElementById("assign-preview-text").textContent) &&
+          document.querySelectorAll("#assign-preview-list li").length >= 1));
+  await page.click("#btn-assign-cancel");
+  await page.waitForTimeout(60);
+  check("§6.18 cancelling preview moves nothing",
+        (await page.evaluate(
+          () => document.querySelectorAll("#eingang-list .inbox-item").length)) === inboxBefore);
+  await page.locator("#eingang-list input[data-inbox-idx]").first().check();
+  await page.click("#btn-eingang-assign");
+  await page.waitForTimeout(60);
+  await page.click("#btn-assign-ok");
+  await page.waitForTimeout(80);
+  check("§6.18 confirmed batch assignment removes items from inbox",
+        (await page.evaluate(
+          () => document.querySelectorAll("#eingang-list .inbox-item").length)) ===
+        inboxBefore - 1);
+  }
+
+  /* --- §6.18 + Gate G2: KI-Projektvorschlag erfordert explizite Wahl --- */
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(100);
+  await page.click("#btn-neues-meeting");
+  await page.waitForTimeout(60);
+  // Sicherstellen, dass das Meeting ohne Projekt startet
+  let chipWasReset = false;
+  if ((await page.textContent("#project-chip")).trim() !== "Kein Projekt") {
+    chipWasReset = true;
+    await page.click("#project-chip");
+    await page.waitForTimeout(50);
+    await page.click("#project-picker .picker-none-opt");
+    await page.waitForTimeout(50);
+  }
+  await page.click("#btn-meeting-starten");
+  await page.waitForTimeout(3300);
+  await page.click("#btn-beenden");
+  await page.waitForTimeout(50);
+  await page.click("#btn-stop-ok");
+  await page.waitForFunction(
+    () => document.querySelector('#proc-checklist li[data-step="summary"]').className === "done",
+    null, { timeout: 8000 });
+  await page.waitForTimeout(900);   // finishChecklist-Nachlauf mit dem Vorschlag
+  const suggestion = await page.evaluate(() => ({
+    visible: !document.getElementById("ai-suggestion").hidden,
+    headline: document.getElementById("suggestion-headline").textContent,
+    evidence: document.querySelectorAll("#suggestion-evidence a.evidence-link").length,
+    buttons: [...document.querySelectorAll("#suggestion-actions button")]
+      .map((b) => b.textContent.trim()),
+    note: document.getElementById("suggestion-note").textContent,
+  }));
+  check(`G2 suggestion appears after processing with confidence + 2 evidence links (visible=${suggestion.visible} ev=${suggestion.evidence} chipReset=${chipWasReset} hl="${suggestion.headline.slice(0, 70)}")`,
+        suggestion.visible && /Confidence/.test(suggestion.headline) &&
+        suggestion.evidence >= 2);
+  check("G2 exactly three equal choices: Zuordnen / Anderes Projekt / Ohne Projekt",
+        suggestion.buttons.length === 3 &&
+        suggestion.buttons[0] === "Zuordnen" &&
+        /Anderes Projekt/.test(suggestion.buttons[1]) &&
+        /Ohne Projekt/.test(suggestion.buttons[2]));
+  check("G2 nothing is moved without an explicit user choice",
+        /Ohne deine Wahl wird nichts verschoben/.test(suggestion.note));
+  const suggestedTitle =
+    (suggestion.headline.match(/„(.+?)“/) || [])[1] || "";
+  // Ohne Projekt lassen: Meeting bleibt im Eingang
+  await page.click("#btn-suggest-none");
+  await page.waitForTimeout(60);
+  await page.goto(url + "#/eingang");
+  await page.waitForTimeout(100);
+  check("G2 declining keeps the meeting unassigned in the inbox",
+        suggestedTitle !== "" &&
+        (await page.evaluate((t) =>
+          [...document.querySelectorAll("#eingang-list .inbox-item")]
+            .some((li) => li.textContent.indexOf(t) !== -1), suggestedTitle)));
+
+  // Zweiter Lauf: „Anderes Projekt“ wählt ein anderes Ziel gleichwertig aus
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(100);
+  await page.click("#btn-neues-meeting");
+  await page.waitForTimeout(60);
+  if ((await page.textContent("#project-chip")).trim() !== "Kein Projekt") {
+    await page.click("#project-chip");
+    await page.waitForTimeout(50);
+    await page.click("#project-picker .picker-none-opt");
+    await page.waitForTimeout(50);
+  }
+  await page.click("#btn-meeting-starten");
+  await page.waitForTimeout(3300);
+  await page.click("#btn-beenden");
+  await page.waitForTimeout(50);
+  await page.click("#btn-stop-ok");
+  await page.waitForFunction(
+    () => !document.getElementById("ai-suggestion").hidden ||
+          document.querySelector('#proc-checklist li[data-step="summary"]').className === "done",
+    null, { timeout: 8000 });
+  await page.waitForSelector("#ai-suggestion:not([hidden])", { timeout: 4000 });
+  await page.click("#btn-suggest-other");
+  await page.waitForTimeout(60);
+  check("G2 'Anderes Projekt' picker lists existing projects equally reachable",
+        await page.evaluate(() =>
+          !document.getElementById("suggest-other-picker").hidden &&
+          document.querySelectorAll("#suggest-other-picker .picker-option").length >= 2));
+  await page.locator("#suggest-other-picker .picker-option",
+                     { hasText: "Atlas GmbH" }).click();
+  await page.waitForTimeout(80);
+  check("G2 choosing another project closes suggestion and assigns it",
+        await page.evaluate(() => document.getElementById("ai-suggestion").hidden));
+
   console.log(results.map(([s, n]) => `${s}  ${n}`).join("\n"));
   console.log(errors.length ? "\nJS ERRORS:\n" + errors.join("\n") : "\nNo JS errors.");
   if (errors.length) process.exitCode = 1;
@@ -821,6 +1187,9 @@ let page = null;
   process.exit(process.exitCode || 0);
 })().catch(async (e) => {
   console.error("HARNESS ERROR:", e);
+  if (jsErrors.length) {
+    console.error("\nJS ERRORS seen before the failure:\n" + jsErrors.join("\n"));
+  }
   if (results.length) {
     console.error("\nResults before the error:");
     console.error(results.map(([s, n]) => `${s}  ${n}`).join("\n"));

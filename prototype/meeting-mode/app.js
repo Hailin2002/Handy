@@ -21,6 +21,7 @@
       { id: nextMeetingId(),
         title: "Wochenplanung", date: "Gestern, 16:00", duration: "00:58:12",
         provider: "Lokal", status: "fertig",
+        project: null,
         summary: "Team einigte sich auf Release-Termin und zwei Follow-up-Aufgaben.",
         decisions: ["Release-Termin wird um eine Woche verschoben.",
                     "Messestand-Budget bleibt unverändert."],
@@ -44,6 +45,7 @@
       { id: nextMeetingId(),
         title: "Kundengespräch Berger", date: "Mo, 10:30", duration: "00:31:40",
         provider: "Lokal", status: "verarbeitung",
+        project: null,
         summary: null,
         decisions: [], tasks: [], questions: [],
         segments: [["1:04", "Herr Berger bittet um ein Angebot für zwanzig Lizenzen."]],
@@ -74,7 +76,8 @@
 
   /* ---------- Routing ---------- */
   var ROUTES = ["diktieren", "meetings", "meeting-aktiv", "verarbeitung",
-                "projekte", "diktatverlauf", "einstellungen", "hilfe",
+                "projekte", "eingang", "projekt-detail", "import",
+                "diktatverlauf", "einstellungen", "hilfe",
                 "meeting-einrichtung", "meeting-detail"];
 
   function currentRoute() {
@@ -102,6 +105,11 @@
     if (route === "meeting-einrichtung") initSetupView();
     if (route === "meeting-detail") renderDetail();
     if (route === "meeting-aktiv") renderRecordingStatus();   // Chip/Pin synchron halten
+    if (route === "projekte") renderProjects();
+    if (route === "eingang") renderEingang();
+    if (route === "projekt-detail") renderProjectDetail();
+    if (route === "import") initImportWizard();
+    updateInboxBadge();
     updateClockDisplays();
   }
 
@@ -822,6 +830,7 @@
       id: nextMeetingId(),
       title: state.activeTitle || "Meeting", date: "Gerade eben", duration: dur,
       provider: providerLabel(), status: "verarbeitung",
+      project: dlg.project || null,   // §6.18: nur sichtbare Vorauswahl, kein Zwang
       summary: null,
       decisions: [], tasks: [], questions: [],
       segments: sessionCaptured.map(function (s) {
@@ -838,6 +847,14 @@
     state.meetings.unshift(newMeeting);
     state.lastProcessingId = newMeeting.id;
     stopSegments();
+    // Checklisten-DOM synchron zurücksetzen, damit keine fertigen Zeilen oder
+    // alten Vorschläge des vorherigen Meetings sichtbar bleiben, bis die neue
+    // Checkliste startet (§6.12, Gates G1/G2)
+    ["saved", "chunks", "transcribe", "summary"].forEach(function (s) {
+      var li = document.querySelector('#proc-checklist li[data-step="' + s + '"]');
+      if (li) li.className = "";
+    });
+    $("#ai-suggestion").hidden = true;
     announce("Aufnahme beendet. Audio sicher gespeichert.");
     location.hash = "#/verarbeitung";
   });
@@ -886,6 +903,7 @@
     clearProcTimers();
     $("#btn-retry-failed").hidden = true;
     $("#btn-open-processing-meeting").hidden = true;
+    $("#ai-suggestion").hidden = true;   // Vorschlag erst nach Abschluss (§6.18)
     var m = checklistMeeting();
     if (!m) return;
     m.status = "verarbeitung";
@@ -947,6 +965,9 @@
       setStep("summary", "done", "✓ Zusammenfassung erstellt");
       $("#btn-retry-failed").hidden = true;
       $("#btn-open-processing-meeting").hidden = false;   // direkt ins Detail (§6.13)
+      // §6.18 (Gate G2): nach dem Stop darf ein Projektvorschlag erscheinen –
+      // aber nie ohne explizite Wahl des Nutzers wird etwas verschoben
+      if (!m.project) showProjectSuggestion(m);
       announce("Verarbeitung abgeschlossen. Systembenachrichtigung gesendet (Mock).");
     });
   }
@@ -1451,7 +1472,932 @@
     });
   });
 
-  /* ---------- Mock zurücksetzen ---------- */
+  /* ================================================================
+     Projekte, Eingang, Projekt-Detail, Import (Plan §6.16–§6.19)
+     Alle Daten sind Mock-Daten; Belege springen in gemockte Quellen.
+     ================================================================ */
+
+  /* ---------- Gemockte Quellen + Belegregister (Gate G1) ---------- */
+  var SOURCES = {
+    "src-wa": { title: "WhatsApp-Export · BDNA Club", meta: "Importiert heute, 09:05 · Zeitraum 12.01.–12.08.2026 · nur lokal",
+      lines: [
+        ["12.03., 18:42", "Lena", "Können wir endlich die Einladungen für den Sommerball rausschicken?"],
+        ["12.03., 18:47", "Tarek", "Ja – ich mache die Einladungen diese Woche fertig."],
+        ["02.06., 09:15", "Lena", "Erinnerung: Die Einladungen sind immer noch nicht raus."],
+        ["03.06., 11:02", "Tarek", "Sorry, diese Woche klappt es nicht, ich verschiebe auf nächste Woche."],
+        ["10.07., 20:14", "Mira", "Sollen wir für den Sommerball jetzt 80 oder 120 Getränkekarten planen?"],
+        ["10.07., 20:31", "Lena", "Nehmen wir 120, beim Sommerfest waren alle Getränke nach zwei Stunden weg."],
+        ["28.07., 17:20", "Tarek", "Ich schicke heute die Zahlen für die Kasse an alle, bitte bis Donnerstag prüfen."]
+      ] },
+    "src-tr": { title: "Transkript · Wochenplanung", meta: "Meeting von gestern, 16:00 · lokal transkribiert",
+      lines: [
+        ["0:04", "", "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen."],
+        ["0:08", "", "Entscheidung: Wir verschieben die Entscheidung um eine Woche."],
+        ["0:12", "", "Vorschlag: Zwei zusätzliche Werkstudenten für den Support."],
+        ["0:14", "", "Einwand: Das Budget dafür ist noch nicht bewilligt."],
+        ["0:16", "", "Wir prüfen die Zahlen bis Donnerstag und melden uns."]
+      ] },
+    "src-berger": { title: "Transkript · Kundengespräch Berger", meta: "Meeting von Montag, 10:30 · lokal transkribiert",
+      lines: [
+        ["0:10", "", "Herr Berger bittet um ein Angebot für zwanzig Lizenzen."],
+        ["0:22", "", "Berger meldet sich bis Donnerstag mit Rückmeldung zu den Zahlen."]
+      ] }
+  };
+  var EVIDENCE = {
+    "ev-invite":  { sourceId: "src-wa", line: 0, label: "WhatsApp · 12.03., 18:42" },
+    "ev-chase":   { sourceId: "src-wa", line: 2, label: "WhatsApp · 02.06., 09:15" },
+    "ev-drinks":  { sourceId: "src-wa", line: 5, label: "WhatsApp · 10.07., 20:31" },
+    "ev-zahlen":  { sourceId: "src-wa", line: 6, label: "WhatsApp · 28.07., 17:20" },
+    "ev-budget":  { sourceId: "src-tr", line: 1, label: "Transkript · 0:08" },
+    "ev-budget-q":{ sourceId: "src-tr", line: 3, label: "Transkript · 0:14" },
+    "ev-license": { sourceId: "src-berger", line: 0, label: "Transkript · 0:10" },
+    "ev-berger-d": { sourceId: "src-berger", line: 1, label: "Transkript · 0:22" }
+  };
+
+  function evidenceLinkHtml(evId) {
+    var ev = EVIDENCE[evId];
+    if (!ev) return "";
+    return '<li><a href="#" class="evidence-link" data-evidence="' + evId + '">' +
+      '🔗 ' + esc(ev.label) + '</a></li>';
+  }
+
+  /* Inline-Variante ohne <li> für Fließtext (z. B. Detail-Kopfzeile) */
+  function evidenceAnchorHtml(evId) {
+    var ev = EVIDENCE[evId];
+    if (!ev) return "";
+    return '<a href="#" class="evidence-link" data-evidence="' + evId + '">🔗 ' +
+      esc(ev.label) + '</a>';
+  }
+
+  /* Quellenansicht: Beleg-Klick springt zur gemockten Stelle und hebt sie
+     hervor (Gate G1: jeder KI-Satz/Task hat ≥1 solchen Sprunglink) */
+  function openSourceViewer(evId) {
+    var ev = EVIDENCE[evId];
+    if (!ev) return;
+    var src = SOURCES[ev.sourceId];
+    $("#sv-title").textContent = src.title;
+    $("#sv-meta").textContent = src.meta;
+    var ul = $("#sv-lines");
+    ul.innerHTML = "";
+    src.lines.forEach(function (ln, i) {
+      var li = document.createElement("li");
+      li.className = i === ev.line ? "src-hit" : "";
+      li.setAttribute("data-src-line", String(i));
+      li.innerHTML = "<span class='segment-time'>" + esc(ln[0]) + "</span>" +
+        (ln[1] ? "<strong>" + esc(ln[1]) + ":</strong> " : "") + esc(ln[2]);
+      ul.appendChild(li);
+    });
+    $("#source-viewer").hidden = false;
+    announce("Quelle geöffnet: " + src.title);
+    window.setTimeout(function () {
+      var hit = ul.querySelector(".src-hit");
+      if (hit) hit.scrollIntoView({ block: "center" });
+    }, 0);
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest(".evidence-link") : null;
+    if (!a) return;
+    e.preventDefault();
+    openSourceViewer(a.getAttribute("data-evidence"));
+  });
+  $("#btn-sv-close").addEventListener("click", function () {
+    $("#source-viewer").hidden = true;
+  });
+
+  /* ---------- Projekt-Mockdaten (§6.16/§6.17) ---------- */
+  var projectSeq = 0;
+  function nextProjectId() { projectSeq += 1; return "p" + projectSeq; }
+
+  function defaultProjects() {
+    return [
+      { id: nextProjectId(), name: "BDNA Club",
+        statusText: "In Arbeit",
+        aiLastRun: "Heute, 09:12",
+        lastActiveRank: 5,
+        unreviewed: 3,
+        overview: {
+          status: [
+            { text: "Die Einladungen für den Sommerball sind überfällig.",
+              evidence: ["ev-invite"] },
+            { text: "Die Budgetentscheidung wurde um eine Woche verschoben.",
+              evidence: ["ev-budget"] },
+            { text: "Für den Sommerball werden 120 statt 80 Getränkekarten eingeplant.",
+              evidence: ["ev-drinks"] }
+          ],
+          decisions: [
+            { text: "Getränkekontingent auf 120 Karten erhöht.",
+              evidence: ["ev-drinks"] }
+          ],
+          questions: [
+            { text: "Ist das Budget für die Support-Werkstudenten bewilligt?",
+              evidence: ["ev-budget-q"] }
+          ],
+          activity: ["Heute, 09:12 · KI-Analyse läuft (3 neue Vorschläge)",
+                     "Gestern · Meeting „Wochenplanung“ verarbeitet"]
+        },
+        sources: [
+          { name: "WhatsApp-Export · BDNA Club", kind: "WhatsApp-Export",
+            status: "Importiert · indexiert", period: "12.01.–12.08.2026",
+            privacy: "Nur lokal", importedOn: "Heute, 09:05" }
+        ],
+        tasks: [
+          { id: "t-inv", title: "Einladungen versenden", status: "offen",
+            dueLabel: "Fälligkeit: 12.08. (vor 3 Tagen)", overdueRank: 1,
+            dueRank: 1, userPrio: null, aiScore: null, updatedRank: 4,
+            evidence: ["ev-invite"],
+            whyUrgent: { reason: "Überfällig seit drei Tagen; Lena hat am 2.6. nachgehakt.",
+                         evidence: ["ev-invite", "ev-chase"] } },
+          { id: "t-zahlen", title: "Zahlen bis Donnerstag prüfen", status: "vorgeschlagen",
+            dueLabel: "KI-Vorschlag: bis Donnerstag", overdueRank: 0,
+            dueRank: 2, userPrio: null, aiScore: 82, confidence: "87 %",
+            updatedRank: 3,
+            evidence: ["ev-zahlen"],
+            whyUrgent: { reason: "Tarek hat die Prüfung für Donnerstag zugesagt; die Kassenentscheidung hängt daran.",
+                         evidence: ["ev-zahlen"] } },
+          { id: "t-protokoll", title: "Protokoll an das Team senden", status: "erledigt",
+            dueLabel: "—", overdueRank: 0, dueRank: null, userPrio: null,
+            aiScore: null, updatedRank: 2,
+            evidence: ["ev-budget-q"], whyUrgent: null },
+          { id: "t-flyer", title: "Alten Flyer-Entwurf drucken", status: "verworfen",
+            dueLabel: "—", overdueRank: 0, dueRank: null, userPrio: null,
+            aiScore: null, updatedRank: 1,
+            evidence: ["ev-drinks"], whyUrgent: null }
+        ]
+      },
+      { id: nextProjectId(), name: "Messestand 2026",
+        statusText: "Ruhend",
+        aiLastRun: "Gestern, 18:40",
+        lastActiveRank: 3,
+        unreviewed: 0,
+        overview: {
+          status: [
+            { text: "Das Messestand-Budget bleibt unverändert.",
+              evidence: ["ev-budget"] }
+          ],
+          decisions: [],
+          questions: [],
+          activity: ["Gestern, 18:40 · letzter KI-Lauf ohne neue Vorschläge"]
+        },
+        sources: [
+          { name: "Notiz · Budgetgespräch", kind: "Notiz",
+            status: "Indexiert", period: "—",
+            privacy: "Nur lokal", importedOn: "Gestern, 18:39" }
+        ],
+        tasks: [
+          { id: "t-messe", title: "Angebote für Standbau vergleichen", status: "offen",
+            dueLabel: "Fälligkeit: Ende August", overdueRank: 0,
+            dueRank: 3, userPrio: "Hoch", aiScore: null, updatedRank: 1,
+            evidence: ["ev-budget"], whyUrgent: null }
+        ]
+      },
+      { id: nextProjectId(), name: "Atlas GmbH",
+        statusText: "In Arbeit",
+        aiLastRun: "Heute, 08:30",
+        lastActiveRank: 4,
+        unreviewed: 1,
+        overview: {
+          status: [
+            { text: "Für Atlas GmbH wird ein Angebot über zwanzig Lizenzen vorbereitet.",
+              evidence: ["ev-license"] }
+          ],
+          decisions: [],
+          questions: [
+            { text: "Kommt die Rückmeldung zu den Zahlen bis Donnerstag?",
+              evidence: ["ev-berger-d"] }
+          ],
+          activity: ["Heute, 08:30 · KI-Analyse: 1 neuer Vorschlag",
+                     "Montag · Meeting „Kundengespräch Berger“ verarbeitet"]
+        },
+        sources: [
+          { name: "Transkript · Kundengespräch Berger", kind: "Meeting-Transkript",
+            status: "Indexiert", period: "—",
+            privacy: "Nur lokal", importedOn: "Mo, 11:05" }
+        ],
+        tasks: [
+          { id: "t-angebot", title: "Angebot über zwanzig Lizenzen erstellen", status: "vorgeschlagen",
+            dueLabel: "KI-Vorschlag: bis Freitag", overdueRank: 0,
+            dueRank: 4, userPrio: null, aiScore: 64, confidence: "81 %",
+            updatedRank: 5,
+            evidence: ["ev-license"],
+            whyUrgent: { reason: "Berger hat das Angebot im Kundengespräch direkt erfragt; die Rückmeldung zu den Zahlen hängt daran.",
+                         evidence: ["ev-license", "ev-berger-d"] } }
+        ]
+      }
+    ];
+  }
+
+  state.projects = defaultProjects();
+  state.selectedProjectId = null;
+  state.projectSearch = "";
+  state.projectSort = "aktiv";
+  state.pendingSuggestionMeetingId = null;
+
+  state.unassignedSources = [];   // Importe ohne Projekt (Eingang)
+
+  function projectById(id) {
+    return state.projects.filter(function (p) { return p.id === id; })[0] || null;
+  }
+  function activeTasks(p) {
+    return p.tasks.filter(function (t) {
+      return t.status === "offen" || t.status === "vorgeschlagen";
+    });
+  }
+  /* Aufgabenreihenfolge gemäß §6.17: nachvollziehbar, nicht nur KI-Score:
+     1. überfällig, 2. frühestes Fälligkeitsdatum, 3. Nutzerpriorität,
+     4. KI-Dringlichkeit + Confidence, 5. zuletzt aktualisiert */
+  function taskComparator(a, b) {
+    if ((b.overdueRank || 0) !== (a.overdueRank || 0)) return (b.overdueRank || 0) - (a.overdueRank || 0);
+    var da = a.dueRank == null ? Infinity : a.dueRank;
+    var db = b.dueRank == null ? Infinity : b.dueRank;
+    if (da !== db) return da - db;
+    var pa = a.userPrio ? 1 : 0, pb = b.userPrio ? 1 : 0;
+    if (pa !== pb) return pb - pa;
+    if ((b.aiScore || 0) !== (a.aiScore || 0)) return (b.aiScore || 0) - (a.aiScore || 0);
+    return (b.updatedRank || 0) - (a.updatedRank || 0);
+  }
+
+  function updateInboxBadge() {
+    var n = state.meetings.filter(function (m) { return !m.project; }).length +
+            state.unassignedSources.length;
+    var badge = $("#eingang-badge");
+    badge.textContent = String(n);
+    badge.hidden = n === 0;
+  }
+
+  /* ---------- Projekte-Seite (§6.16) ---------- */
+  function renderProjects() {
+    updateInboxBadge();
+    var emptySim = $("#sim-no-projects").checked;
+    var projects = emptySim ? [] : state.projects;
+    $("#projects-toolbar").hidden = emptySim && projects.length === 0;
+    $("#projects-empty").hidden = !(emptySim || projects.length === 0);
+    $("#projects-nosearch").hidden = true;
+
+    // Suche über Namen, Status, Aufgaben und normalisierte Quellentexte
+    var q = state.projectSearch.trim().toLowerCase();
+    var shown = projects.filter(function (p) {
+      if (!q) return true;
+      var hay = [p.name, p.statusText]
+        .concat(p.tasks.map(function (t) { return t.title; }))
+        .concat(p.overview.status.map(function (s) { return s.text; }))
+        .join(" ")
+        .toLowerCase()
+        .replace(/\s+/g, " ");   // normalisierte Quellentexte
+      return hay.indexOf(q.replace(/\s+/g, " ")) !== -1;
+    });
+    if (state.projectSort === "name") {
+      shown.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    } else if (state.projectSort === "dringend") {
+      shown.sort(function (a, b) {
+        var ta = activeTasks(a).sort(taskComparator)[0];
+        var tb = activeTasks(b).sort(taskComparator)[0];
+        return taskUrgencyRank(tb) - taskUrgencyRank(ta);
+      });
+    } else {
+      shown.sort(function (a, b) { return b.lastActiveRank - a.lastActiveRank; });
+    }
+
+    var list = $("#project-list");
+    list.innerHTML = "";
+
+    // Eingang immer zuerst, nie wegsortierbar (§6.16)
+    var unassignedCount = state.meetings.filter(function (m) { return !m.project; }).length +
+      state.unassignedSources.length;
+    var inbox = document.createElement("li");
+    inbox.className = "project-card inbox-card";
+    inbox.innerHTML =
+      "<a href='#/eingang' class='project-link'>" +
+      "<strong>Eingang – Nicht zugeordnet</strong>" +
+      "<span class='badge badge-accent'>" + unassignedCount + "</span>" +
+      "<span class='muted'>" + unassignedCount + (unassignedCount === 1 ? " Element" : " Elemente") +
+      " ohne Projektzuordnung</span></a>";
+    list.appendChild(inbox);
+
+    shown.forEach(function (p) {
+      var top = activeTasks(p).sort(taskComparator)[0];
+      var topText = top
+        ? "Nächste Aufgabe: " + esc(top.title) +
+          (top.overdueRank ? " (überfällig)" :
+           top.aiScore ? " (KI-Vorschlag)" : "") +
+          " · " + esc(top.dueLabel)
+        : "Keine offenen Aufgaben";
+      var li = document.createElement("li");
+      li.className = "project-card";
+      li.innerHTML =
+        "<a href='#/projekt-detail' class='project-link' data-project='" + p.id + "'>" +
+        "<strong>" + esc(p.name) + "</strong> " +
+        "<span class='status-chip " + (p.statusText === "In Arbeit" ? "status-processing" : "status-ready") + "'>" +
+        esc(p.statusText) + "</span><br>" +
+        "<span class='muted'>" + topText + "</span><br>" +
+        "<span class='muted small'>Zuletzt aktiv: " +
+        (p.lastActiveRank >= 5 ? "heute" : "vor " + (5 - p.lastActiveRank) + " Tagen") +
+        " · " + p.unreviewed + " ungeprüfte Vorschläge</span></a>";
+      li.querySelector(".project-link").addEventListener("click", function () {
+        state.selectedProjectId = p.id;
+      });
+      list.appendChild(li);
+    });
+
+    if (!shown.length && !emptySim) $("#projects-nosearch").hidden = false;
+  }
+  function taskUrgencyRank(t) {
+    if (!t) return 0;
+    return (t.overdueRank || 0) * 100 + (t.aiScore || 0);
+  }
+
+  $("#project-search").addEventListener("input", function (e) {
+    state.projectSearch = e.target.value; renderProjects();
+  });
+  $("#project-sort").addEventListener("change", function (e) {
+    state.projectSort = e.target.value; renderProjects();
+  });
+  $("#sim-no-projects").addEventListener("change", renderProjects);
+
+  /* Projekt erstellen: genau ein Pflichtfeld Name (§6.16) */
+  function openProjectCreate() {
+    $("#project-create-dialog").hidden = false;
+    var inp = $("#project-name-input");
+    inp.value = "";
+    $("#btn-pc-create").disabled = true;
+    $("#project-name-blocker").hidden = false;
+    inp.focus();
+  }
+  $("#btn-projekt-erstellen").addEventListener("click", openProjectCreate);
+  $("#btn-projekt-erstellen-empty").addEventListener("click", openProjectCreate);
+  $("#project-name-input").addEventListener("input", function () {
+    $("#btn-pc-create").disabled = this.value.trim().length === 0;
+    $("#project-name-blocker").hidden = this.value.trim().length > 0;
+  });
+  $("#btn-pc-cancel").addEventListener("click", function () {
+    $("#project-create-dialog").hidden = true;
+  });
+  $("#project-create-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("#project-name-input").value.trim();
+    if (!name) return;
+    state.projects.push({
+      id: nextProjectId(), name: name, statusText: "Neu",
+      aiLastRun: "–", lastActiveRank: 9, unreviewed: 0,
+      overview: { status: [], decisions: [], questions: [], activity: [] },
+      sources: [], tasks: []
+    });
+    $("#project-create-dialog").hidden = true;
+    $("#sim-no-projects").checked = false;
+    renderProjects();
+    announce("Projekt „" + name + "“ erstellt.");
+  });
+  $("#btn-import-start").addEventListener("click", function () {
+    location.hash = "#/import";
+  });
+  $("#btn-import-empty").addEventListener("click", function () {
+    location.hash = "#/import";
+  });
+
+  /* ---------- Projekt-Detailansicht (§6.17) ---------- */
+  function selectProjectTab(name) {
+    document.querySelectorAll("#view-projekt-detail .tab").forEach(function (t) {
+      t.setAttribute("aria-selected", String(t.dataset.ptab === name));
+    });
+    document.querySelectorAll("#view-projekt-detail .tabpanel").forEach(function (p) {
+      p.hidden = p.dataset.ppanel !== name;
+    });
+  }
+  document.querySelectorAll("#view-projekt-detail .tab").forEach(function (tab) {
+    tab.addEventListener("click", function () { selectProjectTab(this.dataset.ptab); });
+  });
+
+  function renderProjectDetail() {
+    var p = projectById(state.selectedProjectId);
+    if (!p) { location.hash = "#/projekte"; return; }
+    $("#pd-name").textContent = p.name;
+    $("#pd-more-menu").open = false;
+    // Belegbarer Kurzstatus: jeder Satz mit ≥1 Beleglink (Gate G1)
+    var firstStatus = p.overview.status[0];
+    $("#pd-statusline").innerHTML =
+      esc(p.statusText) +
+      (firstStatus ? " · " + esc(firstStatus.text) + " " + evidenceAnchorHtml(firstStatus.evidence[0]) : "");
+    $("#pd-ai-last-run").textContent = "Letzter KI-Lauf: " + p.aiLastRun;
+
+    renderProjectOverview(p);
+    renderProjectTasks(p);
+    renderProjectMeetings(p);
+    renderProjectSources(p);
+    selectProjectTab("uebersicht");
+  }
+
+  function renderProjectOverview(p) {
+    var el = $("#pd-overview");
+    var html = "<h2 class='small-heading'>Status</h2>";
+    if (!p.overview.status.length) html += "<p class='muted'>Noch keine Statusaussagen.</p>";
+    p.overview.status.forEach(function (s) {
+      html += "<p>" + esc(s.text) + "</p><ul class='evidence-list' role='list'>" +
+        s.evidence.map(evidenceLinkHtml).join("") + "</ul>";
+    });
+    html += "<h2 class='small-heading'>Entscheidungen</h2>";
+    if (!p.overview.decisions.length) html += "<p class='muted'>Keine Entscheidungen erkannt.</p>";
+    p.overview.decisions.forEach(function (d) {
+      html += "<p>" + esc(d.text) + "</p><ul class='evidence-list' role='list'>" +
+        d.evidence.map(evidenceLinkHtml).join("") + "</ul>";
+    });
+    html += "<h2 class='small-heading'>Offene Fragen</h2>";
+    if (!p.overview.questions.length) html += "<p class='muted'>Keine offenen Fragen erkannt.</p>";
+    p.overview.questions.forEach(function (qq) {
+      html += "<p>" + esc(qq.text) + "</p><ul class='evidence-list' role='list'>" +
+        qq.evidence.map(evidenceLinkHtml).join("") + "</ul>";
+    });
+    var urgent = activeTasks(p).sort(taskComparator).slice(0, 2);
+    html += "<h2 class='small-heading'>Dringende Aufgaben</h2>";
+    html += urgent.length
+      ? "<ul role='list'>" + urgent.map(function (t) {
+          return "<li>" + esc(t.title) + (t.overdueRank ? " (überfällig)" : "") + "</li>";
+        }).join("") + "</ul>"
+      : "<p class='muted'>Keine dringenden Aufgaben.</p>";
+    html += "<h2 class='small-heading'>Letzte Aktivität</h2><ul role='list'>" +
+      p.overview.activity.map(function (a) { return "<li class='muted small'>" + esc(a) + "</li>"; }).join("") +
+      "</ul>";
+    el.innerHTML = html;
+  }
+
+  function taskCardHtml(p, t) {
+    var chip = t.status === "offen"
+      ? "<span class='status-chip status-processing'>Offen</span>"
+      : t.status === "vorgeschlagen"
+      ? "<span class='status-chip status-ready'>Vorgeschlagen (KI)</span>"
+      : t.status === "erledigt"
+      ? "<span class='status-chip status-done'>✓ Erledigt</span>"
+      : "<span class='status-chip'>Verworfen</span>";
+    var actions = "";
+    if (t.status === "vorgeschlagen") {
+      actions += "<button type='button' class='btn btn-primary btn-small' data-task-action='annehmen' data-task='" + t.id + "'>Annehmen</button>";
+    }
+    if (t.status === "offen" || t.status === "vorgeschlagen") {
+      actions += " <button type='button' class='btn btn-secondary btn-small' data-task-action='erledigen' data-task='" + t.id + "'>Erledigen</button>" +
+        " <button type='button' class='btn btn-ghost btn-small' data-task-action='bearbeiten' data-task='" + t.id + "'>Bearbeiten</button>" +
+        " <button type='button' class='btn btn-ghost btn-small' data-task-action='verwerfen' data-task='" + t.id + "'>Verwerfen</button>";
+    }
+    var why = "";
+    if (t.whyUrgent && t.whyUrgent.reason) {
+      why = "<div class='why-box' data-why='" + t.id + "' hidden>" +
+        "<strong>Warum dringend?</strong> " + esc(t.whyUrgent.reason) +
+        "<ul class='evidence-list' role='list'>" +
+        t.whyUrgent.evidence.map(evidenceLinkHtml).join("") + "</ul></div>" +
+        "<button type='button' class='btn btn-ghost btn-small why-btn' data-why-toggle='" + t.id + "'" +
+        " aria-expanded='false'>Warum dringend?</button>";
+    }
+    var meta = [];
+    if (t.dueLabel !== "—") meta.push(esc(t.dueLabel));
+    if (t.userPrio) meta.push("Priorität (von dir): " + esc(t.userPrio));
+    if (t.aiScore != null) meta.push("KI-Dringlichkeit " + t.aiScore + "/100 · Confidence " + t.confidence);
+    return "<div class='task-card' data-task-card='" + t.id + "'>" +
+      "<div class='row-between'><strong>" + esc(t.title) + "</strong>" + chip + "</div>" +
+      (meta.length ? "<p class='muted small'>" + meta.join(" · ") + "</p>" : "") +
+      "<ul class='evidence-list' role='list'>" + t.evidence.map(evidenceLinkHtml).join("") + "</ul>" +
+      why +
+      "<div class='row-gap task-actions'>" + actions + "</div></div>";
+  }
+
+  function renderProjectTasks(p) {
+    var host = $("#pd-tasks");
+    var groups = [["vorgeschlagen", "Vorgeschlagen"],
+                  ["offen", "Offen"],
+                  ["erledigt", "Erledigt"],
+                  ["verworfen", "Verworfen"]];
+    var sorted = p.tasks.slice().sort(taskComparator);
+    var html = "<p class='muted small'>Reihenfolge nachvollziehbar: überfällig → früheste Fälligkeit → deine Priorität → KI-Dringlichkeit → zuletzt aktualisiert. Erledigte oder bearbeitete Aufgaben werden bei einer Neuanalyse nie still zurückgesetzt.</p>";
+    groups.forEach(function (g) {
+      var items = sorted.filter(function (t) { return t.status === g[0]; });
+      html += "<section class='task-group'><h2 class='small-heading'>" + g[1] +
+        " <span class='badge'>" + items.length + "</span></h2>" +
+        (items.length ? items.map(function (t) { return taskCardHtml(p, t); }).join("")
+                      : "<p class='muted small'>Keine.</p>") + "</section>";
+    });
+    host.innerHTML = html;
+  }
+
+  /* Aufgaben-Aktionen direkt erreichbar (§6.17): Annehmen/Erledigen/
+     Bearbeiten/Verwerfen; „Warum dringend?“ klappt Begründung + Belege auf */
+  $("#pd-tasks").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-task-action]");
+    if (btn) {
+      var p = projectById(state.selectedProjectId);
+      var t = p.tasks.filter(function (x) { return x.id === btn.dataset.task; })[0];
+      if (!t) return;
+      if (btn.dataset.taskAction === "annehmen") {
+        t.status = "offen"; t.updatedRank = 99;
+        announce("Aufgabe angenommen: " + t.title);
+      } else if (btn.dataset.taskAction === "erledigen") {
+        t.status = "erledigt"; t.updatedRank = 99;
+        announce("Aufgabe erledigt: " + t.title);
+      } else if (btn.dataset.taskAction === "verwerfen") {
+        t.status = "verworfen"; t.updatedRank = 99;
+        announce("Aufgabe verworfen: " + t.title);
+      } else if (btn.dataset.taskAction === "bearbeiten") {
+        var neu = window.prompt("Aufgabe bearbeiten", t.title);
+        if (neu && neu.trim()) { t.title = neu.trim(); t.updatedRank = 99; }
+        announce("Aufgabe bearbeitet.");
+      }
+      renderProjectTasks(p); renderProjectOverview(p);
+      return;
+    }
+    var whyBtn = e.target.closest("[data-why-toggle]");
+    if (whyBtn) {
+      var box = document.querySelector("[data-why='" + whyBtn.dataset.whyToggle + "']");
+      if (box) {
+        box.hidden = !box.hidden;
+        whyBtn.setAttribute("aria-expanded", String(!box.hidden));
+      }
+    }
+  });
+
+  function renderProjectMeetings(p) {
+    var el = $("#pd-meetings");
+    var mine = state.meetings.filter(function (m) { return m.project === p.name; });
+    // Dieselben Datensätze wie in der globalen Bibliothek – keine Kopien:
+    // Änderungen im Detail wirken sofort auch hier.
+    el.innerHTML = "<p class='muted small'>Dieselben Meeting-Datensätze wie in der globalen Bibliothek, nur gefiltert – keine duplizierten Kopien.</p>" +
+      (mine.length
+        ? "<ul role='list'>" + mine.map(function (m) {
+            return "<li class='meeting-item'><strong>" + esc(m.title) + "</strong> · " +
+              esc(m.date) + " · " + esc(m.duration) + " " + statusChipHtml(m) + "</li>";
+          }).join("") + "</ul>"
+        : "<p class='muted'>Noch keine Meetings diesem Projekt zugeordnet.</p>");
+  }
+
+  function renderProjectSources(p) {
+    var el = $("#pd-sources");
+    el.innerHTML = "<p class='muted small'>WhatsApp-Exporte, Dateien und Notizen mit Verarbeitungsstatus, Zeitraum, Datenschutzmodus und Importdatum.</p>" +
+      (p.sources.length
+        ? "<table class='sources-table'><thead><tr><th>Quelle</th><th>Status</th><th>Zeitraum</th><th>Datenschutz</th><th>Importiert</th></tr></thead><tbody>" +
+          p.sources.map(function (s) {
+            return "<tr><td>" + esc(s.name) + "<br><span class='muted small'>" + esc(s.kind) +
+              "</span></td><td>" + esc(s.status) + "</td><td>" + esc(s.period) +
+              "</td><td>" + esc(s.privacy) + "</td><td>" + esc(s.importedOn) + "</td></tr>";
+          }).join("") + "</tbody></table>"
+        : "<p class='muted'>Noch keine Quellen importiert.</p>");
+  }
+
+  $("#btn-pd-add-source").addEventListener("click", function () {
+    location.hash = "#/import";
+  });
+  $("#btn-pd-rename").addEventListener("click", function () {
+    var p = projectById(state.selectedProjectId);
+    if (!p) return;
+    var neu = window.prompt("Projekt umbenennen", p.name);
+    if (neu && neu.trim()) {
+      var alt = p.name;
+      p.name = neu.trim();
+      // Nur die Verknüpfung ändern – Meetings behalten Transkript/Audio/Belege
+      state.meetings.forEach(function (m) { if (m.project === alt) m.project = p.name; });
+      $("#pd-more-menu").open = false;
+      renderProjectDetail(); renderMeetings();
+      announce("Projekt umbenannt in „" + p.name + "“.");
+    }
+  });
+  $("#btn-pd-delete").addEventListener("click", function () {
+    var p = projectById(state.selectedProjectId);
+    if (!p) return;
+    if (window.confirm("Projekt „" + p.name + "“ löschen?\n\nMeetings, Transkripte und Audio bleiben erhalten und landen im Eingang „Nicht zugeordnet“. Nur Verknüpfungen, Aufgaben und Projektquellen werden entfernt.")) {
+      state.meetings.forEach(function (m) { if (m.project === p.name) m.project = null; });
+      state.projects = state.projects.filter(function (x) { return x !== p; });
+      location.hash = "#/projekte";
+      announce("Projekt gelöscht. Zugeordnete Meetings liegen im Eingang.");
+    }
+    $("#pd-more-menu").open = false;
+  });
+
+  /* ---------- Eingang – Nicht zugeordnet (§6.16/§6.18) ---------- */
+  function renderEingang() {
+    updateInboxBadge();
+    var list = $("#eingang-list");
+    list.innerHTML = "";
+    var items = state.meetings.filter(function (m) { return !m.project; })
+      .map(function (m) { return { kind: "Meeting", label: m.title + " (" + m.date + " · " + m.duration + ")", ref: m }; })
+      .concat(state.unassignedSources.map(function (s) {
+        return { kind: "Import", label: s.label, ref: s };
+      }));
+    if (!items.length) {
+      list.innerHTML = "<li class='muted'>Der Eingang ist leer – alles ist zugeordnet.</li>";
+    }
+    items.forEach(function (it, idx) {
+      var li = document.createElement("li");
+      li.className = "inbox-item";
+      li.innerHTML = "<label><input type='checkbox' data-inbox-idx='" + idx + "'> " +
+        "<span class='badge'>" + esc(it.kind) + "</span> " + esc(it.label) + "</label>";
+      li.querySelector("input")._ref = it.ref;
+      li.querySelector("input")._kind = it.kind;
+      list.appendChild(li);
+    });
+    // Zielprojekt-Auswahl frisch befüllen
+    var sel = $("#eingang-target");
+    sel.innerHTML = "";
+    state.projects.forEach(function (p) {
+      var o = document.createElement("option");
+      o.value = p.id; o.textContent = p.name;
+      sel.appendChild(o);
+    });
+  }
+
+  $("#btn-eingang-assign").addEventListener("click", function () {
+    var checked = [...document.querySelectorAll("#eingang-list input:checked")];
+    if (!checked.length) { announce("Erst Elemente auswählen."); return; }
+    var target = projectById($("#eingang-target").value);
+    if (!target) { announce("Kein Zielprojekt vorhanden – erst ein Projekt erstellen."); return; }
+    // Vorschau vor jeder Stapelzuordnung (§6.18)
+    $("#assign-preview-text").textContent =
+      checked.length + (checked.length === 1 ? " Element" : " Elemente") +
+      " dem Projekt „" + target.name + "“ zuweisen?";
+    $("#assign-preview-list").innerHTML = checked.map(function (inp) {
+      return "<li>" + esc(inp._kind) + ": " + esc(inp._ref.title || inp._ref.label) + "</li>";
+    }).join("");
+    $("#assign-preview").hidden = false;
+    $("#btn-assign-ok").onclick = function () {
+      checked.forEach(function (inp) {
+        if (inp._kind === "Meeting") inp._ref.project = target.name;
+        else {
+          state.unassignedSources = state.unassignedSources.filter(function (s) { return s !== inp._ref; });
+          target.sources.push({ name: inp._ref.label, kind: inp._ref.kind,
+            status: "Importiert · indexiert", period: inp._ref.period,
+            privacy: "Nur lokal", importedOn: "Heute, 09:05" });
+        }
+      });
+      $("#assign-preview").hidden = true;
+      renderEingang();
+      announce(checked.length + " Element(e) „" + target.name + "“ zugeordnet. Nur Verknüpfungen geändert.");
+    };
+  });
+  $("#btn-assign-cancel").addEventListener("click", function () {
+    $("#assign-preview").hidden = true;
+    announce("Zuordnung abgebrochen – nichts wurde verschoben.");
+  });
+
+  /* ---------- KI-Projektvorschlag (§6.18, Gate G2) ---------- */
+  function showProjectSuggestion(m) {
+    state.pendingSuggestionMeetingId = m.id;
+    var card = $("#ai-suggestion");
+    $("#suggestion-headline").innerHTML =
+      "Für <strong>„" + esc(m.title) + "“</strong> wird <strong>Projekt „BDNA Club“ vorgeschlagen</strong>" +
+      " · Confidence 87 %";
+    $("#suggestion-evidence").innerHTML =
+      evidenceLinkHtml("ev-invite") + evidenceLinkHtml("ev-chase");
+    $("#suggest-other-picker").hidden = true;
+    $("#suggestion-note").textContent =
+      "Ohne deine Wahl wird nichts verschoben.";
+    card.hidden = false;
+    announce("Projektvorschlag: BDNA Club. Bitte zuordnen oder ablehnen.");
+  }
+
+  function closeSuggestion(text) {
+    $("#ai-suggestion").hidden = true;
+    state.pendingSuggestionMeetingId = null;
+    $("#suggestion-note").textContent = text || "";
+    $("#suggestion-note").hidden = false;
+  }
+
+  $("#btn-suggest-zuordnen").addEventListener("click", function () {
+    var m = meetingById(state.pendingSuggestionMeetingId);
+    if (!m) return;
+    m.project = "BDNA Club";
+    closeSuggestion("„" + m.title + "“ wurde „BDNA Club“ zugeordnet. Nur die Verknüpfung wurde geändert.");
+    announce("Meeting zugeordnet: BDNA Club.");
+    updateInboxBadge();
+  });
+  $("#btn-suggest-other").addEventListener("click", function () {
+    var host = $("#suggest-other-picker");
+    host.innerHTML = "";
+    var head = document.createElement("div");
+    head.className = "picker-head";
+    head.innerHTML = "<h3>Anderes Projekt wählen</h3>";
+    host.appendChild(head);
+    state.projects.forEach(function (p) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "picker-option";
+      b.textContent = p.name;
+      b.addEventListener("click", function () {
+        var m = meetingById(state.pendingSuggestionMeetingId);
+        if (!m) return;
+        m.project = p.name;
+        closeSuggestion("„" + m.title + "“ wurde „" + p.name + "“ zugeordnet.");
+        announce("Meeting zugeordnet: " + p.name);
+        updateInboxBadge();
+      });
+      host.appendChild(b);
+    });
+    host.hidden = false;
+  });
+  $("#btn-suggest-none").addEventListener("click", function () {
+    var m = meetingById(state.pendingSuggestionMeetingId);
+    closeSuggestion(m ? "„" + m.title + "“ bleibt ohne Projekt – es liegt im Eingang." : "");
+    announce("Meeting bleibt ohne Projektzuordnung.");
+  });
+
+  /* ---------- WhatsApp-Importassistent (§6.19) ---------- */
+  var IMPORT_FILES = {
+    a: { name: "WhatsApp Export – BDNA Club.zip",
+         chat: "BDNA Club", participants: 4, period: "12.01.–12.08.2026",
+         messages: 48, media: 6, voice: 2, video: 1, unsupported: 1,
+         warnings: ["1 Sprachnachricht ohne Transkript-Datei",
+                    "1 nicht unterstützte Datei (sticker.webp)"],
+         duplicates: [], newMessages: 48 },
+    b: { name: "BDNA Club Chat (Teil 2).zip",
+         chat: "BDNA Club", participants: 4, period: "01.06.–12.08.2026",
+         messages: 26, media: 3, voice: 1, video: 0, unsupported: 0,
+         warnings: ["Export überlappt mit bereits importiertem Archiv"],
+         // Dubletten-Demo (Gate G4): 12 Nachrichten sind bereits vorhanden
+         duplicates: ["Können wir endlich die Einladungen für den Sommerball rausschicken?",
+                      "Ja – ich mache die Einladungen diese Woche fertig.",
+                      "Erinnerung: Die Einladungen sind immer noch nicht raus.",
+                      "Sorry, diese Woche klappt es nicht, ich verschiebe auf nächste Woche.",
+                      "Sollen wir für den Sommerball jetzt 80 oder 120 Getränkekarten planen?",
+                      "Nehmen wir 120, beim Sommerfest waren alle Getränke nach zwei Stunden weg.",
+                      "Ich schicke heute die Zahlen für die Kasse an alle, bitte bis Donnerstag prüfen.",
+                      "Wer holt eigentlich die Kisten vom Lager?",
+                      "Ich kann Freitag gegen 16 Uhr.",
+                      "Dann treffen wir uns um 15:30 am Lager.",
+                      "Bringt bitte noch die Restposten-Coupons mit.",
+                      "Und nicht vergessen: Kassenzettel für die Abrechnung aufheben."],
+         newMessages: 14 }
+  };
+  var importState = null;   // aktuell gewählte Datei
+
+  function setWizardStep(n) {
+    document.querySelectorAll("#wizard-steps li").forEach(function (li) {
+      var cur = Number(li.dataset.wstep) === n;
+      li.classList.toggle("current", cur);
+      if (cur) li.setAttribute("aria-current", "step");
+      else li.removeAttribute("aria-current");
+    });
+    [1, 2, 3, 4].forEach(function (i) {
+      $("#import-step-" + i).hidden = i !== n;
+    });
+  }
+  function initImportWizard() {
+    importState = null;
+    $("#dedup-preview").hidden = true;
+    $("#cloud-disclosure").hidden = true;
+    $("#local-disclosure").hidden = false;
+    $("#import-checklist").innerHTML = "";
+    $("#import-result").hidden = true;
+    $("#btn-import-run").hidden = false;
+    $("#btn-import-finish").hidden = true;
+    $("#btn-import-back3").hidden = true;
+    var radio = document.querySelector('input[name="import-mode"][value="lokal"]');
+    if (radio) radio.checked = true;
+    fillImportProjectSelect();
+    setWizardStep(1);
+  }
+  function fillImportProjectSelect(preselectId) {
+    var sel = $("#import-project");
+    sel.innerHTML = "";
+    var none = document.createElement("option");
+    none.value = ""; none.textContent = "Nicht zugeordnet (Eingang)";
+    sel.appendChild(none);
+    state.projects.forEach(function (p) {
+      var o = document.createElement("option");
+      o.value = p.id; o.textContent = p.name;
+      sel.appendChild(o);
+    });
+    // Optionen tragen die Projekt-IDs – Vorauswahl daher per ID, nicht Name
+    if (preselectId && projectById(preselectId)) sel.value = preselectId;
+  }
+  function projectByName(name) {
+    return state.projects.filter(function (p) { return p.name === name; })[0] || null;
+  }
+
+  document.querySelectorAll(".file-pick").forEach(function (b) {
+    b.addEventListener("click", function () {
+      importState = IMPORT_FILES[b.id === "pick-file-a" ? "a" : "b"];
+      renderDetected();
+      setWizardStep(2);
+      announce("Datei analysiert: " + importState.name);
+    });
+  });
+  $("#btn-import-back1").addEventListener("click", function () { setWizardStep(1); });
+  $("#btn-to-step3").addEventListener("click", function () {
+    fillImportProjectSelect(state.selectedProjectId);
+    setWizardStep(3);
+  });
+  $("#btn-import-back2").addEventListener("click", function () { setWizardStep(2); });
+
+  function renderDetected() {
+    var f = importState;
+    $("#detected-grid").innerHTML =
+      "<dt>Chatname</dt><dd>" + esc(f.chat) + "</dd>" +
+      "<dt>Teilnehmer</dt><dd>" + f.participants + " (Lena, Tarek, Mira, Du)</dd>" +
+      "<dt>Zeitraum</dt><dd>" + esc(f.period) + "</dd>" +
+      "<dt>Nachrichten</dt><dd>" + f.messages + "</dd>" +
+      "<dt>Medien</dt><dd>" + f.media + " Bilder · " + f.voice + " Sprachnachrichten · " +
+      f.video + " Video</dd>" +
+      "<dt>Warnungen</dt><dd>" + f.warnings.map(esc).join("<br>") + "</dd>" +
+      "<dt>Mögliche Dubletten</dt><dd id='detected-dup-count'>" + f.duplicates.length + "</dd>";
+
+    // Deduplizieren passiert lokal VOR jedem Import; die Vorschau zeigt
+    // genau, welche Nachrichten übersprungen würden (Gate G4)
+    var dp = $("#dedup-preview");
+    if (f.duplicates.length) {
+      dp.innerHTML = "<strong>Dubletten-Vorschau (lokal dedupliziert):</strong> " +
+        f.duplicates.length + " Nachrichten existieren bereits im Projekt „BDNA Club“ " +
+        "und werden beim Import übersprungen:" +
+        "<ul class='dup-list' role='list'>" +
+        f.duplicates.map(function (d) {
+          return "<li class='dup-item'>⤵ schon vorhanden · „" + esc(d) + "“</li>";
+        }).join("") + "</ul>" +
+        "<p class='muted small'>Inhalts-Hashes machen erneute Importe idempotent – nichts wird doppelt gespeichert.</p>";
+      dp.hidden = false;
+    } else {
+      dp.hidden = true;
+    }
+  }
+
+  /* Schritt 3: exakte Offenlegung, was das Gerät verlässt (Gate G3) */
+  function renderCloudDisclosure() {
+    var cloud = document.querySelector('input[name="import-mode"]:checked').value === "cloud";
+    $("#cloud-disclosure").hidden = !cloud;
+    $("#local-disclosure").hidden = cloud;
+    if (cloud) {
+      var f = importState;
+      $("#cloud-leaves-list").innerHTML =
+        "<li>Nachrichtentexte: alle " + f.messages + " erkannten Nachrichten des Exports</li>" +
+        "<li>Bilder: " + f.media + " Bilder als Base64-Dateninhalt – nur nach Bestätigung gesendet</li>" +
+        "<li>Sprachnachrichten: " + f.voice + " Audiodatei(en) – nur wenn du unten explizit „Sprache transkribieren (Cloud)“ wählst, sonst nur lokales Asset</li>" +
+        "<li>PDF/Dokumente: " + 0 + " – kein Dokument im Export</li>" +
+        "<li><strong>Nicht</strong>: Video (" + f.video + ") und nicht unterstützte Dateien (" + f.unsupported + ") bleiben vollständig auf dem Gerät</li>";
+      $("#cloud-cost").textContent =
+        "Kostenschätzung: ca. 0,04 € (ca. 21.000 Text-Token · Mock-Betrag).";
+    }
+  }
+  document.querySelectorAll('input[name="import-mode"]').forEach(function (r) {
+    r.addEventListener("change", renderCloudDisclosure);
+  });
+
+  $("#btn-to-step4").addEventListener("click", function () {
+    renderCloudDisclosure();
+    setWizardStep(4);
+    $("#import-checklist").innerHTML =
+      "<li data-istep='parse' class='done'>✓ Lokal entpackt und geparst</li>" +
+      "<li data-istep='dedup' class='done'>✓ Lokal dedupliziert (" + importState.duplicates.length + " Dubletten erkannt)</li>" +
+      "<li data-istep='index' class='done'>✓ Lokal indexiert – Export ist durchsuchbar</li>" +
+      "<li data-istep='cloud' hidden></li>";
+    $("#import-result").hidden = true;
+    $("#btn-import-run").hidden = false;
+    $("#btn-import-finish").hidden = true;
+    $("#btn-import-back3").hidden = false;
+  });
+  $("#btn-import-back3").addEventListener("click", function () { setWizardStep(3); });
+
+  $("#btn-import-run").addEventListener("click", function () {
+    var f = importState;
+    var cloud = document.querySelector('input[name="import-mode"]:checked').value === "cloud";
+    this.disabled = true;
+    this.textContent = "Import läuft …";
+    var steps = $("#import-checklist");
+    var markDone = function (sel) {
+      var li = steps.querySelector(sel);
+      if (li) li.className = "done";
+    };
+    var cloudLi = steps.querySelector('[data-istep="cloud"]');
+    if (cloud) {
+      cloudLi.hidden = false;
+      cloudLi.className = "";
+      cloudLi.textContent = "● Cloud-Analyse der freigegebenen Inhalte …";
+    }
+    window.setTimeout(function () {
+      if (cloud) markDone('[data-istep="cloud"]');
+      // Ergebnis: importierte / übersprungene / fehlerhafte Elemente (§6.19)
+      var skipped = f.duplicates.length;
+      var failed = f.unsupported;
+      var res = $("#import-result");
+      res.innerHTML = "<strong>Import abgeschlossen.</strong>" +
+        "<ul role='list'>" +
+        "<li>Importiert: " + f.newMessages + " Nachrichten, " + (f.media - failed) + " Medien</li>" +
+        "<li>Übersprungen (Dubletten): " + skipped + "</li>" +
+        "<li>Fehlerhaft/nicht analysiert: " + failed + " (klar als „nicht analysiert“ markiert)</li>" +
+        "</ul>" +
+        "<p class='muted small'>Gesamt im Projekt: " + (48 + f.newMessages) +
+        " Nachrichten – die " + skipped + " Dubletten wurden NICHT doppelt gespeichert.</p>";
+      res.hidden = false;
+      // Quelle dem gewählten Zielprojekt zuordnen (oder Eingang lassen)
+      var projSel = $("#import-project").value;
+      var target = projSel ? projectById(projSel) : null;
+      var entry = { name: f.name, kind: "WhatsApp-Export",
+        status: "Importiert · indexiert", period: f.period,
+        privacy: cloud ? "Teils Cloud (bestätigte Inhalte)" : "Nur lokal",
+        importedOn: "Gerade eben" };
+      if (target) target.sources.push(entry);
+      else state.unassignedSources.push({ label: f.name, kind: "WhatsApp-Export", period: f.period });
+      updateInboxBadge();
+      $("#btn-import-run").hidden = true;
+      $("#btn-import-finish").hidden = false;
+      $("#btn-import-run").disabled = false;
+      $("#btn-import-run").textContent = "Import starten";
+      announce("Import abgeschlossen. " + f.newMessages + " importiert, " + skipped + " übersprungen.");
+    }, cloud ? 900 : 400);
+  });
+  $("#btn-import-finish").addEventListener("click", function () {
+    location.hash = "#/projekte";
+  });
+
+
   $("#mock-reset").addEventListener("click", function () {
     state.sessionActive = false; state.paused = false;
     state.seconds = 0;
@@ -1467,6 +2413,21 @@
     closeStopConfirm();
     resetDialogState();
     dlgInitialized = true;   // Defaults sind gerade explizit hergestellt
+    // Projekte/Eingang/Vorschlag/Import auf die Mock-Defaults zurücksetzen
+    state.projects = defaultProjects();
+    state.selectedProjectId = null;
+    state.projectSearch = "";
+    $("#project-search").value = "";
+    state.projectSort = "aktiv";
+    $("#project-sort").value = "aktiv";
+    $("#sim-no-projects").checked = false;
+    state.unassignedSources = [];
+    state.pendingSuggestionMeetingId = null;
+    $("#ai-suggestion").hidden = true;
+    $("#source-viewer").hidden = true;
+    $("#assign-preview").hidden = true;
+    $("#project-create-dialog").hidden = true;
+    importState = null;
     ["#sim-no-mic", "#sim-mic-denied", "#sim-no-output", "#sim-shortcut-taken",
      "#sim-chunk-error"]
       .forEach(function (sel) { $(sel).checked = false; });
