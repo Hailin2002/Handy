@@ -1,9 +1,11 @@
 # Meeting-Modus — Dokumentationsindex und Statusübersicht
 
 Status: **Dokumentationsindex (dieses Dokument beschreibt nur andere Dokumente)**
-Autor-Arbeitsstand: **HEAD-Commit `c5db14e8eadfe9e16d3ca2ccd78cbb452c024789`**
-(zweistufig verifiziert am 22.08.2026 via `git rev-parse HEAD` in einem sauberen
-Arbeitbaum; `git status --porcelain` war vor der Erstellung dieses Dokuments leer).
+Autor-Arbeitsstand: **HEAD-Commit `74669993ca4f84dd18891c5efeb0b8aaa3e01dee`**
+(„company(task-0209): Mid-recording default-device switch test for the dictation
+capture path“; zweifach verifiziert am 22.08.2026 via `git rev-parse HEAD` in
+einem sauberen Arbeitbaum; `git status --porcelain` war bei beiden
+Verifikationsläufen leer).
 Plan: [docs/meeting-mode-plan.md](meeting-mode-plan.md)
 Aufgenommen am: 22.08.2026
 
@@ -17,11 +19,15 @@ Aufgenommen am: 22.08.2026
 > Planung, Vorschläge oder Verträge — niemals lauffähiges Verhalten. Ein
 > Statuswert „implemented behavior" ohne Codebeleg in der Tabelle unten ist
 > ein Dokumentationsfehler und zu korrigieren. Aktuell (Stand HEAD
-> `c5db14e8`) existiert **kein** meeting-mode-Dokument mit dem Status
-> „implemented behavior": Der Meeting-Modus ist im Repository noch nicht
-> implementiert (verifiziert im UX-Copy-Katalog, Abschnitt 1: kein
-> Produktionscode unter `src-tauri/src`, keine Komponenten unter
-> `src/components/meetings/`, keine Meeting-i18n-Keys).
+> `74669993`) tragen nur die in Abschnitt 3 explizit so markierten, eng
+> begrenzten Ist-Stand-Dokumente den Status „implemented behavior"
+> (Phase-0-Baseline für Diktierpfad/Build-Bestand, A11y-Baseline-Audit des
+> bestehenden Frontends, Operator-Guide zum heutigen Diktat-Datenbestand,
+> Limitations-/Umgebungs-Register sowie die Spike-Werkzeug-Referenz) —
+> jeweils ausschließlich mit Beleg. Der Meeting-Modus selbst ist im
+> Repository noch nicht implementiert (verifiziert im UX-Copy-Katalog,
+> Abschnitt 1: kein Produktionscode unter `src-tauri/src`, keine Komponenten
+> unter `src/components/meetings/`, keine Meeting-i18n-Keys).
 
 ## 2. Status-Enum (verbindliche Werte)
 
@@ -34,9 +40,12 @@ Aufgenommen am: 22.08.2026
 
 ## 3. Dokumenttabelle
 
-Verifiziert per `glob docs/**/*.md` zum Autor-Zeitpunkt: genau diese sechs
-Meeting-Mode-Markdown-Dateien existierten unter `docs/`; keine fehlenden und
-keine erfundenen Pfade. Jeder nachfolgende Task, der ein neues
+Verifiziert per `glob docs/**/*.md` zum Autor-Zeitpunkt (HEAD `74669993`):
+unter `docs/` existieren **51 Markdown-Dateien**. Davon sind **45** hier unten
+mit genau einer Tabellenzeile erfasst; die verbleibenden **sechs** (dieses
+Indexdokument selbst sowie die fünf Audit-Dokumente unter `docs/reviews/`)
+sind am Ende dieses Abschnitts explizit ausgenommen. Kein Pfad ist erfunden;
+kein Dokument fehlt. Jeder nachfolgende Task, der ein neues
 meeting-mode-Dokument anlegt, **muss** diese Tabelle um eine Zeile ergänzen.
 
 | Dokumentpfad                                                  | Abgedeckte Plan-Abschnitte (meeting-mode-plan.md)                                                                                                                                                                                                                                                                                                                                                                                             | Status                                                      | Authority Statement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -74,6 +83,24 @@ meeting-mode-Dokument anlegt, **muss** diese Tabelle um eine Zeile ergänzen.
 | `docs/meeting-mode-architecture/whatsapp-importer-contract.md` | §5 (`WhatsAppExportImporter`, Zeilen 285–291), §6.19 WhatsApp-Importassistent (Zeilen 800–835), §9 (`sources`/`source_items`/`assets`/`source_item_assets`, Zeilen 1227–1275), §12 Untrusted-Input und Nachvollziehbarkeit (Zeilen 1463–1476), Phase 9 (Zeilen 1671–1692) | `spec contract` | Normativer WhatsApp-spezifischer Begleitvertrag zur generischen Ingestion-Naht (ingestion-pipeline-contract): Container-/Chatdatei-Erkennung (F1–F4 mit Ambiguitäts-Pfaden), geschlossenes Zeilen-Prädikaten-Set P1–P4 für Formatvarianten (Bracketed/Dash-Grammatiken) mit evidenzbasierter Datumsordnungs-Auflösung D1–D3 und der Ambiguitäts-Doktrin „nie stilles Misparse“ — D3-Fälle scheitern sichtbar in der Preview und werden nur per expliziter `options.date_order`-Wahl (in `parser_version` gepinnt) aufgelöst; Wall-clock-as-UTC-Entscheidung D-TZ zugunsten von INV-3-Determinismus, Timestamp-Kontinuations-Merging M1–M5 mit 64-KiB-Decke, strukturelle (sprachunabhängige) Systemmeldungs-Klassifikation S1–S3; Medien-Anknüpfungsmatrix für fehlende/doppelte/überdimensionierte/traversal-benannte Anhänge (zwei Fälle bewusst unerreichbar-halbseitig via task-0040-SEC-Regeln, D-SIDECAR für unreferenzierte Mitglieder), Preview-Payload-Schema `VariantReport` + getippte Warn-Codes als tauri-specta-expressibler Rust-Sketch (via verify-sketch.ps1 kompiliert, rustc 1.98.0, kein neues Transportformat), Original-Erhaltung je Aufbewahrungsregel, vollständige Fixture→Stufen-Zuordnung des task-0040-Korpus inklusive Validator-ACCEPT ≠ Import-Erfolg Schichtung; Non-Goals: kein Connector-Framework, kein zweites Limit-Set, keine Zeitzonen-Inferenz, keine Medienanalyse im Importer; Eigenangabe: „spec contract — no implementation yet … changes no source code“. |
 | `docs/operator/troubleshooting-audio-devices.md` | §4 „Verifizierter Ausgangszustand“ (Diktierpfad als Basis); keine meeting-mode-spezifischen Plan-Abschnitte — Operator-Dokument zum bestehenden Diktat-Audiopfad | `implemented behavior` (nur für den Diktierpfad) | Operator-Troubleshooting-Matrix für Audio-Geräte- und Capture-Fehler im Diktierpfad (15 Symptomzeilen R1–R15 über leere Aufzählung, Default-/Fallback-, Hot-Unplug-, Berechtigungs- und Resampler-/Rate-Mismatch-Symptome, jeweils Symptom → Ursache → Maßnahme → Evidenz); jede Verhaltensaussage mit Datei-/Zeilenbeleg gegen HEAD `74669993` (`managers/audio.rs`, `audio_toolkit/audio/{device,recorder,resampler}.rs`, `commands/audio.rs`, `audio_toolkit/{utils,constants}.rs`); Meeting-Modus ausdrücklich als Nicht-Umfang ausgewiesen. |
 
+| `docs/meeting-mode-architecture/asset-store-contract.md` | §5 (`AssetStore`), §7 (Persistenzformat), §9 (`assets`, `meeting_audio_chunks`, Storage-Key-Regel), §11 (dreistufiges Löschen), §12 (Retention) | `spec contract` | Interface-, Storage-Key- und Meeting-Layout-Vertrag für den `AssetStore` (Phase-3-Voraussetzung, geplante Heimat `src-tauri/src/storage/asset_store.rs`); übernimmt Chunk-Zustände, Checksums und `.part`-Suffix wörtlich aus recorder-contract; Eigenangabe: „contract draft — no implementation yet … changes no source code". |
+| `docs/meeting-mode-architecture/disk-guard-contract.md` | §6.x Startvalidierung Freiplatz-Check (Zeilen 903–922) und Fehlerverhalten „Datenträger fast voll“ (Zeilen 954–956), §7 Rolling-Chunks/atomares Finalisieren (Zeilen 1004–1030), §8 Azure-File-Limits (Zeilen 1106–1119), §12 Volumina/Retention (Zeilen 1438–1453) | `spec contract` | Festplatten-Kapazitäts- und IO-Failure-Guard-Vertrag für Meeting-Aufnahmen (Phase-2-Voraussetzung); UX-Outcomes gemappt auf UX-Copy-Katalog E7/E8; Eigenangabe: „contract draft — no implementation yet". |
+| `docs/meeting-mode-architecture/repository-boundary-contract.md` | §5 Repository-Schicht (Zeilen 205–217), `MeetingStore` (238–243), `KnowledgeStore` (269–275), `AssetStore` (301–308), §9 Datenmodell (1143–1336), §13 Phase 3 (1546–1558), Zukunftsroadmap Server/Sync/MCP (1758–1783) | `spec contract` | Grenzvertrag MeetingStore/KnowledgeStore: kein Frontendcode greift direkt auf SQLite oder Assetdateien zu (Plan-Zeile 1556); geplante Heimate `src-tauri/src/managers/meeting_store.rs` u. a.; Eigenangabe: „spec contract — no implementation yet". |
+| `docs/meeting-mode-architecture/session-state-contract.md` | §5 `MeetingManager` (Zeilen 221–227), §6.x Session-Zustände (877–896) sowie „Laufende Aufnahme“, „Pause“, „Stoppen“, „Fehlerverhalten“, §9 (`meeting_sessions`, `meeting_audio_chunks`, `meeting_stt_jobs`, 1143–1199), §13 Phase 4 (Zeile 1577), §12 Consent/Indikator (1458–1461) | `spec contract` | Interner Session-State-Seam des `MeetingManager` inkl. Zustandsübergängen und Neustart-Konsistenz (geplante Heimat `src-tauri/src/managers/meeting.rs`, Phase-4-Voraussetzung); definiert nur diesen Seam; Eigenangabe: „spec contract — no implementation yet … changes no source code". |
+| `docs/meeting-mode-architecture/startup-recovery-dataflow.md` | Session-Zustände (Zeilen 893–896), §5 Komponenten-Hemate, Fehlerverhalten „App-Absturz“ (959–960) | `spec contract` | Startup-Recovery-Datenfluss über Recorder-Chunks × STT-Jobs × Session-State nach Absturz/Neustart; baut auf recorder-contract §8, stt-provider-contract §3.4 und phase2-contracts §7 auf; Eigenangabe: „spec contract — not implemented … changes no source code". |
+| `docs/meeting-mode-architecture/summary-evidence-contract.md` | §5 (`MeetingSummaryService` 253–259, `ProjectIntelligenceService` 293–299), §9 (`task_evidence` 1295–1301, `project_snapshots`/`snapshot_evidence` 1303–1311, `processing_jobs` 1313–1318, Belegregel 1329–1332), §10 (1349–1403), Vorrangprinzip 8 (Zeile 135), §12 (1436–1476), §13 Phase 7/10 | `spec contract` | Gemeinsames Evidence-Pointer-Modell mit Idempotency-Keys, Pinning/Aging und Unveränderlichkeitsregeln als Grundlage der Summary-, Snapshot-, Task- und Export-Verträge (Phase-7/10-Voraussetzung); Eigenangabe: „spec contract — no implementation yet". |
+| `docs/meeting-mode-architecture/summary-pipeline-dataflow.md` | §5 (`MeetingSummaryService`, Zeilen 253–259), §8 Segmentmodell (1035–1057), §9 (`meeting_transcript_segments` 1201–1208, `meeting_summaries` 1210–1217, `processing_jobs` 1313–1318), §10 Map-Reduce/Standardausgabe (1349–1378), §11 Sprung zu Position (1415, 1423), §12 (Zeile 1438), §13 Phase 7 (1640–1645) | `spec contract` | Datenflussvertrag der Summary-Pipeline (Map-Reduce, Verarbeitungsjobs, Persistenz); spezifiziert nur den Datenfluss; Eigenangabe: „spec contract — no implementation yet … changes no source code". |
+| `docs/meeting-mode-architecture/export-project-dataflow.md` | §11 Meeting-Bibliothek und Export (1405–1434), §12 Aufbewahrung (1444–1452), §7 Persistenzformat (1007–1017), §9 Datenmodell (1143–1336), §10 Standard-Zusammenfassung (1364–1378) | `spec contract` | Export- und Projektzuweisungs-Dataflow über Serialisatoren × Task-Evidence; baut auf phase2-contracts, summary-evidence-contract §3 und repository-boundary-contract auf; Eigenangabe: „spec contract, Phase 7 not implemented — changes no source code". |
+| `docs/meeting-mode-architecture/import-pipeline-dataflow.md` | §5 (`SourceIngestionService` 277–283, `WhatsAppExportImporter` 285–291, `AssetStore` 301–308), §6.19 WhatsApp-Importassistent (800–835), Release-Gate (Zeile 872) | `spec contract` | Stage-Datenfluss des Imports (inspect → preview → normalize → deduplicate → commit) inkl. idempotentem Re-Import (Phase-9-Voraussetzung); Eigenangabe: „spec contract — no implementation yet … changes no source code". |
+| `docs/meeting-mode-architecture/ingestion-pipeline-contract.md` | §5 (`SourceIngestionService` 277–283, `WhatsAppExportImporter` 285–291), §13 Phase 9 (1671–1692, Akzeptanz Zeile 1687) | `spec contract` | Stage-Interface- und Normalized-Source-Vertrag der generischen Import-Naht; WhatsApp-spezifische Ergänzung im whatsapp-importer-contract; Eigenangabe: „spec contract — no implementation yet … changes no source code". |
+| `docs/meeting-mode-architecture/identifier-registry.md` | übergreifend (bestehende Namen aller Vertragdokumente; keine eigenen Plan-Anker) | `spec contract` | Reines Cross-Contract-Identifier-Register zur Drift-Prävention vor Phase 2; definiert selbst nichts — die definierenden Dokumente bleiben in jedem Konflikt autoritativ (Vorrangordnung wie sonst: Plan schlägt Verträge); Eigenangabe: „registry only — this document defines nothing". |
+| `docs/meeting-mode-data-and-storage.md` | §5 Zielarchitektur (`MeetingStore`, `KnowledgeStore`, `AssetStore`), §9 Datenmodell (Zeilen 1143–1332), §12 Speicher- und Datenschutzlogik (1436–1477) | `spec contract` | Konsolidierte Entwicklerreferenz des Ziel-Daten-/Storage-Designs aus dem Plan (Tabellenmodell, Identity-Konventionen, `change_log`, FTS5); Eigenangabe: „target design consolidated from the plan — nothing in this document is implemented code or a contract of implemented behavior". |
+| `docs/meeting-mode-data-migration-operator-guide.md` | §12 Speicher- und Datenschutzlogik; Migrationsvorkehrungen für künftige Phasen | `implemented behavior` (nur heutiger Diktat-Datenfußabdruck) | Operator-/Support-Guide für Ablage, Backup, Restore und Migrationsgrenzen des bestehenden Diktierverlaufs; beschreibt ausdrücklich „the application as it exists today“ und belegt jeden Pfad im Code (`src-tauri/src/portable.rs:20`, `src-tauri/src/managers/history.rs:77-79`, `tauri.conf.json:5`). |
+| `docs/meeting-mode-known-limitations.md` | übergreifend (Phase-0/1-Evidenz, Vertragsgrenzen, Build-Constraints; Basis der Testmatrix §14) | `implemented behavior` (nur registrierte Ist-Grenzen mit Beleg) | Register verifizierter Limitierungen und unbelegter Ansprüche mit Commit-/Artefakt-Zitaten je Eintrag; ein Eintrag darf nur mit Beleg auf `resolved` gesetzt werden; Audit-Stand HEAD `d3cf5c75`. |
+| `docs/meeting-mode-verification-environment.md` | §14 Testmatrix (Auswerte-Kontext aller Gates auf der primären Windows-Verifikationsmaschine) | `implemented behavior` (nur dokumentierte Umgebungs-Fakten mit Beleg) | Referenz zur Unterscheidung von Umgebungs- und Produktfehlern bei der Verifikation; jeder Fakt mit Symptom, Fallback-Kommando und Zitat aus committed Datei/Log. |
+| `docs/a11y-baseline-meeting-mode.md` | §6.14 Zugänglichkeit und Fehlbedienungsschutz (Plan-Zeilen 683–695) | `implemented behavior` (nur Ist-Zustand der bestehenden Diktier-UI als Baseline) | Read-only-Baseline-Audit des aktuellen `src/`-Frontends gegen jede §6.14-Anforderung mit Codezitaten, programmatisch berechneten Kontrast-Ratios und Deltalisten für die Phase-3-App-Shell-Arbeit; Audit-Stand HEAD `d74a0da6`; ändert keine Quelldateien. |
+| `docs/phase1-spike/tools/README.md` | §13 Phase 1 Loopback-Spike, §14 Testmatrix (Messreihen-Evidenz M-Reihe) | `implemented behavior` (nur Verhalten der Spike-Werkzeuge selbst) | Referenzdokumentation der Phase-1-Spike-Werkzeuge (`analyze-spike-csv.ps1` SUMMARY-Felder, Fixture-Validierung, `events.log`-Marker); gegen die tatsächlichen Skripte und committed Run-Artefakte gegengeprüft, inkl. Warnung vor Pooled-120-min-Evidenz aus abgebrochenen Läufen. |
+
 ### Verwandte, aber keine .md-Dokumente (keine Tabellenzeilen)
 
 Die Spike-Artefakte unter `docs/phase1-spike/` (CSV-Rohdaten der vier Läufe
@@ -82,7 +109,25 @@ Dokumentation**: Sie werden von `docs/meeting-mode-phase2-contracts.md`
 (§4 Feld-Mapping) zitiert, besitzen aber keinen eigenen beschreibenden Text
 und erscheinen deshalb nicht in der Dokumenttabelle. Das Werkzeug
 `docs/meeting-mode-architecture/verify-sketch.ps1` ist ebenfalls Skript,
-kein Dokument.
+kein Dokument. (Die beschreibende Werkzeug-Referenz
+`docs/phase1-spike/tools/README.md` ist dagegen ein Markdown-Dokument und
+steht als Tabellenzeile oben.)
+
+### Explizite Ausnahmen von dieser Tabelle
+
+Die folgenden Markdown-Dateien unter `docs/` sind bewusst **nicht** in der
+Dokumenttabelle erfasst:
+
+1. **Dieses Indexdokument selbst**
+   (`docs/meeting-mode-documentation-index.md`) — es beschreibt nur andere
+   Dokumente und hat per Abschnitt 5 immer den Status „Dokumentationsindex“.
+2. **Alle Audit-Dokumente unter `docs/reviews/`** (`consent-indicator-
+   boundary-audit.md`, `import-security-spec/import-security-spec.md`,
+   `output-channel-privacy-audit.md`, `secrets-exposure-and-durability-audit.md`,
+   `tauri-attack-surface-audit.md`) — unabhängige, punktuelle Sicherheits-/
+   Datenschutz-Audits außerhalb des meeting-mode-Planungs- und Vertragskorpus;
+   sie sind Evidenz für Review-Läufe, kein Teil des hier gepflegten
+   Dokumentkanons und werden nicht über diese Tabelle statusgeführt.
 
 ## 4. Lesereihenfolge für neue Contributor
 
@@ -225,6 +270,14 @@ Jedes Vertragdokument nennt im Kopf seine Plan-Anker; bei Konflikten gilt die
 Reihenfolge: Plan schlägt Verträge, Verträge schlagen Kataloge, und nichts
 schlägt den tatsächlichen Code (der seinerseits nur durch code-zitierte
 Dokumente wie die Phase-0-Baseline abgedeckt wird).
+
+Hinweis: Die obige Lesereihenfolge nennt den **Kernkanon** in sinnvoller
+Leseordnung; sie ist nicht erschöpfend. Die vollständige Bestandsaufnahme
+aller meeting-mode-Dokumente (einschließlich der übrigen Verträge wie
+asset-store, disk-guard, repository-boundary, session-state,
+startup-recovery, summary-evidence/-pipeline, export/import-Dataflows,
+ingestion-pipeline und identifier-registry sowie der Ist-Stand-Dokumente)
+ist ausschließlich die Tabelle in Abschnitt 3.
 
 ## 5. Pflegeregeln
 
