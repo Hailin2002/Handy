@@ -109,7 +109,10 @@
       <div class="card active-meeting-card" id="active-meeting-card" hidden>
         <div class="row-between">
           <div>
-            <span class="status-chip status-recording"><span aria-hidden="true">●</span> Aufnahme läuft</span>
+            <span class="status-chip status-recording" id="am-status">
+              <span aria-hidden="true" id="am-status-icon">●</span>
+              <span id="am-status-text">Aufnahme läuft</span>
+            </span>
             <strong id="am-title">Meeting</strong>
             <span class="mono" id="am-duration">00:00:00</span>
           </div>
@@ -146,19 +149,30 @@
 
     <!-- ========== Ansicht: Laufendes Meeting (Plan §6.11) ========== -->
     <section class="view" id="view-meeting-aktiv" hidden>
+      <!-- Ebene 1: fixierte Statusleiste (§6.11) – Farbe+Icon+Text gemäß §6.8 -->
       <div class="fixed-statusbar" role="status">
-        <span class="status-chip status-recording"><span aria-hidden="true">●</span> Aufnahme läuft</span>
+        <span class="status-chip status-recording" id="live-status-chip">
+          <span aria-hidden="true" id="live-status-icon">●</span>
+          <span id="live-status-text">Aufnahme läuft</span>
+        </span>
         <span class="mono" id="live-duration">00:00:00</span>
-        <span>Lokal</span>
+        <span id="live-provider">Lokal</span>
         <span class="ok">Audio gespeichert</span>
+        <button type="button" class="btn btn-ghost btn-small tray-btn" id="btn-tray"
+                title="Fenster minimieren – die Aufnahme läuft im Tray weiter">– In den Tray</button>
       </div>
 
-      <div class="transcript-area" aria-label="Live-Transkript">
-        <p class="listening-state" id="listening-state">Hört zu …</p>
-        <ul class="segments" id="live-segments" role="list"></ul>
-        <button type="button" class="btn btn-secondary" id="btn-zum-text" hidden>Zum aktuellen Text</button>
+      <!-- Ebene 2: scrollendes Transkript; der Sprung-Button liegt außerhalb des
+           Scrollbereichs, damit er beim Hochscrollen nicht mitwegscrollt -->
+      <div class="transcript-wrap">
+        <div class="transcript-area" aria-label="Live-Transkript" tabindex="0">
+          <p class="listening-state" id="listening-state">Hört zu …</p>
+          <ul class="segments" id="live-segments" role="list"></ul>
+        </div>
+        <button type="button" class="btn btn-secondary jump-btn" id="btn-zum-text" hidden>↓ Zum aktuellen Text</button>
       </div>
 
+      <!-- Ebene 3: fixierte Steuerung mit getrennten Pegeln samt Textlabel -->
       <div class="fixed-controls">
         <button type="button" class="btn btn-neutral" id="btn-pause">Pause</button>
         <button type="button" class="btn btn-danger" id="btn-beenden">⏹ Meeting beenden</button>
@@ -168,17 +182,19 @@
         </div>
       </div>
 
-      <!-- Bestätigung vor Beendigung (Plan §6.9) -->
+      <!-- Bestätigung vor Beendigung (Plan §6.9): ein Druck beendet nie direkt;
+           verschwindet nach kurzer Zeit ohne Zustandsänderung -->
       <div class="modal-backdrop" id="stop-confirm" hidden>
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="stop-confirm-title">
           <h2 id="stop-confirm-title">Meeting wirklich beenden?</h2>
           <p>Die Aufnahme wird gestoppt und die Verarbeitung gestartet.</p>
           <div class="row-gap row-end">
             <button type="button" class="btn btn-neutral" id="btn-stop-abbruch">Weiter aufnehmen</button>
-            <button type="button" class="btn btn-danger" id="btn-stop-ok">Beenden</button>
+            <button type="button" class="btn btn-danger" id="btn-stop-ok">⏹ Beenden</button>
           </div>
         </div>
       </div>
+
     </section>
 
     <!-- ========== Ansicht: Verarbeitung nach Stop (Plan §6.12) ========== -->
@@ -459,6 +475,24 @@
         <button type="submit" class="btn btn-primary btn-large" id="btn-meeting-starten">Meeting starten</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- 3-Sekunden-Countdown vor dem Start (Plan §6.9); Escape bricht nur
+     den Countdown ab, es wird noch nichts aufgenommen. Liegt außerhalb der
+     Ansichten, damit er sichtbar ist, solange noch keine Ansicht aktiv ist. -->
+<div class="modal-backdrop" id="countdown-overlay" hidden>
+  <div class="modal modal-countdown" role="alertdialog" aria-modal="true"
+       aria-labelledby="countdown-title" aria-describedby="countdown-hint">
+    <h2 id="countdown-title">Meeting startet in</h2>
+    <p class="countdown-number mono" id="countdown-number" aria-hidden="true">3</p>
+    <p id="countdown-hint" class="muted">
+      Die Aufnahme beginnt erst nach dem Countdown.
+      <span class="keycap">Escape</span> bricht ab.
+    </p>
+    <div class="row-gap row-end">
+      <button type="button" class="btn btn-neutral" id="btn-countdown-abbruch">✕ Abbrechen (Esc)</button>
+    </div>
   </div>
 </div>
 

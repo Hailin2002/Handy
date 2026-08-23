@@ -43,10 +43,15 @@ angeheftete Eintrag **„Aufnahme läuft · 00:00:12“** mit rotem Statuspunkt
 1. `Meetings` → `Ersteinrichtung` führt durch die Meeting-Ersteinrichtung
    (§6.6); `Abschließen` landet direkt im kompakten Startdialog.
 2. `Meetings` → `Neues Meeting` öffnet den kompakten Startdialog (§6.7).
-3. `Meeting starten` wechselt zur Laufendansicht (§6.11) und aktiviert den Pin.
-4. `Meeting beenden` fragt erst nach (`Meeting wirklich beenden?`, §6.9), dann
+3. `Meeting starten` zeigt zuerst den 3-Sekunden-Countdown (§6.9);
+   `Escape` oder `Abbrechen` bricht ab, ohne etwas aufzunehmen. Danach
+   wechselt der Prototyp zur Laufendansicht (§6.11) und aktiviert den Pin.
+4. In der Laufendansicht hält das Transkript automatisch zum aktuellen Text,
+   solange nicht nach oben gescrollt wird; sonst erscheint
+   `Zum aktuellen Text`. `Pause/Fortsetzen` schreibt einen Timeline-Marker.
+5. `Meeting beenden` fragt erst nach (`Meeting wirklich beenden?`, §6.9), dann
    läuft die Verarbeitungs-Checkliste (§6.12).
-5. Der Pin verschwindet; das Meeting erscheint in der Liste als „In Verarbeitung“.
+6. Der Pin verschwindet; das Meeting erscheint in der Liste als „In Verarbeitung“.
 
 Im Startdialog ist jede Statuszeile (Mikrofon, Systemaudio, Transkription,
 Sprache) komplett anklickbar und öffnet einen Mini-Picker, der auf diese eine

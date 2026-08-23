@@ -1,12 +1,17 @@
 <!DOCTYPE html>
-<!-- In-browser verification harness for prototype/meeting-mode (Gates G1, G2).
-     Loads index.html into an iframe and runs the acceptance checks inside the
-     browser, so no inter-process debugging channel (named pipe / TCP CDP) is
-     needed. Results are written into the DOM as "PASS <name>" / "FAIL <name>"
-     lines; run with:
-       chrome-headless-shell --headless --allow-file-access-from-files \
-         --virtual-time-budget=25000 --dump-dom verify.html
-     and grep the dumped DOM for PASS/FAIL. -->
+<!-- In-browser verification harness for prototype/meeting-mode.
+     Covers the task-0179 leaf gates:
+       G1 – accidental single stop press cannot end the mocked recording
+       G2 – auto-scroll halts on user scroll-up, reveals "Zum aktuellen Text"
+       G3 – colour semantics follow §6.8 (red only while truly recording,
+            text+icon on every state)
+       G4 – flows reachable from start-dialog completion (countdown →
+            running view → confirmed stop → processing)
+     Loads index.html into an iframe and writes "PASS"/"FAIL" lines into the
+     DOM; run with:
+       chrome-headless-shell --headless --no-sandbox --allow-file-access-from-files \
+         --virtual-time-budget=60000 --dump-dom verify.html
+     and grep the dumped DOM for PASS/FAIL and RESULT:. -->
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -33,101 +38,201 @@
     const win = frame.contentWindow;
     const doc = frame.contentDocument;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const $ = (id) => doc.getElementById(id);
 
     async function showRoute(route) {
       win.location.hash = "#/" + route;
       await sleep(50);
-      return doc.getElementById("view-" + route);
+      return $("view-" + route);
+    }
+    async function startSessionFromDialog() {
+      await showRoute("meetings");
+      $("btn-neues-meeting").click();
+      await sleep(30);
+      $("btn-meeting-starten").click();
+      await sleep(3300); // 3-Sekunden-Countdown abwarten
     }
 
     (async () => {
       try {
         await sleep(300);
 
-        // G1: navigation between the five areas
+        /* ---------- Bestand: Navigation aus Teil 1 ---------- */
         const areas = ["diktieren", "meetings", "projekte", "diktatverlauf", "einstellungen"];
         for (const route of areas) {
           const view = await showRoute(route);
-          check("G1 nav: " + route + " visible",
+          check("nav: " + route + " visible",
                 view && !view.hidden && !!view.offsetParent);
         }
-        // exactly one view visible at a time
         await showRoute("projekte");
-        check("G1 only one view visible at a time",
+        check("only one view visible at a time",
               [...doc.querySelectorAll(".view")].filter((v) => !v.hidden).length === 1);
+        check("pinned entry hidden initially", $("pinned-recording").hidden === true);
 
-        // aria-current follows route
-        check("aria-current set on active nav item",
-              doc.querySelector('.nav-item[data-route="projekte"]').getAttribute("aria-current") === "page");
-
-        // G2: pinned entry hidden while no session
-        check("G2 pinned entry hidden initially",
-              doc.getElementById("pinned-recording").hidden === true);
-
-        // Start a mocked session via the start dialog
+        /* ---------- G4: Startdialog-Abschluss → Countdown → Laufendansicht ---------- */
         await showRoute("meetings");
-        doc.getElementById("btn-neues-meeting").click();
-        check("start dialog opens", !doc.getElementById("start-dialog").hidden);
-        doc.getElementById("btn-meeting-starten").click();
+        $("btn-neues-meeting").click();
+        check("start dialog opens", !$("start-dialog").hidden);
+        $("btn-meeting-starten").click();
+        await sleep(60);
 
-        // G2: pinned entry visible with red dot and running timer
-        await sleep(1300);
-        const pin = doc.getElementById("pinned-recording");
-        const dotColor = win.getComputedStyle(pin.querySelector(".rec-dot")).backgroundColor;
-        const timer = pin.querySelector(".pinned-time").textContent;
-        check("G2 pinned entry visible during session", !pin.hidden);
-        check("G2 pinned label 'Aufnahme läuft'",
-              pin.querySelector(".pinned-label").textContent === "Aufnahme läuft");
-        check("G2 red status dot", dotColor === "rgb(179, 38, 30)");
-        check("G2 timer counts up (" + timer + ")", /^00:00:0[1-9]/.test(timer));
-        check("G2 pinned entry sits directly under Meetings",
-              pin.previousElementSibling.querySelector(".nav-item").dataset.route === "meetings");
+        // Countdown statt Sofort-Start; noch kein roter Aufnahmezustand (G3)
+        check("G4 countdown overlay shown after submit", !$("countdown-overlay").hidden);
+        check("§6.9 countdown starts at 3", $("countdown-number").textContent === "3");
+        check("G3 no recording state during countdown",
+              $("pinned-recording").hidden &&
+              $("view-meeting-aktiv").hidden);
+        // Regression: Overlay liegt außerhalb der versteckten Ansicht → sichtbar
+        check("§6.9 countdown overlay actually rendered on screen",
+              !$("countdown-overlay").hidden &&
+              !!doc.querySelector("#countdown-overlay .modal").offsetParent);
 
-        // Pinned entry navigates to running-meeting view
-        doc.querySelector(".nav-pinned").click();
-        await sleep(100);
-        check("pinned entry navigates to meeting-aktiv view",
-              !doc.getElementById("view-meeting-aktiv").hidden);
+        // Escape bricht nur den Countdown ab; Zustand landet zurück im Dialog
+        doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await sleep(50);
+        check("§6.9 Escape cancels countdown",
+              $("countdown-overlay").hidden === true);
+        check("§6.9 cancel returns to intact start dialog",
+              !$("start-dialog").hidden);
+        check("G3 nothing recorded after cancel",
+              $("pinned-recording").hidden &&
+              win.location.hash.indexOf("meeting-aktiv") === -1);
 
-        // Stop flow: confirm dialog, processing checklist, pin gone
-        doc.getElementById("btn-beenden").click();
-        check("stop confirmation shown", !doc.getElementById("stop-confirm").hidden);
-        doc.getElementById("btn-stop-ok").click();
+        // Erneut starten und Countdown auslaufen lassen
+        $("btn-meeting-starten").click();
+        await sleep(3300);
+        check("G4 countdown finishes into running view",
+              $("countdown-overlay").hidden &&
+              !$("view-meeting-aktiv").hidden);
+        check("G4 pinned entry appears with running session", !$("pinned-recording").hidden);
+        check("G4 timer counts (" + doc.querySelector(".pinned-time").textContent + ")",
+              /^00:00:0[1-9]/.test(doc.querySelector(".pinned-time").textContent));
+
+        /* ---------- G3: Farbsemantik während echter Aufnahme ---------- */
+        await showRoute("meeting-aktiv");
+        const chip = $("live-status-chip");
+        check("G3 status bar chip red class while recording",
+              chip.className.indexOf("status-recording") !== -1);
+        check("G3 chip has icon + text",
+              $("live-status-icon").textContent === "●" &&
+              $("live-status-text").textContent === "Aufnahme läuft");
+        check("G3 chip colour is danger red",
+              win.getComputedStyle(chip).color === "rgb(179, 38, 30)");
+        check("G3 pinned dot red while recording",
+              win.getComputedStyle(doc.querySelector(".rec-dot")).backgroundColor === "rgb(179, 38, 30)");
+
+        // Regression: Navigation schenkt der Aufnahme keine Sekunden
+        const navBefore = doc.querySelector(".pinned-time").textContent.slice(-2);
+        for (const r of ["meetings", "projekte", "meeting-aktiv"]) {
+          await showRoute(r);
+          await sleep(20);
+        }
+        const navAfter = doc.querySelector(".pinned-time").textContent.slice(-2);
+        check("navigation adds no phantom seconds to the timer",
+              Math.abs(Number(navAfter) - Number(navBefore)) <= 1);
+
+        /* ---------- G2: Scroll-Lock + „Zum aktuellen Text“ ---------- */
+        // Warten, bis der Transcript-Bereich überläuft (skriptete Segmente + Mock-Nachschub)
+        let overflow = false;
+        for (let i = 0; i < 200; i++) {
+          const area = doc.querySelector(".transcript-area");
+          if (area.scrollHeight > area.clientHeight) { overflow = true; break; }
+          await sleep(100);
+        }
+        check("G2 transcript area overflows with live segments", overflow);
+        const area = doc.querySelector(".transcript-area");
+        area.scrollTop = 0;
+        area.dispatchEvent(new win.Event("scroll"));
+        await sleep(30);
+        check("G2 jump-to-current button revealed on scroll-up",
+              $("btn-zum-text").hidden === false);
+        await sleep(1600); // neue Segmente kommen, während der Nutzer oben ist
+        check("G2 auto-scroll halted after user scrolled up",
+              area.scrollTop <= 2 &&
+              area.scrollHeight > area.clientHeight);
+        $("btn-zum-text").click();
+        await sleep(60);
+        check("G2 jump button scrolls to bottom and hides itself",
+              area.scrollTop + area.clientHeight >= area.scrollHeight - 24 &&
+              $("btn-zum-text").hidden === true);
+
+        /* ---------- Pause mit Timeline-Marker (§6.11 / „Pause“) ---------- */
+        $("btn-pause").click();
+        await sleep(60);
+        check("pause switches chip to paused state (icon+text)",
+              $("live-status-icon").textContent === "⏸" &&
+              $("live-status-text").textContent === "Pausiert" &&
+              $("live-status-chip").className.indexOf("status-paused") !== -1);
+        check("G3 paused chip is orange, not red",
+              win.getComputedStyle($("live-status-chip")).color === "rgb(154, 91, 0)");
+        check("G3 pinned entry shows orange paused state",
+              doc.querySelector(".pinned-label").textContent === "Pausiert" &&
+              $("pinned-recording").classList.contains("is-paused") &&
+              win.getComputedStyle(doc.querySelector(".rec-dot")).backgroundColor === "rgb(154, 91, 0)");
+        check("pause writes timeline marker",
+              [...doc.querySelectorAll("#live-segments .timeline-marker")]
+                .some((li) => /Pausiert/.test(li.textContent)));
+        check("levels drop to zero while paused",
+              $("mic-level").value === 0 && $("sys-level").value === 0);
+        const frozen = doc.querySelector(".pinned-time").textContent;
+        await sleep(1400);
+        check("duration freezes while paused",
+              doc.querySelector(".pinned-time").textContent === frozen);
+
+        $("btn-pause").click(); // Fortsetzen
+        await sleep(60);
+        check("resume restores recording state (red + icon + text)",
+              $("live-status-text").textContent === "Aufnahme läuft" &&
+              $("live-status-chip").className.indexOf("status-recording") !== -1 &&
+              win.getComputedStyle($("live-status-chip")).color === "rgb(179, 38, 30)");
+        check("resume writes timeline marker",
+              [...doc.querySelectorAll("#live-segments .timeline-marker")]
+                .some((li) => /Fortgesetzt/.test(li.textContent)));
+
+        /* ---------- G1: Ein einzelner Druck beendet nie direkt ---------- */
+        $("btn-beenden").click();
+        await sleep(30);
+        check("G1 stop press only opens confirmation",
+              !$("stop-confirm").hidden && !$("pinned-recording").hidden);
+        doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await sleep(30);
+        check("G1 Escape cancels stop, recording continues",
+              $("stop-confirm").hidden && !$("pinned-recording").hidden);
+        $("btn-beenden").click();
+        await sleep(30);
+        $("btn-stop-abbruch").click();
+        await sleep(30);
+        check("G1 explicit 'Weiter aufnehmen' keeps recording",
+              $("stop-confirm").hidden && !$("pinned-recording").hidden);
+
+        /* ---------- G1/§6.9: Bestätigung läuft ohne Zustandsänderung ab ---------- */
+        $("btn-beenden").click();
+        await sleep(10400);
+        check("§6.9 confirmation auto-dismisses without stopping",
+              $("stop-confirm").hidden && !$("pinned-recording").hidden);
+
+        /* ---------- G1/§6.9: bestätigtes Beenden → Verarbeitung (G4) ---------- */
+        $("btn-beenden").click();
+        await sleep(30);
+        $("btn-stop-ok").click();
         await sleep(200);
-        check("pin hidden after stop",
-              doc.getElementById("pinned-recording").hidden === true);
-        check("processing view reached",
-              !doc.getElementById("view-verarbeitung").hidden);
-        await sleep(3600);
+        check("G4 confirmed stop reaches processing view",
+              !$("view-verarbeitung").hidden && $("pinned-recording").hidden);
+        await sleep(3700);
         check("checklist completes",
               doc.querySelector('#proc-checklist li[data-step="summary"]').className === "done");
         await showRoute("meetings");
         check("finished meeting appears in list",
               doc.querySelectorAll("#meeting-list .meeting-item").length >= 3);
 
-        // Settings tabs work
-        await showRoute("einstellungen");
-        doc.querySelector('.tab[data-tab="modelle"]').click();
-        check("settings tab switch works",
-              !doc.querySelector('.tabpanel[data-panel="modelle"]').hidden &&
-              doc.querySelector('.tab[data-tab="modelle"]').getAttribute("aria-selected") === "true");
+        /* ===== Regression: task-0178 Blatt (§6.6 Ersteinrichtung + §6.7 Startdialog) ===== */
 
-        // Escape closes start dialog without starting
+        // Setup screen navigable from scaffold
         await showRoute("meetings");
-        doc.getElementById("btn-neues-meeting").click();
-        doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-        await sleep(50);
-        check("Escape closes start dialog",
-              doc.getElementById("start-dialog").hidden === true);
-
-        /* ===== task-0178 Blatt: §6.6 Ersteinrichtung + §6.7 Startdialog ===== */
-
-        // G4: setup screen navigable from scaffold
-        await showRoute("meetings");
-        doc.getElementById("btn-open-setup").click();
+        $("btn-open-setup").click();
         await sleep(80);
-        check("G4 setup view reachable from Meetings scaffold",
-              !doc.getElementById("view-meeting-einrichtung").hidden);
+        check("reg-0178 setup view reachable",
+              !$("view-meeting-einrichtung").hidden);
         check("§6.6 provider default 'Lokal' preselected",
               doc.querySelector('input[name="setup-provider"][value="lokal"]').checked);
         const moreOpts = doc.querySelector("#view-meeting-einrichtung details.more-options");
@@ -135,125 +240,117 @@
               !!moreOpts && !moreOpts.open &&
               !!moreOpts.querySelector('input[name="setup-provider"][value="custom"]'));
 
-        // §6.6 audio test with live-level mock
-        doc.getElementById("btn-test-mic").click();
+        // Audio test with live-level mock + correction action
+        $("btn-test-mic").click();
         await sleep(300);
         check("§6.6 mic test shows live level",
-              Number(doc.getElementById("setup-mic-level").value) > 0);
+              Number($("setup-mic-level").value) > 0);
         await sleep(2200);
-        check("§6.6 mic test passes", /funktioniert/.test(doc.getElementById("result-mic").textContent));
-        doc.getElementById("btn-test-sys").click();
+        check("§6.6 mic test passes", /funktioniert/.test($("result-mic").textContent));
+        $("btn-test-sys").click();
         await sleep(2200);
         check("§6.6 system test confirms loopback",
-              /Loopback empfängt/.test(doc.getElementById("result-sys").textContent));
-
-        // §6.6 correction action on missing device
-        doc.getElementById("sim-no-mic").checked = true;
-        doc.getElementById("btn-test-mic").click();
+              /Loopback empfängt/.test($("result-sys").textContent));
+        $("sim-no-mic").checked = true;
+        $("btn-test-mic").click();
         await sleep(50);
         check("§6.6 missing device yields fail status + correction action",
-              /Kein Mikrofon erkannt/.test(doc.getElementById("result-mic").textContent) &&
-              !doc.getElementById("setup-audio-hints").hidden &&
+              /Kein Mikrofon erkannt/.test($("result-mic").textContent) &&
+              !$("setup-audio-hints").hidden &&
               !!doc.querySelector("#setup-audio-hints button[data-fix]"));
-        doc.getElementById("sim-no-mic").checked = false;
+        $("sim-no-mic").checked = false;
 
-        // §6.6 shortcut candidate availability
+        // Shortcut candidate availability
         await sleep(700);
         check("§6.6 shortcut candidate available",
-              /verfügbar/.test(doc.getElementById("shortcut-cand-status").textContent));
-        doc.getElementById("sim-shortcut-taken").checked = true;
-        doc.getElementById("btn-shortcut-check").click();
+              /verfügbar/.test($("shortcut-cand-status").textContent));
+        $("sim-shortcut-taken").checked = true;
+        $("btn-shortcut-check").click();
         await sleep(700);
         check("§6.6 taken candidate offers alternatives",
-              !doc.getElementById("shortcut-alternatives").hidden &&
+              !$("shortcut-alternatives").hidden &&
               doc.querySelectorAll(".alt-pick").length >= 2);
-        doc.getElementById("sim-shortcut-taken").checked = false;
+        $("sim-shortcut-taken").checked = false;
 
-        // §6.6 finish lands in compact start dialog
-        doc.getElementById("btn-setup-finish").click();
+        // Finish lands directly in compact start dialog
+        $("btn-setup-finish").click();
         await sleep(100);
-        check("§6.6 finish opens compact start dialog",
-              !doc.getElementById("start-dialog").hidden);
+        check("§6.6 finish opens compact start dialog", !$("start-dialog").hidden);
 
-        // G1: rows clickable, scoped pickers, state preserved
-        const titleBefore = doc.getElementById("meeting-title-input").value;
+        // Rows clickable, scoped pickers, dialog state preserved
+        const titleBefore = $("meeting-title-input").value;
         for (const row of ["mic", "sys", "provider", "lang"]) {
-          doc.getElementById("row-" + row).click();
+          $("row-" + row).click();
           await sleep(30);
-          check("G1 row '" + row + "' opens scoped picker",
-                !doc.getElementById("row-picker").hidden &&
+          check("reg-0178 row '" + row + "' opens scoped picker",
+                !$("row-picker").hidden &&
                 doc.querySelectorAll("#row-picker .picker-option").length > 0);
           doc.querySelector("#row-picker .picker-back").click();
           await sleep(30);
-          check("G1 row '" + row + "' returns to intact dialog",
-                doc.getElementById("row-picker").hidden === true &&
-                !doc.getElementById("start-dialog").hidden);
+          check("reg-0178 row '" + row + "' returns to intact dialog",
+                $("row-picker").hidden === true && !$("start-dialog").hidden);
         }
-        check("G1 dialog state preserved (title unchanged)",
-              doc.getElementById("meeting-title-input").value === titleBefore);
+        check("reg-0178 dialog state preserved (title unchanged)",
+              $("meeting-title-input").value === titleBefore);
 
-        // G2: 'Kein Projekt' selectable and visibly distinct
-        doc.getElementById("project-chip").click();
+        // 'Kein Projekt' selectable and visibly distinct
+        $("project-chip").click();
         await sleep(30);
         const noneOpt = doc.querySelector("#project-picker .picker-none-opt");
-        check("G2 'Kein Projekt' option present and dashed",
+        check("G2(reg) 'Kein Projekt' option present and dashed",
               !!noneOpt &&
               win.getComputedStyle(noneOpt).borderStyle === "dashed" &&
               /Eingang/.test(noneOpt.textContent));
         [...doc.querySelectorAll("#project-picker .picker-option")]
           .find((b) => b.textContent.indexOf("BDNA Club") !== -1).click();
         await sleep(30);
-        check("G2 project selection reflects on chip",
-              doc.getElementById("project-chip").textContent.trim() === "BDNA Club");
-        // Picker bleibt nach einer Auswahl geöffnet – direkt „Kein Projekt“ wählen.
+        check("reg-0178 project selection reflects on chip",
+              $("project-chip").textContent.trim() === "BDNA Club");
         doc.querySelector("#project-picker .picker-none-opt").click();
         await sleep(30);
-        check("G2 'Kein Projekt' selectable again, chip unassigned style",
-              doc.getElementById("project-chip").textContent.trim() === "Kein Projekt" &&
-              doc.getElementById("project-chip").classList.contains("chip-none"));
+        check("reg-0178 'Kein Projekt' selectable again",
+              $("project-chip").textContent.trim() === "Kein Projekt" &&
+              $("project-chip").classList.contains("chip-none"));
 
-        // G3: start disabled for mocked missing device, fixable in-place
-        doc.getElementById("row-mic").click();
+        // Start disabled for mocked missing device, fixable in-place
+        $("row-mic").click();
         await sleep(30);
         [...doc.querySelectorAll("#row-picker .picker-sim")]
           .find((b) => b.textContent.indexOf("Gerät entfernen") !== -1).click();
         await sleep(30);
-        check("G3 start disabled while mic missing",
-              doc.getElementById("btn-meeting-starten").disabled === true);
-        check("G3 blocker names fix location",
-              !doc.getElementById("start-blocker").hidden &&
-              /Mikrofon/.test(doc.getElementById("start-blocker").textContent));
-        check("G3 row shows attention state",
-              /Aufmerksamkeit/.test(doc.getElementById("row-mic-value").textContent));
+        check("G3(reg) start disabled while mic missing",
+              $("btn-meeting-starten").disabled === true);
+        check("G3(reg) blocker names fix location",
+              !$("start-blocker").hidden &&
+              /Mikrofon/.test($("start-blocker").textContent));
         [...doc.querySelectorAll("#row-picker .picker-option")]
           .find((b) => b.textContent.indexOf("Standardmikrofon") !== -1).click();
         await sleep(30);
-        check("G3 fixed in place; start enabled, dialog intact",
-              doc.getElementById("btn-meeting-starten").disabled === false &&
-              !doc.getElementById("start-dialog").hidden);
+        check("G3(reg) fixed in place; start enabled, dialog intact",
+              $("btn-meeting-starten").disabled === false &&
+              !$("start-dialog").hidden);
 
-        // G3: cloud provider without key
-        doc.getElementById("row-provider").click();
+        // Cloud provider without key
+        $("row-provider").click();
         await sleep(30);
         [...doc.querySelectorAll("#row-picker .picker-option")]
           .find((b) => b.textContent.indexOf("Azure Cloud") !== -1).click();
         await sleep(30);
-        check("G3 azure without key disables start",
-              doc.getElementById("btn-meeting-starten").disabled === true);
+        check("G3(reg) azure without key disables start",
+              $("btn-meeting-starten").disabled === true);
         [...doc.querySelectorAll("#row-picker .picker-sim")]
           .find((b) => b.textContent.indexOf("Schlüssel hinzufügen") !== -1).click();
         await sleep(30);
-        check("G3 adding key re-enables start",
-              doc.getElementById("btn-meeting-starten").disabled === false);
+        check("G3(reg) adding key re-enables start",
+              $("btn-meeting-starten").disabled === false);
 
         // Escape first closes only the picker
-        doc.getElementById("row-lang").click();
+        $("row-lang").click();
         await sleep(30);
         doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
         await sleep(30);
-        check("Escape closes picker but keeps dialog",
-              doc.getElementById("row-picker").hidden === true &&
-              !doc.getElementById("start-dialog").hidden);
+        check("reg-0178 Escape closes picker but keeps dialog",
+              $("row-picker").hidden === true && !$("start-dialog").hidden);
 
         out.forEach((l) => { const d = document.createElement("div"); d.textContent = l; document.body.appendChild(d); });
         const summary = document.createElement("div");

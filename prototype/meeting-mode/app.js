@@ -66,7 +66,8 @@
     }
     if (route === "meetings") renderMeetings();
     if (route === "meeting-einrichtung") initSetupView();
-    tick();
+    if (route === "meeting-aktiv") renderRecordingStatus();   // Chip/Pin synchron halten
+    updateClockDisplays();
   }
 
   window.addEventListener("hashchange", render);
@@ -481,7 +482,8 @@
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Tab") return;
     var modal = !$("#stop-confirm").hidden ? $("#stop-confirm .modal")
-      : (!startDialog.hidden ? startDialog.querySelector(".modal") : null);
+      : (!$("#countdown-overlay").hidden ? $("#countdown-overlay .modal")
+      : (!startDialog.hidden ? startDialog.querySelector(".modal") : null));
     if (!modal) return;
     var focusables = Array.prototype.filter.call(
       modal.querySelectorAll("button, input, select, a[href]"),
@@ -495,47 +497,139 @@
   $("#start-form").addEventListener("submit", function (e) {
     e.preventDefault();
     state.activeTitle = $("#meeting-title-input").value || "Meeting";
+    window.closeStartDialog();
+    beginCountdown();   // §6.9: Aufnahme beginnt erst nach 3-Sekunden-Countdown
+  });
+
+  /* ---------- 3-Sekunden-Countdown (§6.9) ----------
+     Escape bricht nur den Countdown ab; vorher läuft keine Aufnahme
+     und es erscheint nirgends ein roter Aufnahmezustand (Gate G3). */
+  var countdownIv = null;
+
+  function beginCountdown() {
+    var ov = $("#countdown-overlay");
+    setCountdownNumber(3);
+    ov.hidden = false;
+    announce("Meeting startet in 3 Sekunden. Escape bricht ab.");
+    $("#btn-countdown-abbruch").focus();
+    var n = 3;
+    countdownIv = window.setInterval(function () {
+      n -= 1;
+      if (n <= 0) { finishCountdown(); return; }
+      setCountdownNumber(n);
+      announce(n + " …");
+    }, 1000);
+  }
+  function setCountdownNumber(n) {
+    $("#countdown-number").textContent = String(n);
+  }
+  function finishCountdown() {
+    if (countdownIv) { window.clearInterval(countdownIv); countdownIv = null; }
+    $("#countdown-overlay").hidden = true;
+    startSession();
+  }
+  function cancelCountdown() {
+    if (!countdownIv && $("#countdown-overlay").hidden) return;
+    if (countdownIv) { window.clearInterval(countdownIv); countdownIv = null; }
+    $("#countdown-overlay").hidden = true;
+    // Zurück in den Startdialog; dessen Zustand bleibt erhalten (§6.9)
+    startDialog.hidden = false;
+    $("#meeting-title-input").focus();
+    announce("Countdown abgebrochen. Es wurde nichts aufgenommen.");
+  }
+  $("#btn-countdown-abbruch").addEventListener("click", cancelCountdown);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("#countdown-overlay").hidden) cancelCountdown();
+  });
+
+  function startSession() {
     state.sessionActive = true;
     state.paused = false;
     state.seconds = 0;
-    window.closeStartDialog();
     announce("Aufnahme läuft. " + state.activeTitle);
     startSegments();
     $("#btn-zum-text").hidden = true;
+    renderRecordingStatus();
     location.hash = "#/meeting-aktiv";
-  });
+  }
 
   /* ---------- Laufende Ansicht (§6.11) ---------- */
   var demoSegments = [
     [2, "Wir starten mit dem Tagesordnungspunkt Budget."],
-    [6, "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen."],
-    [11, "Einwand: Der Messestand braucht dieses Jahr mehr Mittel."],
-    [16, "Entscheidung: Wir verschieben die Entscheidung um eine Woche."]
+    [4, "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen."],
+    [6, "Einwand: Der Messestand braucht dieses Jahr mehr Mittel."],
+    [8, "Entscheidung: Wir verschieben die Entscheidung um eine Woche."],
+    [10, "Nächster Punkt: Personalplanung für das vierte Quartal."],
+    [12, "Vorschlag: Zwei zusätzliche Werkstudenten für den Support."],
+    [14, "Einwand: Das Budget dafür ist noch nicht bewilligt."],
+    [16, "Wir prüfen die Zahlen bis Donnerstag und melden uns."],
+    [18, "Abschließend: Das Protokoll geht heute Abend an alle."],
+    [20, "Damit ist der Tagesordnungspunkt Budget abgeschlossen."]
   ];
-  var segmentTimers = [];
+  /* Demo-Zeitlupe: eine „Segmentsekunde“ entspricht 500 ms Echtzeit. Ein
+     Intervall-Treiber statt fester Timeouts, damit pausierte Segmente beim
+     Fortsetzen nachrücken, statt verworfen zu werden. */
+  var SEG_MS = 500;
+  var segDriver = null, segClock = 0, segFired = [];
+  var nextFillerAt = Infinity, fillerCount = 0;
 
   function startSegments() {
     stopSegments();
-    var ul = $("#live-segments");
-    ul.innerHTML = "";
-    demoSegments.forEach(function (seg, i) {
-      segmentTimers.push(window.setTimeout(function () {
-        if (!state.sessionActive || state.paused) return;
-        var li = document.createElement("li");
-        li.innerHTML = "<span class='segment-time'>+" + seg[0] * 10 + "s</span>" + seg[1];
-        ul.appendChild(li);
-        // Nur am unteren Rand mitlaufen; sonst bleibt die Ansicht stehen (§6.11)
-        if (typeof stickToBottom !== "undefined" && stickToBottom) {
-          transcriptArea.scrollTop = transcriptArea.scrollHeight;
+    // Neue Session beginnt wieder unten klebend – sonst würde eine
+    // hochgescrollte Vorgängersession die neue stumm stehen lassen (§6.11)
+    stickToBottom = true;
+    $("#btn-zum-text").hidden = true;
+    $("#live-segments").innerHTML = "";
+    $("#listening-state").textContent = "Hört zu …";
+    segClock = 0;
+    segFired = demoSegments.map(function () { return false; });
+    nextFillerAt = Infinity;
+    fillerCount = 0;
+    segDriver = window.setInterval(function () {
+      if (!state.sessionActive || state.paused) return;   // Pause stoppt die Demo-Zeit
+      segClock += 100;
+      var scriptedLeft = false;
+      demoSegments.forEach(function (seg, i) {
+        if (!segFired[i]) {
+          if (segClock >= seg[0] * SEG_MS) {
+            segFired[i] = true;
+            appendSegment(seg, i);
+          } else {
+            scriptedLeft = true;
+          }
         }
-        $("#listening-state").textContent =
-          i === demoSegments.length - 1 ? "Abschnitt wird transkribiert …" : "Hört zu …";
-      }, seg[0] * 1500)); // Demo-Zeitlupe
-    });
+      });
+      // Danach wächst das Transkript weiter wie in einem echten Meeting –
+      // dadurch ist der Scroll-Lock jederzeit erreichbar (§6.11).
+      if (!scriptedLeft && nextFillerAt === Infinity) nextFillerAt = segClock + 1000;
+      if (segClock >= nextFillerAt && fillerCount < 40) {
+        nextFillerAt += 1000;
+        fillerCount += 1;
+        appendSegment([Math.round(segClock / SEG_MS),
+                       "Weiteres fertiges Segment aus dem Meetingverlauf (Mock) …"], -1);
+      }
+    }, 100);
   }
   function stopSegments() {
-    segmentTimers.forEach(function (t) { window.clearTimeout(t); });
-    segmentTimers = [];
+    if (segDriver) { window.clearInterval(segDriver); segDriver = null; }
+  }
+  function appendSegment(seg, i) {
+    var li = document.createElement("li");
+    li.innerHTML = "<span class='segment-time'>+" + seg[0] + "s</span>" + esc(seg[1]);
+    $("#live-segments").appendChild(li);
+    // Nur am unteren Rand mitlaufen; sonst bleibt die Ansicht stehen (§6.11)
+    if (stickToBottom) transcriptArea.scrollTop = transcriptArea.scrollHeight;
+    $("#listening-state").textContent =
+      i === demoSegments.length - 1 ? "Abschnitt wird transkribiert …" : "Hört zu …";
+  }
+  /* Timeline-Marker (Pause/Fortsetzen); Icon+Text, nie nur Farbe */
+  function addTimelineMarker(text) {
+    var li = document.createElement("li");
+    li.className = "timeline-marker";
+    li.innerHTML = "<span class='segment-time'>" + fmt(elapsedSec()) + "</span>" +
+      "<span aria-hidden='true'>" + text.icon + "</span> " + esc(text.label);
+    $("#live-segments").appendChild(li);
+    if (stickToBottom) transcriptArea.scrollTop = transcriptArea.scrollHeight;
   }
 
   $("#btn-open-active").addEventListener("click", function () {
@@ -547,8 +641,12 @@
   var transcriptArea = $(".transcript-area");
   var stickToBottom = true;
   transcriptArea.addEventListener("scroll", function () {
-    var nearBottom = transcriptArea.scrollHeight - transcriptArea.clientHeight -
-      transcriptArea.scrollTop < 24;
+    // „Near bottom“ darf nie wahr sein, wenn der Nutzer ganz oben steht –
+    // auch nicht, wenn der Bereich bisher nur wenig überläuft. Deshalb ist
+    // die Toleranz durch die maximale Scroll-Distanz begrenzt (§6.11).
+    var maxScroll = transcriptArea.scrollHeight - transcriptArea.clientHeight;
+    var distance = maxScroll - transcriptArea.scrollTop;
+    var nearBottom = maxScroll === 0 || distance < Math.min(24, maxScroll);
     stickToBottom = nearBottom;
     $("#btn-zum-text").hidden = nearBottom || !state.sessionActive;
   });
@@ -558,35 +656,88 @@
     announce("Zum aktuellen Text gesprungen.");
   });
 
+  /* Zentrale Zustandsdarstellung: Text+Icon immer gemeinsam, Rot nur bei
+     echter Aufnahme, Orange bei Pause (§6.8 / §6.11 – Gate G3) */
+  function providerLabel() {
+    return dlg.provider === "azure" ? "Azure Cloud"
+      : dlg.provider === "custom" ? "Custom" : "Lokal";
+  }
+  function renderRecordingStatus() {
+    var rec = state.sessionActive && !state.paused;
+    var chipClass = "status-chip " + (rec ? "status-recording" : "status-paused");
+    $("#live-status-chip").className = chipClass;
+    $("#live-status-icon").textContent = rec ? "●" : "⏸";
+    $("#live-status-text").textContent = rec ? "Aufnahme läuft" : "Pausiert";
+    $("#live-provider").textContent = providerLabel();   // lesbar, nicht änderbar (§6.11)
+    $("#am-status").className = chipClass;
+    $("#am-status-icon").textContent = rec ? "●" : "⏸";
+    $("#am-status-text").textContent = rec ? "Aufnahme läuft" : "Pausiert";
+    document.querySelector(".pinned-label").textContent =
+      rec ? "Aufnahme läuft" : "Pausiert";
+    $("#pinned-recording").classList.toggle("is-paused", state.sessionActive && state.paused);
+  }
+
   $("#btn-pause").addEventListener("click", function () {
+    if (!state.sessionActive) return;
     state.paused = !state.paused;
+    renderRecordingStatus();
     if (state.paused) {
-      this.textContent = "Fortsetzen";
-      $("#live-region").textContent = "Pausiert.";
+      this.textContent = "▶ Fortsetzen";
       $("#listening-state").textContent = "Pausiert.";
+      // Pegel sofort auf null – während der Pause wird kein Audio gespeichert
+      $("#mic-level").value = 0;
+      $("#sys-level").value = 0;
+      // Plan „Pause“: sauberer Abschnittsende + Timeline-Marker
+      addTimelineMarker({ icon: "⏸", label: "Pausiert – Aufnahme unterbrochen" });
+      announce("Aufnahme pausiert.");
     } else {
       this.textContent = "Pause";
-      announce("Aufnahme fortgesetzt.");
+      $("#listening-state").textContent = "Hört zu …";
+      addTimelineMarker({ icon: "▶", label: "Fortgesetzt" });
+      announce("Aufnahme fortgesetzt. Geräte erneut geprüft.");
     }
   });
 
-  $("#btn-beenden").addEventListener("click", function () {
+  /* §6.11: Minimieren/zum Tray; Aufnahmezustand bleibt im Pin sichtbar */
+  $("#btn-tray").addEventListener("click", function () {
+    announce("Fenster minimiert – die Aufnahme läuft im Tray weiter (Mock).");
+    location.hash = "#/meetings";
+  });
+
+  /* ---------- Stop mit Pflicht-Bestätigung (§6.9, Gate G1) ----------
+     Ein einzelner Druck auf „Meeting beenden“ beendet nie direkt; die
+     Bestätigung verschwindet nach kurzer Zeit ohne Zustandsänderung. */
+  var confirmTimer = null;
+
+  function openStopConfirm() {
+    if (!state.sessionActive || !$("#stop-confirm").hidden) return;
     $("#stop-confirm").hidden = false;
     $("#btn-stop-abbruch").focus();
-  });
-  $("#btn-stop-abbruch").addEventListener("click", function () {
+    confirmTimer = window.setTimeout(function () {
+      closeStopConfirm();
+      announce("Bestätigung abgelaufen. Die Aufnahme läuft weiter.");
+    }, 10000);
+  }
+  function closeStopConfirm() {
     $("#stop-confirm").hidden = true;
+    if (confirmTimer) { window.clearTimeout(confirmTimer); confirmTimer = null; }
+  }
+
+  $("#btn-beenden").addEventListener("click", openStopConfirm);
+  $("#btn-stop-abbruch").addEventListener("click", function () {
+    closeStopConfirm();
     $("#btn-beenden").focus();
+    announce("Aufnahme läuft weiter.");
   });
   $("#btn-stop-ok").addEventListener("click", function () {
-    $("#stop-confirm").hidden = true;
+    closeStopConfirm();
     var dur = fmt(elapsedSec());
     state.sessionActive = false;
     state.paused = false;
     state.seconds = 0;
     state.meetings.unshift({
       title: state.activeTitle, date: "Gerade eben", duration: dur,
-      provider: "Lokal", status: "verarbeitung",
+      provider: providerLabel(), status: "verarbeitung",
       summary: "Verarbeitung gestartet: Transkription läuft …"
     });
     stopSegments();
@@ -595,8 +746,9 @@
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !$("#stop-confirm").hidden) {
-      $("#stop-confirm").hidden = true;
+      closeStopConfirm();
       $("#btn-beenden").focus();
+      announce("Beenden abgebrochen. Die Aufnahme läuft weiter.");
     }
   });
 
@@ -625,14 +777,19 @@
   });
 
   /* ---------- Uhr / Tick ---------- */
-  function tick() {
-    if (state.sessionActive && !state.paused) state.seconds += 1;
+  /* Nur das Intervall lässt die gemockte Zeit weiterlaufen; render() darf
+     beim Anzeigen der Uhr keine Sekunden dazuerfinden. */
+  function updateClockDisplays() {
     var t = fmt(elapsedSec());
     $("#pinned-time").textContent = t;
     $("#am-duration").textContent = t;
     $("#live-duration").textContent = t;
   }
-  window.setInterval(tick, 1000);
+  function advanceClock() {
+    if (state.sessionActive && !state.paused) state.seconds += 1;
+    updateClockDisplays();
+  }
+  window.setInterval(advanceClock, 1000);
 
   /* Pegel-Demo */
   window.setInterval(function () {
@@ -825,6 +982,10 @@
     state.sessionActive = false; state.paused = false;
     state.seconds = 0;
     stopSegments();
+    // offene Overlays (Countdown/Bestätigung) sauber schließen
+    if (countdownIv) { window.clearInterval(countdownIv); countdownIv = null; }
+    $("#countdown-overlay").hidden = true;
+    closeStopConfirm();
     resetDialogState();
     dlgInitialized = true;   // Defaults sind gerade explizit hergestellt
     ["#sim-no-mic", "#sim-mic-denied", "#sim-no-output", "#sim-shortcut-taken"]

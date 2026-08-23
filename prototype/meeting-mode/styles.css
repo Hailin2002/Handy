@@ -9,6 +9,7 @@
   --brand: #3556d4;
   --brand-contrast: #ffffff;
   --danger: #b3261e;
+  --warn-orange: #9a5b00;
   --ok-green: #1a7f37;
   --info-blue: #2456a8;
   --focus: #2b5fd9;
@@ -90,12 +91,15 @@ body {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
+/* §6.8: pausiertes Meeting zeigt Orange statt Rot (Text wechselt auf „Pausiert“) */
+.nav-pinned.is-paused { background: #fdf3e3; color: var(--warn-orange); }
 .rec-dot {
   width: 10px; height: 10px;
   border-radius: 50%;
   background: var(--danger);
   animation: pulse 1.6s ease-in-out infinite;
 }
+.is-paused .rec-dot { background: var(--warn-orange); animation: none; }
 @keyframes pulse { 50% { opacity: .35; } }
 .pinned-label { flex: 0 1 auto; }
 .pinned-time { margin-left: auto; font-size: 13px; }
@@ -148,6 +152,8 @@ body {
 }
 .status-ready      { background: #e6efe8; color: var(--ok-green); }
 .status-recording  { background: #fdeceb; color: var(--danger); }
+/* §6.8: Orange = unterbrochen; Rot erscheint nur während echter Aufnahme */
+.status-paused     { background: #fdf3e3; color: var(--warn-orange); }
 .status-processing { background: #e8effa; color: var(--info-blue); }
 
 /* Statuszeilen (§6.7) */
@@ -339,8 +345,11 @@ input[type="search"], input[type="text"], select {
   top: 0;
   z-index: 2;
 }
+.tray-btn { margin-left: auto; white-space: nowrap; }
+
+/* Scrollbereich + außerhalb liegender Sprung-Button (§6.11) */
+.transcript-wrap { position: relative; margin-top: 14px; }
 .transcript-area {
-  margin-top: 14px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -349,10 +358,25 @@ input[type="search"], input[type="text"], select {
   max-height: 46vh;
   overflow-y: auto;
 }
+.jump-btn {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  z-index: 3;
+}
 .listening-state { color: var(--muted); font-style: italic; }
 .segment-time { color: var(--muted); font-size: 12px; margin-right: 10px; font-variant-numeric: tabular-nums; }
 .segments li { padding: 6px 0; border-top: 1px solid var(--border); }
 .segments li:first-child { border-top: none; }
+/* Pause-/Fortsetzen-Marker auf der Timeline (Plan: Pause erzeugt Marker) */
+.timeline-marker {
+  color: var(--warn-orange);
+  font-weight: 600;
+  border-left: 3px solid var(--warn-orange);
+  padding-left: 10px;
+}
 
 .fixed-controls {
   display: flex;
@@ -413,6 +437,15 @@ meter { width: 120px; height: 10px; }
 .modal h2 { margin-top: 0; }
 .modal label { display: block; margin: 12px 0 4px; font-weight: 600; }
 .modal input[type="text"] { width: 100%; }
+
+/* Countdown-Overlay (§6.9): neutral, kein Rot – es wird noch nichts aufgenommen */
+.modal-countdown { text-align: center; }
+.countdown-number {
+  font-size: 64px;
+  font-weight: 700;
+  margin: 8px 0;
+  line-height: 1;
+}
 
 /* Barrierefreiheit */
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
