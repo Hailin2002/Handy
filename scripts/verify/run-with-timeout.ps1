@@ -55,6 +55,20 @@
                          (GNU coreutils timeout convention)
       125                wrapper failed to start the child process
       126                invalid parameters (e.g. empty FilePath)
+      2                  unsupported PowerShell language mode
+                         (ConstrainedLanguage); see the compatibility note
+                         below
+
+    ConstrainedLanguage compatibility: parameter validation (exit 126) is
+    written with only cmdlet/core-type constructs so it completes cleanly
+    under ConstrainedLanguage. The core wrapper itself is NOT reducible to
+    cmdlets: it requires System.Diagnostics.ProcessStartInfo/Process
+    (child-process spawn), System.IO.StreamWriter (log streaming) and
+    Add-Type P/Invoke (Windows Job Object tree containment), all of which
+    the language mode blocks with "Cannot create type / Cannot invoke
+    method". Rather than fail with that cryptic engine error mid-run, an
+    early guard detects ConstrainedLanguage and exits 2 with an explicit
+    message naming the blocking constructs.
 
     Output transport: stdout/stderr are consumed through
     StreamReader.ReadLineAsync() tasks that are pumped from the main poll
@@ -85,16 +99,47 @@ param(
 
 # Exit-code constants must be defined before parameter validation so the
 # usage branch below can emit the documented code 126.
+$exitCodeUnsupportedMode = 2
 $exitCodeTimeout = 124
 $exitCodeStartFailure = 125
 $exitCodeUsage = 126
+
+# Writes one line to stderr. [Console]::Error.WriteLine is blocked under
+# ConstrainedLanguage ("Cannot invoke method"), so it degrades to the host
+# stream instead of throwing a cryptic language-mode error.
+function Write-ConsoleError {
+    param([string]$Message)
+
+    try {
+        [Console]::Error.WriteLine($Message)
+    }
+    catch {
+        Write-Host $Message -ForegroundColor Red
+    }
+}
 
 # Parameter validation must run before $ErrorActionPreference = "Stop":
 # Write-Error would otherwise terminate the script with exit 1 instead of
 # the documented usage code 126.
 if ([string]::IsNullOrWhiteSpace($FilePath)) {
-    [Console]::Error.WriteLine("run-with-timeout: -FilePath must be a non-empty executable name or path.")
+    Write-ConsoleError "run-with-timeout: -FilePath must be a non-empty executable name or path."
     exit $exitCodeUsage
+}
+
+# ConstrainedLanguage guard: everything below needs .NET constructs the
+# language mode blocks (ProcessStartInfo/Process spawn, StreamWriter log,
+# Add-Type Job Object P/Invoke). Fail here, explicitly, instead of dying
+# mid-run on a cryptic "Cannot create type" engine error. Exit code 2 is
+# documented in the header notes and is distinct from every child/timeout
+# code this wrapper can produce.
+if ($ExecutionContext.SessionState.LanguageMode -eq 'ConstrainedLanguage') {
+    Write-ConsoleError (
+        "run-with-timeout: ConstrainedLanguage mode is not supported. " +
+        "Blocking constructs: System.Diagnostics.ProcessStartInfo/" +
+        "System.Diagnostics.Process (child-process spawn), System.IO.StreamWriter " +
+        "(log streaming), Add-Type P/Invoke (Windows Job Object containment). " +
+        "Re-run under FullLanguage mode.")
+    exit $exitCodeUnsupportedMode
 }
 
 $ErrorActionPreference = "Stop"

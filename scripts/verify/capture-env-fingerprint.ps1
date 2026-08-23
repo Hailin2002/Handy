@@ -24,6 +24,23 @@
 # endpoints (render + capture). This script mirrors that enumeration via the
 # MMDevices registry view, filtered to DeviceState == 1 (Active), so the
 # snapshot lists exactly the endpoints a cpal-based probe would see.
+#
+# ConstrainedLanguage compatibility: the script completes under
+# ConstrainedLanguage in a degraded mode. Blocked .NET constructs are
+# replaced or fail soft with an explicit warning instead of a cryptic
+# "Cannot create type / Cannot invoke method" error:
+#   - Add-Type GlobalMemoryStatusEx P/Invoke -> fails soft; total memory is
+#     emitted as null (CIM fallback is NOT used: it is unavailable on
+#     restricted hosts and this script already treats CIM as optional).
+#   - .NET registry enumeration (audio endpoints, GPU display class) ->
+#     fails soft to empty lists; each degraded section is reported.
+#   - [IO.File]::WriteAllText + UTF8Encoding::new -> Write-Utf8NoBomFile
+#     helper with a Set-Content fallback (Windows PowerShell 5.1 prepends a
+#     BOM under ConstrainedLanguage - documented residual limit).
+#   - $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath
+#     -> cmdlet-based absolute-path fallback.
+# A CLM-captured snapshot therefore parses cleanly but may contain null /
+# empty detail fields; every degraded field is announced on the host.
 
 [CmdletBinding()]
 param(
@@ -37,6 +54,33 @@ $ErrorActionPreference = 'Stop'
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+# Degraded-section tracking: every section that had to fall back (CLM-blocked
+# .NET call or restricted source) is recorded and announced at the end, so a
+# CLM snapshot is never silently less complete than the header claims.
+$script:degradedSections = @()
+function Add-DegradedSection {
+    param([string]$Name, [string]$Reason)
+    $script:degradedSections += ('{0} ({1})' -f $Name, $Reason)
+}
+
+function Write-Utf8NoBomFile {
+    # UTF-8 without BOM writer. Primary path is byte-identical to the previous
+    # direct [IO.File]::WriteAllText + UTF8Encoding($false) call; under CLM
+    # both constructs are blocked ("Cannot create type / Cannot invoke
+    # method") and Set-Content keeps the snapshot on disk. Residual limit:
+    # Windows PowerShell 5.1 Set-Content prepends a UTF-8 BOM.
+    param([string]$Path, [string]$Text)
+
+    try {
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($Path, $Text, $utf8NoBom)
+    }
+    catch {
+        Add-DegradedSection 'snapshot-file-write' 'ConstrainedLanguage: BOM prepended by Set-Content fallback'
+        Set-Content -LiteralPath $Path -Value $Text -Encoding UTF8
+    }
+}
 
 function Get-ToolVersion {
     # Returns the first stdout line of `<exe> --version`, or $null when the
@@ -76,7 +120,10 @@ function Get-AudioEndpoints {
     # hit ACL-restricted subkeys, while explicit OpenSubKey works unprivileged.
     param([string]$Flow)
 
-    $endpoints = New-Object System.Collections.Generic.List[object]
+    # Plain array, not Generic.List[object]: New-Object on generic types is
+    # blocked under ConstrainedLanguage, and this call sat OUTSIDE the
+    # try/catch below, aborting the whole snapshot instead of degrading.
+    $endpoints = @()
     $baseKey = $null
     try {
         $baseKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Default').OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\$Flow")
@@ -117,28 +164,36 @@ function Get-AudioEndpoints {
                     }
                 }
 
-                $endpoints.Add([ordered]@{
+                $endpoints += [ordered]@{
                     id   = $epId
                     name = $name
-                })
+                }
             } finally {
                 $epKey.Dispose()
             }
         }
     } catch {
-        # Whole-flow failure degrades to an empty list rather than a broken run.
+        # Whole-flow failure degrades to an empty list rather than a broken run
+        # (ConstrainedLanguage blocks the .NET registry API entirely; restricted
+        # ACLs can do the same). The degradation is recorded, not silent.
+        Add-DegradedSection "audio-$Flow" 'enumeration failed (.NET registry API blocked or ACL-restricted)'
         return ,@()
     } finally {
         if ($baseKey) { $baseKey.Dispose() }
     }
 
     # Sort for the determinism contract.
-    return ,@($endpoints.ToArray() | Sort-Object -Property id)
+    return ,@($endpoints | Sort-Object -Property id)
 }
 
 function Get-TotalPhysicalMemoryBytes {
-    # GlobalMemoryStatusEx: unprivileged, no WMI needed.
-    Add-Type -Namespace Native -Name MemStatus -MemberDefinition @'
+    # GlobalMemoryStatusEx: unprivileged, no WMI needed. Under
+    # ConstrainedLanguage the Add-Type P/Invoke is blocked; there is no
+    # cmdlet-only equivalent that returns the same figure (CIM is optional on
+    # restricted hosts and cannot be relied on), so this fails soft to $null
+    # and records the degradation instead of aborting the whole snapshot.
+    try {
+        Add-Type -Namespace Native -Name MemStatus -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential)]
 public struct MEMORYSTATUSEX {
     public uint dwLength;
@@ -154,10 +209,15 @@ public struct MEMORYSTATUSEX {
 [DllImport("kernel32.dll", SetLastError = true)]
 public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
 '@
-    $status = New-Object Native.MemStatus+MEMORYSTATUSEX
-    $status.dwLength = [uint32][Runtime.InteropServices.Marshal]::SizeOf([type][Native.MemStatus+MEMORYSTATUSEX])
-    $null = [Native.MemStatus]::GlobalMemoryStatusEx([ref]$status)
-    return $status.ullTotalPhys
+        $status = New-Object Native.MemStatus+MEMORYSTATUSEX
+        $status.dwLength = [uint32][Runtime.InteropServices.Marshal]::SizeOf([type][Native.MemStatus+MEMORYSTATUSEX])
+        $null = [Native.MemStatus]::GlobalMemoryStatusEx([ref]$status)
+        return $status.ullTotalPhys
+    }
+    catch {
+        Add-DegradedSection 'memory.totalPhysicalBytes' 'ConstrainedLanguage: Add-Type P/Invoke (GlobalMemoryStatusEx) blocked'
+        return $null
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -203,7 +263,9 @@ $gpus = @()
 try {
     $gpuClassKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Default').OpenSubKey('SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}')
     if ($gpuClassKey) {
-        $found = New-Object System.Collections.Generic.List[object]
+        # Plain array: Generic.List[object] is not constructible under
+        # ConstrainedLanguage; the array form captures GPUs even there.
+        $found = @()
         foreach ($sub in $gpuClassKey.GetSubKeyNames()) {
             # Device instances are numeric ("0000", "0001", ...).
             if ($sub -notmatch '^\d{4}$') { continue }
@@ -213,20 +275,21 @@ try {
             try {
                 $desc = $dev.GetValue('DriverDesc')
                 if ($desc) {
-                    $found.Add([ordered]@{
+                    $found += [ordered]@{
                         name          = [string]$desc
                         driverVersion = if ($dev.GetValue('DriverVersion')) { [string]$dev.GetValue('DriverVersion') } else { $null }
-                    })
+                    }
                 }
             } finally {
                 $dev.Dispose()
             }
         }
         $gpuClassKey.Dispose()
-        $gpus = @($found.ToArray() | Sort-Object -Property name)
+        $gpus = @($found | Sort-Object -Property name)
     }
 } catch {
     $gpus = @()
+    Add-DegradedSection 'gpu' 'enumeration failed (.NET registry API blocked or ACL-restricted)'
 }
 
 # --- Audio (cpal-equivalent active endpoint enumeration) --------------------
@@ -287,11 +350,28 @@ $json = $fingerprint | ConvertTo-Json -Depth 6
 # Sanity: the emitted document must parse cleanly before we commit it to disk.
 $null = $json | ConvertFrom-Json
 
-$resolvedOut = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutPath)
+# Absolute output path. The SessionState API is blocked under
+# ConstrainedLanguage; the fallback resolves absolute paths as-is and
+# relative ones against the caller's location (same semantics for the
+# existing usage patterns).
+try {
+    $resolvedOut = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutPath)
+} catch {
+    if (Split-Path -Path $OutPath -IsAbsolute) {
+        $resolvedOut = $OutPath
+    } else {
+        $resolvedOut = Join-Path (Get-Location -PSProvider FileSystem).ProviderPath $OutPath
+    }
+}
 $outDir = Split-Path -Parent $resolvedOut
 if (-not (Test-Path $outDir)) {
     New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 }
-[System.IO.File]::WriteAllText($resolvedOut, $json + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
+Write-Utf8NoBomFile -Path $resolvedOut -Text ($json + [Environment]::NewLine)
+
+if ($script:degradedSections.Count -gt 0) {
+    Write-Host ("capture-env-fingerprint: WARNING: degraded sections: {0}" -f
+        ($script:degradedSections -join '; ')) -ForegroundColor Yellow
+}
 
 Write-Host "Fingerprint written to $resolvedOut"

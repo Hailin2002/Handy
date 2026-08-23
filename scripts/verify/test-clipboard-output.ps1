@@ -26,6 +26,22 @@
 
 .NOTES
     Read-only with respect to product code. Only writes its own log directory.
+
+    Exit codes: 0 = all gates pass, 1 = at least one check failed,
+    2 = unsupported PowerShell language mode (ConstrainedLanguage).
+
+    ConstrainedLanguage compatibility: this probe is NOT reducible to
+    cmdlets. Its core is Add-Type P/Invoke compilation of
+    HandyVerify.NativeClipboard (user32/kernel32 clipboard APIs) and
+    System.Security.Cryptography SHA256 hashing, both of which
+    ConstrainedLanguage blocks with "Cannot add type / Cannot invoke
+    method". An early guard detects ConstrainedLanguage and exits 2 with an
+    explicit message naming the blocking constructs instead of a cryptic
+    engine error mid-run. Two cheap constructs are nonetheless replaced so
+    the script stays closer to CLM-clean: Stopwatch timing -> Get-Date /
+    New-TimeSpan deltas, and [IO.File]::WriteAllText + UTF8Encoding::new ->
+    Write-Utf8NoBomFile helper (Set-Content fallback; Windows PowerShell 5.1
+    prepends a BOM under ConstrainedLanguage).
 #>
 
 [CmdletBinding()]
@@ -44,11 +60,37 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+# ConstrainedLanguage guard: the clipboard fidelity probes require Add-Type
+# P/Invoke (user32/kernel32 clipboard APIs) and .NET SHA256 hashing, both
+# blocked by the language mode. Fail here, explicitly, instead of dying
+# mid-run on a cryptic "Cannot add type" engine error. Exit code 2 is
+# distinct from every check result this script can produce.
+if ($ExecutionContext.SessionState.LanguageMode -eq 'ConstrainedLanguage') {
+    Write-Host "test-clipboard-output: ConstrainedLanguage mode is not supported. Blocking constructs: Add-Type P/Invoke compilation (HandyVerify.NativeClipboard: user32/kernel32 clipboard APIs) and System.Security.Cryptography SHA256 hashing. Re-run under FullLanguage mode." -ForegroundColor Red
+    exit 2
+}
+
 if ([string]::IsNullOrEmpty($LogDir)) {
     $LogDir = Join-Path $PSScriptRoot '..\..\src-tauri\target\baseline-tools\logs\clipboard-unicode'
 }
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+
+function Write-Utf8NoBomFile {
+    # UTF-8 without BOM writer. Primary path is byte-identical to the previous
+    # direct [IO.File]::WriteAllText + UTF8Encoding($false) calls; under CLM
+    # the .NET write is blocked and Set-Content keeps the run alive (Windows
+    # PowerShell 5.1 Set-Content prepends a BOM - documented residual limit).
+    param([string]$Path, [string]$Text)
+
+    try {
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($Path, $Text, $utf8NoBom)
+    }
+    catch {
+        Set-Content -LiteralPath $Path -Value $Text -Encoding UTF8
+    }
+}
 
 # --- Win32 clipboard P/Invoke -------------------------------------------------
 # Mirrors how arboard (used by tauri-plugin-clipboard-manager) talks to the
@@ -233,7 +275,7 @@ $fixtures['large-payload'] = $sb.ToString()
 $baselineRaw = [HandyVerify.NativeClipboard]::GetTextRawBytes()
 $baselineText = if ($null -ne $baselineRaw) { [System.Text.Encoding]::Unicode.GetString($baselineRaw) } else { '' }
 $baselineFile = Join-Path $LogDir 'before-clipboard-dump.txt'
-[System.IO.File]::WriteAllText($baselineFile, $baselineText, [System.Text.UTF8Encoding]::new($false))
+Write-Utf8NoBomFile -Path $baselineFile -Text $baselineText
 $baselineHash = Get-Sha256 $(Get-Utf8Bytes $baselineText)
 Write-Output "Baseline clipboard: $($baselineRaw.Count) bytes, sha256=$baselineHash" |
     Tee-Object -FilePath (Join-Path $LogDir 'transcript.log') -Append
@@ -260,16 +302,18 @@ foreach ($rep in 1..$Repetitions) {
         $savedText = if ($null -ne $savedRaw) { [System.Text.Encoding]::Unicode.GetString($savedRaw) } else { $null }
 
         # -- write like write_text_to_clipboard ----------------------------------
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        # Get-Date delta instead of System.Diagnostics.Stopwatch (CLM-blocked);
+        # same millisecond precision.
+        $writeStartedAt = Get-Date
         [HandyVerify.NativeClipboard]::SetText($text)
-        $writeMs = $sw.Elapsed.TotalMilliseconds
+        $writeMs = (New-TimeSpan -Start $writeStartedAt -End (Get-Date)).TotalMilliseconds
 
         # -- scripted clipboard read (paste-injection fidelity probe) ------------
-        $sw.Restart()
+        $readStartedAt = Get-Date
         $rawBack = [HandyVerify.NativeClipboard]::GetTextRawBytes()
         $rawStr = if ($null -ne $rawBack) { [System.Text.Encoding]::Unicode.GetString($rawBack) } else { $null }
         $dotNetRead = Get-Clipboard -Raw
-        $readMs = $sw.Elapsed.TotalMilliseconds
+        $readMs = (New-TimeSpan -Start $readStartedAt -End (Get-Date)).TotalMilliseconds
 
         # -- byte-for-byte comparisons -------------------------------------------
         $utf16Match = ($null -ne $rawBack) -and ($rawBack.Length -eq $utf16Expected.Length) -and
@@ -291,8 +335,8 @@ foreach ($rep in 1..$Repetitions) {
         $prefix = "{0}-rep{1}" -f $name, $rep
         $beforePath = Join-Path $LogDir "$prefix-before.txt"
         $afterPath  = Join-Path $LogDir "$prefix-after.txt"
-        [System.IO.File]::WriteAllText($beforePath, $text, [System.Text.UTF8Encoding]::new($false))
-        if ($null -ne $rawStr) { [System.IO.File]::WriteAllText($afterPath, $rawStr, [System.Text.UTF8Encoding]::new($false)) }
+        Write-Utf8NoBomFile -Path $beforePath -Text $text
+        if ($null -ne $rawStr) { Write-Utf8NoBomFile -Path $afterPath -Text $rawStr }
 
         $results.Add([pscustomobject]@{
             repetition       = $rep
@@ -323,7 +367,7 @@ Start-Sleep -Milliseconds 50
 $finalRaw = [HandyVerify.NativeClipboard]::GetTextRawBytes()
 $finalText = if ($null -ne $finalRaw) { [System.Text.Encoding]::Unicode.GetString($finalRaw) } else { '' }
 $finalFile = Join-Path $LogDir 'after-clipboard-dump.txt'
-[System.IO.File]::WriteAllText($finalFile, $finalText, [System.Text.UTF8Encoding]::new($false))
+Write-Utf8NoBomFile -Path $finalFile -Text $finalText
 $finalHash = Get-Sha256 $(Get-Utf8Bytes $finalText)
 $baselinePreserved = ($finalHash -eq $baselineHash)
 Write-Output "Final clipboard: sha256=$finalHash baseline-preserved=$baselinePreserved"
