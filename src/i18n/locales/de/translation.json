@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy benötigt Bedienungshilfen-Berechtigungen, um transkribierten Text einzugeben.",
     "openSettings": "Systemeinstellungen öffnen"
   },
+  "dictation": {
+    "title": "Diktieren",
+    "subtitle": "Sprich überall — dein Gesprochenes wird in die aktive App geschrieben.",
+    "status": {
+      "title": "Status",
+      "ready": "Bereit",
+      "recording": "Aufnahme",
+      "transcribing": "Transkription",
+      "error": "Fehler",
+      "genericError": "Beim Aufnehmen oder Transkribieren ist etwas schiefgegangen."
+    },
+    "errorOpenSettings": "Diktier-Einstellungen öffnen",
+    "shortcut": {
+      "description": "Das aktuelle globale Tastenkürzel zum Starten und Stoppen des Diktierens.",
+      "openAria": "Diktier-Tastenkürzel {{shortcut}} — Diktier-Einstellungen öffnen, um es zu ändern",
+      "missing": "Nicht konfiguriert"
+    },
+    "mode": {
+      "title": "Modus",
+      "hold": "Gedrückt halten",
+      "toggle": "Drücken zum Umschalten",
+      "holdDescription": "Halte das Tastenkürzel gedrückt, während du sprichst.",
+      "toggleDescription": "Drücke das Tastenkürzel einmal zum Starten und nochmal zum Stoppen."
+    },
+    "target": {
+      "title": "Spracherkennung",
+      "description": "Wo deine Sprache transkribiert wird.",
+      "local": "Lokal",
+      "azure": "Azure",
+      "custom": "Custom"
+    },
+    "language": {
+      "title": "Sprache und Modell",
+      "description": "Erkennungssprache und bei lokaler Spracherkennung das aktive Modell.",
+      "withModel": "{{language}} · {{model}}"
+    },
+    "test": {
+      "title": "Diktat testen",
+      "button": "Diktat testen",
+      "privacy": "Bleibt in diesem Fenster — es wird nichts kopiert oder eingefügt.",
+      "start": "Diktat testen",
+      "stop": "Testaufnahme stoppen",
+      "idleHint": "Nimmt bis zu {{seconds}} s auf und spielt sie nur hier zurück.",
+      "recordingHint": "Aufnahme… endet automatisch nach {{seconds}} s.",
+      "retry": "Erneut versuchen",
+      "error": {
+        "unavailable": {
+          "title": "Mikrofon nicht verfügbar",
+          "description": "Es wurde kein nutzbares Mikrofon gefunden. Schließe eines an oder wähle ein anderes Eingabegerät in den Einstellungen."
+        },
+        "denied": {
+          "title": "Mikrofonzugriff verweigert",
+          "description": "Dieses Fenster benötigt die Mikrofonberechtigung, um den Test auszuführen."
+        },
+        "failed": {
+          "title": "Testaufnahme fehlgeschlagen",
+          "description": "Die Testaufnahme konnte nicht erfasst werden. Bitte versuche es erneut."
+        }
+      },
+      "preview": {
+        "label": "Vorschau deiner Testaufnahme",
+        "playbackAria": "Testaufnahme abspielen",
+        "duration": "Dauer: {{duration}}",
+        "discard": "Aufnahme verwerfen"
+      }
+    },
+    "settingsLink": "Diktier-Einstellungen"
+  },
   "errors": {
     "loadDirectory": "Fehler beim Laden des Verzeichnisses: {{error}}",
     "micPermissionDeniedTitle": "Mikrofonzugriff verweigert",

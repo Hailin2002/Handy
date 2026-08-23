@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy, transkribe edilen metni yazabilmek için erişilebilirlik izinlerine ihtiyaç duyar.",
     "openSettings": "Sistem Ayarlarını Aç"
   },
+  "dictation": {
+    "title": "Dikte",
+    "subtitle": "Her yerde konuşun — söyledikleriniz etkin uygulamaya yazılır.",
+    "status": {
+      "title": "Durum",
+      "ready": "Hazır",
+      "recording": "Kayıt",
+      "transcribing": "Yazıya dökme",
+      "error": "Hata",
+      "genericError": "Kayıt veya yazıya dökme sırasında bir sorun oluştu."
+    },
+      "errorOpenSettings": "Dikte ayarlarını aç",
+      "shortcut": {
+        "description": "Dikteyi başlatmak ve durdurmak için geçerli genel kısayol.",
+        "openAria": "Dikte kısayolu {{shortcut}} — değiştirmek için dikte ayarlarını açın",
+        "missing": "Yapılandırılmadı"
+      },
+      "mode": {
+        "title": "Mod",
+        "hold": "Basılı tut",
+        "toggle": "Değiştirmek için bas",
+        "holdDescription": "Konuşurken kısayolu basılı tutun.",
+        "toggleDescription": "Başlamak için kısayola bir kez, durdurmak için yeniden basın."
+      },
+      "target": {
+        "title": "Konuşma tanıma",
+        "description": "Konuşmanızın yazıya döküldüğü yer.",
+        "local": "Yerel",
+        "azure": "Azure",
+        "custom": "Özel"
+      },
+      "language": {
+        "title": "Dil ve model",
+        "description": "Tanıma dili ve yerel tanımada etkin model.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Dikte testi",
+        "button": "Dikteyi test et",
+        "privacy": "Bu pencerede kalır — hiçbir şey kopyalanmaz veya yapıştırılmaz.",
+        "start": "Dikteyi test et",
+        "stop": "Test kaydını durdur",
+        "idleHint": "{{seconds}} sn'ye kadar kaydeder ve yalnızca burada çalar.",
+        "recordingHint": "Kaydediliyor… {{seconds}} sn sonra otomatik durur.",
+        "retry": "Tekrar dene",
+        "error": {
+          "unavailable": {
+            "title": "Mikrofon kullanılamıyor",
+            "description": "Kullanılabilir bir mikrofon bulunamadı. Bir tane bağlayın veya ayarlardan başka bir giriş cihazı seçin."
+          },
+          "denied": {
+            "title": "Mikrofon erişimi reddedildi",
+            "description": "Bu pencerenin testi çalıştırması için mikrofon izni gerekiyor."
+          },
+          "failed": {
+            "title": "Test kaydı başarısız oldu",
+            "description": "Test kaydı alınamadı. Lütfen tekrar deneyin."
+          }
+        },
+        "preview": {
+          "label": "Test kaydının önizlemesi",
+          "playbackAria": "Test kaydını çal",
+          "duration": "Süre: {{duration}}",
+          "discard": "Kaydı sil"
+        }
+      },
+      "settingsLink": "Dikte ayarları"
+    },
   "errors": {
     "loadDirectory": "Dizin yüklenirken hata oluştu: {{error}}",
     "micPermissionDeniedTitle": "Mikrofon erişimi reddedildi",

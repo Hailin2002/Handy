@@ -755,6 +755,74 @@
     "permissionsDescription": "O Handy precisa de permissões de acessibilidade para digitar o texto transcrito.",
     "openSettings": "Abrir Configurações do Sistema"
   },
+  "dictation": {
+    "title": "Ditado",
+    "subtitle": "Fale em qualquer lugar — suas palavras são digitadas no aplicativo ativo.",
+    "status": {
+      "title": "Status",
+      "ready": "Pronto",
+      "recording": "Gravando",
+      "transcribing": "Transcrevendo",
+      "error": "Erro",
+      "genericError": "Algo deu errado ao gravar ou transcrever."
+    },
+      "errorOpenSettings": "Abrir configurações de ditado",
+      "shortcut": {
+        "description": "O atalho global atual para iniciar e parar o ditado.",
+        "openAria": "Atalho de ditado {{shortcut}} — abra as configurações de ditado para alterá-lo",
+        "missing": "Não configurado"
+      },
+      "mode": {
+        "title": "Modo",
+        "hold": "Segurar",
+        "toggle": "Pressionar para alternar",
+        "holdDescription": "Mantenha o atalho pressionado enquanto fala.",
+        "toggleDescription": "Pressione o atalho uma vez para iniciar e novamente para parar."
+      },
+      "target": {
+        "title": "Reconhecimento de fala",
+        "description": "Onde sua fala é transcrita.",
+        "local": "Local",
+        "azure": "Azure",
+        "custom": "Personalizado"
+      },
+      "language": {
+        "title": "Idioma e modelo",
+        "description": "Idioma de reconhecimento e, para reconhecimento local, o modelo ativo.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Testar ditado",
+        "button": "Testar ditado",
+        "privacy": "Fica nesta janela — nada é copiado ou colado.",
+        "start": "Testar ditado",
+        "stop": "Parar gravação de teste",
+        "idleHint": "Grava até {{seconds}} s e reproduz somente aqui.",
+        "recordingHint": "Gravando… para automaticamente após {{seconds}} s.",
+        "retry": "Tentar novamente",
+        "error": {
+          "unavailable": {
+            "title": "Microfone indisponível",
+            "description": "Nenhum microfone utilizável foi encontrado. Conecte um ou selecione outro dispositivo de entrada nas configurações."
+          },
+          "denied": {
+            "title": "Acesso ao microfone negado",
+            "description": "Esta janela precisa de permissão do microfone para executar o teste."
+          },
+          "failed": {
+            "title": "Falha na gravação de teste",
+            "description": "Não foi possível capturar a gravação de teste. Tente novamente."
+          }
+        },
+        "preview": {
+          "label": "Prévia da gravação de teste",
+          "playbackAria": "Reproduzir a gravação de teste",
+          "duration": "Duração: {{duration}}",
+          "discard": "Descartar gravação"
+        }
+      },
+      "settingsLink": "Configurações de ditado"
+    },
   "errors": {
     "loadDirectory": "Erro ao carregar diretório: {{error}}",
     "micPermissionDeniedTitle": "Acesso ao microfone negado",

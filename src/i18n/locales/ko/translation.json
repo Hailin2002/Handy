@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy는 녹음된 텍스트를 입력하기 위해 접근성 권한이 필요합니다.",
     "openSettings": "시스템 설정 열기"
   },
+  "dictation": {
+    "title": "받아쓰기",
+    "subtitle": "어디서든 말하세요 — 말한 내용이 활성 앱에 입력됩니다.",
+    "status": {
+      "title": "상태",
+      "ready": "준비됨",
+      "recording": "녹음 중",
+      "transcribing": "변환 중",
+      "error": "오류",
+      "genericError": "녹음 또는 변환 중 문제가 발생했습니다."
+    },
+      "errorOpenSettings": "받아쓰기 설정 열기",
+      "shortcut": {
+        "description": "받아쓰기를 시작하고 중지하는 현재 전역 단축키입니다.",
+        "openAria": "받아쓰기 단축키 {{shortcut}} — 변경하려면 받아쓰기 설정을 엽니다",
+        "missing": "구성되지 않음"
+      },
+      "mode": {
+        "title": "모드",
+        "hold": "누르고 있기",
+        "toggle": "눌러서 전환",
+        "holdDescription": "말하는 동안 단축키를 누르고 있습니다.",
+        "toggleDescription": "단축키를 한 번 누르면 시작하고, 다시 누르면 중지합니다."
+      },
+      "target": {
+        "title": "음성 인식",
+        "description": "음성이 변환되는 위치입니다.",
+        "local": "로컬",
+        "azure": "Azure",
+        "custom": "사용자 지정"
+      },
+      "language": {
+        "title": "언어 및 모델",
+        "description": "인식 언어와, 로컬 인식의 경우 사용 중인 모델입니다.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "받아쓰기 테스트",
+        "button": "받아쓰기 테스트",
+        "privacy": "이 창 안에만 머물며 아무것도 복사하거나 붙여넣지 않습니다.",
+        "start": "받아쓰기 테스트",
+        "stop": "테스트 녹음 중지",
+        "idleHint": "최대 {{seconds}}초까지 녹음하며 여기서만 재생합니다.",
+        "recordingHint": "녹음 중… {{seconds}}초 후 자동으로 중지됩니다.",
+        "retry": "다시 시도",
+        "error": {
+          "unavailable": {
+            "title": "마이크를 사용할 수 없음",
+            "description": "사용 가능한 마이크를 찾지 못했습니다. 연결하거나 설정에서 다른 입력 장치를 선택하세요."
+          },
+          "denied": {
+            "title": "마이크 접근이 거부됨",
+            "description": "테스트를 실행하려면 이 창에 마이크 권한이 필요합니다."
+          },
+          "failed": {
+            "title": "테스트 녹음 실패",
+            "description": "테스트 녹음을 캡처하지 못했습니다. 다시 시도해 주세요."
+          }
+        },
+        "preview": {
+          "label": "테스트 녹음 미리보기",
+          "playbackAria": "테스트 녹음 재생",
+          "duration": "길이: {{duration}}",
+          "discard": "녹음 삭제"
+        }
+      },
+      "settingsLink": "받아쓰기 설정"
+    },
   "errors": {
     "loadDirectory": "디렉토리 로딩 오류: {{error}}",
     "micPermissionDeniedTitle": "마이크 접근이 거부되었습니다",

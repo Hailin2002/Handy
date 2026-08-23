@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy behöver behörighet för hjälpmedel för att kunna skriva transkriberad text.",
     "openSettings": "Öppna systeminställningar"
   },
+  "dictation": {
+    "title": "Diktering",
+    "subtitle": "Prata var som helst — dina ord skrivs i den aktiva appen.",
+    "status": {
+      "title": "Status",
+      "ready": "Redo",
+      "recording": "Inspelning",
+      "transcribing": "Transkribering",
+      "error": "Fel",
+      "genericError": "Något gick fel vid inspelning eller transkribering."
+    },
+      "errorOpenSettings": "Öppna inställningar för diktering",
+      "shortcut": {
+        "description": "Den aktuella globala genvägen för att starta och stoppa diktering.",
+        "openAria": "Dikteringsgenväg {{shortcut}} — öppna inställningar för diktering för att ändra den",
+        "missing": "Inte konfigurerad"
+      },
+      "mode": {
+        "title": "Läge",
+        "hold": "Håll ned",
+        "toggle": "Tryck för att växla",
+        "holdDescription": "Håll genvägen ned medan du pratar.",
+        "toggleDescription": "Tryck på genvägen en gång för att starta och igen för att stoppa."
+      },
+      "target": {
+        "title": "Taligenkänning",
+        "description": "Var ditt tal transkriberas.",
+        "local": "Lokalt",
+        "azure": "Azure",
+        "custom": "Anpassad"
+      },
+      "language": {
+        "title": "Språk och modell",
+        "description": "Igenkänningsspråk och vid lokal igenkänning den aktiva modellen.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Testa diktering",
+        "button": "Testa diktering",
+        "privacy": "Stannar i detta fönster — inget kopieras eller klistras in.",
+        "start": "Testa diktering",
+        "stop": "Stoppa testinspelningen",
+        "idleHint": "Spelar in upp till {{seconds}} s och spelar upp det bara här.",
+        "recordingHint": "Spelar in… stoppar automatiskt efter {{seconds}} s.",
+        "retry": "Försök igen",
+        "error": {
+          "unavailable": {
+            "title": "Mikrofonen är inte tillgänglig",
+            "description": "Ingen användbar mikrofon hittades. Anslut en eller välj en annan ingångsenhet i inställningarna."
+          },
+          "denied": {
+            "title": "Åtkomst till mikrofoonen nekad",
+            "description": "Detta fönster behöver mikrofonbehörighet för att köra testet."
+          },
+          "failed": {
+            "title": "Testinspelningen misslyckades",
+            "description": "Testinspelningen kunde inte spelas in. Försök igen."
+          }
+        },
+        "preview": {
+          "label": "Förhandsgranskning av testinspelningen",
+          "playbackAria": "Spela upp testinspelningen",
+          "duration": "Längd: {{duration}}",
+          "discard": "Ta bort inspelningen"
+        }
+      },
+      "settingsLink": "Inställningar för diktering"
+    },
   "errors": {
     "loadDirectory": "Fel vid laddning av mapp: {{error}}",
     "micPermissionDeniedTitle": "Mikrofonåtkomst nekad",

@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy a besoin des autorisations d'accessibilité pour taper le texte transcrit.",
     "openSettings": "Ouvrir les Préférences Système"
   },
+  "dictation": {
+    "title": "Dictée",
+    "subtitle": "Parlez où que vous soyez — vos mots sont saisis dans l'application active.",
+    "status": {
+      "title": "État",
+      "ready": "Prêt",
+      "recording": "Enregistrement",
+      "transcribing": "Transcription",
+      "error": "Erreur",
+      "genericError": "Une erreur est survenue pendant l'enregistrement ou la transcription."
+    },
+      "errorOpenSettings": "Ouvrir les paramètres de dictée",
+      "shortcut": {
+        "description": "Raccourci global actuel pour démarrer et arrêter la dictée.",
+        "openAria": "Raccourci de dictée {{shortcut}} — ouvrir les paramètres de dictée pour le modifier",
+        "missing": "Non configuré"
+      },
+      "mode": {
+        "title": "Mode",
+        "hold": "Maintenir enfoncé",
+        "toggle": "Appuyer pour basculer",
+        "holdDescription": "Maintenez le raccourci enfoncé pendant que vous parlez.",
+        "toggleDescription": "Appuyez une fois sur le raccourci pour démarrer, puis à nouveau pour arrêter."
+      },
+      "target": {
+        "title": "Reconnaissance vocale",
+        "description": "Lieu où votre voix est transcrite.",
+        "local": "Local",
+        "azure": "Azure",
+        "custom": "Personnalisé"
+      },
+      "language": {
+        "title": "Langue et modèle",
+        "description": "Langue de reconnaissance et, pour la reconnaissance locale, modèle actif.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Tester la dictée",
+        "button": "Tester la dictée",
+        "privacy": "Reste dans cette fenêtre — rien n'est copié ni collé.",
+        "start": "Tester la dictée",
+        "stop": "Arrêter l'enregistrement de test",
+        "idleHint": "Enregistre jusqu'à {{seconds}} s et ne le rejoue qu'ici.",
+        "recordingHint": "Enregistrement… arrêt automatique après {{seconds}} s.",
+        "retry": "Réessayer",
+        "error": {
+          "unavailable": {
+            "title": "Microphone indisponible",
+            "description": "Aucun microphone utilisable n'a été trouvé. Branchez-en un ou sélectionnez un autre périphérique d'entrée dans les paramètres."
+          },
+          "denied": {
+            "title": "Accès au microphone refusé",
+            "description": "Cette fenêtre nécessite l'autorisation du microphone pour effectuer le test."
+          },
+          "failed": {
+            "title": "Échec de l'enregistrement de test",
+            "description": "L'enregistrement de test n'a pas pu être capturé. Veuillez réessayer."
+          }
+        },
+        "preview": {
+          "label": "Aperçu de votre enregistrement de test",
+          "playbackAria": "Lire l'enregistrement de test",
+          "duration": "Durée : {{duration}}",
+          "discard": "Supprimer l'enregistrement"
+        }
+      },
+      "settingsLink": "Paramètres de dictée"
+    },
   "errors": {
     "loadDirectory": "Erreur lors du chargement du répertoire : {{error}}",
     "micPermissionDeniedTitle": "Accès au microphone refusé",

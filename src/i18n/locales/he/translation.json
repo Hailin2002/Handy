@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy צריך הרשאות נגישות כדי להקליד את הטקסט המתומלל.",
     "openSettings": "פתח את הגדרות המערכת"
   },
+  "dictation": {
+    "title": "הכתבה",
+    "subtitle": "דברו בכל מקום — המילים שלכם מוקלדות באפליקציה הפעילה.",
+    "status": {
+      "title": "מצב",
+      "ready": "מוכן",
+      "recording": "מקליט",
+      "transcribing": "מתמלל",
+      "error": "שגיאה",
+      "genericError": "משהו השתבש בהקלטה או בתמלול."
+    },
+      "errorOpenSettings": "פתח את הגדרות ההכתבה",
+      "shortcut": {
+        "description": "קיצור הדרך הגלובלי הנוכחי להתחלה ולעצירה של ההכתבה.",
+        "openAria": "קיצור ההכתבה {{shortcut}} — פתח את הגדרות ההכתבה כדי לשנות אותו",
+        "missing": "לא הוגדר"
+      },
+      "mode": {
+        "title": "מצב",
+        "hold": "החזק לחוץ",
+        "toggle": "לחץ להחלפה",
+        "holdDescription": "החזק את קיצור הדרך לחוץ בזמן הדיבור.",
+        "toggleDescription": "לחץ על קיצור הדרך פעם אחת להתחלה ושוב לעצירה."
+      },
+      "target": {
+        "title": "זיהוי דיבור",
+        "description": "היכן הדיבור שלך מתומלל.",
+        "local": "מקומי",
+        "azure": "Azure",
+        "custom": "מותאם"
+      },
+      "language": {
+        "title": "שפה ומודל",
+        "description": "שפת הזיהוי ובזיהוי מקומי — המודל הפעיל.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "בדיקת הכתבה",
+        "button": "בדוק הכתבה",
+        "privacy": "נשאר בחלון זה — שום דבר לא מועתק או מודבק.",
+        "start": "בדוק הכתבה",
+        "stop": "עצור הקלטת בדיקה",
+        "idleHint": "מקליט עד {{seconds}} שניות ומנגן רק כאן.",
+        "recordingHint": "מקליט… ייעצר אוטומטית לאחר {{seconds}} שניות.",
+        "retry": "נסה שוב",
+        "error": {
+          "unavailable": {
+            "title": "המיקרופון אינו זמין",
+            "description": "לא נמצא מיקרופון שמיש. חבר אחד או בחר התקן קלט אחר בהגדרות."
+          },
+          "denied": {
+            "title": "הגישה למיקרופון נדחתה",
+            "description": "לחלון זה נדרשת הרשאת מיקרופון כדי להריץ את הבדיקה."
+          },
+          "failed": {
+            "title": "הקלטת הבדיקה נכשלה",
+            "description": "לא ניתן היה לקלוט את הקלטה. נסה שוב."
+          }
+        },
+        "preview": {
+          "label": "תצוגה מקדימה של הקלטת הבדיקה",
+          "playbackAria": "נגן את הקלטת הבדיקה",
+          "duration": "משך: {{duration}}",
+          "discard": "מחק את ההקלטה"
+        }
+      },
+      "settingsLink": "הגדרות ההכתבה"
+    },
   "errors": {
     "loadDirectory": "שגיאה בטעינת תיקייה: {{error}}",
     "micPermissionDeniedTitle": "הגישה למיקרופון נדחתה",

@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy necesita permisos de accesibilidad para escribir texto transcrito.",
     "openSettings": "Abrir Ajustes del Sistema"
   },
+  "dictation": {
+    "title": "Dictado",
+    "subtitle": "Habla en cualquier lugar: tus palabras se escriben en la aplicación activa.",
+    "status": {
+      "title": "Estado",
+      "ready": "Listo",
+      "recording": "Grabando",
+      "transcribing": "Transcribiendo",
+      "error": "Error",
+      "genericError": "Algo salió mal al grabar o transcribir."
+    },
+      "errorOpenSettings": "Abrir ajustes de dictado",
+      "shortcut": {
+        "description": "El atajo global actual para iniciar y detener el dictado.",
+        "openAria": "Atajo de dictado {{shortcut}}: abre los ajustes de dictado para cambiarlo",
+        "missing": "Sin configurar"
+      },
+      "mode": {
+        "title": "Modo",
+        "hold": "Mantener pulsado",
+        "toggle": "Pulsar para alternar",
+        "holdDescription": "Mantén pulsado el atajo mientras hablas.",
+        "toggleDescription": "Pulsa el atajo una vez para iniciar y otra vez para detener."
+      },
+      "target": {
+        "title": "Reconocimiento de voz",
+        "description": "Dónde se transcribe tu voz.",
+        "local": "Local",
+        "azure": "Azure",
+        "custom": "Personalizado"
+      },
+      "language": {
+        "title": "Idioma y modelo",
+        "description": "Idioma de reconocimiento y, para reconocimiento local, el modelo activo.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Probar dictado",
+        "button": "Probar dictado",
+        "privacy": "Permanece en esta ventana: no se copia ni se pega nada.",
+        "start": "Probar dictado",
+        "stop": "Detener grabación de prueba",
+        "idleHint": "Graba hasta {{seconds}} s y la reproduce solo aquí.",
+        "recordingHint": "Grabando… se detiene automáticamente tras {{seconds}} s.",
+        "retry": "Inténtalo de nuevo",
+        "error": {
+          "unavailable": {
+            "title": "Micrófono no disponible",
+            "description": "No se encontró un micrófono utilizable. Conecta uno o selecciona otro dispositivo de entrada en los ajustes."
+          },
+          "denied": {
+            "title": "Acceso al micrófono denegado",
+            "description": "Esta ventana necesita permiso de micrófono para realizar la prueba."
+          },
+          "failed": {
+            "title": "Falló la grabación de prueba",
+            "description": "No se pudo capturar la grabación de prueba. Inténtalo de nuevo."
+          }
+        },
+        "preview": {
+          "label": "Vista previa de tu grabación de prueba",
+          "playbackAria": "Reproducir la grabación de prueba",
+          "duration": "Duración: {{duration}}",
+          "discard": "Descartar grabación"
+        }
+      },
+      "settingsLink": "Ajustes de dictado"
+    },
   "errors": {
     "loadDirectory": "Error al cargar el directorio: {{error}}",
     "micPermissionDeniedTitle": "Acceso al micrófono denegado",

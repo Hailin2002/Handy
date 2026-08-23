@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy cần quyền truy cập để gõ văn bản đã chuyển đổi.",
     "openSettings": "Mở Cài đặt Hệ thống"
   },
+  "dictation": {
+    "title": "Nhập giọng nói",
+    "subtitle": "Nói ở bất kỳ đâu — lời nói của bạn được gõ vào ứng dụng đang hoạt động.",
+    "status": {
+      "title": "Trạng thái",
+      "ready": "Sẵn sàng",
+      "recording": "Đang ghi âm",
+      "transcribing": "Đang chuyển thành văn bản",
+      "error": "Lỗi",
+      "genericError": "Đã xảy ra lỗi khi ghi âm hoặc chuyển đổi."
+    },
+      "errorOpenSettings": "Mở cài đặt nhập giọng nói",
+      "shortcut": {
+        "description": "Phím tắt toàn cục hiện tại để bắt đầu và dừng nhập giọng nói.",
+        "openAria": "Phím tắt nhập giọng nói {{shortcut}} — mở cài đặt nhập giọng nói để thay đổi",
+        "missing": "Chưa cấu hình"
+      },
+      "mode": {
+        "title": "Chế độ",
+        "hold": "Giữ",
+        "toggle": "Nhấn để bật/tắt",
+        "holdDescription": "Giữ phím tắt trong khi nói.",
+        "toggleDescription": "Nhấn phím tắt một lần để bắt đầu và nhấn lần nữa để dừng."
+      },
+      "target": {
+        "title": "Nhận dạng giọng nói",
+        "description": "Nơi giọng nói của bạn được chuyển thành văn bản.",
+        "local": "Cục bộ",
+        "azure": "Azure",
+        "custom": "Tùy chỉnh"
+      },
+      "language": {
+        "title": "Ngôn ngữ và mô hình",
+        "description": "Ngôn ngữ nhận dạng và mô hình đang dùng (đối với nhận dạng cục bộ).",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Thử nhập giọng nói",
+        "button": "Thử nhập giọng nói",
+        "privacy": "Chỉ ở trong cửa sổ này — không có gì được sao chép hay dán.",
+        "start": "Thử nhập giọng nói",
+        "stop": "Dừng ghi âm thử",
+        "idleHint": "Ghi âm tối đa {{seconds}} giây và chỉ phát lại ở đây.",
+        "recordingHint": "Đang ghi âm… sẽ tự động dừng sau {{seconds}} giây.",
+        "retry": "Thử lại",
+        "error": {
+          "unavailable": {
+            "title": "Không có micrô",
+            "description": "Không tìm thấy micrô khả dụng. Hãy kết nối một micrô hoặc chọn thiết bị vào khác trong cài đặt."
+          },
+          "denied": {
+            "title": "Quyền truy cập micrô bị từ chối",
+            "description": "Cửa sổ này cần quyền micrô để chạy kiểm tra."
+          },
+          "failed": {
+            "title": "Ghi âm thử thất bại",
+            "description": "Không thể ghi bản thu thử. Vui lòng thử lại."
+          }
+        },
+        "preview": {
+          "label": "Xem trước bản ghi thử",
+          "playbackAria": "Phát bản ghi thử",
+          "duration": "Thời lượng: {{duration}}",
+          "discard": "Xóa bản ghi"
+        }
+      },
+      "settingsLink": "Cài đặt nhập giọng nói"
+    },
   "errors": {
     "loadDirectory": "Lỗi khi tải thư mục: {{error}}",
     "micPermissionDeniedTitle": "Quyền truy cập micrô bị từ chối",

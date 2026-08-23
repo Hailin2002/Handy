@@ -758,6 +758,74 @@
     "permissionsDescription": "Handy heeft toegankelijkheidsmachtigingen nodig om getranscribeerde tekst te kunnen typen.",
     "openSettings": "Systeeminstellingen openen"
   },
+  "dictation": {
+    "title": "Dictaat",
+    "subtitle": "Spreek overal — je woorden worden getypt in de actieve app.",
+    "status": {
+      "title": "Status",
+      "ready": "Gereed",
+      "recording": "Opname",
+      "transcribing": "Transcriptie",
+      "error": "Fout",
+      "genericError": "Er ging iets mis bij het opnemen of transcriberen."
+    },
+      "errorOpenSettings": "Dicteerinstellingen openen",
+      "shortcut": {
+        "description": "De huidige globale sneltoets om dicteren te starten en te stoppen.",
+        "openAria": "Dicteersneltoets {{shortcut}} — open dicteerinstellingen om deze te wijzigen",
+        "missing": "Niet ingesteld"
+      },
+      "mode": {
+        "title": "Modus",
+        "hold": "Ingedrukt houden",
+        "toggle": "Drukken om te wisselen",
+        "holdDescription": "Houd de sneltoets ingedrukt terwijl je spreekt.",
+        "toggleDescription": "Druk één keer op de sneltoets om te starten en nogmaals om te stoppen."
+      },
+      "target": {
+        "title": "Spraakherkenning",
+        "description": "Waar je spraak wordt getranscribeerd.",
+        "local": "Lokaal",
+        "azure": "Azure",
+        "custom": "Aangepast"
+      },
+      "language": {
+        "title": "Taal en model",
+        "description": "Herkenningstaal en bij lokale herkenning het actieve model.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Dictaat testen",
+        "button": "Dictaat testen",
+        "privacy": "Blijft in dit venster — er wordt niets gekopieerd of geplakt.",
+        "start": "Dictaat testen",
+        "stop": "Testopname stoppen",
+        "idleHint": "Neemt tot {{seconds}} s op en speelt het alleen hier af.",
+        "recordingHint": "Opname… stopt automatisch na {{seconds}} s.",
+        "retry": "Opnieuw proberen",
+        "error": {
+          "unavailable": {
+            "title": "Microfoon niet beschikbaar",
+            "description": "Er is geen bruikbare microfoon gevonden. Sluit er een aan of kies een ander invoerapparaat in de instellingen."
+          },
+          "denied": {
+            "title": "Toegang tot microfoon geweigerd",
+            "description": "Dit venster heeft microfoontoegang nodig om de test uit te voeren."
+          },
+          "failed": {
+            "title": "Testopname mislukt",
+            "description": "De testopname kon niet worden vastgelegd. Probeer het opnieuw."
+          }
+        },
+        "preview": {
+          "label": "Voorbeeld van je testopname",
+          "playbackAria": "Testopname afspelen",
+          "duration": "Duur: {{duration}}",
+          "discard": "Opname verwijderen"
+        }
+      },
+      "settingsLink": "Dicteerinstellingen"
+    },
   "errors": {
     "loadDirectory": "Fout bij laden van map: {{error}}",
     "micPermissionDeniedTitle": "Microfoontoegang geweigerd",

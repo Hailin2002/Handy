@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy ha bisogno dei permessi di accessibilità per digitare il testo trascritto.",
     "openSettings": "Apri Impostazioni di Sistema"
   },
+  "dictation": {
+    "title": "Dettato",
+    "subtitle": "Parla ovunque — le tue parole vengono digitate nell'app attiva.",
+    "status": {
+      "title": "Stato",
+      "ready": "Pronto",
+      "recording": "Registrazione",
+      "transcribing": "Trascrizione",
+      "error": "Errore",
+      "genericError": "Qualcosa è andato storto durante la registrazione o la trascrizione."
+    },
+      "errorOpenSettings": "Apri impostazioni dettato",
+      "shortcut": {
+        "description": "La scorciatoia globale attuale per avviare e interrompere il dettato.",
+        "openAria": "Scorciatoia del dettato {{shortcut}} — apri le impostazioni del dettato per modificarla",
+        "missing": "Non configurata"
+      },
+      "mode": {
+        "title": "Modalità",
+        "hold": "Tieni premuto",
+        "toggle": "Premi per attivare/disattivare",
+        "holdDescription": "Tieni premuta la scorciatoia mentre parli.",
+        "toggleDescription": "Premi una volta la scorciatoia per avviare e di nuovo per interrompere."
+      },
+      "target": {
+        "title": "Riconoscimento vocale",
+        "description": "Dove viene trascritta la tua voce.",
+        "local": "Locale",
+        "azure": "Azure",
+        "custom": "Personalizzato"
+      },
+      "language": {
+        "title": "Lingua e modello",
+        "description": "Lingua di riconoscimento e, per il riconoscimento locale, modello attivo.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Prova il dettato",
+        "button": "Prova il dettato",
+        "privacy": "Resta in questa finestra — nulla viene copiato o incollato.",
+        "start": "Prova il dettato",
+        "stop": "Interrompi la registrazione di prova",
+        "idleHint": "Registra fino a {{seconds}} s e la riproduce solo qui.",
+        "recordingHint": "Registrazione… si interrompe automaticamente dopo {{seconds}} s.",
+        "retry": "Riprova",
+        "error": {
+          "unavailable": {
+            "title": "Microfono non disponibile",
+            "description": "Nessun microfono utilizzabile trovato. Collegane uno o seleziona un altro dispositivo di input nelle impostazioni."
+          },
+          "denied": {
+            "title": "Accesso al microfono negato",
+            "description": "Questa finestra richiede il permesso del microfono per eseguire il test."
+          },
+          "failed": {
+            "title": "Registrazione di prova non riuscita",
+            "description": "Impossibile acquisire la registrazione di prova. Riprova."
+          }
+        },
+        "preview": {
+          "label": "Anteprima della tua registrazione di prova",
+          "playbackAria": "Riproduci la registrazione di prova",
+          "duration": "Durata: {{duration}}",
+          "discard": "Elimina la registrazione"
+        }
+      },
+      "settingsLink": "Impostazioni dettato"
+    },
   "errors": {
     "loadDirectory": "Errore di caricamento cartella: {{error}}",
     "micPermissionDeniedTitle": "Accesso al microfono negato",

@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy potrzebuje uprawnień dostępności, aby wpisywać transkrybowany tekst.",
     "openSettings": "Otwórz ustawienia systemowe"
   },
+  "dictation": {
+    "title": "Dyktowanie",
+    "subtitle": "Mów gdziekolwiek — twoje słowa zostaną wpisane w aktywnej aplikacji.",
+    "status": {
+      "title": "Stan",
+      "ready": "Gotowe",
+      "recording": "Nagrywanie",
+      "transcribing": "Transkrypcja",
+      "error": "Błąd",
+      "genericError": "Coś poszło nie tak podczas nagrywania lub transkrypcji."
+    },
+      "errorOpenSettings": "Otwórz ustawienia dyktowania",
+      "shortcut": {
+        "description": "Aktualny globalny skrót do uruchamiania i zatrzymywania dyktowania.",
+        "openAria": "Skrót dyktowania {{shortcut}} — otwórz ustawienia dyktowania, aby go zmienić",
+        "missing": "Nieskonfigurowano"
+      },
+      "mode": {
+        "title": "Tryb",
+        "hold": "Przytrzymaj",
+        "toggle": "Naciśnij, aby przełączyć",
+        "holdDescription": "Przytrzymaj skrót podczas mówienia.",
+        "toggleDescription": "Naciśnij skrót raz, aby rozpocząć, i ponownie, aby zatrzymać."
+      },
+      "target": {
+        "title": "Rozpoznawanie mowy",
+        "description": "Gdzie Twoja mowa jest transkrybowana.",
+        "local": "Lokalnie",
+        "azure": "Azure",
+        "custom": "Niestandardowe"
+      },
+      "language": {
+        "title": "Język i model",
+        "description": "Język rozpoznawania, a przy rozpoznawaniu lokalnym — aktywny model.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Test dyktowania",
+        "button": "Test dyktowania",
+        "privacy": "Zostaje w tym oknie — nic nie jest kopiowane ani wklejane.",
+        "start": "Test dyktowania",
+        "stop": "Zatrzymaj nagrywanie testowe",
+        "idleHint": "Nagrywa do {{seconds}} s i odtwarza tylko tutaj.",
+        "recordingHint": "Nagrywanie… zatrzyma się automatycznie po {{seconds}} s.",
+        "retry": "Spróbuj ponownie",
+        "error": {
+          "unavailable": {
+            "title": "Mikrofon niedostępny",
+            "description": "Nie znaleziono użytecznego mikrofonu. Podłącz go lub wybierz inne urządzenie wejściowe w ustawieniach."
+          },
+          "denied": {
+            "title": "Brak dostępu do mikrofonu",
+            "description": "To okno wymaga uprawnienia do mikrofonu, aby wykonać test."
+          },
+          "failed": {
+            "title": "Niepowodzenie nagrania testowego",
+            "description": "Nie udało się nagrać dźwięku testowego. Spróbuj ponownie."
+          }
+        },
+        "preview": {
+          "label": "Podgląd nagrania testowego",
+          "playbackAria": "Odtwórz nagranie testowe",
+          "duration": "Czas trwania: {{duration}}",
+          "discard": "Odrzuć nagranie"
+        }
+      },
+      "settingsLink": "Ustawienia dyktowania"
+    },
   "errors": {
     "loadDirectory": "Błąd wczytywania katalogu: {{error}}",
     "micPermissionDeniedTitle": "Odmowa dostępu do mikrofonu",

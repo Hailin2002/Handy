@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy potřebuje oprávnění usnadnění přístupu, aby mohlo psát přepsaný text.",
     "openSettings": "Otevřít Nastavení systému"
   },
+  "dictation": {
+    "title": "Diktování",
+    "subtitle": "Mluvte kdekoli — vaše slova se napíší do aktivní aplikace.",
+    "status": {
+      "title": "Stav",
+      "ready": "Připraveno",
+      "recording": "Nahrávání",
+      "transcribing": "Přepis",
+      "error": "Chyba",
+      "genericError": "Při nahrávání nebo přepisu se něco pokazilo."
+    },
+      "errorOpenSettings": "Otevřít nastavení diktování",
+      "shortcut": {
+        "description": "Aktuální globální zkratka pro spuštění a zastavení diktování.",
+        "openAria": "Zkratka diktování {{shortcut}} — otevřete nastavení diktování, abyste ji změnili",
+        "missing": "Nenastaveno"
+      },
+      "mode": {
+        "title": "Režim",
+        "hold": "Podržet",
+        "toggle": "Stiskněte pro přepnutí",
+        "holdDescription": "Podržte zkratku během mluvení.",
+        "toggleDescription": "Stiskněte zkratku jednou pro spuštění a znovu pro zastavení."
+      },
+      "target": {
+        "title": "Rozpoznávání řeči",
+        "description": "Kde se vaše řeč přepisuje.",
+        "local": "Místní",
+        "azure": "Azure",
+        "custom": "Vlastní"
+      },
+      "language": {
+        "title": "Jazyk a model",
+        "description": "Jazyk rozpoznávání a při místním rozpoznávání aktivní model.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Test diktování",
+        "button": "Test diktování",
+        "privacy": "Zůstává v tomto okně — nic se nekopíruje ani nevkládá.",
+        "start": "Test diktování",
+        "stop": "Zastavit testové nahrávání",
+        "idleHint": "Nahrává až {{seconds}} s a přehraje to jen zde.",
+        "recordingHint": "Nahrávání… po {{seconds}} s se automaticky zastaví.",
+        "retry": "Zkusit znovu",
+        "error": {
+          "unavailable": {
+            "title": "Mikrofon není k dispozici",
+            "description": "Nebyl nalezen použitelný mikrofon. Připojte jej nebo v nastavení vyberte jiné vstupní zařízení."
+          },
+          "denied": {
+            "title": "Přístup k mikrofonu odepřen",
+            "description": "Toto okno potřebuje povolení mikrofonu, aby mohlo test spustit."
+          },
+          "failed": {
+            "title": "Testové nahrávání se nezdařilo",
+            "description": "Testovou nahrávku se nepodařilo zachytit. Zkuste to prosím znovu."
+          }
+        },
+        "preview": {
+          "label": "Náhled vaší testové nahrávky",
+          "playbackAria": "Přehrát testovou nahrávku",
+          "duration": "Délka: {{duration}}",
+          "discard": "Zahodit nahrávku"
+        }
+      },
+      "settingsLink": "Nastavení diktování"
+    },
   "errors": {
     "loadDirectory": "Chyba při načítání adresáře: {{error}}",
     "micPermissionDeniedTitle": "Přístup k mikrofonu byl odepřen",

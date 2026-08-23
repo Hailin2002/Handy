@@ -755,6 +755,74 @@
     "permissionsDescription": "Handy が文字起こしテキストを入力するには、アクセシビリティ権限が必要です。",
     "openSettings": "システム設定を開く"
   },
+  "dictation": {
+    "title": "音声入力",
+    "subtitle": "どこでも話しかけるだけで、言葉がアクティブなアプリに入力されます。",
+    "status": {
+      "title": "状態",
+      "ready": "準備完了",
+      "recording": "録音中",
+      "transcribing": "文字起こし中",
+      "error": "エラー",
+      "genericError": "録音または文字起こし中に問題が発生しました。"
+    },
+      "errorOpenSettings": "音声入力設定を開く",
+      "shortcut": {
+        "description": "音声入力の開始・停止に使う現在のグローバルショートカット。",
+        "openAria": "音声入力ショートカット {{shortcut}} — 変更するには音声入力設定を開きます",
+        "missing": "未設定"
+      },
+      "mode": {
+        "title": "モード",
+        "hold": "押している間",
+        "toggle": "押して切り替え",
+        "holdDescription": "話している間、ショートカットを押し続けます。",
+        "toggleDescription": "ショートカットを1回押すと開始し、もう一度押すと停止します。"
+      },
+      "target": {
+        "title": "音声認識",
+        "description": "音声を認識する場所。",
+        "local": "ローカル",
+        "azure": "Azure",
+        "custom": "カスタム"
+      },
+      "language": {
+        "title": "言語とモデル",
+        "description": "認識言語と、ローカル認識の場合は使用中のモデル。",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "音声入力をテスト",
+        "button": "音声入力をテスト",
+        "privacy": "このウィンドウ内だけ — 何もコピーも貼り付けもされません。",
+        "start": "音声入力をテスト",
+        "stop": "テスト録音を停止",
+        "idleHint": "最大 {{seconds}} 秒録音し、ここでのみ再生します。",
+        "recordingHint": "録音中… {{seconds}} 秒後に自動的に停止します。",
+        "retry": "再試行",
+        "error": {
+          "unavailable": {
+            "title": "マイクを利用できません",
+            "description": "使用可能なマイクが見つかりませんでした。接続するか、設定で別の入力デバイスを選択してください。"
+          },
+          "denied": {
+            "title": "マイクへのアクセスが拒否されました",
+            "description": "テストを実行するには、このウィンドウにマイクの権限が必要です。"
+          },
+          "failed": {
+            "title": "テスト録音に失敗しました",
+            "description": "テスト録音を取り込めませんでした。もう一度お試しください。"
+          }
+        },
+        "preview": {
+          "label": "テスト録音のプレビュー",
+          "playbackAria": "テスト録音を再生",
+          "duration": "長さ: {{duration}}",
+          "discard": "録音を破棄"
+        }
+      },
+      "settingsLink": "音声入力設定"
+    },
   "errors": {
     "loadDirectory": "ディレクトリの読み込みエラー: {{error}}",
     "micPermissionDeniedTitle": "マイクへのアクセスが拒否されました",

@@ -758,6 +758,74 @@
     "permissionsDescription": "Handy har brug for tilgængelighedstilladelser for at skrive den transskriberede tekst.",
     "openSettings": "Åbn systemindstillinger"
   },
+  "dictation": {
+    "title": "Diktering",
+    "subtitle": "Tal hvor som helst — dine ord skrives i den aktive app.",
+    "status": {
+      "title": "Status",
+      "ready": "Klar",
+      "recording": "Optagelse",
+      "transcribing": "Transskription",
+      "error": "Fejl",
+      "genericError": "Noget gik galt under optagelse eller transskription."
+    },
+      "errorOpenSettings": "Åbn indstillinger for diktering",
+      "shortcut": {
+        "description": "Den aktuelle globale genvej til at starte og stoppe diktering.",
+        "openAria": "Dikteringsgenvej {{shortcut}} — åbn indstillinger for diktering for at ændre den",
+        "missing": "Ikke konfigureret"
+      },
+      "mode": {
+        "title": "Tilstand",
+        "hold": "Hold nede",
+        "toggle": "Tryk for at skifte",
+        "holdDescription": "Hold genvejen nede, mens du taler.",
+        "toggleDescription": "Tryk på genvejen én gang for at starte og igen for at stoppe."
+      },
+      "target": {
+        "title": "Talegenkendelse",
+        "description": "Hvor din tale transskriberes.",
+        "local": "Lokalt",
+        "azure": "Azure",
+        "custom": "Brugerdefineret"
+      },
+      "language": {
+        "title": "Sprog og model",
+        "description": "Genkendelsessprog og ved lokal genkendelse den aktive model.",
+        "withModel": "{{language}} · {{model}}"
+      },
+      "test": {
+        "title": "Test diktering",
+        "button": "Test diktering",
+        "privacy": "Forbliver i dette vindue — intet kopieres eller indsættes.",
+        "start": "Test diktering",
+        "stop": "Stop testoptagelsen",
+        "idleHint": "Optager op til {{seconds}} s og afspiller den kun her.",
+        "recordingHint": "Optager… stopper automatisk efter {{seconds}} s.",
+        "retry": "Prøv igen",
+        "error": {
+          "unavailable": {
+            "title": "Mikrofonen er ikke tilgængelig",
+            "description": "Der blev ikke fundet en brugbar mikrofon. Tilslut én, eller vælg en anden inputenhed i indstillingerne."
+          },
+          "denied": {
+            "title": "Adgang til mikrofonen nægtet",
+            "description": "Dette vindue kræver mikrofontilladelse for at køre testen."
+          },
+          "failed": {
+            "title": "Testoptagelsen mislykkedes",
+            "description": "Testoptagelsen kunne ikke registreres. Prøv igen."
+          }
+        },
+        "preview": {
+          "label": "Forhåndsvisning af din testoptagelse",
+          "playbackAria": "Afspil testoptagelsen",
+          "duration": "Varighed: {{duration}}",
+          "discard": "Kassér optagelsen"
+        }
+      },
+      "settingsLink": "Indstillinger for diktering"
+    },
   "errors": {
     "loadDirectory": "Fejl ved indlæsning af mappe: {{error}}",
     "micPermissionDeniedTitle": "Mikrofonadgang nægtet",

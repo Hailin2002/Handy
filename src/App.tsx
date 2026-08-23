@@ -11,6 +11,7 @@ import { ModelStateEvent, RecordingErrorEvent } from "./lib/types/events";
 import "./App.css";
 import AccessibilityPermissions from "./components/AccessibilityPermissions";
 import SecureInputWarning from "./components/SecureInputWarning";
+import { DictationHome } from "./components/dictation/DictationHome";
 import Footer from "./components/footer";
 import Onboarding, { AccessibilityOnboarding } from "./components/onboarding";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -20,11 +21,7 @@ import {
   SettingsPage,
   type ProductViewId,
 } from "./components/shell";
-import {
-  AboutSettings,
-  GeneralSettings,
-  HistorySettings,
-} from "./components/settings";
+import { AboutSettings, HistorySettings } from "./components/settings";
 import { WhatsNewGate } from "./components/whats-new";
 import { useSettings } from "./hooks/useSettings";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -34,13 +31,17 @@ import { useAzureSpeechStream } from "@/hooks/useAzureSpeechStream";
 
 type OnboardingStep = "accessibility" | "model" | "done";
 
-// Content router for the product navigation views (plan §6.3). Dictation
-// keeps its proven workflow: "Diktieren" shows the same home content as
-// before, and the global shortcut start/stop flow is untouched.
-const renderProductContent = (view: ProductViewId) => {
+// Content router for the product navigation views (plan §6.3). "Diktieren"
+// shows the DictationHome page (plan §6.4): status, shortcut, mode, target,
+// language/model and a safe in-app dictation test — deliberately without any
+// meeting affordance. The global shortcut start/stop flow is untouched.
+const renderProductContent = (
+  view: ProductViewId,
+  onOpenDictationSettings: () => void,
+) => {
   switch (view) {
     case "dictate":
-      return <GeneralSettings />;
+      return <DictationHome onOpenSettings={onOpenDictationSettings} />;
     case "meetings":
       return (
         <ProductPlaceholder
@@ -341,7 +342,9 @@ function App() {
               <div className="flex flex-col items-center p-4 gap-4">
                 <AccessibilityPermissions />
                 <SecureInputWarning />
-                {renderProductContent(currentView)}
+                {renderProductContent(currentView, () =>
+                  setCurrentView("settings"),
+                )}
               </div>
             </div>
           </div>

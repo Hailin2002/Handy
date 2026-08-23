@@ -758,6 +758,74 @@
     "permissionsDescription": "Handy needs accessibility permissions to type transcribed text.",
     "openSettings": "Open System Settings"
   },
+  "dictation": {
+    "title": "Dictation",
+    "subtitle": "Speak anywhere — your words are typed into the active app.",
+    "status": {
+      "title": "Status",
+      "ready": "Ready",
+      "recording": "Recording",
+      "transcribing": "Transcribing",
+      "error": "Error",
+      "genericError": "Something went wrong while recording or transcribing."
+    },
+    "errorOpenSettings": "Open dictation settings",
+    "shortcut": {
+      "description": "The current global shortcut that starts and stops dictation.",
+      "openAria": "Dictation shortcut {{shortcut}} — open dictation settings to change it",
+      "missing": "Not configured"
+    },
+    "mode": {
+      "title": "Mode",
+      "hold": "Hold",
+      "toggle": "Toggle",
+      "holdDescription": "Press and hold the shortcut while speaking.",
+      "toggleDescription": "Press the shortcut once to start, press again to stop."
+    },
+    "target": {
+      "title": "Speech recognition",
+      "description": "Where your speech is transcribed.",
+      "local": "Local",
+      "azure": "Azure",
+      "custom": "Custom"
+    },
+    "language": {
+      "title": "Language and model",
+      "description": "Recognition language and, for local speech recognition, the active model.",
+      "withModel": "{{language}} · {{model}}"
+    },
+    "test": {
+      "title": "Test dictation",
+      "button": "Test dictation",
+      "privacy": "Stays in this window — nothing is copied or pasted anywhere.",
+      "start": "Test dictation",
+      "stop": "Stop test recording",
+      "idleHint": "Records up to {{seconds}} s and plays it back here only.",
+      "recordingHint": "Recording… stops automatically after {{seconds}} s.",
+      "retry": "Try again",
+      "error": {
+        "unavailable": {
+          "title": "Microphone unavailable",
+          "description": "No usable microphone was found. Connect one or select another input device in the settings."
+        },
+        "denied": {
+          "title": "Microphone access denied",
+          "description": "This window needs microphone permission to run the test."
+        },
+        "failed": {
+          "title": "Test recording failed",
+          "description": "The test recording could not be captured. Please try again."
+        }
+      },
+      "preview": {
+        "label": "Preview of your test recording",
+        "playbackAria": "Play back the test recording",
+        "duration": "Duration: {{duration}}",
+        "discard": "Discard recording"
+      }
+    },
+    "settingsLink": "Dictation settings"
+  },
   "errors": {
     "loadDirectory": "Error loading directory: {{error}}",
     "micPermissionDeniedTitle": "Microphone Access Denied",
