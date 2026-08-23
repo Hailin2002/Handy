@@ -27,6 +27,33 @@
         <step>.log.sha256     "<sha256>  <logfile>" sidecar, verifiable with
                               Get-FileHash against the log
         summary.json          machine-readable result of the whole run
+        fingerprint.json      machine-readable environment preflight snapshot
+                              captured BEFORE the first step (see below)
+        fingerprint.json.sha256
+                              "<sha256>  fingerprint.json" sidecar, mirroring
+                              the summary.json sidecar contract
+
+    Environment preflight (task-0308): before the first step executes, the
+    runner captures a zero-cost fingerprint of the verification environment
+    into fingerprint.json, reusing the capture patterns of
+    scripts/verify/capture-env-fingerprint.ps1 where compatible:
+
+        package manager resolution (F1/F2)   bun/npm probe result + sources
+        git core.autocrlf         (F3)       checkout line-ending setting
+        CMAKE_BUILD_PARALLEL_LEVEL(F4)       shell env vs. repo serial pin
+        VULKAN_SDK presence       (F5)       SDK path / glslc on PATH
+        node/npm/cargo/bun versions          first line of `<tool> --version`
+        OS build                             Windows build number + UBR
+
+    Every fact carries a stable key name and a `classification` tag
+    (machine-local | harness-local | repo-enforced) citing
+    docs/meeting-mode-verification-environment.md, so later evidence readers
+    can attribute a failure to the exact environment class deterministically.
+    Individual lookups fail SOFT (null + recorded) - a missing tool is data,
+    not an error. Only a structural preflight failure (e.g. fingerprint.json
+    cannot be written) aborts the gate with exit 2 and a console message;
+    a successful preflight never changes step results or the overall exit
+    code.
 
     Idempotency contract (gate G3): the artifacts directory is emptied at the
     start of every run, so a second invocation leaves exactly the artifacts of
@@ -36,7 +63,8 @@
       0   every executed step returned 0
       1   at least one step failed (see summary.json for per-step codes)
       2   the gate runner itself hit an infrastructure error (bad arguments,
-          unwritable artifacts directory, ...) before or during bookkeeping
+          unwritable artifacts directory, preflight failure, ...) before or
+          during bookkeeping
 
     ConstrainedLanguage compatibility (see also run-with-timeout.ps1): the
     runner itself completes under ConstrainedLanguage in a degraded mode.
@@ -214,8 +242,34 @@ try {
     Push-Location -LiteralPath $repoRoot
 
     # ---------------------------------------------------------------------
-    # Resolve the JavaScript package manager for the frontend steps.
+    # Prepare the artifacts directory: idempotent reset (gate G3).
+    # Moved AHEAD of the preflight and package-manager resolution so that
+    # every gate run - including one that exits 2 before the first step -
+    # leaves THIS run's fingerprint.json evidence in a freshly reset
+    # directory instead of stale artifacts from an earlier run.
     # ---------------------------------------------------------------------
+    if (-not (Test-Path -LiteralPath $resolvedArtifacts)) {
+        New-Item -ItemType Directory -Path $resolvedArtifacts -Force |
+            Out-Null
+    }
+    else {
+        # Remove everything from previous runs so no stale log, sidecar,
+        # summary or fingerprint can survive into this run's results.
+        Get-ChildItem -LiteralPath $resolvedArtifacts -Force |
+            Remove-Item -Recurse -Force
+    }
+
+    # ---------------------------------------------------------------------
+    # Environment preflight (task-0308): zero-cost fact capture BEFORE the
+    # first step. Reuses the capture patterns of capture-env-fingerprint.ps1
+    # (tool-version probing, registry build readout, soft-fail lookups) in a
+    # reduced, gate-focused form; every fact is tagged with its environment
+    # class per docs/meeting-mode-verification-environment.md.
+    # ---------------------------------------------------------------------
+
+    # Resolver for the frontend steps' package manager. Definition only at
+    # this point; invoked once inside the preflight so its outcome is part of
+    # the fingerprint evidence.
     function Resolve-PackageManagerCommand {
         param([string]$Mode)
 
@@ -241,10 +295,182 @@ try {
         return $null
     }
 
-    $resolvedPm = Resolve-PackageManagerCommand -Mode $PackageManager
+    # Same probe shape as Get-ToolVersion in capture-env-fingerprint.ps1:
+    # first stdout line of `<exe> --version`, $null when absent. Never
+    # throws; PowerShell's own pipeline captures the output, so this is not
+    # affected by the sandbox's named-pipe restriction (F6).
+    function Get-PreflightToolVersion {
+        param([string]$Exe)
+
+        $resolved = Get-Command $Exe -ErrorAction SilentlyContinue
+        if (-not $resolved) { return $null }
+        try {
+            $output = @(& $Exe --version 2>$null)
+            if (-not $output) { return $null }
+            return ('{0}' -f @($output)[0]).Trim()
+        } catch {
+            return $null
+        }
+    }
+
+    try {
+        $preflightCapturedAt = (Get-Date).ToUniversalTime().ToString(
+            'yyyy-MM-ddTHH:mm:ss.fffZ')
+
+        # --- F1/F2: bun/npm resolution, probed once here so the outcome
+        # lands in the fingerprint and the step table reuses exactly this
+        # result.
+        $bunCommand     = Get-Command 'bun' -ErrorAction SilentlyContinue
+        $npmPs1Command  = Get-Command 'npm' -ErrorAction SilentlyContinue
+        $pmResolution   = Resolve-PackageManagerCommand -Mode $PackageManager
+
+        # --- F3: git checkout line-ending setting. Unset -> null (git then
+        # applies its built-in default); the repo side (.prettierrc pins LF)
+        # is repo-enforced and recorded as the static counterpart.
+        $autocrlfValue = $null
+        try {
+            $autocrlfOut = @(& git config --get core.autocrlf 2>$null)
+            if ($LASTEXITCODE -eq 0 -and @($autocrlfOut).Count -gt 0) {
+                $autocrlfValue = ('{0}' -f @($autocrlfOut)[0]).Trim()
+            }
+        } catch { $autocrlfValue = $null }
+
+        # --- F4: serial-build sanity. The pin lives in .cargo/config.toml
+        # ([env]) and is therefore repo-enforced; it applies to cargo build
+        # scripts, so an unset shell variable is normal and recorded as-is.
+        $cmakeParallelEnv = if ($env:CMAKE_BUILD_PARALLEL_LEVEL) {
+            $env:CMAKE_BUILD_PARALLEL_LEVEL
+        } else { $null }
+
+        # --- F5: Vulkan SDK visibility of THIS shell (machine-local;
+        # restricted harness shells do not always inherit the machine env).
+        $vulkanSdkPath = if ($env:VULKAN_SDK) { $env:VULKAN_SDK } else { $null }
+        $glslcCommand  = Get-Command 'glslc' -ErrorAction SilentlyContinue
+
+        # --- OS build (registry readout, same source as
+        # capture-env-fingerprint.ps1). Individual lookups fail SOFT per the
+        # preflight contract: -ErrorAction SilentlyContinue plus a $cv null
+        # guard turn a restricted/missing key into fallback values instead
+        # of aborting the gate; only structural failures exit 2.
+        $osVersionInfo = [Environment]::OSVersion.Version
+        $cv = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction SilentlyContinue
+        $buildNumber = if ($cv -and $cv.PSObject.Properties['CurrentBuildNumber']) {
+            [string]$cv.CurrentBuildNumber
+        } else { '{0}' -f $osVersionInfo.Build }
+        $ubr = if ($cv -and $cv.PSObject.Properties['UBR']) {
+            [string]$cv.UBR
+        } else { '{0}' -f $osVersionInfo.Revision }
+
+        $verificationDoc = 'docs/meeting-mode-verification-environment.md'
+
+        $fingerprint = [ordered]@{
+            schemaVersion  = 1
+            generator      = 'scripts/verify/run-gate.ps1'
+            capturedAt     = $preflightCapturedAt
+            repositoryRoot = $repoRoot
+            classificationReference = $verificationDoc
+            facts          = [ordered]@{
+
+                packageManagerResolution = [ordered]@{
+                    factIds        = @('F1', 'F2')
+                    classification = 'machine-local'
+                    sourceDoc      = "$verificationDoc (F1, F2)"
+                    requestedMode  = $PackageManager
+                    resolvedName   = $(if ($pmResolution) { $pmResolution.name } else { $null })
+                    resolvedSource = $(if ($pmResolution) { $pmResolution.source } else { $null })
+                    bunOnPath      = [bool]$bunCommand
+                    bunSource      = $(if ($bunCommand) { $bunCommand.Source } else { $null })
+                    npmPowerShellShimPath = $(if ($npmPs1Command) { $npmPs1Command.Source } else { $null })
+                    executionPolicy = ('{0}' -f (Get-ExecutionPolicy))
+                }
+
+                gitCoreAutocrlf = [ordered]@{
+                    factIds        = @('F3')
+                    classification = 'machine-local'
+                    sourceDoc      = "$verificationDoc (F3)"
+                    value          = $autocrlfValue
+                    repoEnforcedCounterpart = '.prettierrc: endOfLine "lf"'
+                }
+
+                cmakeBuildParallelLevel = [ordered]@{
+                    factIds        = @('F4')
+                    classification = 'repo-enforced'
+                    sourceDoc      = "$verificationDoc (F4)"
+                    shellEnvironmentValue   = $cmakeParallelEnv
+                    repositoryPinValue      = '1'
+                    matchesRepositoryPin    = ($cmakeParallelEnv -eq '1')
+                    pinSource      = '.cargo/config.toml [env] CMAKE_BUILD_PARALLEL_LEVEL'
+                }
+
+                vulkanSdk = [ordered]@{
+                    factIds        = @('F5')
+                    classification = 'machine-local'
+                    sourceDoc      = "$verificationDoc (F5)"
+                    present        = [bool]$vulkanSdkPath
+                    path           = $vulkanSdkPath
+                    glslcOnPath    = [bool]$glslcCommand
+                }
+
+                toolchainVersions = [ordered]@{
+                    factIds        = @()
+                    classification = 'machine-local'
+                    sourceDoc      = $verificationDoc
+                    node           = Get-PreflightToolVersion 'node'
+                    npm            = Get-PreflightToolVersion 'npm.cmd'
+                    cargo          = Get-PreflightToolVersion 'cargo'
+                    bun            = Get-PreflightToolVersion 'bun'
+                }
+
+                operatingSystem = [ordered]@{
+                    factIds        = @()
+                    classification = 'machine-local'
+                    sourceDoc      = $verificationDoc
+                    platform       = 'windows'
+                    osVersion      = '{0}.{1}.{2}' -f $osVersionInfo.Major,
+                                        $osVersionInfo.Minor, $osVersionInfo.Build
+                    buildNumber    = $buildNumber
+                    updateBuildRevision = $ubr
+                    fullBuild      = '{0}.{1}' -f $buildNumber, $ubr
+                    architecture   = if ([Environment]::Is64BitOperatingSystem) {
+                        '64-bit'
+                    } else {
+                        '32-bit'
+                    }
+                }
+            }
+        }
+
+        $fingerprintJson = $fingerprint | ConvertTo-Json -Depth 6
+        $null = $fingerprintJson | ConvertFrom-Json   # must round-trip
+
+        $fingerprintPath = Join-Path $resolvedArtifacts 'fingerprint.json'
+        Write-Utf8NoBomFile -Path $fingerprintPath -Text (
+            $fingerprintJson + [Environment]::NewLine)
+
+        # Sidecar mirroring the per-log/summary contract.
+        $fingerprintHash = Get-Sha256Hex -Path $fingerprintPath
+        Write-Utf8NoBomFile -Path "$fingerprintPath.sha256" -Text (
+            "$fingerprintHash  fingerprint.json`n")
+
+        Write-Host ("run-gate: preflight: fingerprint written to {0}" -f
+            $fingerprintPath)
+    }
+    catch {
+        Write-ConsoleError ("run-gate: environment preflight failed: {0}" -f
+            $_.Exception.Message)
+        Pop-Location
+        exit $exitCodeInfrastructure
+    }
+
+    # ---------------------------------------------------------------------
+    # Frontend steps run on the package manager the preflight resolved; the
+    # fingerprint under facts.packageManagerResolution records exactly this
+    # result, so evidence and execution can never disagree.
+    # ---------------------------------------------------------------------
+    $resolvedPm = $pmResolution
     if (-not $resolvedPm) {
-        # Write-ConsoleError, not a raw [Console]::Error.WriteLine call: the
-        # raw method is blocked under ConstrainedLanguage.
+        # The fingerprint written above already carries the unresolved
+        # outcome as evidence; exit 2 with a message (infrastructure error).
         Write-ConsoleError (
             "run-gate: neither bun nor npm was found on PATH; cannot run frontend steps.")
         Pop-Location
@@ -293,19 +519,9 @@ try {
 
     $selectedNames = if ($Steps) { @($Steps) } else { @($allSteps.Keys) }
 
-    # ---------------------------------------------------------------------
-    # Prepare the artifacts directory: idempotent reset (gate G3).
-    # ---------------------------------------------------------------------
-    if (-not (Test-Path -LiteralPath $resolvedArtifacts)) {
-        New-Item -ItemType Directory -Path $resolvedArtifacts -Force |
-            Out-Null
-    }
-    else {
-        # Remove everything from previous runs so no stale log, sidecar or
-        # summary can survive into this run's results.
-        Get-ChildItem -LiteralPath $resolvedArtifacts -Force |
-            Remove-Item -Recurse -Force
-    }
+    # The artifacts directory was already created and reset ahead of the
+    # environment preflight above (so the fingerprint lands beside
+    # summary.json even on early exits); nothing left to prepare here.
 
     # ---------------------------------------------------------------------
     # Execute the selected steps sequentially through the wrapper.
