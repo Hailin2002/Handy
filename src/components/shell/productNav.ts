@@ -68,16 +68,19 @@ export interface ActiveMeetingInfo {
 }
 
 /**
- * Formats an elapsed-meeting duration as `mm:ss`, switching to `hh:mm:ss`
- * once the recording passes one hour (plan §6.3 shows `00:42:18`).
+ * Formats an elapsed-meeting duration as an always-padded `hh:mm:ss` status
+ * clock (formatting-contract §2 class A): the zero-padded hours field is
+ * rendered even below one hour (plan line 427: `Aufnahme läuft · 00:42:18`)
+ * and grows unbounded beyond 24 h for multi-day sessions. Negative and
+ * non-finite inputs clamp to `00:00:00`.
  */
 export function formatMeetingDuration(totalSeconds: number): string {
-  const total = Math.max(0, Math.floor(totalSeconds));
+  const total = Number.isFinite(totalSeconds)
+    ? Math.max(0, Math.floor(totalSeconds))
+    : 0;
   const pad = (n: number) => String(n).padStart(2, "0");
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
-  return hours > 0
-    ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-    : `${pad(minutes)}:${pad(seconds)}`;
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
