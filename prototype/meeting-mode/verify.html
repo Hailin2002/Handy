@@ -7,6 +7,10 @@
             text+icon on every state)
        G4 – flows reachable from start-dialog completion (countdown →
             running view → confirmed stop → processing)
+     plus regressions for task-0178 (§6.6 setup, §6.7 start dialog) and the
+     task-0180 leaf gates (§6.12 checklist with deterministic counts and
+     retry-failed, §6.5 list with click-reachable named-artifact delete,
+     §6.13 detail tabs with transcript search jump and optional split view).
      Loads index.html into an iframe and writes "PASS"/"FAIL" lines into the
      DOM; run with:
        chrome-headless-shell --headless --no-sandbox --allow-file-access-from-files \
@@ -351,6 +355,138 @@
         await sleep(30);
         check("reg-0178 Escape closes picker but keeps dialog",
               $("row-picker").hidden === true && !$("start-dialog").hidden);
+        await sleep(30);
+        doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await sleep(30);
+
+        /* ===== task-0180 Blatt: §6.5 Liste, §6.12 Checkliste, §6.13 Detail ===== */
+        // Lösch-Bestätigungen im Mock automatisch annehmen
+        win.confirm = function () { return true; };
+
+        /* --- G4: Liste -> Detail -> zurück --- */
+        await showRoute("meetings");
+        check("G4(list) populated list renders cards",
+              doc.querySelectorAll("#meeting-list .card-open").length >= 3);
+        doc.querySelector("#meeting-list .card-open").click();
+        await sleep(80);
+        check("G4 list card opens detail view",
+              !$("view-meeting-detail").hidden && $("view-meetings").hidden);
+        check("§6.13 detail defaults to Übersicht tab",
+              !doc.querySelector('[data-dpanel="uebersicht"]').hidden &&
+              doc.querySelector('[data-dpanel="transkript"]').hidden &&
+              doc.querySelector('[data-dtab="uebersicht"]').getAttribute("aria-selected") === "true");
+        $("btn-detail-back").click();
+        await sleep(60);
+        check("G4 detail back returns to list",
+              !$("view-meetings").hidden && $("view-meeting-detail").hidden);
+
+        /* --- G3: Transkript-Suche springt zur Segmentposition --- */
+        [...doc.querySelectorAll("#meeting-list .card-open")]
+          .find((b) => b.textContent.indexOf("Wochenplanung") !== -1).click();
+        await sleep(80);
+        doc.querySelector('[data-dtab="transkript"]').click();
+        await sleep(30);
+        doc.getElementById("detail-transcript-area").style.maxHeight = "120px";
+        $("detail-transcript-search").value = "Messestand";
+        $("detail-transcript-search").dispatchEvent(new win.Event("input", { bubbles: true }));
+        await sleep(50);
+        const firstHit = doc.querySelector("#detail-segments .seg-hit-first");
+        check("G3 search jumps to mocked segment position",
+              !!firstHit &&
+              doc.activeElement === firstHit &&
+              firstHit.dataset.pos === "0:06" &&
+              doc.getElementById("detail-transcript-area").scrollTop > 2 &&
+              /Segment 3 von 9/.test($("transcript-search-status").textContent));
+        doc.getElementById("detail-transcript-area").style.maxHeight = "";
+
+        /* --- G2: Löschen ohne Hover mit benannten Artefakten --- */
+        await showRoute("meetings");
+        const itemsBefore = doc.querySelectorAll("#meeting-list .meeting-item").length;
+        doc.querySelectorAll("#meeting-list .menu-btn")[1].click();
+        await sleep(40);
+        const dangerBtn = doc.querySelector("#meeting-list .menu .menu-danger");
+        check("G2 three-dot delete reachable by click (no hover)",
+              !!dangerBtn && getComputedStyle(dangerBtn).display !== "none");
+        if (dangerBtn) {
+          const menuTitle =
+            doc.querySelectorAll("#meeting-list .card-open")[1].textContent.split("·")[0].trim();
+          let askedMsg = "";
+          win.confirm = function (msg) { askedMsg = msg; return true; };
+          dangerBtn.click();
+          await sleep(50);
+          check("G2 delete asks naming Audio/Transkript/Zusammenfassung + title",
+                /Audio,\s*Transkript und Zusammenfassung/.test(askedMsg) &&
+                askedMsg.indexOf(menuTitle) !== -1);
+          win.confirm = function () { return true; };
+          check("G2 confirmed delete removes the meeting",
+                doc.querySelectorAll("#meeting-list .meeting-item").length === itemsBefore - 1);
+        }
+
+        /* --- G1: deterministische Stückzahlen, nie Prozent --- */
+        $("btn-neues-meeting").click();
+        await sleep(30);
+        $("btn-meeting-starten").click();
+        await sleep(3400);
+        $("btn-beenden").click();
+        await sleep(30);
+        $("btn-stop-ok").click();
+        await sleep(250);
+        const earlyChunks = doc.querySelector('#proc-checklist li[data-step="chunks"]').textContent;
+        const earlyHtml = $("proc-checklist").innerHTML;
+        check("G1 while total unknown: no count, no percentage",
+              earlyChunks.indexOf("%") === -1 && !/\d/.test(earlyChunks));
+        await sleep(3600);
+        const lateTr = doc.querySelector('#proc-checklist li[data-step="transcribe"]');
+        const lateCk = lateTr.textContent.match(/^✓ (\d+) von (\d+) Abschnitten transkribiert$/);
+        check("G1 deterministic n von n counts, checklist completes, no percentage",
+              !!lateCk && lateCk[1] === lateCk[2] &&
+              doc.querySelector('#proc-checklist li[data-step="summary"]').className === "done" &&
+              $("proc-checklist").innerHTML.indexOf("%") === -1);
+
+        /* --- §6.12: fehlerhafte Abschnitte erneut versuchen --- */
+        $("sim-chunk-error").checked = true;
+        await showRoute("meetings");
+        await showRoute("verarbeitung");
+        await sleep(300);
+        $("btn-proc-bg").click();
+        await sleep(80);
+        check("§6.12 background-continue returns to list",
+              !$("view-meetings").hidden &&
+              [...doc.querySelectorAll("#meeting-list .status-chip")]
+                .some((c) => /In Verarbeitung/.test(c.textContent)));
+        await showRoute("verarbeitung");
+        await sleep(2900);
+        check("§6.12 failed chunk shows error state + retry action",
+              doc.querySelector('#proc-checklist li[data-step="transcribe"]').className === "error" &&
+              !$("btn-retry-failed").hidden);
+        $("btn-retry-failed").click();
+        await sleep(2000);
+        check("§6.12 retry completes processing, opens detail entry",
+              doc.querySelector('#proc-checklist li[data-step="summary"]').className === "done" &&
+              !$("btn-open-processing-meeting").hidden);
+        $("btn-open-processing-meeting").click();
+        await sleep(80);
+        check("§6.13 finished meeting detail reached from checklist",
+              !$("view-meeting-detail").hidden &&
+              /Fertig/.test($("detail-status-chip").textContent));
+
+        /* --- §6.13: optionale Geteilte Ansicht --- */
+        check("§6.13 split view offered wide / not default",
+              getComputedStyle(doc.querySelector(".split-toggle")).display !== "none" &&
+              !$("view-meeting-detail").classList.contains("split-active"));
+        $("split-toggle").checked = true;
+        $("split-toggle").click();
+        await sleep(60);
+        const splitOn = $("view-meeting-detail").classList.contains("split-active") &&
+          !doc.querySelector('[data-dpanel="transkript"]').hidden;
+        $("split-toggle").checked = false;
+        $("split-toggle").click();
+        await sleep(60);
+        check("§6.13 split view toggles side-by-side and back",
+              splitOn &&
+              !$("view-meeting-detail").classList.contains("split-active") &&
+              doc.querySelector('[data-dpanel="transkript"]').hidden);
+        $("sim-chunk-error").checked = false;
 
         out.forEach((l) => { const d = document.createElement("div"); d.textContent = l; document.body.appendChild(d); });
         const summary = document.createElement("div");

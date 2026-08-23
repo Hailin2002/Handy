@@ -197,21 +197,114 @@
 
     </section>
 
-    <!-- ========== Ansicht: Verarbeitung nach Stop (Plan §6.12) ========== -->
+    <!-- ========== Ansicht: Verarbeitung nach Stop (Plan §6.12, Teil 4/5) ==========
+         Klare Checkliste mit deterministischen Stückzahlen. Solange die
+         Gesamtmenge unbekannt ist (Vorbereitung), steht bewusst KEINE Zahl und
+         nie eine Prozentanzeige im Text (Gate G1). -->
     <section class="view" id="view-verarbeitung" hidden>
       <header class="view-header">
         <h1 id="proc-title">Meeting wird verarbeitet</h1>
         <p class="subtitle">Du kannst dieses Fenster schließen – die Arbeit läuft im Hintergrund weiter.</p>
       </header>
       <div class="card">
+        <p class="muted small" id="proc-meeting-label"></p>
         <ul class="checklist" id="proc-checklist" role="list" aria-live="polite">
           <li data-step="saved" class="done">✓ Aufnahme sicher gespeichert</li>
-          <li data-step="chunks">○ Audioabschnitte vorbereiten …</li>
+          <!-- Gesamtmenge unbekannt → bewusst ohne Stückzahl und ohne Prozent -->
+          <li data-step="chunks">● Audioabschnitte werden vorbereitet …</li>
           <li data-step="transcribe">○ Abschnitte transkribieren …</li>
           <li data-step="summary">○ Zusammenfassung wartet</li>
         </ul>
         <div class="row-gap">
-          <button type="button" class="btn btn-secondary" onclick="location.hash='#/meetings'">Im Hintergrund weiterarbeiten</button>
+          <button type="button" class="btn btn-secondary" id="btn-proc-bg">Im Hintergrund weiterarbeiten</button>
+          <button type="button" class="btn btn-secondary" id="btn-retry-failed" hidden>Fehlerhafte Abschnitte erneut versuchen</button>
+          <button type="button" class="btn btn-primary" id="btn-open-processing-meeting" hidden>Meeting öffnen</button>
+        </div>
+        <fieldset class="mock-fieldset">
+          <legend>Prototyp-Simulation (nur im Mock)</legend>
+          <label><input type="checkbox" id="sim-chunk-error"> Einen Abschnitt fehlschlagen lassen</label>
+        </fieldset>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Meeting-Detail (Plan §6.13, Teil 4/5) ========== -->
+    <section class="view" id="view-meeting-detail" hidden>
+      <div class="row-between">
+        <a href="#/meetings" class="btn btn-ghost" id="btn-detail-back">← Meetings</a>
+        <!-- Optionale Geteilte Ansicht: nur auf breiten Bildschirmen angeboten,
+             nie der unerklärte Standard (§6.13) -->
+        <label class="split-toggle" for="split-toggle">
+          <input type="checkbox" id="split-toggle">
+          Geteilte Ansicht
+        </label>
+      </div>
+
+      <header class="view-header">
+        <label class="sr-only" for="detail-title">Meeting-Titel bearbeiten</label>
+        <input type="text" id="detail-title" class="detail-title-input">
+        <p class="subtitle detail-meta">
+          <span id="detail-date"></span> · <span class="mono" id="detail-duration"></span> ·
+          <span id="detail-provider-line"></span>
+          <span id="detail-status-chip"></span>
+        </p>
+      </header>
+
+      <div class="row-between detail-actions">
+        <div class="row-gap" style="margin-top:0">
+          <button type="button" class="btn btn-secondary btn-small" id="btn-detail-copy">Kopieren</button>
+          <button type="button" class="btn btn-secondary btn-small" id="btn-detail-export">Exportieren</button>
+        </div>
+        <!-- Beschriftetes Menü für weitere Aktionen inkl. immer erreichbarem
+             Löschen ohne Hover (§6.13/§6.14, Gate G2) -->
+        <details class="more-options detail-more" id="detail-more-menu">
+          <summary>Weitere Aktionen</summary>
+          <div class="menu menu-static" role="menu">
+            <button type="button" role="menuitem" id="btn-detail-reprocess">Erneut verarbeiten</button>
+            <button type="button" role="menuitem" class="menu-danger" id="btn-detail-delete">Löschen …</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Meeting-Bereiche">
+        <button role="tab" class="tab" data-dtab="uebersicht" aria-selected="true">Übersicht</button>
+        <button role="tab" class="tab" data-dtab="transkript" aria-selected="false">Transkript</button>
+        <button role="tab" class="tab" data-dtab="audio" aria-selected="false">Audio</button>
+        <button role="tab" class="tab" data-dtab="verarbeitung" aria-selected="false">Verarbeitung</button>
+      </div>
+
+      <div class="detail-body">
+        <div class="tabpanel" role="tabpanel" data-dpanel="uebersicht">
+          <div class="card">
+            <h2 class="small-heading">Kurzfassung</h2>
+            <p id="detail-summary"></p>
+            <h2 class="small-heading">Entscheidungen</h2>
+            <ul id="detail-decisions" role="list"></ul>
+            <h2 class="small-heading">Aufgaben</h2>
+            <ul id="detail-tasks" role="list"></ul>
+            <h2 class="small-heading">Offene Fragen</h2>
+            <ul id="detail-questions" role="list"></ul>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" data-dpanel="transkript" hidden>
+          <div class="card">
+            <div class="toolbar" style="margin-top:0">
+              <label class="sr-only" for="detail-transcript-search">Transkript durchsuchen</label>
+              <input type="search" id="detail-transcript-search" placeholder="Transkript durchsuchen …">
+            </div>
+            <p class="test-result" id="transcript-search-status" role="status"></p>
+            <div class="transcript-area detail-transcript-area" id="detail-transcript-area" aria-label="Meeting-Transkript" tabindex="0">
+              <ul class="segments" id="detail-segments" role="list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" data-dpanel="audio" hidden>
+          <div class="card" id="detail-audio-panel"></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" data-dpanel="verarbeitung" hidden>
+          <div class="card" id="detail-processing-panel"></div>
         </div>
       </div>
     </section>

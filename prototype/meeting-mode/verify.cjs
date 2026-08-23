@@ -530,6 +530,287 @@ let page = null;
   check("second Escape closes dialog",
         await page.evaluate(() => document.getElementById("start-dialog").hidden === true));
 
+  /* ===== task-0180 Blatt: §6.12 Checkliste, §6.5 Liste, §6.13 Detail ===== */
+
+  // Dialog-Handler: window.confirm-Nachrichten mitprotokollieren und
+  // standardmäßig annehmen (für die Lösch-Bestätigungen).
+  const confirmMessages = [];
+  let confirmAnswer = true;
+  page.on("dialog", async (d) => {
+    if (d.type() === "confirm") {
+      confirmMessages.push(d.message());
+      if (confirmAnswer) await d.accept(); else await d.dismiss();
+    } else await d.accept();
+  });
+
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(150);
+
+  /* --- G4: Liste -> Detail -> zurück --- */
+  const cardCount = await page.evaluate(() =>
+    document.querySelectorAll("#meeting-list .card-open").length);
+  check("G4(list) populated list renders cards with open targets", cardCount >= 3);
+  await page.locator("#meeting-list .card-open").first().click();
+  await page.waitForTimeout(100);
+  check("G4 list card opens detail view",
+        await page.evaluate(() =>
+          !document.getElementById("view-meeting-detail").hidden &&
+          document.getElementById("view-meetings").hidden));
+  check("§6.13 detail defaults to Übersicht tab",
+        await page.evaluate(() =>
+          !document.querySelector('[data-dpanel="uebersicht"]').hidden &&
+          document.querySelector('[data-dpanel="transkript"]').hidden &&
+          document.querySelector('[data-dtab="uebersicht"]').getAttribute("aria-selected") === "true"));
+  check("§6.13 overview shows summary/decisions/tasks/questions",
+        await page.evaluate(() => {
+          const v = document.getElementById("view-meeting-detail");
+          return !!v.querySelector("#detail-summary").textContent &&
+            !!v.querySelector("#detail-decisions") &&
+            !!v.querySelector("#detail-tasks") &&
+            !!v.querySelector("#detail-questions");
+        }));
+  check("§6.13 labeled actions Kopieren/Exportieren/Weitere Aktionen present",
+        await page.evaluate(() =>
+          document.getElementById("btn-detail-copy").textContent === "Kopieren" &&
+          document.getElementById("btn-detail-export").textContent === "Exportieren" &&
+          /Weitere Aktionen/.test(document.querySelector("#detail-more-menu summary").textContent)));
+  await page.click("#btn-detail-back");
+  await page.waitForTimeout(100);
+  check("G4 detail back returns to list",
+        await page.evaluate(() =>
+          !document.getElementById("view-meetings").hidden &&
+          document.getElementById("view-meeting-detail").hidden));
+
+  /* --- Detail-Tabs inkl. Transkript-Suche (Gate G3) --- */
+  await page.locator("#meeting-list .card-open", { hasText: "Wochenplanung" }).click();
+  await page.waitForTimeout(100);
+  for (const tabName of ["transkript", "audio", "verarbeitung"]) {
+    await page.click(`[data-dtab="${tabName}"]`);
+    await page.waitForTimeout(50);
+    const vis = await page.evaluate((n) =>
+      !document.querySelector(`[data-dpanel="${n}"]`).hidden, tabName);
+    check(`§6.13 tab '${tabName}' opens its panel`, vis);
+  }
+  await page.click('[data-dtab="transkript"]');
+  await page.waitForTimeout(50);
+  // Container künstlich schmal machen, damit der Sprung real scrollen muss
+  await page.evaluate(() => {
+    document.getElementById("detail-transcript-area").style.maxHeight = "120px";
+  });
+  await page.fill("#detail-transcript-search", "Messestand");
+  await page.waitForTimeout(80);
+  const g3 = await page.evaluate(() => {
+    const hits = [...document.querySelectorAll("#detail-segments .seg-hit")];
+    const first = document.querySelector("#detail-segments .seg-hit-first");
+    const area = document.getElementById("detail-transcript-area");
+    return {
+      hitCount: hits.length,
+      focused: document.activeElement === first,
+      scrolled: area.scrollTop > 2,
+      pos: first ? first.dataset.pos : null,
+      status: document.getElementById("transcript-search-status").textContent,
+    };
+  });
+  check("G3 search highlights matching segments", g3.hitCount === 1);
+  check("G3 search jumps to mocked segment position",
+        g3.focused && g3.scrolled && g3.pos === "0:06");
+  check("G3 search status names segment index and audio position",
+        /Segment 3 von 9/.test(g3.status) && /0:06/.test(g3.status));
+  await page.evaluate(() => {
+    const el = document.getElementById("detail-transcript-area");
+    if (el) { el.style.maxHeight = ""; }
+  });
+
+  /* --- Geteilte Ansicht (§6.13): optional, nie Default --- */
+  const splitOffered = await page.evaluate(() => {
+    const t = document.querySelector(".split-toggle");
+    return t && getComputedStyle(t).display !== "none";   // Viewport 1280 breit
+  });
+  check("§6.13 split view offered on wide screens", splitOffered);
+  check("§6.13 split view NOT active by default",
+        await page.evaluate(() =>
+          !document.getElementById("view-meeting-detail").classList.contains("split-active")));
+  await page.check("#split-toggle");
+  await page.waitForTimeout(80);
+  const splitOn = await page.evaluate(() =>
+    document.getElementById("view-meeting-detail").classList.contains("split-active") &&
+    !document.querySelector('[data-dpanel="transkript"]').hidden &&
+    !document.querySelector('[data-dpanel="uebersicht"]').hidden);
+  check("§6.13 split view shows Übersicht+Transkript side by side", splitOn);
+  await page.uncheck("#split-toggle");
+  await page.waitForTimeout(80);
+  check("§6.13 unchecking split view restores single tab",
+        await page.evaluate(() => {
+          const v = document.getElementById("view-meeting-detail");
+          return !v.classList.contains("split-active") &&
+            document.querySelector('[data-dpanel="transkript"]').hidden;
+        }));
+
+  // Titel im Detail bearbeiten → erscheint in der Liste (G4-Verzahnung)
+  await page.fill("#detail-title", "Wochenplanung (umbenannt)");
+  await page.dispatchEvent("#detail-title", "change");
+  await page.click("#btn-detail-back");
+  await page.waitForTimeout(100);
+  check("G4 edited detail title appears in list",
+        await page.evaluate(() =>
+          [...document.querySelectorAll("#meeting-list .card-open")]
+            .some((b) => /Wochenplanung \(umbenannt\)/.test(b.textContent))));
+  await page.locator("#meeting-list .card-open", { hasText: "Wochenplanung (umbenannt)" }).click();
+  await page.waitForTimeout(80);
+  await page.fill("#detail-title", "Wochenplanung");
+  await page.dispatchEvent("#detail-title", "change");
+
+  /* --- G2: Delete ohne Hover, benannte Artefakte (Liste + Detail) --- */
+  confirmMessages.length = 0;
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(150);
+  const before = await page.evaluate(() =>
+    document.querySelectorAll("#meeting-list .meeting-item").length);
+  // Drei-Punkte-Menü per Klick – kein Hover beteiligt
+  await page.locator("#meeting-list .menu-btn").nth(1).click();
+  await page.waitForTimeout(60);
+  check("G2 three-dot menu opens by click (no hover needed)",
+        await page.evaluate(() => !!document.querySelector("#meeting-list .menu")));
+  check("G2 delete item always visible in menu (not hover-gated)",
+        await page.evaluate(() => {
+          const b = [...document.querySelectorAll("#meeting-list .menu .menu-danger")]
+            .find((x) => /Löschen/.test(x.textContent));
+          if (!b) return false;
+          const cs = getComputedStyle(b);
+          return cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0";
+        }));
+  const targetTitle = await page.evaluate(() =>
+    document.querySelectorAll("#meeting-list .card-open")[1].textContent.split("·")[0].trim());
+  await page.locator("#meeting-list .menu .menu-danger").click();
+  await page.waitForTimeout(100);
+  check("G2 delete confirm names the artifacts (Audio/Transkript/Zusammenfassung)",
+        confirmMessages.length === 1 &&
+        /Audio,\s*Transkript und Zusammenfassung/.test(confirmMessages[0]) &&
+        confirmMessages[0].indexOf(targetTitle) !== -1);
+  check("G2 confirmed delete removes the meeting",
+        (await page.evaluate(() =>
+          document.querySelectorAll("#meeting-list .meeting-item").length)) === before - 1);
+
+  // Gleiche Bestätigung aus dem Detail-Menü; Abbruch entfernt nichts
+  await page.locator("#meeting-list .card-open").first().click();
+  await page.waitForTimeout(80);
+  await page.click("#detail-more-menu summary");
+  await page.waitForTimeout(60);
+  confirmMessages.length = 0;
+  confirmAnswer = false;
+  await page.click("#btn-detail-delete");
+  await page.waitForTimeout(80);
+  check("G2 detail menu delete asks with named artifacts too",
+        confirmMessages.length === 1 &&
+        /Audio,\s*Transkript und Zusammenfassung/.test(confirmMessages[0]));
+  check("G2 declining delete keeps the meeting and stays in detail",
+        await page.evaluate(() =>
+          !document.getElementById("view-meeting-detail").hidden));
+  confirmAnswer = true;
+
+  /* --- G1: Checkliste mit deterministischen Stückzahlen, nie Prozent --- */
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(100);
+  await page.click("#btn-neues-meeting");
+  await page.waitForTimeout(80);
+  await page.click("#btn-meeting-starten");
+  await page.waitForTimeout(3400);
+  await page.click("#btn-beenden");
+  await page.waitForTimeout(50);
+  await page.click("#btn-stop-ok");
+  await page.waitForTimeout(250);
+  const early = await page.evaluate(() => ({
+    chunks: document.querySelector('#proc-checklist li[data-step="chunks"]').textContent,
+    html: document.getElementById("proc-checklist").innerHTML,
+  }));
+  check("G1 while total unknown: preparation shows NO count and NO percentage",
+        early.chunks.indexOf("%") === -1 && !/\d/.test(early.chunks));
+  check("G1 checklist never uses a fake percentage",
+        early.html.indexOf("%") === -1);
+  await page.waitForTimeout(3550);
+  const lateCk = await page.evaluate(() => {
+    const get = (s) => document.querySelector(`#proc-checklist li[data-step="${s}"]`);
+    return {
+      chunks: get("chunks").textContent,
+      transcribeCls: get("transcribe").className,
+      transcribe: get("transcribe").textContent,
+      summaryDone: get("summary").className === "done",
+      html: document.getElementById("proc-checklist").innerHTML,
+    };
+  });
+  {
+    const mm = lateCk.transcribe.match(/^✓ (\d+) von (\d+) Abschnitten transkribiert$/);
+    check("G1 final transcription count is deterministic n von n", !!mm && mm[1] === mm[2]);
+    const cm = lateCk.chunks.match(/^✓ (\d+) von (\d+)/);
+    check("G1 preparation count consistent with transcription count",
+          !!cm && !!mm && cm[1] === cm[2] && cm[1] === mm[1]);
+  }
+  check("G1 checklist completes into summary without any percentage",
+        lateCk.summaryDone && lateCk.transcribeCls === "done" &&
+        lateCk.html.indexOf("%") === -1);
+
+  /* --- §6.12: Fehlerhafte Abschnitte erneut versuchen (deterministisch) --- */
+  await page.check("#sim-chunk-error");
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(120);
+  await page.goto(url + "#/verarbeitung");     // erneuter Checklistendurchlauf
+  await page.waitForTimeout(300);
+  // Im Hintergrund weiterarbeiten – Liste zeigt das Meeting als in Verarbeitung
+  await page.click("#btn-proc-bg");
+  await page.waitForTimeout(120);
+  check("§6.12 background-continue returns to the list",
+        await page.evaluate(() => !document.getElementById("view-meetings").hidden));
+  check("§6.12 processing meeting stays visible in the list",
+        await page.evaluate(() =>
+          [...document.querySelectorAll("#meeting-list .status-chip")]
+            .some((c) => /In Verarbeitung/.test(c.textContent))));
+  await page.goto(url + "#/verarbeitung");
+  await page.waitForTimeout(2900);
+  check("§6.12 failed chunk surfaces error state + retry action",
+        await page.evaluate(() => {
+          const tr = document.querySelector('#proc-checklist li[data-step="transcribe"]');
+          return tr.className === "error" && /fehlerhaft/.test(tr.textContent) &&
+            !document.getElementById("btn-retry-failed").hidden;
+        }));
+  await page.click("#btn-retry-failed");
+  await page.waitForTimeout(2000);
+  check("§6.12 retry completes transcription and summary",
+        await page.evaluate(() =>
+          document.querySelector('#proc-checklist li[data-step="summary"]').className === "done" &&
+          document.getElementById("btn-retry-failed").hidden));
+  check("§6.12 completion offers direct entry to the detail view",
+        await page.evaluate(() => !document.getElementById("btn-open-processing-meeting").hidden));
+  await page.click("#btn-open-processing-meeting");
+  await page.waitForTimeout(120);
+  check("§6.12 'Meeting öffnen' reaches the finished meeting's detail",
+        await page.evaluate(() =>
+          !document.getElementById("view-meeting-detail").hidden &&
+          /Fertig/.test(document.getElementById("detail-status-chip").textContent)));
+  // Verarbeitungstab zeigt Provider/Modell/Jobs/Wiederholungen (§6.13)
+  await page.click('[data-dtab="verarbeitung"]');
+  await page.waitForTimeout(50);
+  check("§6.13 processing tab shows provider/model/jobs/retries",
+        await page.evaluate(() => {
+          const p = document.getElementById("detail-processing-panel").textContent;
+          return /Whisper Small/.test(p) && /Jobs/.test(p) &&
+            /Wiederholungen/.test(p) && /Keine offenen Fehler/.test(p);
+        }));
+  // Audio-Tab: Wiedergabe-Mock + Aufbewahrungshinweis
+  await page.click('[data-dtab="audio"]');
+  await page.waitForTimeout(50);
+  check("§6.13 audio tab offers playback mock and retention note",
+        await page.evaluate(() => {
+          const p = document.getElementById("detail-audio-panel");
+          return !!p.querySelector("#btn-audio-play") &&
+            /lokal auf diesem Gerät gespeichert/.test(p.textContent);
+        }));
+  // Simulation wieder ausschalten (wir sind gerade in der Detailansicht,
+  // daher direkt per DOM statt per sichtbarem Klick)
+  await page.evaluate(() => {
+    const el = document.getElementById("sim-chunk-error");
+    if (el) el.checked = false;
+  });
+
   console.log(results.map(([s, n]) => `${s}  ${n}`).join("\n"));
   console.log(errors.length ? "\nJS ERRORS:\n" + errors.join("\n") : "\nNo JS errors.");
   if (errors.length) process.exitCode = 1;

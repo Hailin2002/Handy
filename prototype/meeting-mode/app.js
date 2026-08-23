@@ -11,22 +11,56 @@
   function announce(msg) { liveRegion.textContent = msg; }
 
   /* ---------- Zustand ---------- */
+  var meetingSeq = 0;
+  function nextMeetingId() { meetingSeq += 1; return "m" + meetingSeq; }
   var state = {
     sessionActive: false,      // läuft gerade ein Meeting? (steuert Pin in der Navigation)
     paused: false,
     seconds: 0,                // gemockte Aufnahmedauer, pro Tick inkrementiert
     meetings: [
-      { title: "Wochenplanung", date: "Gestern, 16:00", duration: "00:58:12",
+      { id: nextMeetingId(),
+        title: "Wochenplanung", date: "Gestern, 16:00", duration: "00:58:12",
         provider: "Lokal", status: "fertig",
-        summary: "Team einigte sich auf Release-Termin und zwei Follow-up-Aufgaben." },
-      { title: "Kundengespräch Berger", date: "Mo, 10:30", duration: "00:31:40",
+        summary: "Team einigte sich auf Release-Termin und zwei Follow-up-Aufgaben.",
+        decisions: ["Release-Termin wird um eine Woche verschoben.",
+                    "Messestand-Budget bleibt unverändert."],
+        tasks: [{ text: "Zahlen bis Donnerstag prüfen", done: false },
+                { text: "Protokoll an das Team senden", done: true }],
+        questions: ["Ist das Budget für die Support-Werkstudenten bewilligt?"],
+        segments: [
+          ["0:02", "Wir starten mit dem Tagesordnungspunkt Budget."],
+          ["0:04", "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen."],
+          ["0:06", "Einwand: Der Messestand braucht dieses Jahr mehr Mittel."],
+          ["0:08", "Entscheidung: Wir verschieben die Entscheidung um eine Woche."],
+          ["0:10", "Nächster Punkt: Personalplanung für das vierte Quartal."],
+          ["0:12", "Vorschlag: Zwei zusätzliche Werkstudenten für den Support."],
+          ["0:14", "Einwand: Das Budget dafür ist noch nicht bewilligt."],
+          ["0:16", "Wir prüfen die Zahlen bis Donnerstag und melden uns."],
+          ["0:18", "Abschließend: Das Protokoll geht heute Abend an alle."]
+        ],
+        audio: true,
+        processing: { provider: "Lokal", model: "Whisper Small",
+                      chunksTotal: 24, transcribed: 24, failedChunks: 0, retries: 0 } },
+      { id: nextMeetingId(),
+        title: "Kundengespräch Berger", date: "Mo, 10:30", duration: "00:31:40",
         provider: "Lokal", status: "verarbeitung",
-        summary: "Transkription läuft …" }
+        summary: null,
+        decisions: [], tasks: [], questions: [],
+        segments: [["1:04", "Herr Berger bittet um ein Angebot für zwanzig Lizenzen."]],
+        audio: true,
+        processing: { provider: "Lokal", model: "Whisper Small",
+                      chunksTotal: 11, transcribed: 4, failedChunks: 0, retries: 0 } }
     ],
     filter: "alle",
     search: "",
-    activeTitle: ""
+    activeTitle: "",
+    selectedId: null,          // Meeting in der Detailansicht (§6.13)
+    lastProcessingId: null     // Meeting, dessen Checkliste gerade läuft (§6.12)
   };
+
+  function meetingById(id) {
+    return state.meetings.filter(function (m) { return m.id === id; })[0] || null;
+  }
 
   function fmt(sec) {
     var h = String(Math.floor(sec / 3600)).padStart(2, "0");
@@ -41,7 +75,7 @@
   /* ---------- Routing ---------- */
   var ROUTES = ["diktieren", "meetings", "meeting-aktiv", "verarbeitung",
                 "projekte", "diktatverlauf", "einstellungen", "hilfe",
-                "meeting-einrichtung"];
+                "meeting-einrichtung", "meeting-detail"];
 
   function currentRoute() {
     var h = location.hash.replace(/^#\/?/, "").split("/")[0];
@@ -66,6 +100,7 @@
     }
     if (route === "meetings") renderMeetings();
     if (route === "meeting-einrichtung") initSetupView();
+    if (route === "meeting-detail") renderDetail();
     if (route === "meeting-aktiv") renderRecordingStatus();   // Chip/Pin synchron halten
     updateClockDisplays();
   }
@@ -76,7 +111,28 @@
   function meetingMatches(m) {
     if (state.filter !== "alle" && m.status !== state.filter) return false;
     if (!state.search) return true;
-    return (m.title + " " + m.summary).toLowerCase().indexOf(state.search.toLowerCase()) !== -1;
+    // summary kann während der Verarbeitung noch null sein – nicht als
+    // String "null" in die Suche mischen
+    return (m.title + " " + (m.summary || "")).toLowerCase()
+      .indexOf(state.search.toLowerCase()) !== -1;
+  }
+
+  /* Fortschrittstext aus deterministischen Verarbeitungszahlen (§6.5/§6.12) */
+  function meetingProgressText(m) {
+    if (!m.processing) return "";
+    var p = m.processing;
+    if (m.status === "fertig") return "Verarbeitung abgeschlossen · " +
+      p.transcribed + " von " + p.chunksTotal + " Abschnitten transkribiert";
+    if (p.transcribed < p.chunksTotal)
+      return "Transkription läuft · " + p.transcribed + " von " + p.chunksTotal + " Abschnitten";
+    return "Zusammenfassung wird erstellt …";
+  }
+
+  /* Gemeinsame Löschbestätigung: nennt konkret Audio, Transkript und
+     Zusammenfassung (§6.14, Gate G2) – im Listen-Menü wie im Detail-Menü */
+  function confirmDeleteMeeting(m) {
+    return window.confirm("„" + m.title + "“ endgültig löschen?\n\n" +
+      "Es werden Audio, Transkript und Zusammenfassung dieses Meetings unwiderruflich entfernt.");
   }
 
   function renderMeetings() {
@@ -85,19 +141,34 @@
     var shown = state.meetings.filter(meetingMatches);
     $("#meetings-empty").hidden = state.sessionActive || state.meetings.length > 0;
 
-    shown.forEach(function (m, i) {
+    shown.forEach(function (m) {
       var li = document.createElement("li");
       li.className = "meeting-item";
-      var chip = m.status === "fertig"
-        ? '<span class="status-chip status-ready">✓ Fertig</span>'
-        : '<span class="status-chip status-processing">⟳ In Verarbeitung</span>';
+      var chip;
+      if (m.status === "fertig")
+        chip = '<span class="status-chip status-ready">✓ Fertig</span>';
+      else if (m.status === "fehler")
+        chip = '<span class="status-chip status-recording">✗ Fehler</span>';
+      else
+        chip = '<span class="status-chip status-processing">⟳ In Verarbeitung</span>';
+      var summaryText = m.summary !== null && m.summary !== undefined ? m.summary
+        : "Zusammenfassung wird nach Abschluss der Verarbeitung angezeigt.";
       li.innerHTML =
         "<div class='row-between'>" +
-        "<div><strong>" + m.title + "</strong> · <span class='muted'>" + m.date +
-        "</span> · " + m.duration + " · " + m.provider + "</div>" +
+        // Karte öffnet die Detailansicht (§6.13); eigenes, mit Tastatur
+        // erreichbares Element – das Drei-Punkte-Menü bleibt separat (Gate G4)
+        "<button type='button' class='card-open' data-id='" + m.id + "'" +
+        " aria-label='Meeting „" + esc(m.title) + "“ öffnen'>" +
+        "<strong>" + esc(m.title) + "</strong> · <span class='muted'>" + esc(m.date) +
+        "</span> · " + esc(m.duration) + " · " + esc(m.provider) + "</button>" +
         "<div class='menu-row'><button type='button' class='btn btn-ghost btn-small menu-btn' " +
-        "aria-haspopup='true' aria-expanded='false' aria-label='Aktionen für " + m.title + "'>⋯ Menü</button></div></div>" +
-        chip + "<p class='muted small'>" + m.summary + "</p>";
+        "aria-haspopup='true' aria-expanded='false' aria-label='Aktionen für " + esc(m.title) + "'>⋯ Menü</button></div></div>" +
+        chip + "<span class='muted small'>" + esc(meetingProgressText(m)) + "</span>" +
+        "<p class='muted small'>" + esc(summaryText) + "</p>";
+      li.querySelector(".card-open").addEventListener("click", function () {
+        state.selectedId = m.id;
+        location.hash = "#/meeting-detail";
+      });
       // Sichtbares Drei-Punkte-Menü (§6.5): Export/Neu verarbeiten/Löschen ohne Hover
       li.querySelector(".menu-btn").addEventListener("click", function (ev) {
         toggleMenu(ev.currentTarget, m);
@@ -120,12 +191,13 @@
     [["Exportieren …", ""], ["Erneut verarbeiten", ""], ["Löschen …", "menu-danger"]].forEach(function (item) {
       var b = document.createElement("button");
       b.type = "button";
+      b.setAttribute("role", "menuitem");
       b.textContent = item[0];
       if (item[1]) b.className = item[1];
       if (item[0].indexOf("Löschen") === 0) {
         b.addEventListener("click", function () {
           // Irreversible Löschung nennt konkret, was entfernt wird (§6.14)
-          if (window.confirm("„" + m.title + "“ endgültig löschen?\n\nEs werden Audio, Transkript und Zusammenfassung unwiderruflich entfernt.")) {
+          if (confirmDeleteMeeting(m)) {
             state.meetings = state.meetings.filter(function (x) { return x !== m; });
             announce("Meeting gelöscht.");
           }
@@ -140,7 +212,11 @@
     btn.parentElement.appendChild(menu);
   }
   function closeMenus() {
-    document.querySelectorAll(".menu").forEach(function (el) { el.remove(); });
+    // Nur dynamische Karten-Menüs entfernen; das statische Detail-Menü
+    // (.menu-static) bleibt im DOM und wird lediglich zugeklappt
+    document.querySelectorAll(".menu:not(.menu-static)").forEach(function (el) { el.remove(); });
+    var more = $("#detail-more-menu");
+    if (more) more.open = false;
     document.querySelectorAll(".menu-btn[aria-expanded]").forEach(function (b) {
       b.setAttribute("aria-expanded", "false");
     });
@@ -572,6 +648,7 @@
   var SEG_MS = 500;
   var segDriver = null, segClock = 0, segFired = [];
   var nextFillerAt = Infinity, fillerCount = 0;
+  var sessionCaptured = [];   // fertige Segmente der laufenden Session (§6.13)
 
   function startSegments() {
     stopSegments();
@@ -581,6 +658,7 @@
     $("#btn-zum-text").hidden = true;
     $("#live-segments").innerHTML = "";
     $("#listening-state").textContent = "Hört zu …";
+    sessionCaptured = [];   // Transkript der Session für die Detailansicht (§6.13)
     segClock = 0;
     segFired = demoSegments.map(function () { return false; });
     nextFillerAt = Infinity;
@@ -617,6 +695,8 @@
     var li = document.createElement("li");
     li.innerHTML = "<span class='segment-time'>+" + seg[0] + "s</span>" + esc(seg[1]);
     $("#live-segments").appendChild(li);
+    // Für die spätere Detailansicht mitschneiden (§6.13)
+    sessionCaptured.push({ t: seg[0], text: seg[1] });
     // Nur am unteren Rand mitlaufen; sonst bleibt die Ansicht stehen (§6.11)
     if (stickToBottom) transcriptArea.scrollTop = transcriptArea.scrollHeight;
     $("#listening-state").textContent =
@@ -735,11 +815,28 @@
     state.sessionActive = false;
     state.paused = false;
     state.seconds = 0;
-    state.meetings.unshift({
-      title: state.activeTitle, date: "Gerade eben", duration: dur,
+    // Gesamtmenge der Abschnitte ist nach dem Speichern deterministisch
+    // bekannt und treibt die Checklisten-Zählung (§6.12, Gate G1)
+    var chunksTotal = Math.max(sessionCaptured.length * 2, 6);
+    var newMeeting = {
+      id: nextMeetingId(),
+      title: state.activeTitle || "Meeting", date: "Gerade eben", duration: dur,
       provider: providerLabel(), status: "verarbeitung",
-      summary: "Verarbeitung gestartet: Transkription läuft …"
-    });
+      summary: null,
+      decisions: [], tasks: [], questions: [],
+      segments: sessionCaptured.map(function (s) {
+        var mm = Math.floor(s.t / 60), ss = String(s.t % 60).padStart(2, "0");
+        return [mm + ":" + ss, s.text];
+      }),
+      audio: true,
+      processing: { provider: providerLabel(), model: "Whisper Small",
+                    chunksTotal: chunksTotal,
+                    transcribed: Math.min(1, chunksTotal),
+                    failedChunks: 0, retries: 0 }
+    };
+    sessionCaptured = [];
+    state.meetings.unshift(newMeeting);
+    state.lastProcessingId = newMeeting.id;
     stopSegments();
     announce("Aufnahme beendet. Audio sicher gespeichert.");
     location.hash = "#/verarbeitung";
@@ -749,31 +846,397 @@
       closeStopConfirm();
       $("#btn-beenden").focus();
       announce("Beenden abgebrochen. Die Aufnahme läuft weiter.");
+      return;
+    }
+    // Escape schließt offene Karten- und Detailmenüs (§6.14: vollständige
+    // Tastaturbedienung – ein mit der Tastatur geöffnetes Menü muss auch
+    // wieder per Tastatur schließbar sein)
+    if (e.key !== "Escape") return;
+    var more = $("#detail-more-menu");
+    if (document.querySelector(".menu:not(.menu-static)") || (more && more.open)) {
+      closeMenus();
+      announce("Menü geschlossen.");
     }
   });
 
-  /* ---------- Verarbeitungs-Checkliste (§6.12) ---------- */
-  function runChecklist() {
-    var steps = document.querySelectorAll("#proc-checklist li");
-    steps.forEach(function (li) { li.className = ""; });
-    // Schrittexte zurücksetzen, damit ein erneuter Lauf sauber startet
-    steps[1].textContent = "○ Audioabschnitte vorbereiten …";
-    steps[2].textContent = "○ Abschnitte transkribieren …";
-    steps[3].textContent = "○ Zusammenfassung wartet";
-    var seq = [
-      [400, function () { steps[1].textContent = "● 3 von 3 Audioabschnitten vorbereitet"; steps[1].className = "done"; }],
-      [1200, function () { steps[2].textContent = "● 2 von 3 Abschnitten transkribiert"; }],
-      [2200, function () { steps[2].textContent = "✓ 3 von 3 Abschnitten transkribiert"; steps[2].className = "done"; }],
-      [3200, function () {
-        steps[3].textContent = "✓ Zusammenfassung erstellt";
-        steps[3].className = "done";
-        announce("Verarbeitung abgeschlossen.");
-      }]
-    ];
-    seq.forEach(function (item) { window.setTimeout(item[1], item[0]); });
+  /* ---------- Verarbeitungs-Checkliste (§6.12) ----------
+     Deterministische Stückzahlen aus den gespeicherten Meeting-Daten.
+     Keine Prozentanzeige; solange die Gesamtmenge unbekannt ist (Phase
+     „vorbereiten“), steht bewusst keine Zahl im Text (Gate G1). */
+  var procTimers = [];
+
+  function clearProcTimers() {
+    procTimers.forEach(function (t) { window.clearTimeout(t); window.clearInterval(t); });
+    procTimers = [];
   }
+  function procLater(ms, fn) { procTimers.push(window.setTimeout(fn, ms)); }
+
+  function checklistMeeting() {
+    return meetingById(state.lastProcessingId) || state.meetings[0] || null;
+  }
+
+  function setStep(step, cls, text) {
+    var li = document.querySelector('#proc-checklist li[data-step="' + step + '"]');
+    if (!li) return;
+    li.className = cls || "";
+    li.textContent = text;
+  }
+
+  function runChecklist() {
+    clearProcTimers();
+    $("#btn-retry-failed").hidden = true;
+    $("#btn-open-processing-meeting").hidden = true;
+    var m = checklistMeeting();
+    if (!m) return;
+    m.status = "verarbeitung";
+    $("#proc-meeting-label").textContent = "„" + m.title + "“ · " + m.duration;
+    // Schritt 1 ist erledigt: Aufnahme liegt sicher vor
+    setStep("saved", "done", "✓ Aufnahme sicher gespeichert");
+    /* Phase Vorbereitung: Gesamtmenge noch unbekannt → bewusst OHNE Stückzahl
+       und ohne Prozentangabe (Gate G1: keine erfundene Fortschrittszahl) */
+    setStep("chunks", "", "● Audioabschnitte werden vorbereitet …");
+    setStep("transcribe", "", "○ Abschnitte transkribieren …");
+    setStep("summary", "", "○ Zusammenfassung wartet");
+
+    var total = m.processing.chunksTotal;
+
+    procLater(600, function () {
+      // Jetzt ist die Gesamtmenge bekannt → deterministische Stückzahl
+      m.processing.transcribed = 0;
+      setStep("chunks", "done",
+        "✓ " + total + " von " + total + " Audioabschnitten vorbereitet");
+
+      // Transkription in vier deterministischen Etappen; optional scheitert
+      // genau ein Abschnitt (Mock-Simulation, nicht zufällig)
+      var simulateError = $("#sim-chunk-error").checked;
+      var stages = [Math.round(total * 0.25), Math.round(total * 0.5),
+                    Math.round(total * 0.75), total];
+      // Offsets relativ zum Vorbereitungs-Abschluss; absolut also
+      // 1100/1600/2100/2600 ms nach Checkliststart (deterministisch)
+      var stageTimes = [500, 1000, 1500, 2000];
+      stages.forEach(function (upto, idx) {
+        procLater(stageTimes[idx], function () {
+          if (simulateError && idx === stages.length - 1) {
+            // Ein Abschnitt dauerhaft fehlgeschlagen → Wiederholung anbieten
+            m.processing.transcribed = total - 1;
+            m.processing.failedChunks = 1;
+            setStep("transcribe", "error",
+              "✗ " + (total - 1) + " von " + total + " Abschnitten transkribiert · 1 fehlerhaft");
+            $("#btn-retry-failed").hidden = false;
+            announce("Ein Abschnitt konnte nicht transkribiert werden.");
+            return;
+          }
+          m.processing.transcribed = upto;
+          setStep("transcribe", "",
+            "● " + upto + " von " + total + " Abschnitten transkribiert");
+          if (idx === stages.length - 1) finishChecklist(m);
+        });
+      });
+    });
+  }
+
+  function finishChecklist(m) {
+    m.processing.failedChunks = 0;
+    m.processing.transcribed = m.processing.chunksTotal;
+    setStep("transcribe", "done", "✓ " + m.processing.chunksTotal + " von " +
+      m.processing.chunksTotal + " Abschnitten transkribiert");
+    procLater(700, function () {
+      m.status = "fertig";
+      m.summary = "Automatische Kurzfassung: Besprechung abgeschlossen, " +
+        "Ergebnisse wurden aus " + m.segments.length + " Transkriptsegmenten extrahiert (Mock).";
+      setStep("summary", "done", "✓ Zusammenfassung erstellt");
+      $("#btn-retry-failed").hidden = true;
+      $("#btn-open-processing-meeting").hidden = false;   // direkt ins Detail (§6.13)
+      announce("Verarbeitung abgeschlossen. Systembenachrichtigung gesendet (Mock).");
+    });
+  }
+
+  $("#btn-retry-failed").addEventListener("click", function () {
+    var m = checklistMeeting();
+    if (!m) return;
+    this.hidden = true;
+    m.processing.retries += 1;
+    setStep("transcribe", "", "● Fehlerhafte Abschnitte werden erneut versucht …");
+    announce("Fehlerhafte Abschnitte werden erneut versucht.");
+    procLater(900, function () { finishChecklist(m); });
+  });
+
+  /* Im Hintergrund weiterarbeiten: zurück zur Liste; Verarbeitung läuft
+     laut Mock weiter und das Meeting bleibt dort sichtbar (§6.12) */
+  $("#btn-proc-bg").addEventListener("click", function () {
+    announce("Verarbeitung läuft im Hintergrund weiter.");
+    location.hash = "#/meetings";
+  });
+
+  /* Direkt aus der Checkliste ins Detail des verarbeiteten Meetings (§6.13) */
+  $("#btn-open-processing-meeting").addEventListener("click", function () {
+    var m = checklistMeeting();
+    if (m) state.selectedId = m.id;
+    location.hash = "#/meeting-detail";
+  });
+
   window.addEventListener("hashchange", function () {
     if (currentRoute() === "verarbeitung") runChecklist();
+  });
+
+  /* ---------- Meeting-Detailansicht (§6.13) ----------
+     Tabs Übersicht/Transkript/Audio/Verarbeitung; standardmäßig Übersicht;
+     optionale Geteilte Ansicht nur auf breiten Bildschirmen (§6.13). */
+
+  function statusChipHtml(m) {
+    if (m.status === "fertig") return '<span class="status-chip status-ready">✓ Fertig</span>';
+    if (m.status === "fehler") return '<span class="status-chip status-recording">✗ Fehler</span>';
+    return '<span class="status-chip status-processing">⟳ In Verarbeitung</span>';
+  }
+
+  function renderDetail() {
+    var m = meetingById(state.selectedId);
+    if (!m) { location.hash = "#/meetings"; return; }
+    $("#detail-title").value = m.title;
+    $("#detail-date").textContent = m.date;
+    $("#detail-duration").textContent = m.duration;
+    $("#detail-provider-line").textContent = m.provider +
+      (m.processing ? " · " + m.processing.model : "");
+    $("#detail-status-chip").innerHTML = statusChipHtml(m);
+
+    // Übersicht
+    $("#detail-summary").textContent = m.summary !== null && m.summary !== undefined
+      ? m.summary : "Zusammenfassung wird nach Abschluss der Verarbeitung erstellt …";
+    fillSimpleList("#detail-decisions", m.decisions,
+      "Noch keine Entscheidungen erkannt.");
+    fillTaskList("#detail-tasks", m.tasks);
+    fillSimpleList("#detail-questions", m.questions,
+      "Keine offenen Fragen erkannt.");
+
+    renderDetailTranscript(m);
+    renderAudioPanel(m);
+    renderProcessingPanel(m);
+
+    // Standard-Tab ist Übersicht (§6.13); Split-Ansicht nicht als Default
+    selectDetailTab("uebersicht");
+    $("#split-toggle").checked = false;
+    $("#view-meeting-detail").classList.remove("split-active");
+    $("#detail-more-menu").open = false;
+  }
+
+  function fillSimpleList(sel, items, emptyText) {
+    var ul = $(sel);
+    ul.innerHTML = "";
+    if (!items || !items.length) {
+      var li0 = document.createElement("li");
+      li0.className = "muted small";
+      li0.textContent = emptyText;
+      ul.appendChild(li0);
+      return;
+    }
+    items.forEach(function (it) {
+      var li = document.createElement("li");
+      li.textContent = typeof it === "string" ? it : it.text;
+      ul.appendChild(li);
+    });
+  }
+  function fillTaskList(sel, tasks) {
+    var ul = $(sel);
+    ul.innerHTML = "";
+    if (!tasks || !tasks.length) {
+      var li0 = document.createElement("li");
+      li0.className = "muted small";
+      li0.textContent = "Noch keine Aufgaben erkannt.";
+      ul.appendChild(li0);
+      return;
+    }
+    tasks.forEach(function (t) {
+      var li = document.createElement("li");
+      li.textContent = (t.done ? "☑ " : "☐ ") + t.text;
+      ul.appendChild(li);
+    });
+  }
+
+  /* Transkript-Tab inklusive Suche mit Sprung zur Segmentposition (Gate G3) */
+  function renderDetailTranscript(m) {
+    var ul = $("#detail-segments");
+    ul.innerHTML = "";
+    $("#detail-transcript-search").value = "";
+    $("#transcript-search-status").textContent = "";
+    (m.segments || []).forEach(function (seg, i) {
+      var li = document.createElement("li");
+      li.dataset.index = String(i);
+      li.dataset.pos = seg[0];
+      li.tabIndex = -1;
+      li.innerHTML = "<span class='segment-time'>" + esc(seg[0]) + "</span>" + esc(seg[1]);
+      ul.appendChild(li);
+    });
+    if (!(m.segments || []).length) {
+      var li0 = document.createElement("li");
+      li0.className = "muted";
+      li0.textContent = "Keine Transkriptsegmente vorhanden.";
+      ul.appendChild(li0);
+    }
+  }
+
+  function runTranscriptSearch() {
+    var q = $("#detail-transcript-search").value.trim().toLowerCase();
+    var lis = Array.prototype.slice.call(document.querySelectorAll("#detail-segments li[data-index]"));
+    var hits = [];
+    lis.forEach(function (li) {
+      li.classList.remove("seg-hit", "seg-hit-first");
+      if (q && li.textContent.toLowerCase().indexOf(q) !== -1) hits.push(li);
+    });
+    var status = $("#transcript-search-status");
+    if (!q) { status.textContent = ""; return; }
+    if (!hits.length) {
+      status.textContent = "Kein Treffer für „" + q + "“.";
+      return;
+    }
+    hits.forEach(function (li) { li.classList.add("seg-hit"); });
+    var first = hits[0];
+    first.classList.add("seg-hit-first");
+    // Sprung zur gemockten Audioposition des ersten Treffers (§6.13/Gate G3)
+    first.scrollIntoView({ block: "center" });
+    first.focus();
+    status.textContent = hits.length + " Treffer · erster Treffer bei Segment " +
+      (Number(first.dataset.index) + 1) + " von " + lis.length +
+      " · Audioposition " + first.dataset.pos;
+    announce(status.textContent);
+  }
+  $("#detail-transcript-search").addEventListener("input", runTranscriptSearch);
+
+  /* Audio-Tab: Wiedergabe und Aufbewahrung, nur solange Audio vorhanden (§6.13) */
+  var audioPlaying = false;
+  function renderAudioPanel(m) {
+    audioPlaying = false;
+    var host = $("#detail-audio-panel");
+    if (!m.audio) {
+      host.innerHTML =
+        "<h2 class='small-heading'>Audio</h2>" +
+        "<p class='muted'>Das Audio wurde entfernt. Transkript und Zusammenfassung bleiben verfügbar.</p>";
+      return;
+    }
+    host.innerHTML =
+      "<h2 class='small-heading'>Aufnahme</h2>" +
+      "<div class='setting-row-inline'>" +
+      "<button type='button' class='btn btn-secondary btn-small' id='btn-audio-play'>▶ Wiedergabe (Mock)</button>" +
+      "<div class='audio-progress' role='progressbar' aria-label='Wiedergegebene Position' " +
+      "aria-valuemin='0' aria-valuemax='100' aria-valuenow='0' id='audio-progress'></div>" +
+      "<span class='mono muted' id='audio-pos'>0:00 / " + esc(m.duration) + "</span></div>" +
+      "<p class='muted small'>Aufbewahrung: Das Audio bleibt lokal auf diesem Gerät gespeichert, " +
+      "solange das Meeting existiert.</p>" +
+      "<button type='button' class='btn btn-neutral btn-small' id='btn-audio-delete'>Audio löschen (Mock)</button>";
+    $("#btn-audio-play").addEventListener("click", function () {
+      audioPlaying = !audioPlaying;
+      this.textContent = audioPlaying ? "⏸ Pause (Mock)" : "▶ Wiedergabe (Mock)";
+      announce(audioPlaying ? "Wiedergabe gestartet (Mock)." : "Wiedergabe pausiert.");
+    });
+    $("#btn-audio-delete").addEventListener("click", function () {
+      if (!window.confirm("Audio von „" + m.title + "“ löschen?\n\nTranskript und Zusammenfassung bleiben erhalten.")) return;
+      m.audio = false;
+      announce("Audio gelöscht (Mock).");
+      renderAudioPanel(meetingById(state.selectedId));
+    });
+  }
+
+  /* Verarbeitung-Tab: Provider, Modell, Jobs, Fehler und Wiederholungen (§6.13) */
+  function renderProcessingPanel(m) {
+    var p = m.processing || {};
+    var jobs = "<li>" + (m.status === "fertig" ? "✓" : "●") +
+      " Audio vorbereiten – " + (p.chunksTotal || 0) + " Abschnitte</li>" +
+      "<li>" + (m.status === "fertig" ? "✓" : "●") + " Transkription – " +
+      (p.transcribed || 0) + " von " + (p.chunksTotal || 0) + " Abschnitten" +
+      (p.failedChunks ? " · " + p.failedChunks + " fehlerhaft" : "") + "</li>" +
+      "<li>" + (m.status === "fertig" ? "✓" : "○") + " Zusammenfassung" +
+      (m.status === "fertig" ? "" : " – wartet") + "</li>";
+    $("#detail-processing-panel").innerHTML =
+      "<h2 class='small-heading'>Verarbeitungsdetails</h2>" +
+      "<dl class='status-lines'>" +
+      "<div class='status-line'><dt>Provider</dt><dd>" + esc(p.provider || m.provider) + "</dd></div>" +
+      "<div class='status-line'><dt>Modell</dt><dd>" + esc(p.model || "–") + "</dd></div>" +
+      "</dl>" +
+      "<h2 class='small-heading'>Jobs</h2><ul class='checklist' role='list'>" + jobs + "</ul>" +
+      "<h2 class='small-heading'>Fehler &amp; Wiederholungen</h2>" +
+      "<p>" + (p.failedChunks
+        ? "1 Abschnitt fehlgeschlagen – in der Verarbeitung-Seite erneut versuchen."
+        : "Keine offenen Fehler.") +
+      " Wiederholungen bisher: " + (p.retries || 0) + ".</p>";
+  }
+
+  /* Detail-Tabs */
+  function selectDetailTab(name) {
+    document.querySelectorAll("#view-meeting-detail .tab").forEach(function (t) {
+      t.setAttribute("aria-selected", String(t.dataset.dtab === name));
+    });
+    document.querySelectorAll("#view-meeting-detail .tabpanel").forEach(function (p) {
+      p.hidden = p.dataset.dpanel !== name;
+    });
+  }
+  document.querySelectorAll("#view-meeting-detail .tab").forEach(function (tab) {
+    tab.addEventListener("click", function () { selectDetailTab(this.dataset.dtab); });
+  });
+  /* Pfeiltasten-Navigation im Tablist (§6.14: vollständige Tastaturbedienung) */
+  document.querySelector("#view-meeting-detail .tabs").addEventListener("keydown",
+    function (e) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      var tabs = Array.prototype.slice.call(this.querySelectorAll(".tab"));
+      var i = tabs.indexOf(document.activeElement);
+      if (i === -1) return;
+      var n = e.key === "ArrowRight"
+        ? (i + 1) % tabs.length
+        : (i - 1 + tabs.length) % tabs.length;
+      tabs[n].focus();
+      selectDetailTab(tabs[n].dataset.dtab);
+      e.preventDefault();
+    });
+
+  /* Optionale Geteilte Ansicht (nur breite Screens bieten sie an, §6.13) */
+  $("#split-toggle").addEventListener("click", function () {
+    // Checkbox-Wechsel erst nach dem Click-Event auswerten
+    window.setTimeout(function () {
+      var on = $("#split-toggle").checked;
+      $("#view-meeting-detail").classList.toggle("split-active", on);
+      if (on) {
+        // Geteilte Ansicht zeigt Übersicht + Transkript nebeneinander
+        selectDetailTab("uebersicht");
+        document.querySelector('[data-dpanel="transkript"]').hidden = false;
+      } else {
+        selectDetailTab("uebersicht");
+      }
+    }, 0);
+  });
+
+  /* Titel im Detail bearbeiten → Änderung erscheint auch in der Liste (G4) */
+  $("#detail-title").addEventListener("change", function () {
+    var m = meetingById(state.selectedId);
+    if (!m) return;
+    m.title = this.value.trim() || m.title;
+    this.value = m.title;
+    announce("Titel geändert: " + m.title);
+  });
+
+  $("#btn-detail-copy").addEventListener("click", function () {
+    var m = meetingById(state.selectedId);
+    announce("Zusammenfassung kopiert (Mock): „" + ((m && m.summary) || "–") + "“");
+  });
+  $("#btn-detail-export").addEventListener("click", function () {
+    announce("Export geöffnet (Mock).");
+  });
+  $("#btn-detail-reprocess").addEventListener("click", function () {
+    var m = meetingById(state.selectedId);
+    if (!m) return;
+    $("#detail-more-menu").open = false;
+    state.lastProcessingId = m.id;
+    location.hash = "#/verarbeitung";
+  });
+  $("#btn-detail-delete").addEventListener("click", function () {
+    var m = meetingById(state.selectedId);
+    if (!m) return;
+    // Gleiche benannte Bestätigung wie in der Liste (Gate G2)
+    if (confirmDeleteMeeting(m)) {
+      state.meetings = state.meetings.filter(function (x) { return x !== m; });
+      state.selectedId = null;
+      announce("Meeting gelöscht.");
+      location.hash = "#/meetings";
+    } else {
+      $("#detail-more-menu").open = false;
+    }
   });
 
   /* ---------- Uhr / Tick ---------- */
@@ -790,6 +1253,17 @@
     updateClockDisplays();
   }
   window.setInterval(advanceClock, 1000);
+
+  /* Audio-Wiedergabe-Fortschritt im Detail-Tab (§6.13) – ein globaler Ticker,
+     damit renderAudioPanel keine Intervalle ansammelt */
+  window.setInterval(function () {
+    if (currentRoute() !== "meeting-detail" || !audioPlaying) return;
+    var bar = document.getElementById("audio-progress");
+    if (!bar) return;
+    var now = (Number(bar.getAttribute("aria-valuenow") || 0) + 2) % 104;
+    bar.setAttribute("aria-valuenow", String(Math.min(now, 100)));
+    bar.style.width = Math.min(now, 100) + "%";
+  }, 300);
 
   /* Pegel-Demo */
   window.setInterval(function () {
@@ -982,13 +1456,19 @@
     state.sessionActive = false; state.paused = false;
     state.seconds = 0;
     stopSegments();
+    clearProcTimers();          // laufende Checklisten anhalten (§6.12)
+    sessionCaptured = [];
+    state.selectedId = null;
+    $("#btn-retry-failed").hidden = true;
+    $("#btn-open-processing-meeting").hidden = true;
     // offene Overlays (Countdown/Bestätigung) sauber schließen
     if (countdownIv) { window.clearInterval(countdownIv); countdownIv = null; }
     $("#countdown-overlay").hidden = true;
     closeStopConfirm();
     resetDialogState();
     dlgInitialized = true;   // Defaults sind gerade explizit hergestellt
-    ["#sim-no-mic", "#sim-mic-denied", "#sim-no-output", "#sim-shortcut-taken"]
+    ["#sim-no-mic", "#sim-mic-denied", "#sim-no-output", "#sim-shortcut-taken",
+     "#sim-chunk-error"]
       .forEach(function (sel) { $(sel).checked = false; });
     location.hash = "#/diktieren";
     render();

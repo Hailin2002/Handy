@@ -27,7 +27,8 @@ Primärnavigation gemäß Plan §6.3:
 | Bereich | Umfang im Prototyp |
 | --- | --- |
 | **Diktieren** | Statuszeilen, Shortcut-Keycap, `Diktat testen` mit reiner Vorschau; bewusst kein Meeting-Startbutton (§6.4) |
-| **Meetings** | Leerer Zustand, Liste mit Suche/Filter, sichtbarem Drei-Punkte-Menü; aktives Meeting immer oben (§6.5) |
+| **Meetings** | Leerer Zustand, Liste mit Suche/Filter, Karten mit Fortschritt und Zusammenfassung, sichtbarem Drei-Punkte-Menü (Export/Erneut verarbeiten/Löschen ohne Hover); aktives Meeting immer oben (§6.5). Kartenklick öffnet die Detailansicht |
+| **Meeting-Detailansicht** | Tabs `Übersicht` / `Transkript` / `Audio` / `Verarbeitung`; editierbarer Titel; Kopieren/Exportieren plus beschriftetes Menü „Weitere Aktionen“ inkl. Löschen mit benannten Artefakten; Transkript-Suche springt zur Segmentposition inkl. Audioposition; optionale `Geteilte Ansicht` nur auf breiten Bildschirmen (§6.13) |
 | **Meeting-Ersteinrichtung** | Drei Schritte: Verarbeitung wählen (Lokal empfohlen, Azure mit Upload-Hinweis, Custom unter „Weitere Optionen“), Audio prüfen mit Livepegel-Mocks und Korrekturaktionen bei fehlendem Gerät/verweigerter Berechtigung, Meeting-Shortcut mit Verfügbarkeitsprüfung und konfliktfreien Alternativen (§6.6) |
 | **Kompakter Startdialog** | Vier komplett anklickbare Statuszeilen mit Mini-Pickern (eine Zeile = eine Entscheidung), Projektauswahl per Chip inkl. sichtbar unterschiedenem „Kein Projekt“, Summary-Schalter, Speicherhinweis, genau ein Primärbutton `Meeting starten` mit nachvollziehbarem Deaktivierungsgrund (§6.7) |
 | **Projekte** | Karten inkl. Eingang „Nicht zugeordnet“ mit Zähler-Badge (§6.16) |
@@ -50,8 +51,16 @@ angeheftete Eintrag **„Aufnahme läuft · 00:00:12“** mit rotem Statuspunkt
    solange nicht nach oben gescrollt wird; sonst erscheint
    `Zum aktuellen Text`. `Pause/Fortsetzen` schreibt einen Timeline-Marker.
 5. `Meeting beenden` fragt erst nach (`Meeting wirklich beenden?`, §6.9), dann
-   läuft die Verarbeitungs-Checkliste (§6.12).
+   läuft die Verarbeitungs-Checkliste (§6.12): deterministische Stückzahlen
+   („37 von 42“), bewusst keine Zahl und nie eine Prozentanzeige, solange die
+   Gesamtmenge unbekannt ist, `Im Hintergrund weiterarbeiten` zurück zur Liste,
+   und bei simuliertem Fehler `Fehlerhafte Abschnitte erneut versuchen`.
 6. Der Pin verschwindet; das Meeting erscheint in der Liste als „In Verarbeitung“.
+7. Klick auf eine Meeting-Karte öffnet die Detailansicht (§6.13) mit den Tabs
+   Übersicht, Transkript, Audio und Verarbeitung – inklusive Transkript-Suche,
+   die zum ersten Treffer springt und dessen Audioposition nennt. Zurück über
+   `← Meetings`; auf breiten Bildschirmen steht optional die `Geteilte Ansicht`
+   bereit.
 
 Im Startdialog ist jede Statuszeile (Mikrofon, Systemaudio, Transkription,
 Sprache) komplett anklickbar und öffnet einen Mini-Picker, der auf diese eine
@@ -98,3 +107,12 @@ erweiterten Prozessrechten auszuführen.
 - Keine echte Audio-, Transkriptions- oder Providerlogik.
 - Keine Projekt-Detailansicht, kein Importassistent (spätere Teilblätter von task-0025).
 - Kein Anschluss an die Tauri-App; vollständig losgelöst von `src/`.
+
+## Gates dieses Blattes (task-0180, Teil 4/5)
+
+| Gate | Umsetzung | Nachweis |
+| --- | --- | --- |
+| G1 – Checkliste mit deterministischen Stückzahlen, keine fake Prozentanzeige bei unbekannter Gesamtmenge | Checkliste zählt aus den gespeicherten Meeting-Daten (`processing.chunksTotal`); in der Vorbereitungsphase steht bewusst keine Zahl; Prozentzeichen kommen nirgends vor | verify.cjs: „G1 while total unknown…“, „G1 deterministic n von n…“, „G1 checklist never uses a fake percentage“ |
+| G2 – Löschen ohne Hover erreichbar, Bestätigung nennt Artefakte | Drei-Punkte-Menü per Klick (Liste) und „Weitere Aktionen“ (Detail); `window.confirm` nennt Titel sowie Audio, Transkript und Zusammenfassung | verify.cjs: „G2 three-dot menu opens by click…“, „G2 delete confirm names the artifacts…“ |
+| G3 – Transkript-Suche springt zur gemockten Segmentposition | Suche hebt Treffer hervor, fokussiert den ersten, scrollt ihn in Sicht und nennt „Segment k von n · Audioposition mm:ss“ | verify.cjs: „G3 search jumps to mocked segment position“ |
+| G4 – Liste → Detail → zurück verzahnt | Kartenklick öffnet Detail, `← Meetings` zurück, Titeländerungen erscheinen in der Liste, Checkliste bietet „Meeting öffnen“ | verify.cjs: „G4 list card opens detail view“, „G4 detail back returns to list“, „G4 edited detail title appears in list“ |
