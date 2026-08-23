@@ -243,6 +243,42 @@ Umfang war nur `docs/contributing-docs.md` plus Read-Scopes).
 | `docs/a11y-baseline-meeting-mode.md` | §6.14 Zugänglichkeit und Fehlbedienungsschutz (Plan-Zeilen 683–695) | `implemented behavior` (nur Ist-Zustand der bestehenden Diktier-UI als Baseline) | Read-only-Baseline-Audit des aktuellen `src/`-Frontends gegen jede §6.14-Anforderung mit Codezitaten, programmatisch berechneten Kontrast-Ratios und Deltalisten für die Phase-3-App-Shell-Arbeit; Audit-Stand HEAD `d74a0da6`; ändert keine Quelldateien. |
 | `docs/accessibility-statement.md` | §6.14 Zugänglichkeit und Fehlbedienungsschutz (Plan-Zeilen 683–695); §6.15 Anfänger-/Usability-Gates (Zeilen 697–721); §6.21 Erweiterte Usability-Gates (Zeilen 854–875) — die Gates als geplante Ziele, nicht als Fähigkeit | `implemented behavior` (nur für die dokumentierten Ist-Lücken des Diktiermodus mit Re-Verifikation; Meeting-Mode-Teil ist rein planbezogen) | Ehrliche Barrierefreiheits-Angabe ohne Konformitätsanspruch (expliziter „kein WCAG-Level beansprucht"-Abschnitt): (a) drei offene Ist-Lücken der ausgelieferten Diktier-App je an Baseline-Audit und Delta-Task gebunden — Kontrast-Tokens (D6 pending; Re-Belege `theme.css:28`, kein `--color-text-muted`), Reduced Motion (D7 pending; grep 0 Treffer), Screenreader-Naming (D10 pending; `ModelStatusButton.tsx:55`, `ProgressBar.tsx:46–50,83`) inkl. ehrlicher Kennzeichnung inzwischen teilweise erfolgter Remediation (aria-labels, aria-live) und Hinweis, dass seit Audit-HEAD `d74a0da6` kein neues Voll-Audit lief; übrige §6.14-Verdikte bewusst nicht restatet; (b) Meeting-Mode-Ziele ausschließlich als Plan-Zitate (§6.14/§6.15/§6.21) markiert; (c) Feedback-Kanal über GitHub Issues/Discussions gemäß `.github/ISSUE_TEMPLATE/config.yml` und AGENTS.md ohne SLA-Anspruch; Belegstand HEAD `e8278628`. |
 | `docs/phase1-spike/tools/README.md` | §13 Phase 1 Loopback-Spike, §14 Testmatrix (Messreihen-Evidenz M-Reihe) | `implemented behavior` (nur Verhalten der Spike-Werkzeuge selbst) | Referenzdokumentation der Phase-1-Spike-Werkzeuge (`analyze-spike-csv.ps1` SUMMARY-Felder, Fixture-Validierung, `events.log`-Marker); gegen die tatsächlichen Skripte und committed Run-Artefakte gegengeprüft, inkl. Warnung vor Pooled-120-min-Evidenz aus abgebrochenen Läufen. |
+Update (Task task-0366, 22.08.2026): Neu aufgenommen als Zeile unten:
+`docs/operator/platform-notes.md` (Platform-Notes-Operator-Referenz;
+beschreibt als `implemented behavior` die plattformabhängigen Betriebsknöpfe
+— Laufzeit-Env-Variablen `HANDY_NO_GTK_LAYER_SHELL`,
+`HANDY_METAL_RESIDENCY`, `RUST_LOG`, Debug-only-Variablen, Build-Zeit-
+Variablen (`ORT_LIB_LOCATION`, `ORT_PREFER_DYNAMIC_LINK`,
+`HANDY_VC_REDIST_DIRS`, `HANDY_FORCE_AI_STUB`), die build-fest verdrahtete
+Acceleration-Backend-Auswahl (Vulkan/Metal/CPU-Dynamik-Backends/OpenBLAS als
+Paketabhängigkeit), Wayland-Erkennung und -Werkzeugketten sowie die
+Autostart-Mechanismen — jede Variablen-Aussage grep-verifiziert gegen
+`src-tauri/src/**` und `src-tauri/build.rs`, Belegstand HEAD `33c6e0fd`).
+Bestand damit (verifiziert am 22.08.2026 per `Get-ChildItem docs -Recurse
+-Filter *.md` bzw. `Select-String '^\| \`docs/'` auf diesem Index): **63**
+Markdown-Dateien unter `docs/`, **55** hier mit Tabellenzeile erfasst.
+Nicht erfasst sind damit **8**: dieses Indexdokument, die **vier**
+Audit-Markdown-Dateien unter `docs/reviews/`
+(consent-indicator-boundary, output-channel-privacy,
+secrets-exposure-and-durability, tauri-attack-surface),
+`docs/reviews/import-security-spec/import-security-spec.md` sowie die zwei
+nachfolgend genannten Diskrepanzdateien. Korrektur gegenüber früheren
+Updates: die dortige Formel „6 ausgenommen = Indexdokument + 5
+Audit-Dokumente unter `docs/reviews/`“ war bereits vor task-0366
+unzutreffend — `docs/reviews/` enthält nur vier Markdown-Audits, und das
+Import-Security-Spec-Dokument war in der Aufzählung nie genannt; die
+Datei-/Zeilen-Zählungen selbst stimmten jeweils. Die bereits in
+task-0358/task-0368 notierte Diskrepanz
+besteht fort: `docs/operator/backup-restore-drill.md` und
+`docs/operator/meeting-mode-readiness-checklist.md` besitzen weiterhin keine
+Tabellenzeile — beide Nachträge bleiben dem jeweiligen Dokument-Eigentümer
+vorbehalten und wurden von task-0366 bewusst nicht nachgetragen. Die
+Aufnahme der Platform-Notes-Zeile selbst ist die durch Gate G3 des Leaf
+geforderte Indexregistrierung und damit eine offengelegte, minimal
+notwendige Erweiterung des deklarierten Konfliktumfangs (deklarierter
+Umfang war nur `docs/operator/platform-notes.md` plus Read-Scopes).
+
+| `docs/operator/platform-notes.md` | übergreifend (kein eigener Plan-Abschnitt; Operator-Nachschlagewerk zum belegten Ist-Stand des heutigen Diktiermodus, analog Phase-0-Baseline) | `implemented behavior` | Plattform-Operator-Referenz der Betriebsknöpfe: Plattform-Matrix (§1), Laufzeit-Variablen mit Codebeleg — `HANDY_NO_GTK_LAYER_SHELL` (`overlay.rs:115-137`, Fallback `425-433/507-524`), `HANDY_METAL_RESIDENCY`/Weitergabe an `GGML_METAL_NO_RESIDENCY` (`lib.rs:176-189`, Issue #1902), `RUST_LOG` (`logging.rs:38-58`), Debug-only `HANDY_FORCE_TRANSCRIPTION_FAILURE` (`transcription.rs:1168-1174`) und `HANDY_DEBUG_MIC_READY_DELAY_MS` inkl. 10-s-Cap (`actions.rs:612-625`); Build-Zeit-Variablen `ORT_LIB_LOCATION`+`ORT_PREFER_DYNAMIC_LINK` (`build.rs:105-147`; macOS-dev via BUILD.md:26/32), `HANDY_VC_REDIST_DIRS` (`build.rs:40-103`, Issue #1527), `HANDY_FORCE_AI_STUB` (`build.rs:417-444`); Acceleration-Backends als Build-Feature-Tabelle aus `Cargo.toml` (Win-x64 Vulkan+dynamic-backends, Win-ARM CPU-statisch, macOS Metal statisch, Linux Vulkan+dynamic-backends; OpenBLAS als deb/rpm-Paketabhängigkeit aus `tauri.conf.json:48,56`; ONNX überall CPU-only); Wayland-Erkennung (`utils.rs:141-163`), Paste-Werkzeugketten (`clipboard.rs:120-224`, `wl-copy` :33), ehrliche Korrektur des README-Workarounds `WEBKIT_DISABLE_DMABUF_RENDERER` (wird von Handy auf Linux selbst gesetzt, `main.rs:10-15`, README:468-474 damit obsolet); Autostart-Mechanismen SMAppService vs. Plugin inkl. Legacy-Plist-Räumung (`autostart.rs:1-111`, Issue #337); jede Variable grep-verifiziert (Beleglauf im Task task-0366 gegen HEAD `33c6e0fd`), Non-Goals/Komplexitätsbudget in §7. |
 | `docs/developer/architecture-tour.md` | übergreifend (Leseführer; Einstieg über §5 „Zielarchitektur" und §13 Phasen als Eintrittspunkte); keine eigenen normativen Aussagen | `implemented behavior` (nur der belegte Ist-Stand-Bericht „kein Meeting-Modus-Produktionsverhalten"; übriger Inhalt beschreibt ausschließlich andere Dokumente) | Entwickler-Lesetour von Plan §5 über die kanonischen Pfade des module-placement-map (B1–B11/F1–F22) zum Vertragsgraphen der sechs Kernverträge (recorder, stt-provider, coexistence, session-state, repository-boundary, frontend-state); erklärt die Autoritätsordnung „Plan schlägt Verträge, Verträge schlagen Kataloge, nichts schlägt Code" samt der MeetingRecorder-Pfad-Adjudikation; der Ist-Stand-Abschnitt ist ausschließlich mit Befehlsbelegen getragen (Test-Path/grep gegen HEAD `61237b15`, inkl. ehrlicher Charakterisierung der beiden einzigen code-nahen Artefakte: compile-only Trait-Scaffolds `meeting_store.rs`/`knowledge_store.rs` und das build-flag-gated `MeetingList.tsx`-Prototyp-Placeholder); definiert selbst nichts Normatives und ändert keinen Quellcode. |
 | `docs/contributing-docs.md` | übergreifend (kein eigener Plan-Abschnitt; Konventionsdokument für den meeting-mode-Dokumentkanon) | `plan` (Konventions-/Prozessdokument für Dokumentationsbeiträge; macht selbst keine Verhaltensaussagen über Produktcode) | Contributor-Konventionen für meeting-mode-Dokumentation: Codebeleg-Regel wörtlich aus Index §1, Status-Enum wörtlich aus Index §2, Indexregistrierungs-Pflicht wörtlich aus Index §5 (inkl. datiertem Update-Absatz mit gezählten Bestandszahlen und offengelegter Scope-Erweiterung), HEAD-Pinning-Praxis (doppelte `git rev-parse HEAD`-Verifikation in sauberem Arbeitbaum, leerer `git status --porcelain`), Flip-Regel des Known-Limitations-Registers wörtlich zitiert („No entry … without a citation to the resolving artifact or commit") und Autoritätsordnung „Plan schlägt Verträge … nichts schlägt den Code"; Selbst-Check-Liste für Dokument-Autoren; verweist auf CONTRIBUTING.md für den allgemeinen Contribution-Flow, ohne ihn zu duplizieren; Belegstand HEAD `33c6e0fd`. |
 
