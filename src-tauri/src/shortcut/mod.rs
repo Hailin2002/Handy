@@ -13,6 +13,15 @@ mod handler;
 pub mod handy_keys;
 pub mod tauri_impl;
 
+/// Meeting bindings are declared by the settings schema; re-exported here so
+/// callers reason about "which tool owns this shortcut" in one place. The
+/// routing types are the shortcut module's public vocabulary for the tray and
+/// for tests, even where the crate does not consume them yet.
+#[allow(unused_imports)]
+pub use crate::settings::is_meeting_binding;
+#[allow(unused_imports)]
+pub use handler::{dispatch_meeting_action, route_binding, MeetingShortcutAction, ShortcutRoute};
+
 use log::{debug, error, info, warn};
 use serde::Serialize;
 use specta::Type;
@@ -81,6 +90,12 @@ pub fn unregister_cancel_shortcut(app: &AppHandle) {
 
 /// Register a shortcut using the appropriate implementation
 pub fn register_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<(), String> {
+    // An empty binding means "deliberately unbound" (plan §6.9 lists the
+    // meeting pause/resume action as unassigned by default). Registering an
+    // empty accelerator would fail noisily in both implementations.
+    if binding.current_binding.trim().is_empty() {
+        return Ok(());
+    }
     let settings = get_settings(app);
     match settings.keyboard_implementation {
         KeyboardImplementation::Tauri => tauri_impl::register_shortcut(app, binding),
@@ -90,6 +105,9 @@ pub fn register_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<()
 
 /// Unregister a shortcut using the appropriate implementation
 pub fn unregister_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<(), String> {
+    if binding.current_binding.trim().is_empty() {
+        return Ok(());
+    }
     let settings = get_settings(app);
     match settings.keyboard_implementation {
         KeyboardImplementation::Tauri => tauri_impl::unregister_shortcut(app, binding),

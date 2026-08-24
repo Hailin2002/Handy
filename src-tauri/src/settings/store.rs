@@ -1,9 +1,9 @@
 //! Persistence: loading, salvaging, migrating, and writing the settings
 //! store (tauri-plugin-store JSON).
 
-use log::{debug, warn};
-use tauri::AppHandle;
-use tauri_plugin_store::StoreExt;
+use log::{debug, error, warn};
+use tauri::{AppHandle, Runtime};
+use tauri_plugin_store::{Store, StoreExt};
 
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, MutexGuard};
@@ -14,6 +14,31 @@ use super::schema::{ensure_post_process_defaults, get_default_settings};
 use super::types::*;
 
 pub const SETTINGS_STORE_PATH: &str = "settings_store.json";
+
+/// Test-only redirect for the settings store location. Once set (first caller
+/// wins), every store open in this process resolves inside this directory so
+/// tests run against an isolated temp dir instead of the real user data.
+#[cfg(test)]
+static TEST_STORE_DIR: LazyLock<std::sync::OnceLock<std::path::PathBuf>> =
+    LazyLock::new(std::sync::OnceLock::new);
+
+/// Test-only: point [`settings_store_path`] at `dir`. Best-effort — if
+/// another test already claimed the location, that directory stays in effect;
+/// the actually active directory is returned either way.
+#[cfg(test)]
+pub(crate) fn set_test_store_dir(dir: &std::path::Path) -> std::path::PathBuf {
+    let _ = TEST_STORE_DIR.set(dir.to_path_buf());
+    TEST_STORE_DIR.get().unwrap().clone()
+}
+
+/// Resolves the on-disk location of the settings store file.
+fn settings_store_path() -> std::path::PathBuf {
+    #[cfg(test)]
+    if let Some(dir) = TEST_STORE_DIR.get() {
+        return dir.join(SETTINGS_STORE_PATH);
+    }
+    crate::portable::store_path(SETTINGS_STORE_PATH)
+}
 
 /// Serializes settings transactions inside this process. The store plugin
 /// protects individual reads and writes, but a read-modify-write sequence still
@@ -35,14 +60,14 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
     settings
 }
 
-pub fn get_settings(app: &AppHandle) -> AppSettings {
+pub fn get_settings<T: Runtime>(app: &AppHandle<T>) -> AppSettings {
     let _transaction = lock_settings_transaction();
     get_settings_unlocked(app)
 }
 
-fn get_settings_unlocked(app: &AppHandle) -> AppSettings {
+fn get_settings_unlocked<T: Runtime>(app: &AppHandle<T>) -> AppSettings {
     let store = app
-        .store(crate::portable::store_path(SETTINGS_STORE_PATH))
+        .store(settings_store_path())
         .expect("Failed to initialize store");
 
     // Settings reads also persist one-time migrations. Migration helpers are
@@ -72,17 +97,20 @@ fn get_settings_unlocked(app: &AppHandle) -> AppSettings {
 
         if updated {
             store.set("settings", serde_json::to_value(&settings).unwrap());
+            flush_settings_store(&store);
         }
 
         settings
     } else {
         let default_settings = get_default_settings();
         store.set("settings", serde_json::to_value(&default_settings).unwrap());
+        flush_settings_store(&store);
         default_settings
     };
 
     if ensure_post_process_defaults(&mut settings) {
         store.set("settings", serde_json::to_value(&settings).unwrap());
+        flush_settings_store(&store);
     }
 
     // Surface keychain-stored API keys to callers/UI. The maps on disk stay
@@ -207,42 +235,105 @@ pub(super) fn apply_settings_migrations(
     updated
 }
 
-fn write_settings_unlocked(app: &AppHandle, settings: &AppSettings) {
-    let store = app
-        .store(crate::portable::store_path(SETTINGS_STORE_PATH))
-        .expect("Failed to initialize store");
-
-    store.set("settings", serde_json::to_value(settings).unwrap());
+/// Durable flush point for every acknowledged settings write.
+///
+/// Why an explicit `save()` is required here: tauri-plugin-store's
+/// [`Store::set`] only mutates the in-memory cache and schedules a *debounced*
+/// background auto-save — `StoreBuilder::default()` (what `StoreExt::store`
+/// uses) enables `auto_save(100 ms)`, and the debounce timer runs on the async
+/// runtime. An immediate process kill inside that window (crash, SIGKILL,
+/// power loss) would lose an update that `update_settings` /
+/// `try_update_settings` had already acknowledged to its caller. Every write
+/// site therefore ends with this synchronous flush: [`Store::save`] cancels
+/// any pending debounced auto-save and then blocking-writes the whole JSON
+/// document via `fs::write`, so once the surrounding transaction returns, the
+/// new value is on disk and observable by a freshly opened store handle.
+///
+/// A failed flush is logged loudly but does not abort the transaction: the
+/// in-memory state stays coherent, callers keep their acknowledged value, and
+/// the next settings write retries persistence.
+fn flush_settings_store<T: Runtime>(store: &Store<T>) {
+    if let Err(e) = store.save() {
+        error!("Failed to persist settings store to disk: {e}");
+    }
 }
 
-/// Atomically loads, mutates, and persists settings.
-pub fn update_settings<R>(app: &AppHandle, update: impl FnOnce(&mut AppSettings) -> R) -> R {
+fn write_settings_unlocked<T: Runtime>(app: &AppHandle<T>, settings: &AppSettings) {
+    let store = app
+        .store(settings_store_path())
+        .expect("Failed to initialize store");
+
+    // See [`flush_settings_store`]: `set` alone is not durable; the explicit
+    // save below is the durability barrier of every settings transaction.
+    store.set("settings", serde_json::to_value(settings).unwrap());
+    flush_settings_store(&store);
+}
+
+/// Runs one serialized settings transaction against pluggable load/persist
+/// backends. The transaction lock is held across the whole read-modify-write,
+/// so concurrent callers cannot interleave a load between another caller's
+/// load and persist (the lost-update race the pre-b677107
+/// `get_settings`/`write_settings` pairing had). Split out from
+/// [`update_settings`] so tests can exercise the real locking behavior
+/// without a Tauri `AppHandle`.
+pub(super) fn run_transaction<R>(
+    load: impl FnOnce() -> AppSettings,
+    persist: impl FnOnce(&AppSettings),
+    update: impl FnOnce(&mut AppSettings) -> R,
+) -> R {
     let _transaction = lock_settings_transaction();
-    let mut settings = get_settings_unlocked(app);
+    let mut settings = load();
     let result = update(&mut settings);
-    write_settings_unlocked(app, &settings);
+    persist(&settings);
     result
 }
 
-/// Atomic settings transaction which persists only when the mutation succeeds.
-pub fn try_update_settings<R, E>(
-    app: &AppHandle,
+/// [`run_transaction`] variant which persists only when the mutation succeeds.
+/// The error is returned verbatim to the caller and the loaded snapshot is
+/// discarded, so a failed transaction leaves the persisted settings untouched.
+pub(super) fn try_run_transaction<R, E>(
+    load: impl FnOnce() -> AppSettings,
+    persist: impl FnOnce(&AppSettings),
     update: impl FnOnce(&mut AppSettings) -> Result<R, E>,
 ) -> Result<R, E> {
     let _transaction = lock_settings_transaction();
-    let mut settings = get_settings_unlocked(app);
+    let mut settings = load();
     let result = update(&mut settings)?;
-    write_settings_unlocked(app, &settings);
+    persist(&settings);
     Ok(result)
 }
 
-pub fn get_bindings(app: &AppHandle) -> HashMap<String, ShortcutBinding> {
+/// Atomically loads, mutates, and persists settings.
+pub fn update_settings<T: Runtime, R>(
+    app: &AppHandle<T>,
+    update: impl FnOnce(&mut AppSettings) -> R,
+) -> R {
+    run_transaction(
+        || get_settings_unlocked(app),
+        |settings| write_settings_unlocked(app, settings),
+        update,
+    )
+}
+
+/// Atomic settings transaction which persists only when the mutation succeeds.
+pub fn try_update_settings<T: Runtime, R, E>(
+    app: &AppHandle<T>,
+    update: impl FnOnce(&mut AppSettings) -> Result<R, E>,
+) -> Result<R, E> {
+    try_run_transaction(
+        || get_settings_unlocked(app),
+        |settings| write_settings_unlocked(app, settings),
+        update,
+    )
+}
+
+pub fn get_bindings<T: Runtime>(app: &AppHandle<T>) -> HashMap<String, ShortcutBinding> {
     let settings = get_settings(app);
 
     settings.bindings
 }
 
-pub fn get_stored_binding(app: &AppHandle, id: &str) -> ShortcutBinding {
+pub fn get_stored_binding<T: Runtime>(app: &AppHandle<T>, id: &str) -> ShortcutBinding {
     let bindings = get_bindings(app);
 
     let binding = bindings.get(id).unwrap().clone();
@@ -250,12 +341,12 @@ pub fn get_stored_binding(app: &AppHandle, id: &str) -> ShortcutBinding {
     binding
 }
 
-pub fn get_history_limit(app: &AppHandle) -> usize {
+pub fn get_history_limit<T: Runtime>(app: &AppHandle<T>) -> usize {
     let settings = get_settings(app);
     settings.history_limit
 }
 
-pub fn get_recording_retention_period(app: &AppHandle) -> RecordingRetentionPeriod {
+pub fn get_recording_retention_period<T: Runtime>(app: &AppHandle<T>) -> RecordingRetentionPeriod {
     let settings = get_settings(app);
     settings.recording_retention_period
 }

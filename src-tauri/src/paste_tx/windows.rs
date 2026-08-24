@@ -14,9 +14,10 @@
 //! signals the transcript is published, then returns; the wait, guarded
 //! restore and auto-submit all finish on the worker.
 
-use std::sync::{mpsc::Sender, Arc, Mutex, Once};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
+use std::sync::{Arc, Mutex, Once};
 use std::thread;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use log::{error, info, warn};
 use tauri::Manager;
@@ -55,6 +56,19 @@ const TIMER_INTERVAL_MS: u32 = 25;
 /// Skip clipboard formats larger than this when snapshotting.
 const MAX_FORMAT_BYTES: usize = 64 * 1024 * 1024;
 
+/// Upper bound for waiting until the worker reports the transcript published.
+/// The calling thread must never wait on the worker without a deadline: a
+/// worker stalled behind a contended clipboard or a dead message pump would
+/// otherwise hang the paste forever. On timeout the caller cancels the
+/// transaction and falls back to the legacy path.
+const PUBLISH_READY_TIMEOUT: Duration = Duration::from_secs(2);
+/// Upper bound for one bounded OpenClipboard retry series. Another process
+/// holding the clipboard open makes OpenClipboard fail transiently; we retry
+/// until this deadline instead of hanging or giving up after one attempt.
+const OPEN_CLIPBOARD_TIMEOUT: Duration = Duration::from_millis(500);
+/// Poll interval between OpenClipboard attempts within [`OPEN_CLIPBOARD_TIMEOUT`].
+const OPEN_CLIPBOARD_RETRY_INTERVAL: Duration = Duration::from_millis(10);
+
 const IMAGE_BITMAP_TYPE: GDI_IMAGE_TYPE = GDI_IMAGE_TYPE(0);
 const LR_CREATEDIBSECTION_FLAG: IMAGE_FLAGS = IMAGE_FLAGS(0x2000);
 
@@ -84,6 +98,39 @@ static PENDING: Mutex<Option<Arc<WinTxShared>>> = Mutex::new(None);
 
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+/// Opens the clipboard with a bounded retry loop. Deterministic contended
+/// behavior: retry until [`OPEN_CLIPBOARD_TIMEOUT`], then fail with an error
+/// instead of hanging or silently proceeding on a half-open state.
+unsafe fn open_clipboard_bounded(owner: Option<HWND>) -> Result<(), String> {
+    let deadline = Instant::now() + OPEN_CLIPBOARD_TIMEOUT;
+    loop {
+        if OpenClipboard(owner).is_ok() {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            return Err(format!(
+                "clipboard stayed contended for {OPEN_CLIPBOARD_TIMEOUT:?}"
+            ));
+        }
+        thread::sleep(OPEN_CLIPBOARD_RETRY_INTERVAL);
+    }
+}
+
+/// Bounded wait for the worker's published/failed signal. The paste caller is
+/// a synchronous path that must never block indefinitely, even if the worker
+/// thread stalls or dies.
+fn wait_for_ready(rx: Receiver<Result<(), String>>, timeout: Duration) -> Result<(), String> {
+    match rx.recv_timeout(timeout) {
+        Ok(result) => result,
+        Err(RecvTimeoutError::Timeout) => Err(format!(
+            "reliable paste worker did not report publication within {timeout:?}"
+        )),
+        Err(RecvTimeoutError::Disconnected) => {
+            Err("reliable paste worker died before publishing".to_string())
+        }
+    }
 }
 
 unsafe fn shared_ptr(hwnd: HWND) -> *const WinTxShared {
@@ -248,8 +295,10 @@ unsafe fn settle_clipboard(shared: &WinTxShared) {
         restore_snapshot(shared);
         return;
     }
-    if OpenClipboard(None).is_err() {
-        warn!("[reliable-paste] could not open clipboard to leave transcript");
+    if let Err(e) = open_clipboard_bounded(None) {
+        // Deterministic contended behavior: leave the clipboard untouched
+        // (the promise stays concealed) rather than half-writing, and say so.
+        error!("[reliable-paste] could not open clipboard to leave transcript: {e}");
         return;
     }
     let _ = EmptyClipboard();
@@ -260,8 +309,13 @@ unsafe fn settle_clipboard(shared: &WinTxShared) {
 
 /// Restores the snapshotted clipboard contents. Safe to call from any thread.
 unsafe fn restore_snapshot(shared: &WinTxShared) {
-    if OpenClipboard(None).is_err() {
-        warn!("[reliable-paste] could not open clipboard to restore");
+    if let Err(e) = open_clipboard_bounded(None) {
+        // The user's prior content cannot be put back; without this log the
+        // loss would be silent while the paste reports success.
+        error!(
+            "[reliable-paste] could not open clipboard within {OPEN_CLIPBOARD_TIMEOUT:?} to \
+             restore the previous content; the user's clipboard may be lost ({e})"
+        );
         return;
     }
     let _ = EmptyClipboard();
@@ -296,7 +350,7 @@ unsafe fn restore_snapshot(shared: &WinTxShared) {
 }
 
 unsafe fn snapshot_clipboard(hwnd: HWND, shared: &WinTxShared) -> Result<(), String> {
-    OpenClipboard(Some(hwnd)).map_err(|e| format!("OpenClipboard failed: {e}"))?;
+    open_clipboard_bounded(Some(hwnd))?;
     let mut formats = Vec::new();
     let mut format = 0u32;
     loop {
@@ -355,7 +409,7 @@ unsafe fn snapshot_clipboard(hwnd: HWND, shared: &WinTxShared) -> Result<(), Str
 /// history / cloud / monitoring opt-out markers (the same formats Chrome uses
 /// for Incognito copies). Returns the new clipboard sequence number.
 unsafe fn publish(hwnd: HWND) -> Result<u32, String> {
-    OpenClipboard(Some(hwnd)).map_err(|e| format!("OpenClipboard failed: {e}"))?;
+    open_clipboard_bounded(Some(hwnd))?;
     let published = publish_formats();
     let closed = CloseClipboard();
     published?;
@@ -532,6 +586,15 @@ fn pump_thread(shared: Arc<WinTxShared>, ready: Sender<Result<(), String>>) {
             Arc::into_raw(shared.clone()) as *const _ as isize,
         );
 
+        // A caller that timed out waiting for us (or a newer transaction)
+        // marks the state cancelled; skip publishing so a late promise cannot
+        // race the legacy fallback's own clipboard round-trip.
+        if shared.state.lock().map(|st| st.cancelled).unwrap_or(false) {
+            destroy_window_and_shared(hwnd);
+            let _ = ready.send(Err("reliable paste cancelled before publication".into()));
+            return;
+        }
+
         let published = match snapshot_clipboard(hwnd, &shared) {
             Ok(()) => match publish(hwnd) {
                 Ok(sequence) => Ok(sequence),
@@ -597,11 +660,17 @@ pub(super) fn run(
     thread::spawn(move || pump_thread(shared_for_pump, ready_tx));
 
     // Wait until the transcript is actually published (or the worker reports
-    // why it could not) before injecting the chord.
-    match ready_rx.recv() {
-        Ok(Ok(())) => {}
-        Ok(Err(e)) => return Err(e),
-        Err(_) => return Err("reliable paste worker died before publishing".to_string()),
+    // why it could not) before injecting the chord. Bounded: a worker stalled
+    // behind a contended clipboard must not hang the paste.
+    if let Err(e) = wait_for_ready(ready_rx, PUBLISH_READY_TIMEOUT) {
+        // Cancel the transaction so the worker skips publication when it
+        // eventually gets to run; if it published anyway, the next
+        // transaction settles it via `flush_pending`.
+        if let Ok(mut st) = shared.state.lock() {
+            st.cancelled = true;
+        }
+        warn!("[reliable-paste] {e}; falling back to legacy paste");
+        return Err(e);
     }
     info!("[reliable-paste] published transcript (delayed render)");
 
@@ -621,4 +690,55 @@ pub(super) fn run(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- Gate G2: every wait has an asserted upper bound ----
+
+    #[test]
+    fn ready_wait_returns_error_within_bound_when_worker_never_signals() {
+        let (_tx, rx) = std::sync::mpsc::channel::<Result<(), String>>();
+        let start = Instant::now();
+
+        let result = wait_for_ready(rx, Duration::from_millis(60));
+        let elapsed = start.elapsed();
+
+        assert!(result.is_err());
+        assert!(elapsed >= Duration::from_millis(60));
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "ready wait was unbounded: {elapsed:?}"
+        );
+        assert!(result.unwrap_err().contains("did not report publication"));
+    }
+
+    #[test]
+    fn ready_wait_propagates_worker_outcome_without_extra_delay() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        tx.send(Ok(())).unwrap();
+        assert_eq!(wait_for_ready(rx, Duration::from_secs(1)), Ok(()));
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        tx.send(Err("OpenClipboard failed".into())).unwrap();
+        assert_eq!(
+            wait_for_ready(rx, Duration::from_secs(1)),
+            Err("OpenClipboard failed".into())
+        );
+    }
+
+    #[test]
+    fn ready_wait_reports_dead_worker_instead_of_hanging() {
+        let (tx, rx) = std::sync::mpsc::channel::<Result<(), String>>();
+        drop(tx);
+
+        let result = wait_for_ready(rx, Duration::from_secs(30));
+
+        assert_eq!(
+            result,
+            Err("reliable paste worker died before publishing".to_string())
+        );
+    }
 }

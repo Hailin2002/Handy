@@ -25,6 +25,8 @@ mod secure_input;
 pub mod settings;
 mod shortcut;
 mod signal_handle;
+// Persistence seam (plan §5, module-placement-map B11/E3); scaffold only.
+mod storage;
 // Public for integration tests (src-tauri/tests): negative-path STT tests call
 // `transcribe_cloud` against a local mock HTTP server.
 pub mod speech_pipeline;
@@ -34,12 +36,20 @@ mod tray_i18n;
 mod utils;
 
 pub use cli::CliArgs;
+// Re-exported so integration tests can open history connections configured
+// exactly like the app does (WAL + busy_timeout) without exposing the whole
+// private `managers` tree, and can exercise the corrupt-database
+// quarantine-and-rebuild startup path directly.
+pub use managers::history::{
+    create_and_migrate_history_db, ensure_usable_history_db, open_configured_connection,
+};
 #[cfg(debug_assertions)]
 use specta_typescript::{BigIntExportBehavior, Typescript};
 use tauri_specta::{collect_commands, collect_events, Builder};
 
 use managers::audio::AudioRecordingManager;
 use managers::history::HistoryManager;
+use managers::meeting::MeetingManager;
 use managers::model::ModelManager;
 use managers::transcription::TranscriptionManager;
 use std::sync::Arc;
@@ -107,6 +117,20 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     );
     let history_manager =
         Arc::new(HistoryManager::new(app_handle).expect("Failed to initialize history manager"));
+    let meeting_manager =
+        Arc::new(MeetingManager::new(app_handle).expect("Failed to initialize meeting manager"));
+    // The recorder-event pump needs the manager behind its `Arc` (it holds a
+    // `Weak` back-reference), so it is attached right after construction.
+    meeting_manager.attach_recorder_events();
+    // Durable, content-addressed asset storage for meeting audio (plan 5,
+    // module-placement-map B11). Managed so later leaves resolve it from
+    // Tauri state instead of constructing a second root.
+    match storage::asset_store::LocalAssetStore::for_app(app_handle) {
+        Ok(asset_store) => {
+            app_handle.manage(Arc::new(asset_store));
+        }
+        Err(e) => log::error!("Failed to initialize meeting asset store: {}", e),
+    }
 
     // Initialize the transcribe-cpp native backend (logging + backend module
     // registration) once, before any whisper model is loaded.
@@ -121,7 +145,19 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     app_handle.manage(transcription_manager.clone());
     app_handle.manage(azure_stream_manager);
     app_handle.manage(history_manager.clone());
+    app_handle.manage(meeting_manager.clone());
     app_handle.manage(tray::CurrentTrayIconState::new());
+
+    // Startup reconciliation (session-state-contract 6.2 R0-R6): no meeting
+    // session may stay in an active state after a crashed process. Runs once,
+    // after migrations, before any window can subscribe.
+    match meeting_manager.run_startup_recovery() {
+        Ok(offers) if !offers.is_empty() => {
+            log::info!("Recovered {} interrupted meeting session(s)", offers.len());
+        }
+        Ok(_) => {}
+        Err(e) => log::error!("Meeting startup recovery failed: {}", e),
+    }
 
     // Note: Shortcuts are NOT initialized here.
     // The frontend is responsible for calling the `initialize_shortcuts` command
@@ -331,6 +367,22 @@ pub fn run(cli_args: CliArgs) {
             commands::history::retry_history_entry_transcription,
             commands::history::update_history_limit,
             commands::history::update_recording_retention_period,
+            commands::meetings::meeting_create_session,
+            commands::meetings::meeting_get_session,
+            commands::meetings::meeting_list_sessions,
+            commands::meetings::meeting_rename_session,
+            commands::meetings::meeting_delete_session,
+            commands::meetings::create_meeting_draft,
+            commands::meetings::preflight_meeting,
+            commands::meetings::start_meeting,
+            commands::meetings::pause_meeting,
+            commands::meetings::resume_meeting,
+            commands::meetings::stop_meeting,
+            commands::meetings::cancel_meeting,
+            commands::meetings::get_meeting_snapshot,
+            commands::meetings::retry_meeting_jobs,
+            commands::meetings::meeting_list_recoveries,
+            commands::meetings::meeting_resolve_recovery,
             helpers::clamshell::is_laptop,
         ])
         .events(collect_events![
@@ -456,6 +508,17 @@ pub fn run(cli_args: CliArgs) {
             // recorder (so it never opens the mic, even with always_on_microphone),
             // signal handlers, and autostart that initialize_core_logic sets up.
             if headless_mode {
+                // One-time legacy-secret migration BEFORE anything reads
+                // settings on this path (audit F-6,
+                // docs/reviews/secrets-exposure-and-durability-audit.md §3.2):
+                // ModelManager/TranscriptionManager init and
+                // apply_accelerator_settings all call get_settings, and a read
+                // of an older store re-persists it with the API-key maps
+                // serialized as `{}` — which would silently destroy plain-text
+                // keys that were never moved into the OS keychain. The load
+                // inside this transaction also hydrates the in-memory maps.
+                secret_store::migrate_secrets_at_startup(app.handle());
+
                 let app_handle = app.handle().clone();
                 let model_manager = Arc::new(
                     ModelManager::new(&app_handle).expect("Failed to initialize model manager"),

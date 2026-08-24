@@ -1,12 +1,12 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Local, Utc};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use rusqlite::{params, Connection, OptionalExtension};
 use rusqlite_migration::{Migrations, M};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::AppHandle;
 use tauri_specta::Event;
 
@@ -71,6 +71,233 @@ pub struct HistoryManager {
     db_path: PathBuf,
 }
 
+/// Busy timeout applied to every history connection (milliseconds). Short
+/// lock contention between concurrent writers (e.g. save + retention cleanup)
+/// is retried by SQLite instead of failing immediately with SQLITE_BUSY.
+const HISTORY_BUSY_TIMEOUT_MS: u64 = 5000;
+
+/// Open a history database connection with concurrency-friendly pragmas:
+///
+/// - `journal_mode = WAL`: readers never block the writer and the writer
+///   never blocks readers, so the UI can page through history while a
+///   transcription is being saved.
+/// - `busy_timeout = 5s`: SQLite waits on a locked database instead of
+///   returning SQLITE_BUSY immediately.
+///
+/// Used for both the migration connection and every per-call connection so
+/// all access paths share the same configuration.
+pub fn open_configured_connection(db_path: &std::path::Path) -> Result<Connection> {
+    let conn = Connection::open(db_path)?;
+    configure_connection(&conn)?;
+    Ok(conn)
+}
+
+fn configure_connection(conn: &Connection) -> Result<()> {
+    // WAL is persistent in the database file, but setting it on every open is
+    // cheap and guarantees fresh databases are correct from the first write.
+    conn.pragma_update(None, "journal_mode", "WAL")?;
+    conn.busy_timeout(std::time::Duration::from_millis(HISTORY_BUSY_TIMEOUT_MS))?;
+    Ok(())
+}
+
+/// Outcome of probing an existing history database file for usability.
+enum DbHealth {
+    /// The file opens, is readable, and passes `PRAGMA quick_check`.
+    Healthy,
+    /// The file is unreadable or corrupt. Carries a human-readable reason.
+    Corrupt(String),
+    /// The failure is unrelated to corruption (e.g. filesystem permissions).
+    /// Must NOT trigger quarantine — the cause has to be surfaced honestly.
+    Unrelated(anyhow::Error),
+}
+
+/// Classify an error observed while opening/probing the history database:
+/// only SQLite's explicit "not a database" / "database corrupt" codes count
+/// as corruption; everything else stays inconclusive.
+fn classify_probe_error(err: anyhow::Error) -> DbHealth {
+    let is_corruption = err
+        .downcast_ref::<rusqlite::Error>()
+        .map(|e| {
+            matches!(
+                e,
+                rusqlite::Error::SqliteFailure(failure, _)
+                    if failure.code == rusqlite::ErrorCode::DatabaseCorrupt
+                        || failure.code == rusqlite::ErrorCode::NotADatabase
+            )
+        })
+        .unwrap_or(false);
+
+    if is_corruption {
+        DbHealth::Corrupt(err.to_string())
+    } else {
+        DbHealth::Unrelated(err)
+    }
+}
+
+/// Probe `db_path` without modifying it (beyond SQLite's normal WAL setup on
+/// an already-valid database). A file is considered corrupt when:
+///
+/// - opening/configuring it fails with SQLITE_NOTADB / SQLITE_CORRUPT
+///   (garbage bytes, wrong-format files),
+/// - reading the schema catalog fails,
+/// - or `PRAGMA quick_check` reports anything other than "ok" (truncation,
+///   malformed page chains). `quick_check` is a read-only integrity scan;
+///   at startup this runs once against a single-digit-MB database.
+fn probe_database_health(db_path: &Path) -> DbHealth {
+    let conn = match open_configured_connection(db_path) {
+        Ok(conn) => conn,
+        Err(e) => return classify_probe_error(e),
+    };
+
+    // The schema catalog must be readable at all.
+    if let Err(e) = conn.query_row("SELECT COUNT(*) FROM sqlite_master", [], |_| Ok(())) {
+        return classify_probe_error(anyhow::Error::new(e));
+    }
+
+    match conn.query_row::<String, _, _>("PRAGMA quick_check", [], |row| row.get(0)) {
+        Ok(result) if result == "ok" => DbHealth::Healthy,
+        Ok(result) => DbHealth::Corrupt(format!("PRAGMA quick_check reported: {}", result)),
+        Err(e) => classify_probe_error(anyhow::Error::new(e)),
+    }
+}
+
+/// Move a corrupt history database aside under a timestamped name so the user
+/// can attempt recovery, instead of deleting it. The `-wal` and `-shm`
+/// sidecars are moved alongside so no stale WAL frames can ever be applied to
+/// the freshly created replacement database. Returns the quarantine path of
+/// the main database file.
+fn quarantine_corrupt_database(db_path: &Path) -> Result<PathBuf> {
+    let dir = db_path
+        .parent()
+        .ok_or_else(|| anyhow!("database path {:?} has no parent directory", db_path))?;
+    let file_name = db_path
+        .file_name()
+        .ok_or_else(|| anyhow!("database path {:?} has no file name", db_path))?
+        .to_string_lossy()
+        .into_owned();
+
+    let timestamp = Utc::now().format("%Y%m%dT%H%M%SZ");
+    let mut target = dir.join(format!("{}.corrupt-{}.quarantined", file_name, timestamp));
+    let mut attempt: u32 = 0;
+    while target.exists() {
+        attempt += 1;
+        if attempt > 1000 {
+            return Err(anyhow!(
+                "could not find a free quarantine name for {:?}",
+                db_path
+            ));
+        }
+        target = dir.join(format!(
+            "{}.corrupt-{}-{}.quarantined",
+            file_name, timestamp, attempt
+        ));
+    }
+
+    fs::rename(db_path, &target)
+        .with_context(|| format!("quarantining corrupt database to {:?}", target))?;
+    debug!("Quarantined corrupt history database: {:?}", target);
+
+    // Sidecars are moved best-effort: their absence on the quarantine copy is
+    // harmless (WAL data was already part of the corrupt picture), but they
+    // must not linger next to the new database.
+    for suffix in ["-wal", "-shm"] {
+        let sidecar = PathBuf::from(format!("{}{}", db_path.display(), suffix));
+        if sidecar.exists() {
+            let sidecar_target = PathBuf::from(format!("{}{}", target.display(), suffix));
+            if let Err(e) = fs::rename(&sidecar, &sidecar_target) {
+                warn!(
+                    "Could not move sidecar {} out of the way: {}",
+                    sidecar.display(),
+                    e
+                );
+            }
+        }
+    }
+
+    Ok(target)
+}
+
+/// Apply all schema migrations to the database at `db_path`, creating the
+/// file if it does not exist yet. Shared by normal startup and by the fresh
+/// rebuild after a quarantine.
+pub fn create_and_migrate_history_db(db_path: &Path) -> Result<()> {
+    let mut conn = open_configured_connection(db_path)?;
+
+    // Handle migration from tauri-plugin-sql to rusqlite_migration:
+    // tauri-plugin-sql used _sqlx_migrations table, rusqlite_migration uses
+    // the user_version pragma.
+    HistoryManager::migrate_from_tauri_plugin_sql(&conn)?;
+
+    // Create migrations object and run to latest version
+    let migrations = Migrations::new(MIGRATIONS.to_vec());
+
+    // Validate migrations in debug builds
+    #[cfg(debug_assertions)]
+    migrations.validate().expect("Invalid migrations");
+
+    // Get current version before migration
+    let version_before: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
+    debug!("Database version before migration: {}", version_before);
+
+    // Apply any pending migrations
+    migrations.to_latest(&mut conn)?;
+
+    // Get version after migration
+    let version_after: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
+
+    if version_after > version_before {
+        info!(
+            "Database migrated from version {} to {}",
+            version_before, version_after
+        );
+    } else {
+        debug!("Database already at latest version {}", version_after);
+    }
+
+    Ok(())
+}
+
+/// Ensure the history database at `db_path` is usable, quarantining and
+/// rebuilding it if it is corrupt or unreadable:
+///
+/// 1. Probe the existing file (`PRAGMA quick_check` + schema readability).
+/// 2. On corruption: rename it (plus `-wal`/`-shm`) to a timestamped
+///    `<name>.corrupt-<timestamp>.quarantined` file next to the original —
+///    never delete it, the user may still want to attempt recovery — then log
+///    a warning stating explicitly that old data did NOT survive in the new
+///    database.
+/// 3. Recreate a fresh schema via the standard migrations and continue.
+///
+/// Non-corruption failures (e.g. permission errors) are returned as errors so
+/// the real cause surfaces instead of silently masking data loss.
+pub fn ensure_usable_history_db(db_path: &Path) -> Result<()> {
+    match probe_database_health(db_path) {
+        DbHealth::Healthy => {
+            create_and_migrate_history_db(db_path)?;
+            Ok(())
+        }
+        DbHealth::Unrelated(err) => Err(
+            err.context("history database could not be opened for reasons unrelated to corruption")
+        ),
+        DbHealth::Corrupt(reason) => {
+            warn!(
+                "History database at {:?} is unreadable/corrupt ({}); \
+                 quarantining it and starting with an empty history. \
+                 Old entries did NOT survive into the new database and can be \
+                 found in the .quarantined file for manual recovery.",
+                db_path, reason
+            );
+            let quarantined = quarantine_corrupt_database(db_path)?;
+            warn!(
+                "Corrupt history database quarantined at {:?}; created a fresh one.",
+                quarantined
+            );
+            create_and_migrate_history_db(db_path)?;
+            Ok(())
+        }
+    }
+}
+
 impl HistoryManager {
     pub fn new(app_handle: &AppHandle) -> Result<Self> {
         // Create recordings directory in app data dir
@@ -99,47 +326,17 @@ impl HistoryManager {
     fn init_database(&self) -> Result<()> {
         info!("Initializing database at {:?}", self.db_path);
 
-        let mut conn = Connection::open(&self.db_path)?;
-
-        // Handle migration from tauri-plugin-sql to rusqlite_migration
-        // tauri-plugin-sql used _sqlx_migrations table, rusqlite_migration uses user_version pragma
-        self.migrate_from_tauri_plugin_sql(&conn)?;
-
-        // Create migrations object and run to latest version
-        let migrations = Migrations::new(MIGRATIONS.to_vec());
-
-        // Validate migrations in debug builds
-        #[cfg(debug_assertions)]
-        migrations.validate().expect("Invalid migrations");
-
-        // Get current version before migration
-        let version_before: i32 =
-            conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
-        debug!("Database version before migration: {}", version_before);
-
-        // Apply any pending migrations
-        migrations.to_latest(&mut conn)?;
-
-        // Get version after migration
-        let version_after: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
-
-        if version_after > version_before {
-            info!(
-                "Database migrated from version {} to {}",
-                version_before, version_after
-            );
-        } else {
-            debug!("Database already at latest version {}", version_after);
-        }
-
-        Ok(())
+        // Health-check the existing database first. A corrupt/unreadable file
+        // is quarantined (never deleted) and a fresh schema is created in its
+        // place so startup can continue; see `ensure_usable_history_db`.
+        ensure_usable_history_db(&self.db_path)
     }
 
     /// Migrate from tauri-plugin-sql's migration tracking to rusqlite_migration's.
     /// tauri-plugin-sql used a _sqlx_migrations table, while rusqlite_migration uses
     /// SQLite's user_version pragma. This function checks if the old system was in use
     /// and sets the user_version accordingly so migrations don't re-run.
-    fn migrate_from_tauri_plugin_sql(&self, conn: &Connection) -> Result<()> {
+    fn migrate_from_tauri_plugin_sql(conn: &Connection) -> Result<()> {
         // Check if the old _sqlx_migrations table exists
         let has_sqlx_migrations: bool = conn
             .query_row(
@@ -193,7 +390,7 @@ impl HistoryManager {
     }
 
     fn get_connection(&self) -> Result<Connection> {
-        Ok(Connection::open(&self.db_path)?)
+        open_configured_connection(&self.db_path)
     }
 
     fn map_history_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<HistoryEntry> {
@@ -653,6 +850,20 @@ impl HistoryManager {
 mod tests {
     use super::*;
     use rusqlite::{params, Connection};
+
+    /// G1: every history connection must report WAL journal mode.
+    #[test]
+    fn configured_connection_reports_wal_journal_mode() {
+        let tmp = tempfile::TempDir::new().expect("create temp dir");
+        let db_path = tmp.path().join("history.db");
+
+        let conn = open_configured_connection(&db_path).expect("open configured connection");
+
+        let journal_mode: String = conn
+            .pragma_query_value(None, "journal_mode", |row| row.get(0))
+            .expect("read journal_mode");
+        assert_eq!(journal_mode.to_lowercase(), "wal");
+    }
 
     fn setup_conn() -> Connection {
         let conn = Connection::open_in_memory().expect("open in-memory db");

@@ -70,6 +70,9 @@ regex = "1"
 whatlang = "0.16"
 isolang = "2"
 chrono = "0.4"
+# Stable meeting-session ids (plan §9 line 1151); v4 only, already resolved in
+# Cargo.lock as a transitive dependency.
+uuid = { version = "1", features = ["v4"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 tar = "0.4.44"
 flate2 = "1.0"
@@ -203,6 +206,10 @@ cmake = { path = "../vendor/cmake" }
 
 [dev-dependencies]
 tempfile = "3"
+# Enables `tauri::test` (mock runtime/app) so settings persistence tests can
+# exercise the real AppHandle-based update_settings path against an isolated
+# temp-dir store. Feature unification only affects test builds.
+tauri = { version = "2.11.5", features = ["test"] }
 # Test-only tokio features for the local socket servers exercising the
 # resumable HTTP downloader; normal builds keep the leaner feature set.
 tokio = { version = "1.43.0", features = ["macros", "net", "io-util", "sync", "time", "rt-multi-thread"] }

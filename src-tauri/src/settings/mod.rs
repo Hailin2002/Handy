@@ -5,13 +5,18 @@
 //! handles load/salvage/migrate/write against the plugin-store JSON, and
 //! `types.rs` holds the small enums and the redacting `SecretMap`.
 
+#[cfg(test)]
+mod concurrency_tests;
 pub(crate) mod schema;
 mod store;
 #[cfg(test)]
 mod tests;
 mod types;
 
-pub use schema::{get_default_settings, AppSettings};
+pub use schema::{
+    get_default_settings, is_meeting_binding, AppSettings, MEETING_BINDING_PAUSE_RESUME,
+    MEETING_BINDING_START_STOP,
+};
 /// Re-exported as stable public API even though only `store.rs` consumes it today.
 #[allow(unused_imports)]
 pub use store::SETTINGS_STORE_PATH;

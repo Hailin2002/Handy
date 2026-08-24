@@ -359,13 +359,18 @@ fn custom_settings(endpoint: &str) -> AppSettings {
 }
 
 /// Deterministic audio whose encoded PCM16 payload embeds an ASCII marker in
-/// the low byte of every other sample, so the exact bytes that reach the wire
-/// can be compared against the logs byte-for-byte.
+/// every other sample's low byte, so the exact bytes that reach the wire can
+/// be compared against the logs byte-for-byte.
+///
+/// The sample is offset by half a quantization step (`+ 0.5`) because a bare
+/// `byte / 32767.0` does not survive the encoder's `(s * 32767.0) as i16`
+/// truncation exactly in f32 arithmetic; the half-step keeps the truncation
+/// safely inside the target bucket, making the round-trip exact.
 fn marker_samples() -> Vec<f32> {
     const MARKER: &[u8] = b"STT_NEGATIVE_PATH_AUDIO_PAYLOAD_MARKER_01";
     MARKER
         .iter()
-        .flat_map(|&byte| [i16::from_ne_bytes([byte, 0]) as f32 / 32767.0, 0.0])
+        .flat_map(|&byte| [(byte as f32 + 0.5) / 32767.0, 0.0])
         .collect()
 }
 

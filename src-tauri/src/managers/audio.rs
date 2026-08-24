@@ -379,6 +379,24 @@ pub struct AudioRecordingManager {
     cached_device: Arc<Mutex<Option<(String, cpal::Device)>>>,
 }
 
+/// Decision core of [`AudioRecordingManager::persist_default_microphone_after_fallback`],
+/// kept pure so the settings-concurrency tests can pin the bool-returning
+/// contract against its pre-refactor (`b677107^`) behavior: returns `true`
+/// only when the persisted selection is still the microphone that fell back,
+/// in which case it is cleared; any other current value is left untouched and
+/// reported as "no change".
+pub(crate) fn clear_unavailable_selected_microphone(
+    settings: &mut AppSettings,
+    unavailable_name: &str,
+) -> bool {
+    if settings.selected_microphone.as_deref() != Some(unavailable_name) {
+        return false;
+    }
+
+    settings.selected_microphone = None;
+    true
+}
+
 impl AudioRecordingManager {
     /* ---------- construction ------------------------------------------------ */
 
@@ -516,12 +534,7 @@ impl AudioRecordingManager {
     /// selected concurrently while the stream was being rebuilt.
     fn persist_default_microphone_after_fallback(&self, unavailable_name: &str) {
         let changed = crate::settings::update_settings(&self.app_handle, |settings| {
-            if settings.selected_microphone.as_deref() != Some(unavailable_name) {
-                return false;
-            }
-
-            settings.selected_microphone = None;
-            true
+            clear_unavailable_selected_microphone(settings, unavailable_name)
         });
         if !changed {
             return;

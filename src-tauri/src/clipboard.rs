@@ -3,16 +3,110 @@ use crate::input::{self, EnigoState};
 use crate::settings::TypingTool;
 use crate::settings::{get_settings, AutoSubmitKey, ClipboardHandling, PasteMethod};
 use enigo::{Direction, Enigo, Key, Keyboard};
-use log::info;
+use log::{info, warn};
+use std::fmt;
 use std::process::Command;
 #[cfg(target_os = "linux")]
 use std::sync::OnceLock;
-use std::time::Duration;
-use tauri::{AppHandle, Manager};
+use std::sync::{Mutex, MutexGuard, TryLockError};
+use std::time::{Duration, Instant};
+use tauri::{image::Image, AppHandle, Manager};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 #[cfg(target_os = "linux")]
 use crate::utils::{is_kde_wayland, is_wayland};
+
+/// Upper bound on how long any single paste may wait on a contended resource
+/// (the enigo input lock, or the system clipboard held open by another
+/// process). Every wait in the dictation paste path is derived from this, so a
+/// stuck clipboard manager or input consumer degrades the paste into a typed
+/// error instead of hanging the transcription pipeline indefinitely.
+const CONTENDED_WAIT_TIMEOUT: Duration = Duration::from_millis(1000);
+/// Poll interval while waiting on a contended resource.
+const CONTENDED_POLL_INTERVAL: Duration = Duration::from_millis(20);
+
+/// Typed failure of a clipboard-mediated paste.
+///
+/// Contended-clipboard behavior is deterministic: contention never hangs and
+/// never silently substitutes content. Every phase either completes, retries
+/// until its bound ([`CONTENDED_WAIT_TIMEOUT`]), or fails with exactly one of
+/// these variants. At the module boundary the variant is rendered through
+/// [`Display`](fmt::Display) into the `paste-error` message.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ClipboardPasteError {
+    /// A required resource stayed contended for the whole bounded retry
+    /// window while `operation` ran. For `save` and `publish` the clipboard
+    /// was never modified by this paste; the caller's data is untouched.
+    Busy {
+        operation: &'static str,
+        attempts: u32,
+        last_error: String,
+    },
+    /// Key injection failed after the transcript had been written to the
+    /// clipboard. The previous content was still restored best-effort.
+    InjectionFailed(String),
+    /// The previous clipboard content could not be restored within the
+    /// bounded retry window: the user's prior copy may be lost and the
+    /// transcript may remain on the clipboard. Always accompanied by a
+    /// warning log at the moment of the last failed attempt.
+    RestoreFailed { attempts: u32, last_error: String },
+}
+
+impl fmt::Display for ClipboardPasteError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Busy {
+                operation,
+                attempts,
+                last_error,
+            } => write!(
+                f,
+                "clipboard stayed busy: '{operation}' failed after {attempts} attempts \
+                 within the retry window ({last_error}); paste aborted without touching \
+                 the clipboard"
+            ),
+            Self::InjectionFailed(error) => {
+                write!(f, "paste key injection failed: {error}")
+            }
+            Self::RestoreFailed {
+                attempts,
+                last_error,
+            } => write!(
+                f,
+                "could not restore the previous clipboard content after {attempts} \
+                 attempts within the retry window: {last_error}"
+            ),
+        }
+    }
+}
+
+/// Locks `lock` with a hard upper bound. A plain `Mutex::lock` here is an
+/// unbounded wait: a wedged input consumer would hang the paste forever.
+fn lock_bounded<'a, T>(
+    lock: &'a Mutex<T>,
+    timeout: Duration,
+    interval: Duration,
+    what: &'static str,
+) -> Result<MutexGuard<'a, T>, String> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        match lock.try_lock() {
+            Ok(guard) => return Ok(guard),
+            Err(TryLockError::Poisoned(_)) => {
+                return Err(format!("{what} state poisoned"));
+            }
+            Err(TryLockError::WouldBlock) => {
+                if Instant::now() >= deadline {
+                    return Err(format!(
+                        "{what} stayed locked by another thread for {timeout:?}; \
+                         giving up instead of waiting indefinitely"
+                    ));
+                }
+                std::thread::sleep(interval);
+            }
+        }
+    }
+}
 
 fn with_enigo<T>(
     app_handle: &AppHandle,
@@ -21,10 +115,13 @@ fn with_enigo<T>(
     let enigo_state = app_handle
         .try_state::<EnigoState>()
         .ok_or("Enigo state not initialized")?;
-    let mut enigo = enigo_state
-        .0
-        .lock()
-        .map_err(|e| format!("Failed to lock Enigo: {}", e))?;
+    let mut enigo = lock_bounded(
+        &enigo_state.0,
+        CONTENDED_WAIT_TIMEOUT,
+        CONTENDED_POLL_INTERVAL,
+        "input",
+    )
+    .map_err(|e| format!("Failed to acquire enigo lock: {e}"))?;
     f(&mut enigo)
 }
 
@@ -41,17 +138,291 @@ fn write_text_to_clipboard(app_handle: &AppHandle, text: &str) -> Result<(), Str
         .map_err(|e| format!("Failed to write to clipboard: {}", e))
 }
 
-fn finish_clipboard_paste(
-    paste_result: Result<(), String>,
+/// Snapshot of whatever the user had on the clipboard before the transcript
+/// was written over it.
+#[derive(Debug)]
+pub(crate) enum SavedClipboard {
+    Text(String),
+    Image(Image<'static>),
+    Empty,
+}
+
+/// Minimal clipboard surface used by the paste path. Abstracted so the
+/// save / publish / restore logic (retry bounds, typed errors) can be
+/// unit-tested without an app handle or a real system clipboard.
+pub(crate) trait ClipboardOps {
+    /// Current text, if any. `Err` means the clipboard could not be read
+    /// (typically held open by another process).
+    fn read_text(&self) -> Result<Option<String>, String>;
+    /// Current image, if any. Only probed when there is no text.
+    fn read_image(&self) -> Result<Option<Image<'static>>, String>;
+    fn write_text(&self, text: &str) -> Result<(), String>;
+    fn write_image(&self, image: &Image<'static>) -> Result<(), String>;
+    fn clear(&self) -> Result<(), String>;
+}
+
+/// Real clipboard behind the Tauri app handle.
+struct SystemClipboard<'a> {
+    app_handle: &'a AppHandle,
+}
+
+impl ClipboardOps for SystemClipboard<'_> {
+    fn read_text(&self) -> Result<Option<String>, String> {
+        self.app_handle
+            .clipboard()
+            .read_text()
+            .map(|t| if t.is_empty() { None } else { Some(t) })
+            .map_err(|e| format!("failed to read clipboard text: {e}"))
+    }
+
+    fn read_image(&self) -> Result<Option<Image<'static>>, String> {
+        self.app_handle
+            .clipboard()
+            .read_image()
+            .map(|image| Some(image.to_owned()))
+            .map_err(|e| format!("failed to read clipboard image: {e}"))
+    }
+
+    fn write_text(&self, text: &str) -> Result<(), String> {
+        write_text_to_clipboard(self.app_handle, text)
+    }
+
+    fn write_image(&self, image: &Image<'static>) -> Result<(), String> {
+        self.app_handle
+            .clipboard()
+            .write_image(image)
+            .map_err(|e| format!("failed to write clipboard image: {e}"))
+    }
+
+    fn clear(&self) -> Result<(), String> {
+        self.app_handle
+            .clipboard()
+            .clear()
+            .map_err(|e| format!("failed to clear clipboard: {e}"))
+    }
+}
+
+/// Retry bounds for one paste transaction's contended-resource waits.
+#[derive(Clone, Copy, Debug)]
+struct PasteTiming {
+    paste_delay_ms: u64,
     paste_delay_after_ms: u64,
-    restore_clipboard: impl FnOnce(),
-) -> Result<(), String> {
-    std::thread::sleep(Duration::from_millis(paste_delay_after_ms));
-    restore_clipboard();
-    paste_result
+    /// Upper bound per save/publish/restore retry series.
+    op_timeout: Duration,
+    poll_interval: Duration,
+}
+
+impl Default for PasteTiming {
+    fn default() -> Self {
+        Self {
+            paste_delay_ms: 0,
+            paste_delay_after_ms: 0,
+            op_timeout: CONTENDED_WAIT_TIMEOUT,
+            poll_interval: CONTENDED_POLL_INTERVAL,
+        }
+    }
+}
+
+/// Runs `op` until it succeeds or the deadline passes. Always attempts at
+/// least once; returns `(attempts, last_error)` on exhaustion.
+fn retry_until_deadline(
+    mut op: impl FnMut() -> Result<(), String>,
+    timeout: Duration,
+    interval: Duration,
+) -> Result<u32, (u32, String)> {
+    let deadline = Instant::now() + timeout;
+    let mut attempts = 0u32;
+    loop {
+        attempts += 1;
+        match op() {
+            Ok(()) => return Ok(attempts),
+            Err(error) => {
+                if Instant::now() >= deadline {
+                    return Err((attempts, error));
+                }
+                std::thread::sleep(interval);
+            }
+        }
+    }
+}
+
+/// Retries a fallible clipboard read until it succeeds or the deadline
+/// passes. Always attempts at least once.
+fn retry_read_until_deadline<T>(
+    mut read: impl FnMut() -> Result<T, String>,
+    timing: &PasteTiming,
+    operation: &'static str,
+) -> Result<T, ClipboardPasteError> {
+    let deadline = Instant::now() + timing.op_timeout;
+    let mut attempts = 0u32;
+    loop {
+        attempts += 1;
+        match read() {
+            Ok(value) => return Ok(value),
+            Err(last_error) => {
+                if Instant::now() >= deadline {
+                    return Err(ClipboardPasteError::Busy {
+                        operation,
+                        attempts,
+                        last_error,
+                    });
+                }
+                std::thread::sleep(timing.poll_interval);
+            }
+        }
+    }
+}
+
+/// Reads the user's prior clipboard content. A read failure is treated as
+/// contention and aborts the paste: we refuse to overwrite content we could
+/// not observe first, so nothing can be silently destroyed.
+fn save_clipboard(
+    clipboard: &dyn ClipboardOps,
+    timing: &PasteTiming,
+) -> Result<SavedClipboard, ClipboardPasteError> {
+    // Text takes priority so this path stays identical to the previous
+    // behavior; an image is only probed when there is no text to restore.
+    // Text is by far the common case, and reading an image decodes the full
+    // bitmap, so this keeps the text path exactly as cheap as it was before.
+    if let Some(text) = retry_read_until_deadline(|| clipboard.read_text(), timing, "save")? {
+        return Ok(SavedClipboard::Text(text));
+    }
+
+    match retry_read_until_deadline(|| clipboard.read_image(), timing, "save")? {
+        Some(image) => Ok(SavedClipboard::Image(image)),
+        None => Ok(SavedClipboard::Empty),
+    }
+}
+
+/// Writes the transcript to the clipboard with bounded retries. Failure here
+/// means contention; nothing has been overwritten yet, so the typed error
+/// deterministically leaves the user's clipboard exactly as it was.
+fn publish_transcript(
+    clipboard: &dyn ClipboardOps,
+    text: &str,
+    timing: &PasteTiming,
+) -> Result<(), ClipboardPasteError> {
+    retry_until_deadline(
+        || clipboard.write_text(text),
+        timing.op_timeout,
+        timing.poll_interval,
+    )
+    .map(|_| ())
+    .map_err(|(attempts, last_error)| ClipboardPasteError::Busy {
+        operation: "publish",
+        attempts,
+        last_error,
+    })
+}
+
+/// Restores the prior clipboard content with bounded retries, logging every
+/// failed attempt. On exhaustion returns [`ClipboardPasteError::RestoreFailed`]
+/// so the caller can surface the loss instead of reporting success while the
+/// transcript still sits on the clipboard.
+fn restore_clipboard(
+    clipboard: &dyn ClipboardOps,
+    saved: &SavedClipboard,
+    timing: &PasteTiming,
+) -> Result<(), ClipboardPasteError> {
+    let outcome = match saved {
+        SavedClipboard::Text(text) => {
+            let restore = || clipboard.write_text(text);
+            retry_until_deadline(restore, timing.op_timeout, timing.poll_interval)
+        }
+        SavedClipboard::Image(image) => {
+            let restore = || clipboard.write_image(image);
+            retry_until_deadline(restore, timing.op_timeout, timing.poll_interval)
+        }
+        SavedClipboard::Empty => {
+            // Nothing was there to begin with — don't leave the transcription behind.
+            let restore = || clipboard.clear();
+            retry_until_deadline(restore, timing.op_timeout, timing.poll_interval)
+        }
+    };
+    if let Err((attempts, last_error)) = &outcome {
+        warn!(
+            "Clipboard restore gave up after {attempts} attempts within {:?}: {last_error}",
+            timing.op_timeout
+        );
+    }
+    outcome.map(|_| ()).map_err(
+        |(attempts, last_error)| ClipboardPasteError::RestoreFailed {
+            attempts,
+            last_error,
+        },
+    )
+}
+
+/// The legacy clipboard round-trip, platform-independent and testable:
+///
+/// 1. save the prior content (aborting on unreadable clipboard),
+/// 2. publish the transcript with bounded retries,
+/// 3. inject the paste chord after `paste_delay_ms`,
+/// 4. restore the prior content after `paste_delay_after_ms`, with bounded
+///    retries and a typed error when restoration fails.
+///
+/// Delivery errors take precedence over restore errors in the return value;
+/// a restore failure that coexists with an injection failure is logged but
+/// the injection error is what propagates.
+fn run_clipboard_paste(
+    text: &str,
+    clipboard: &dyn ClipboardOps,
+    inject_chord: impl FnOnce() -> Result<(), String>,
+    timing: &PasteTiming,
+) -> Result<(), ClipboardPasteError> {
+    let saved = save_clipboard(clipboard, timing)?;
+    publish_transcript(clipboard, text, timing)?;
+
+    std::thread::sleep(Duration::from_millis(timing.paste_delay_ms));
+
+    // Capture key injection errors so the original clipboard is restored before
+    // they are propagated to the caller.
+    let paste_result = inject_chord();
+
+    std::thread::sleep(Duration::from_millis(timing.paste_delay_after_ms));
+
+    let restore_result = restore_clipboard(clipboard, &saved, timing);
+
+    match (paste_result, restore_result) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Ok(()), Err(restore)) => Err(restore),
+        (Err(injection), restore_result) => {
+            if let Err(restore) = restore_result {
+                warn!("Clipboard restore also failed alongside injection error: {restore}");
+            }
+            Err(ClipboardPasteError::InjectionFailed(injection))
+        }
+    }
+}
+
+/// Sends the configured paste key combo via Linux-native tools or enigo.
+fn send_paste_chord(app_handle: &AppHandle, paste_method: &PasteMethod) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    let key_combo_sent = try_send_key_combo_linux(paste_method)?;
+
+    #[cfg(not(target_os = "linux"))]
+    let key_combo_sent = false;
+
+    // Fall back to enigo if no native tool handled it
+    if !key_combo_sent {
+        with_enigo(app_handle, |enigo| match paste_method {
+            // The legacy path cannot detect a mistimed chord, so it keeps the
+            // conservative 100ms modifier hold.
+            PasteMethod::CtrlV => input::send_paste_ctrl_v(enigo, 100),
+            PasteMethod::CtrlShiftV => input::send_paste_ctrl_shift_v(enigo, 100),
+            PasteMethod::ShiftInsert => input::send_paste_shift_insert(enigo, 100),
+            _ => Err("Invalid paste method for clipboard paste".into()),
+        })?;
+    }
+
+    Ok(())
 }
 
 /// Pastes text using the clipboard: saves current content, writes text, sends paste keystroke, restores clipboard.
+///
+/// All waits are bounded ([`CONTENDED_WAIT_TIMEOUT`]); contention surfaces as
+/// a [`ClipboardPasteError`] rendered into the returned message instead of a
+/// hang or silent content loss.
 fn paste_via_clipboard(
     text: &str,
     app_handle: &AppHandle,
@@ -59,61 +430,21 @@ fn paste_via_clipboard(
     paste_delay_ms: u64,
     paste_delay_after_ms: u64,
 ) -> Result<(), String> {
-    let clipboard = app_handle.clipboard();
-    let saved_text = clipboard.read_text().ok().filter(|t| !t.is_empty());
-    // Only probe for an image when there is no text to restore. Text is by far the
-    // common case, and reading an image decodes the full bitmap, so this keeps the
-    // text path exactly as cheap as it was before.
-    let saved_image = if saved_text.is_none() {
-        clipboard.read_image().ok().map(|image| image.to_owned())
-    } else {
-        None
+    let clipboard = SystemClipboard { app_handle };
+    let timing = PasteTiming {
+        paste_delay_ms,
+        paste_delay_after_ms,
+        ..Default::default()
     };
-
-    // Write text to clipboard first
-    write_text_to_clipboard(app_handle, text)?;
-
-    std::thread::sleep(Duration::from_millis(paste_delay_ms));
-
-    // Capture key injection errors so the original clipboard is restored before
-    // propagating them to the caller.
-    let paste_result = (|| -> Result<(), String> {
-        // Send paste key combo
-        #[cfg(target_os = "linux")]
-        let key_combo_sent = try_send_key_combo_linux(paste_method)?;
-
-        #[cfg(not(target_os = "linux"))]
-        let key_combo_sent = false;
-
-        // Fall back to enigo if no native tool handled it
-        if !key_combo_sent {
-            with_enigo(app_handle, |enigo| match paste_method {
-                // The legacy path cannot detect a mistimed chord, so it keeps the
-                // conservative 100ms modifier hold.
-                PasteMethod::CtrlV => input::send_paste_ctrl_v(enigo, 100),
-                PasteMethod::CtrlShiftV => input::send_paste_ctrl_shift_v(enigo, 100),
-                PasteMethod::ShiftInsert => input::send_paste_shift_insert(enigo, 100),
-                _ => Err("Invalid paste method for clipboard paste".into()),
-            })?;
-        }
-
-        Ok(())
-    })();
-
-    finish_clipboard_paste(paste_result, paste_delay_after_ms, || {
-        // Restore original clipboard content even when key injection failed.
-        // Text takes priority so this path stays identical to the previous behavior;
-        // an image is only restored when the clipboard held no text at all, which is
-        // the case that used to silently wipe screenshots.
-        if let Some(clipboard_content) = saved_text {
-            let _ = write_text_to_clipboard(app_handle, &clipboard_content);
-        } else if let Some(image) = saved_image {
-            info!("Restoring image to clipboard");
-            let _ = clipboard.write_image(&image);
-        } else {
-            // Nothing was there to begin with — don't leave the transcription behind.
-            let _ = clipboard.clear();
-        }
+    run_clipboard_paste(
+        text,
+        &clipboard,
+        || send_paste_chord(app_handle, paste_method),
+        &timing,
+    )
+    .map_err(|error| {
+        warn!("Clipboard-mediated paste failed: {error}");
+        error.to_string()
     })
 }
 
@@ -857,7 +1188,6 @@ pub fn paste(text: String, app_handle: AppHandle) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::Cell;
 
     #[cfg(target_os = "linux")]
     const YDOTOOL_0_1_8_HELP: &str = r#"
@@ -957,12 +1287,318 @@ e.g. 28:1 28:0 means pressing on the Enter button on a standard US keyboard.
 
     #[test]
     fn clipboard_is_restored_before_key_injection_error_is_returned() {
-        let restored = Cell::new(false);
-        let result = finish_clipboard_paste(Err("input failed".into()), 0, || {
-            restored.set(true);
-        });
+        let clipboard = FakeClipboard::with_text("user secret");
+        let timing = fast_timing();
+        let result = run_clipboard_paste(
+            "TRANSCRIPT",
+            &clipboard,
+            || Err("input failed".into()),
+            &timing,
+        );
 
-        assert_eq!(result.unwrap_err(), "input failed");
-        assert!(restored.get());
+        assert_eq!(
+            result,
+            Err(ClipboardPasteError::InjectionFailed("input failed".into()))
+        );
+        // Restore still ran before the error was returned.
+        assert_eq!(clipboard.current_text(), Some("user secret".to_string()));
+    }
+
+    // ---- Fake clipboard + timing used by the paste-path tests below ----
+
+    struct FakeClipboard {
+        state: Mutex<FakeState>,
+    }
+
+    struct FakeState {
+        text: Option<String>,
+        image: Option<Image<'static>>,
+        /// Number of remaining writes of a given text that fail (contention).
+        fail_text_writes: Mutex<Vec<(String, u32)>>,
+        /// Whether all reads currently fail (clipboard held open).
+        fail_reads: bool,
+        ops: Vec<String>,
+    }
+
+    impl FakeClipboard {
+        fn empty() -> Self {
+            Self {
+                state: Mutex::new(FakeState {
+                    text: None,
+                    image: None,
+                    fail_text_writes: Mutex::new(Vec::new()),
+                    fail_reads: false,
+                    ops: Vec::new(),
+                }),
+            }
+        }
+
+        fn with_text(text: &str) -> Self {
+            let clipboard = Self::empty();
+            clipboard.state.lock().unwrap().text = Some(text.to_string());
+            clipboard
+        }
+
+        fn fail_next_writes_of(&self, text: &str, count: u32) {
+            self.state
+                .lock()
+                .unwrap()
+                .fail_text_writes
+                .lock()
+                .unwrap()
+                .push((text.to_string(), count));
+        }
+
+        fn hold_contended(&self) {
+            self.state.lock().unwrap().fail_reads = true;
+        }
+
+        fn current_text(&self) -> Option<String> {
+            self.state.lock().unwrap().text.clone()
+        }
+
+        fn ops(&self) -> Vec<String> {
+            self.state.lock().unwrap().ops.clone()
+        }
+    }
+
+    impl ClipboardOps for FakeClipboard {
+        fn read_text(&self) -> Result<Option<String>, String> {
+            let mut state = self.state.lock().unwrap();
+            state.ops.push("read_text".into());
+            if state.fail_reads {
+                return Err("clipboard held open by another process".into());
+            }
+            Ok(state.text.clone())
+        }
+
+        fn read_image(&self) -> Result<Option<Image<'static>>, String> {
+            let mut state = self.state.lock().unwrap();
+            state.ops.push("read_image".into());
+            if state.fail_reads {
+                return Err("clipboard held open by another process".into());
+            }
+            Ok(state.image.clone())
+        }
+
+        fn write_text(&self, text: &str) -> Result<(), String> {
+            // Decide under the failures lock, then drop it before mutating
+            // `state` (both are fields of the same outer mutex guard).
+            let forced_failure = {
+                let state = self.state.lock().unwrap();
+                let mut failures = state.fail_text_writes.lock().unwrap();
+                failures
+                    .iter_mut()
+                    .find(|(pattern, remaining)| *pattern == text && *remaining > 0)
+                    .map(|entry| {
+                        entry.1 -= 1;
+                        ()
+                    })
+                    .is_some()
+            };
+            let mut state = self.state.lock().unwrap();
+            if forced_failure {
+                let failed = format!("write_text({}) FAILED", Log(text));
+                state.ops.push(failed);
+                return Err("clipboard held open by another process".into());
+            }
+            let logged = format!("write_text({})", Log(text));
+            state.ops.push(logged);
+            state.text = Some(text.to_string());
+            Ok(())
+        }
+
+        fn write_image(&self, _image: &Image<'static>) -> Result<(), String> {
+            self.state.lock().unwrap().ops.push("write_image".into());
+            Ok(())
+        }
+
+        fn clear(&self) -> Result<(), String> {
+            let mut state = self.state.lock().unwrap();
+            state.ops.push("clear".into());
+            state.text = None;
+            state.image = None;
+            Ok(())
+        }
+    }
+
+    /// Wraps clipboard content in test op logs without leaking transcript text.
+    struct Log<'a>(&'a str);
+    impl fmt::Display for Log<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{} chars", self.0.chars().count())
+        }
+    }
+
+    fn fast_timing() -> PasteTiming {
+        PasteTiming {
+            paste_delay_ms: 0,
+            paste_delay_after_ms: 0,
+            op_timeout: Duration::from_millis(60),
+            poll_interval: Duration::from_millis(5),
+        }
+    }
+
+    // ---- Gate G1: prior clipboard content is restored on the success path ----
+
+    #[test]
+    fn success_path_restores_prior_text_after_paste() {
+        let clipboard = FakeClipboard::with_text("user secret");
+        let timing = fast_timing();
+
+        let result = run_clipboard_paste("TRANSCRIPT", &clipboard, || Ok(()), &timing);
+
+        assert_eq!(result, Ok(()));
+        // The transcript was published (9-char log entry)...
+        let ops = clipboard.ops();
+        assert!(ops
+            .iter()
+            .any(|op| op == &format!("write_text({})", Log("TRANSCRIPT"))));
+        // ...and the prior content is what remains afterwards, restored last.
+        assert_eq!(clipboard.current_text(), Some("user secret".to_string()));
+        assert_eq!(
+            ops.last().unwrap(),
+            &format!("write_text({})", Log("user secret"))
+        );
+    }
+
+    #[test]
+    fn success_path_clears_empty_prior_clipboard() {
+        let clipboard = FakeClipboard::empty();
+        let timing = fast_timing();
+
+        let result = run_clipboard_paste("TRANSCRIPT", &clipboard, || Ok(()), &timing);
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(clipboard.current_text(), None);
+        assert_eq!(clipboard.ops().last().unwrap(), "clear");
+    }
+
+    #[test]
+    fn restore_retries_within_bound_then_succeeds() {
+        let clipboard = FakeClipboard::with_text("user secret");
+        // The restore write (of the saved text) fails twice, then succeeds.
+        // The transcript write itself is unaffected.
+        clipboard.fail_next_writes_of("user secret", 2);
+        let timing = fast_timing();
+
+        let result = run_clipboard_paste("TRANSCRIPT", &clipboard, || Ok(()), &timing);
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(clipboard.current_text(), Some("user secret".to_string()));
+    }
+
+    // ---- Gate G3: contended clipboard yields a typed error, never a hang ----
+    // ---- or silently pasted/replaced wrong content ----
+
+    #[test]
+    fn unreadable_clipboard_aborts_before_any_write_with_busy_error() {
+        let clipboard = FakeClipboard::with_text("user secret");
+        clipboard.hold_contended();
+        let timing = fast_timing();
+        let start = Instant::now();
+
+        let result = run_clipboard_paste("TRANSCRIPT", &clipboard, || Ok(()), &timing);
+        let elapsed = start.elapsed();
+
+        match result {
+            Err(ClipboardPasteError::Busy { operation, .. }) => {
+                assert_eq!(operation, "save")
+            }
+            other => panic!("expected Busy(save), got {other:?}"),
+        }
+        // Deterministic no-loss behavior: nothing was ever published.
+        assert!(!clipboard
+            .ops()
+            .iter()
+            .any(|op| op.starts_with("write_text") && !op.contains("FAILED")));
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "wait was unbounded: {elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn contended_publish_aborts_with_busy_error_and_keeps_prior_content() {
+        let clipboard = FakeClipboard::with_text("user secret");
+        clipboard.fail_next_writes_of("TRANSCRIPT", u32::MAX);
+        let timing = fast_timing();
+        let start = Instant::now();
+
+        let result = run_clipboard_paste("TRANSCRIPT", &clipboard, || Ok(()), &timing);
+        let elapsed = start.elapsed();
+
+        match result {
+            Err(ClipboardPasteError::Busy { operation, .. }) => {
+                assert_eq!(operation, "publish")
+            }
+            other => panic!("expected Busy(publish), got {other:?}"),
+        }
+        assert_eq!(clipboard.current_text(), Some("user secret".to_string()));
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "wait was unbounded: {elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn contended_restore_fails_with_typed_error_within_bound() {
+        let clipboard = FakeClipboard::with_text("user secret");
+        clipboard.fail_next_writes_of("user secret", u32::MAX);
+        let timing = fast_timing();
+        let start = Instant::now();
+
+        let result = run_clipboard_paste("TRANSCRIPT", &clipboard, || Ok(()), &timing);
+        let elapsed = start.elapsed();
+
+        match result {
+            Err(ClipboardPasteError::RestoreFailed { attempts, .. }) => {
+                assert!(attempts >= 1)
+            }
+            other => panic!("expected RestoreFailed, got {other:?}"),
+        }
+        // Bounded: far below any plausible hang.
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "restore wait was unbounded: {elapsed:?}"
+        );
+    }
+
+    // ---- Gate G2: bounded lock acquisition ----
+
+    #[test]
+    fn bounded_lock_gives_up_after_timeout_instead_of_waiting_forever() {
+        let lock = Mutex::new(());
+        let _guard = lock.lock().unwrap();
+        let start = Instant::now();
+
+        let result = lock_bounded(
+            &lock,
+            Duration::from_millis(80),
+            Duration::from_millis(5),
+            "input",
+        );
+        let elapsed = start.elapsed();
+
+        assert!(result.is_err());
+        assert!(elapsed >= Duration::from_millis(80));
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "lock wait was unbounded: {elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn bounded_lock_succeeds_when_uncontended() {
+        let lock = Mutex::new(41u8);
+        let mut guard = lock_bounded(
+            &lock,
+            Duration::from_millis(100),
+            Duration::from_millis(5),
+            "input",
+        )
+        .unwrap();
+        *guard += 1;
+        assert_eq!(*guard, 42);
     }
 }

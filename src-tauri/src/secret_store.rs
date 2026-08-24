@@ -18,6 +18,7 @@
 //! serializes `SecretMap`s as `{}`).
 
 use log::{error, info};
+use tauri::AppHandle;
 
 /// Scope prefix for cloud speech pipeline providers (azure / deepl / custom).
 pub const SPEECH_PIPELINE_SCOPE: &str = "speech-pipeline";
@@ -150,6 +151,17 @@ pub fn delete_secret(scope: &str, id: &str) {
 /// already present in the secret store are not overwritten, and emptied maps
 /// make subsequent calls no-ops.
 pub fn migrate_legacy_settings_secrets(settings: &mut crate::settings::AppSettings) -> bool {
+    migrate_legacy_settings_secrets_with(settings, imp::get_secret, imp::set_secret)
+}
+
+/// Backend-injected core of [`migrate_legacy_settings_secrets`], so tests can
+/// exercise the migration/ordering contract against an in-memory store
+/// instead of the real OS keychain.
+fn migrate_legacy_settings_secrets_with(
+    settings: &mut crate::settings::AppSettings,
+    get_secret: impl Fn(&str, &str) -> Option<String>,
+    set_secret: impl Fn(&str, &str, &str) -> Result<(), String>,
+) -> bool {
     let mut migrated_any = false;
     let scopes = [
         (
@@ -167,7 +179,7 @@ pub fn migrate_legacy_settings_secrets(settings: &mut crate::settings::AppSettin
             .collect();
 
         for (id, value) in legacy {
-            match imp::get_secret(scope, &id) {
+            match get_secret(scope, &id) {
                 Some(existing) => {
                     info!(
                         "legacy API key for {scope}/{id} found in settings but a secret \
@@ -176,7 +188,7 @@ pub fn migrate_legacy_settings_secrets(settings: &mut crate::settings::AppSettin
                     let _ = existing;
                 }
                 None => {
-                    if let Err(e) = imp::set_secret(scope, &id, &value) {
+                    if let Err(e) = set_secret(scope, &id, &value) {
                         // Keep the value in the settings map so nothing is lost;
                         // migration retried on next startup.
                         error!("failed to migrate API key for {scope}/{id}: {e}");
@@ -191,6 +203,26 @@ pub fn migrate_legacy_settings_secrets(settings: &mut crate::settings::AppSettin
     }
 
     migrated_any
+}
+
+/// Startup entry point for the legacy-secret migration. Runs
+/// [`migrate_legacy_settings_secrets`] inside one serialized settings
+/// transaction and re-persists the (emptied) store.
+///
+/// Ordering invariant (docs/reviews/secrets-exposure-and-durability-audit.md
+/// §3.2, finding F-6): every launch path — GUI and headless/CLI alike — MUST
+/// call this before its first `get_settings`/`update_settings`. A settings
+/// read that finds an older store re-persists it with schema migrations or
+/// default merges applied, and `SecretMap::serialize` writes `{}` — silently
+/// destroying plain-text keys that were never moved into the secret store.
+/// The settings load inside this transaction also hydrates the in-memory maps
+/// from the secret store (`settings::store::get_settings_unlocked`), so later
+/// consumers keep seeing configured keys.
+pub fn migrate_secrets_at_startup(app: &AppHandle) -> crate::settings::AppSettings {
+    crate::settings::update_settings(app, |settings| {
+        migrate_legacy_settings_secrets(settings);
+        settings.clone()
+    })
 }
 
 /// Populates the in-memory API-key maps from the secret store so callers of
@@ -254,5 +286,102 @@ mod tests {
         assert_eq!(imp::get_secret("other-scope", "prov"), None);
         imp::delete_secret("test-scope", "prov");
         assert_eq!(imp::get_secret("test-scope", "prov"), None);
+    }
+
+    /// Regression test for the headless ordering contract
+    /// (secrets-exposure-and-durability-audit.md §3.2 / F-6, task gates G1/G2):
+    /// a CLI-only session loads a legacy store whose API-key maps hold
+    /// plain-text values. Running the migration *before* the (any) persist
+    /// must leave the key maps that reach disk empty while every legacy value
+    /// has landed in the secret store. Uses an injected backend so it never
+    /// touches the real OS keychain.
+    #[test]
+    fn headless_migration_before_first_persist_empties_maps_and_fills_secret_store() {
+        // What get_settings_unlocked deserializes from a not-yet-migrated
+        // settings_store.json.
+        let mut settings: crate::settings::AppSettings =
+            serde_json::from_value(serde_json::json!({
+                "speech_pipeline_api_keys": { "azure": "legacy-azure-key", "deepl": "" },
+                "post_process_api_keys": { "openai": "legacy-openai-key" },
+            }))
+            .expect("partial stores parse with defaults");
+
+        let backend: std::sync::Mutex<std::collections::HashMap<String, String>> =
+            std::sync::Mutex::new(std::collections::HashMap::new());
+        let migrated = {
+            let backend = &backend;
+            migrate_legacy_settings_secrets_with(
+                &mut settings,
+                |scope, id| backend.lock().unwrap().get(&account(scope, id)).cloned(),
+                |scope, id, value| {
+                    backend
+                        .lock()
+                        .unwrap()
+                        .insert(account(scope, id), value.to_string());
+                    Ok(())
+                },
+            )
+        };
+        assert!(migrated);
+
+        // Whatever persists next (schema migrations, default merges — the F-6
+        // trigger) writes the maps through SecretMap::serialize: empty on disk.
+        let persisted = serde_json::to_value(&settings).unwrap();
+        assert_eq!(persisted["speech_pipeline_api_keys"], serde_json::json!({}));
+        assert_eq!(persisted["post_process_api_keys"], serde_json::json!({}));
+
+        // ...and every configured legacy key now lives in the secret store,
+        // under the same scope/account the GUI path and readers use.
+        let stored = backend.lock().unwrap();
+        assert_eq!(
+            stored.get(&account(SPEECH_PIPELINE_SCOPE, "azure")),
+            Some(&"legacy-azure-key".to_string())
+        );
+        assert_eq!(
+            stored.get(&account(POST_PROCESS_SCOPE, "openai")),
+            Some(&"legacy-openai-key".to_string())
+        );
+        // Empty-string entries mean "not configured" and stay out of the store.
+        assert!(!stored.contains_key(&account(SPEECH_PIPELINE_SCOPE, "deepl")));
+        assert_eq!(stored.len(), 2);
+        drop(stored);
+
+        // Idempotent: a second startup pass is a no-op and does not clobber
+        // existing secrets with the (already removed) settings copies.
+        let second = {
+            let backend = &backend;
+            migrate_legacy_settings_secrets_with(
+                &mut settings,
+                |scope, id| backend.lock().unwrap().get(&account(scope, id)).cloned(),
+                |scope, id, value| {
+                    backend
+                        .lock()
+                        .unwrap()
+                        .insert(account(scope, id), value.to_string());
+                    Ok(())
+                },
+            )
+        };
+        assert!(!second);
+        assert_eq!(backend.lock().unwrap().len(), 2);
+    }
+
+    /// Counterexample pinning WHY the ordering matters: persisting a legacy
+    /// store *without* running the migration first (the F-6 headless bug)
+    /// strips the keys from disk via `SecretMap::serialize` while nothing ever
+    /// reaches the secret store — an unrecoverable loss.
+    #[test]
+    fn persisting_before_migration_destroys_legacy_keys_unmigrated() {
+        let settings: crate::settings::AppSettings = serde_json::from_value(serde_json::json!({
+            "speech_pipeline_api_keys": { "azure": "lost-without-migration" },
+        }))
+        .unwrap();
+
+        let backend: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+
+        // No migration ran; the first read re-persists schema migrations:
+        let persisted = serde_json::to_value(&settings).unwrap();
+        assert_eq!(persisted["speech_pipeline_api_keys"], serde_json::json!({}));
+        assert!(backend.is_empty(), "no secret was ever stored");
     }
 }

@@ -11,6 +11,21 @@ use std::collections::HashMap;
 use super::types::*;
 use log::debug;
 
+/// Binding id of the meeting start/stop shortcut (plan §6.9 row 3).
+///
+/// Meeting bindings are deliberately *separate* ids from the dictation ones
+/// (`transcribe`, `transcribe_with_post_process`, `cancel`) so both tools stay
+/// independently bindable and the shortcut editor can never confuse them.
+pub const MEETING_BINDING_START_STOP: &str = "meeting_start_stop";
+
+/// Binding id of the meeting pause/resume shortcut (plan §6.9 row 4).
+pub const MEETING_BINDING_PAUSE_RESUME: &str = "meeting_pause_resume";
+
+/// True when `id` addresses a meeting action rather than a dictation action.
+pub fn is_meeting_binding(id: &str) -> bool {
+    id == MEETING_BINDING_START_STOP || id == MEETING_BINDING_PAUSE_RESUME
+}
+
 /// The container-level `serde(default)` (backed by the `Default` impl below)
 /// guarantees every field — including ones added in the future — falls back to
 /// its `get_default_settings()` value when missing from a stored settings
@@ -597,6 +612,43 @@ pub fn get_default_settings() -> AppSettings {
             description: "Cancels the current recording.".to_string(),
             default_binding: "escape".to_string(),
             current_binding: "escape".to_string(),
+        },
+    );
+
+    // Meeting bindings (plan §6.9). They are separate, clearly named entries
+    // so meeting and dictation can never be confused, and they leave the
+    // dictation defaults above untouched (plan §6.10: "Meeting-Einstellungen
+    // verändern keine Diktier-Einstellungen und umgekehrt").
+    #[cfg(target_os = "macos")]
+    let default_meeting_shortcut = "option+ctrl+space";
+    #[cfg(not(target_os = "macos"))]
+    let default_meeting_shortcut = "ctrl+alt+space";
+
+    bindings.insert(
+        MEETING_BINDING_START_STOP.to_string(),
+        ShortcutBinding {
+            id: MEETING_BINDING_START_STOP.to_string(),
+            name: "Start/Stop Meeting".to_string(),
+            description: "Starts or stops a meeting recording.".to_string(),
+            default_binding: default_meeting_shortcut.to_string(),
+            current_binding: default_meeting_shortcut.to_string(),
+        },
+    );
+    // Plan §6.9 lists pause/resume as "standardmäßig unbelegt": the default is
+    // an empty binding, which the registration paths skip.
+    #[cfg(target_os = "macos")]
+    let default_meeting_pause_shortcut = "option+ctrl+p";
+    #[cfg(not(target_os = "macos"))]
+    let default_meeting_pause_shortcut = "ctrl+alt+p";
+
+    bindings.insert(
+        MEETING_BINDING_PAUSE_RESUME.to_string(),
+        ShortcutBinding {
+            id: MEETING_BINDING_PAUSE_RESUME.to_string(),
+            name: "Pause/Resume Meeting".to_string(),
+            description: "Pauses or resumes the running meeting recording.".to_string(),
+            default_binding: default_meeting_pause_shortcut.to_string(),
+            current_binding: String::new(),
         },
     );
 

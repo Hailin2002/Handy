@@ -416,3 +416,59 @@ fn secret_map_debug_redacts_values() {
     assert!(!out.contains("secret"));
     assert!(out.contains("[REDACTED]"));
 }
+
+/// Durability gate for `update_settings`: the moment the transaction returns,
+/// the new value must already be on disk — observable through a freshly
+/// opened store handle, with no reliance on `Drop` or tauri-plugin-store's
+/// ~100 ms debounced auto-save (which an immediate process kill would lose).
+///
+/// The writer and reader are two *separate* mock apps: each app's store plugin
+/// keeps its own handle cache, so the reader's store is a brand-new instance
+/// that must read the value back from disk at open time. Without the explicit
+/// `store.save()` flush at the write site (see
+/// `store::flush_settings_store`), this test fails because the reader opens
+/// before any debounced save has fired.
+#[test]
+fn flushed_update_is_immediately_visible_to_a_freshly_opened_handle() {
+    use tempfile::TempDir;
+
+    // Isolate the store file from the real user data directory. (The redirect
+    // is process-global and first-caller-wins; this is the only test that
+    // uses it.)
+    let dir = TempDir::new().expect("temp dir for isolated settings store");
+    super::store::set_test_store_dir(dir.path());
+    let store_file = dir.path().join(super::store::SETTINGS_STORE_PATH);
+
+    let build_app = || {
+        tauri::test::mock_builder()
+            .plugin(tauri_plugin_store::Builder::default().build())
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .expect("mock app with store plugin builds")
+    };
+
+    let marker = "durability-check-model";
+    {
+        let writer_app = build_app();
+        super::update_settings(writer_app.handle(), |settings| {
+            settings.selected_model = marker.to_string();
+        });
+        // No Drop of any handle may be required for durability: assert the
+        // raw file contents synchronously, before any debounced save could
+        // have run.
+        let on_disk = std::fs::read_to_string(&store_file)
+            .expect("update_settings must leave the store file on disk");
+        assert!(
+            on_disk.contains(marker),
+            "acknowledged update must be flushed to disk synchronously"
+        );
+    }
+
+    // Fresh app => fresh plugin state => a brand-new store handle that reads
+    // the persisted value back from disk when it opens.
+    let reader_app = build_app();
+    let reread = get_settings(reader_app.handle());
+    assert_eq!(
+        reread.selected_model, marker,
+        "a freshly opened store handle must observe the acknowledged update"
+    );
+}
