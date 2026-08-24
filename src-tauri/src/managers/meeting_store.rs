@@ -1256,6 +1256,16 @@ fn summary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<MeetingSummary>
     })
 }
 
+/// Loads the transcript segments produced by one job, in sequence order.
+fn load_job_segments(conn: &Connection, job_id: &str) -> rusqlite::Result<Vec<TranscriptSegment>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {SEGMENT_COLUMNS} FROM meeting_transcript_segments
+         WHERE job_id = ?1 AND deleted_at IS NULL ORDER BY sequence ASC"
+    ))?;
+    let rows = stmt.query_map(params![job_id], segment_from_row)?;
+    rows.collect()
+}
+
 /// Loads the ordered chunk ids referenced by one job (plan §9 line 1193).
 fn load_job_chunk_ids(conn: &Connection, job_id: &str) -> rusqlite::Result<Vec<Uuid>> {
     let mut stmt = conn.prepare(
@@ -2153,6 +2163,21 @@ impl MeetingRepository for SqliteMeetingStore {
                 entity: "meeting_stt_jobs",
                 id: job_id.clone(),
             })?;
+
+        // Idempotent resume (plan §13 Phase 6: saved responses are never
+        // duplicated): if a previous attempt of this job already committed its
+        // segments (crash between insert and the Succeeded transition), return
+        // them instead of writing a second copy.
+        let existing = load_job_segments(&tx, &job_id.0).map_err(sql_err(op))?;
+        if !existing.is_empty() {
+            log::debug!(
+                "Job {} already has {} persisted segment(s); skipping re-insert",
+                job_id.0,
+                existing.len()
+            );
+            tx.commit().map_err(sql_err(op))?;
+            return Ok(existing);
+        }
 
         let mut inserted = Vec::with_capacity(segments.len());
         for segment in segments {
@@ -3194,6 +3219,48 @@ mod sqlite_tests {
             .transition_stt_job(job_id, SttJobState::Queued, None)
             .expect_err("terminal states are final");
         assert!(matches!(err, StoreError::Conflict { .. }), "got {err:?}");
+    }
+
+    /// Crash-recovery guarantee (plan §13 Phase 6): re-running a job whose
+    /// segments already committed must not duplicate them.
+    #[test]
+    fn insert_segments_is_idempotent_for_an_already_persisted_job() {
+        let (_dir, store) = temp_store();
+        let (_meeting_id, _, job_id) = seeded(&store);
+
+        let drafts = |text: &str| {
+            vec![NewTranscriptSegment {
+                source: "microphone".to_string(),
+                start_ms: 0,
+                end_ms: 900,
+                text: text.to_string(),
+                word_timestamps: None,
+                confidence: Some(0.5),
+                provider: "local".to_string(),
+                model_id: Some("parakeet-v3".to_string()),
+                sequence: 0,
+            }]
+        };
+
+        let first = store
+            .insert_segments(job_id.clone(), drafts("first attempt"))
+            .expect("insert");
+        assert_eq!(first.len(), 1);
+
+        // A resumed job produces fresh engine output under the same job id.
+        let again = store
+            .insert_segments(job_id.clone(), drafts("second attempt"))
+            .expect("re-insert");
+        assert_eq!(again.len(), 1);
+        assert_eq!(
+            again[0].envelope.id, first[0].envelope.id,
+            "the original row is returned untouched"
+        );
+        assert_eq!(again[0].text, "first attempt");
+        assert_eq!(
+            count(&store, "SELECT COUNT(*) FROM meeting_transcript_segments"),
+            1
+        );
     }
 
     // -- transcript segments -----------------------------------------------

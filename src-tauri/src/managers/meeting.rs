@@ -700,6 +700,16 @@ pub trait MeetingEnvironment: Send + Sync {
     fn free_disk_bytes(&self) -> Option<u64>;
     /// STT/summary configuration snapshot.
     fn provider(&self) -> ProviderSnapshot;
+    /// Effective STT provider for a session being started. The default
+    /// ignores the per-meeting override; the real environment honors it
+    /// (plan §13 Phase 6: Local/Azure/Custom chosen per meeting).
+    fn provider_for(
+        &self,
+        override_provider: Option<crate::settings::SpeechInputProvider>,
+    ) -> ProviderSnapshot {
+        let _ = override_provider;
+        self.provider()
+    }
     /// OS-level capture permission.
     fn microphone_permission_granted(&self) -> bool;
 }
@@ -798,10 +808,18 @@ impl MeetingEnvironment for AppEnvironment {
     }
 
     fn provider(&self) -> ProviderSnapshot {
+        self.provider_for(None)
+    }
+
+    fn provider_for(
+        &self,
+        override_provider: Option<crate::settings::SpeechInputProvider>,
+    ) -> ProviderSnapshot {
         let settings = crate::settings::get_settings(&self.app);
         // Meetings pick their STT provider independently of dictation
         // (plan §13 Phase 6 acceptance).
-        let (kind, name, configured) = match settings.meeting_stt_provider {
+        let effective = override_provider.unwrap_or(settings.meeting_stt_provider);
+        let (kind, name, configured) = match effective {
             crate::settings::SpeechInputProvider::Local => (
                 "local",
                 "Local".to_string(),
@@ -1700,7 +1718,10 @@ impl MeetingManager {
         self.snapshot(&session.id)
     }
 
-    /// T02/T03 — consent gate, start validation, device opening.
+    /// T02/T03 — consent gate, start validation, device opening. Kept for
+    /// callers/tests that need the plain default-provider start; the command
+    /// layer uses [`Self::start_with_provider`].
+    #[allow(dead_code)]
     pub fn start(
         &self,
         meeting_id: &str,
@@ -1708,6 +1729,28 @@ impl MeetingManager {
         microphone_only: bool,
         summary_enabled: bool,
         consent_acknowledged: bool,
+    ) -> Result<MeetingSnapshot, String> {
+        self.start_with_provider(
+            meeting_id,
+            title,
+            microphone_only,
+            summary_enabled,
+            consent_acknowledged,
+            None,
+        )
+    }
+
+    /// Like [`Self::start`], but pins this session's STT provider regardless
+    /// of the global default (plan §13 Phase 6: Local/Azure/Custom are chosen
+    /// per meeting and must not touch the dictation provider).
+    pub fn start_with_provider(
+        &self,
+        meeting_id: &str,
+        title: Option<String>,
+        microphone_only: bool,
+        summary_enabled: bool,
+        consent_acknowledged: bool,
+        stt_provider: Option<crate::settings::SpeechInputProvider>,
     ) -> Result<MeetingSnapshot, String> {
         // Gate G4 (SSC §7) is fail-closed and evaluated *before* T02, so no
         // capture resource can be opened without an acknowledged consent.
@@ -1779,7 +1822,56 @@ impl MeetingManager {
             )?;
         }
         drop(inner);
+        // Pin the effective provider choice for this session *after* capture
+        // opened successfully: every later STT job routes through the stored
+        // snapshot, so a mid-meeting settings change cannot split a transcript
+        // across backends.
+        if let Err(e) = self.persist_provider_choice(meeting_id, stt_provider) {
+            warn!("Failed to persist meeting provider choice: {}", e);
+        }
         self.snapshot(meeting_id)
+    }
+
+    /// Writes the effective STT provider for one session into its row so the
+    /// queue's `session_provider` lookup resolves it (plan §13 Phase 6).
+    fn persist_provider_choice(
+        &self,
+        meeting_id: &str,
+        override_provider: Option<crate::settings::SpeechInputProvider>,
+    ) -> Result<()> {
+        let snapshot = self.env.provider_for(override_provider);
+        let kind = snapshot.kind.as_str();
+        let name = snapshot.name.as_str();
+        let language = snapshot
+            .language
+            .clone()
+            .filter(|l| !l.is_empty() && l != "auto");
+        {
+            let conn = lock(&self.conn);
+            let updated = conn.execute(
+                // Metadata-only write (like the queue's own lookups): no
+                // revision bump, because no state event accompanies it.
+                "UPDATE meeting_sessions
+                 SET stt_provider = ?2, provider_config_snapshot = ?3, language = ?4,
+                     updated_at = ?5
+                 WHERE id = ?1 AND deleted_at IS NULL",
+                params![
+                    meeting_id,
+                    name,
+                    serde_json::json!({ "kind": kind }).to_string(),
+                    language,
+                    now_ms()
+                ],
+            )?;
+            if updated == 0 {
+                anyhow::bail!("Meeting session {} not found", meeting_id);
+            }
+        }
+        if let Some(runtime) = lock(&self.inner).sessions.get_mut(meeting_id) {
+            runtime.provider_kind = kind.to_string();
+            runtime.provider_name = Some(name.to_string());
+        }
+        Ok(())
     }
 
     fn open_capture(
@@ -2685,6 +2777,27 @@ impl MeetingEnvironment for StaticEnvironment {
         self.provider.clone()
     }
 
+    /// Mirrors the real environment: an explicit per-meeting override wins
+    /// over whatever default this static fixture carries.
+    fn provider_for(
+        &self,
+        override_provider: Option<crate::settings::SpeechInputProvider>,
+    ) -> ProviderSnapshot {
+        let (kind, name) = match override_provider {
+            Some(crate::settings::SpeechInputProvider::Azure) => ("cloud", "Azure Speech"),
+            Some(crate::settings::SpeechInputProvider::Custom) => ("cloud", "Custom endpoint"),
+            _ => return self.provider.clone(),
+        };
+        ProviderSnapshot {
+            kind: kind.to_string(),
+            name: name.to_string(),
+            language: self.provider.language.clone(),
+            configured: true,
+            summary_provider: None,
+            retention_policy: self.provider.retention_policy.clone(),
+        }
+    }
+
     fn microphone_permission_granted(&self) -> bool {
         !self.permission_denied
     }
@@ -3173,6 +3286,41 @@ mod tests {
                 "completed"
             ]
         );
+    }
+
+    /// Phase 6: the provider chosen for one meeting is persisted on start and
+    /// drives later STT job routing — without touching dictation settings.
+    #[test]
+    fn start_pins_the_chosen_provider_for_the_session() {
+        let h = harness();
+        let pinned = h.manager.create_draft(None).unwrap();
+        let started = h
+            .manager
+            .start_with_provider(
+                &pinned.meeting_id,
+                None,
+                false,
+                false,
+                true,
+                Some(crate::settings::SpeechInputProvider::Azure),
+            )
+            .unwrap();
+        assert_eq!(started.provider_kind, "cloud");
+        assert_eq!(started.provider_name.as_deref(), Some("Azure Speech"));
+
+        // The queue resolves jobs through this stored snapshot.
+        let (name, config) = h.manager.session_provider(&pinned.meeting_id);
+        assert_eq!(name, "Azure Speech");
+        assert_eq!(config["kind"], "cloud");
+
+        // A sibling meeting keeps the global default.
+        let _ = h.manager.stop(&pinned.meeting_id, false);
+        let plain = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&plain.meeting_id, None, false, false, true)
+            .unwrap();
+        let (default_name, _) = h.manager.session_provider(&plain.meeting_id);
+        assert_eq!(default_name, "Local");
     }
 
     /// O2: revisions are strictly increasing, and exactly one event is

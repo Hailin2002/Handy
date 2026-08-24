@@ -108,7 +108,9 @@ pub async fn preflight_meeting(
     Ok(meeting_manager.preflight())
 }
 
-/// T02/T03 — consent gate, validation, device opening.
+/// T02/T03 — consent gate, validation, device opening. `stt_provider` pins
+/// this meeting's transcription backend (plan §13 Phase 6); `None` uses the
+/// global meeting default.
 #[tauri::command]
 #[specta::specta]
 pub async fn start_meeting(
@@ -118,13 +120,15 @@ pub async fn start_meeting(
     microphone_only: bool,
     summary_enabled: bool,
     consent_acknowledged: bool,
+    stt_provider: Option<crate::settings::SpeechInputProvider>,
 ) -> Result<MeetingSnapshot, String> {
-    meeting_manager.start(
+    meeting_manager.start_with_provider(
         &meeting_id,
         title,
         microphone_only,
         summary_enabled,
         consent_acknowledged,
+        stt_provider,
     )
 }
 
