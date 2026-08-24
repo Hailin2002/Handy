@@ -347,7 +347,11 @@
       "summaryFailed": "The summary could not be created.",
       "resummarize": "Summarise again",
       "resummarizeDone": "Summary updated",
-      "resummarizeFailed": "Re-summarising failed"
+      "resummarizeFailed": "Re-summarising failed",
+      "searchLabel": "Search the transcript",
+      "searchPlaceholder": "Search in transcript�",
+      "searchMatches_one": "{{count}} match",
+      "searchMatches_other": "{{count}} matches"
     }
   },
   "onboarding": {

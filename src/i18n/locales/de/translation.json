@@ -347,7 +347,11 @@
       "summaryFailed": "Die Zusammenfassung konnte nicht erstellt werden.",
       "resummarize": "Erneut zusammenfassen",
       "resummarizeDone": "Zusammenfassung aktualisiert",
-      "resummarizeFailed": "Erneutes Zusammenfassen fehlgeschlagen"
+      "resummarizeFailed": "Erneutes Zusammenfassen fehlgeschlagen",
+      "searchLabel": "Transkript durchsuchen",
+      "searchPlaceholder": "Im Transkript suchen�",
+      "searchMatches_one": "{{count}} Treffer",
+      "searchMatches_other": "{{count}} Treffer"
     }
   },
   "onboarding": {

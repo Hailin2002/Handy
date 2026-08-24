@@ -54,6 +54,15 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
   const [summary, setSummary] = useState<MeetingSummaryDto | null>(null);
   const [transcript, setTranscript] = useState<TranscriptRowDto[]>([]);
   const [resummarizing, setResummarizing] = useState(false);
+  const [transcriptQuery, setTranscriptQuery] = useState("");
+
+  const visibleTranscript = transcriptQuery.trim()
+    ? transcript.filter((row) =>
+        row.text
+          .toLowerCase()
+          .includes(transcriptQuery.trim().toLowerCase()),
+      )
+    : transcript;
 
   const loadContent = useCallback(async () => {
     try {
@@ -299,10 +308,24 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
               </div>
             </div>
             <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm text-text/80">
-              {transcript.map((row, index) => (
+              {visibleTranscript.map((row, index) => (
                 <li key={`${row.start_ms}-${index}`}>{row.text}</li>
               ))}
             </ul>
+            <Input
+              value={transcriptQuery}
+              onChange={(event) => setTranscriptQuery(event.target.value)}
+              placeholder={t("meeting.detail.searchPlaceholder")}
+              aria-label={t("meeting.detail.searchLabel")}
+              className="mt-2"
+            />
+            {transcriptQuery.trim() && (
+              <p className="mt-1 text-xs text-text/50">
+                {t("meeting.detail.searchMatches", {
+                  count: visibleTranscript.length,
+                })}
+              </p>
+            )}
           </div>
         )}
 
