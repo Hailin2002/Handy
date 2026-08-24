@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { FolderPlus, Inbox, Trash2, Unlink } from "lucide-react";
-import { commands, type MeetingSession, type Project } from "@/bindings";
+import { Check, FolderPlus, Inbox, Pencil, Trash2, Unlink, X } from "lucide-react";
+import { commands, type MeetingSession, type Project, type ProjectTask } from "@/bindings";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -20,6 +20,8 @@ export const ProjectsPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [inboxIds, setInboxIds] = useState<string[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
+  const [tasks, setTasks] = useState<ProjectTask[]>([]);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
 
   const sessionById = useCallback(
     (id: string) => sessions.find((s) => s.id === id),
@@ -64,11 +66,16 @@ export const ProjectsPage: React.FC = () => {
   const refreshMembers = useCallback(async () => {
     if (!selectedId) {
       setMemberIds([]);
+      setTasks([]);
       return;
     }
     try {
-      const result = await commands.projectMeetingIds(selectedId);
-      if (result.status === "ok") setMemberIds(result.data);
+      const [members, taskList] = await Promise.all([
+        commands.projectMeetingIds(selectedId),
+        commands.taskList(selectedId),
+      ]);
+      if (members.status === "ok") setMemberIds(members.data);
+      if (taskList.status === "ok") setTasks(taskList.data);
     } catch (error) {
       console.error("Failed to load project members:", error);
     }
@@ -141,6 +148,44 @@ export const ProjectsPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to unassign meeting:", error);
+    }
+  };
+
+  // -- Phase 10: task workflow ---------------------------------------------
+
+  const addManualTask = async () => {
+    if (!selectedId || !newTaskTitle.trim()) return;
+    try {
+      const result = await commands.taskCreateManual(
+        selectedId,
+        newTaskTitle.trim(),
+        null,
+      );
+      if (result.status === "ok") {
+        setNewTaskTitle("");
+        await refreshMembers();
+      }
+    } catch (error) {
+      console.error("Failed to create task:", error);
+    }
+  };
+
+  /** Manual edits always win — the backend is insert-only for AI twins. */
+  const decideTask = async (
+    taskId: string,
+    state: "accepted" | "rejected" | "edited",
+  ) => {
+    let title: string | null = null;
+    if (state === "edited") {
+      const answer = window.prompt(t("projects.taskEditPrompt"));
+      if (answer === null || !answer.trim()) return;
+      title = answer;
+    }
+    try {
+      const result = await commands.taskDecide(taskId, state, title, null);
+      if (result.status === "ok") await refreshMembers();
+    } catch (error) {
+      console.error("Failed to decide task:", error);
     }
   };
 
@@ -239,6 +284,68 @@ export const ProjectsPage: React.FC = () => {
               </div>
             </>
           )}
+
+          {/* Phase 10 — task workflow */}
+          <div className="mt-4 border-t border-mid-gray/15 pt-3">
+            <h4 className="text-xs font-medium text-text/60">
+              {t("projects.tasksHeading")}
+            </h4>
+            <ul className="mt-2 space-y-1">
+              {tasks.map((task) => (
+                <li
+                  key={task.id}
+                  className="flex items-center justify-between gap-2 rounded-md bg-mid-gray/5 px-2 py-1 text-sm"
+                >
+                  <span className={task.state === "rejected" ? "line-through opacity-50" : ""}>
+                    {task.title}
+                    {task.origin === "ai" && task.state === "suggested" && (
+                      <span className="ml-1 text-xs text-text/50">
+                        ({t("projects.taskSuggested")})
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex gap-1">
+                    {task.state === "suggested" && (
+                      <>
+                        <Button size="sm" variant="ghost" aria-label={t("projects.taskAccept")}
+                          onClick={() => void decideTask(task.id, "accepted")}>
+                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                        <Button size="sm" variant="ghost" aria-label={t("projects.taskReject")}
+                          onClick={() => void decideTask(task.id, "rejected")}>
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                      </>
+                    )}
+                    {(task.state === "accepted" || task.state === "edited") && (
+                      <Button size="sm" variant="ghost" aria-label={t("common.edit")}
+                        onClick={() => void decideTask(task.id, "edited")}>
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
+                    )}
+                  </span>
+                </li>
+              ))}
+              {tasks.length === 0 && (
+                <li className="text-sm text-text/50">{t("projects.noTasks")}</li>
+              )}
+            </ul>
+            <div className="mt-2 flex gap-1">
+              <Input
+                value={newTaskTitle}
+                onChange={(event) => setNewTaskTitle(event.target.value)}
+                placeholder={t("projects.newTaskPlaceholder")}
+                aria-label={t("projects.newTaskPlaceholder")}
+              />
+              <Button
+                size="sm"
+                onClick={() => void addManualTask()}
+                disabled={!newTaskTitle.trim()}
+              >
+                {t("common.add")}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </section>

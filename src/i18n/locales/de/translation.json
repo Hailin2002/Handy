@@ -1236,7 +1236,14 @@
     "empty": "Noch keine Projekte",
     "noMeetings": "Noch keine Meetings zugeordnet",
     "unlink": "Trennen",
-    "assignFromInbox": "Meeting aus dem Eingang zuordnen"
+    "assignFromInbox": "Meeting aus dem Eingang zuordnen",
+    "tasksHeading": "Aufgaben",
+    "noTasks": "Noch keine Aufgaben",
+    "newTaskPlaceholder": "Neue Aufgabe�",
+    "taskSuggested": "von der KI vorgeschlagen",
+    "taskAccept": "Annehmen",
+    "taskReject": "Verwerfen",
+    "taskEditPrompt": "Aufgabentitel bearbeiten:"
   },
   "whatsapp": {
     "title": "WhatsApp-Chat importieren",

@@ -1236,7 +1236,14 @@
     "empty": "No projects yet",
     "noMeetings": "No meetings assigned yet",
     "unlink": "Unlink",
-    "assignFromInbox": "Assign a meeting from the inbox"
+    "assignFromInbox": "Assign a meeting from the inbox",
+    "tasksHeading": "Tasks",
+    "noTasks": "No tasks yet",
+    "newTaskPlaceholder": "New task�",
+    "taskSuggested": "suggested by AI",
+    "taskAccept": "Accept",
+    "taskReject": "Reject",
+    "taskEditPrompt": "Edit the task title:"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
