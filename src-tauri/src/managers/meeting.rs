@@ -34,12 +34,14 @@
 
 use super::meeting_store::{
     meeting_db_path, open_meeting_database, ChunkFacts, ChunkState as StoreChunkState,
-    MeetingRepository, NewSttJob, SessionPatch, SqliteMeetingStore, StoreError, Uuid as StoreUuid,
+    MeetingRepository, NewAudioChunk, NewSttJob, SessionPatch, SqliteMeetingStore, StoreError,
+    Uuid as StoreUuid,
 };
 use super::meeting_transcription::{
     MeetingSttEngine, MeetingTranscriptionQueue, QueueConfig, QueueDelegate,
 };
 use crate::audio_toolkit::audio::meeting_recorder as rec;
+use crate::managers::meeting_summary as summarize;
 use anyhow::Result;
 use log::{debug, error, info, warn};
 use rusqlite::{params, Connection, OptionalExtension};
@@ -690,6 +692,9 @@ impl Default for ProviderSnapshot {
     }
 }
 
+/// Injected summary LLM handle: `(provider_id, model, executor)`.
+pub type SummaryLlmConfig = (String, String, Box<dyn summarize::SummaryLlm>);
+
 /// Everything the manager needs to validate a start that is not a device fact.
 pub trait MeetingEnvironment: Send + Sync {
     /// The configured capture devices.
@@ -712,6 +717,17 @@ pub trait MeetingEnvironment: Send + Sync {
     }
     /// OS-level capture permission.
     fn microphone_permission_granted(&self) -> bool;
+    /// Persisted cloud-summarization consent (plan summary-provider-contract).
+    /// Default false keeps the cloud path unreachable for fakes.
+    fn summary_cloud_consent(&self) -> bool {
+        false
+    }
+    /// Configured LLM for summaries as `(provider_id, model, executor)`.
+    /// `None` means "not configured" — the summary then fails with a visible
+    /// code instead of silently skipping. Tests inject scripted executors.
+    fn summary_llm(&self) -> Option<SummaryLlmConfig> {
+        None
+    }
 }
 
 /// Pen-test hardening: a pathological title (megabytes pasted, zero-width
@@ -874,6 +890,24 @@ impl MeetingEnvironment for AppEnvironment {
         {
             true
         }
+    }
+
+    fn summary_cloud_consent(&self) -> bool {
+        crate::settings::get_settings(&self.app).meeting_summary_cloud_consent
+    }
+
+    fn summary_llm(&self) -> Option<SummaryLlmConfig> {
+        let settings = crate::settings::get_settings(&self.app);
+        let provider = settings.active_post_process_provider().cloned()?;
+        let model = settings.post_process_models.get(&provider.id)?.clone();
+        if model.trim().is_empty() {
+            return None;
+        }
+        let api_key =
+            crate::secret_store::get_secret(crate::secret_store::POST_PROCESS_SCOPE, &provider.id)
+                .unwrap_or_default();
+        let executor = summarize::CloudSummarizer::new(provider.clone(), api_key, model.clone());
+        Some((provider.id, model, Box::new(executor)))
     }
 }
 
@@ -1077,7 +1111,7 @@ impl rec::ChunkStateStore for SqliteChunkStateStore {
     ) -> Result<rec::ChunkId, String> {
         let chunk = self
             .store
-            .append_chunk(super::meeting_store::NewAudioChunk {
+            .append_chunk(NewAudioChunk {
                 meeting_id: StoreUuid(session_id.to_string()),
                 sequence: descriptor.sequence as i64,
                 source: MeetingAudioSource::from_recorder(descriptor.source)
@@ -1365,6 +1399,16 @@ impl MeetingManager {
             created_at: started_at,
             updated_at: started_at,
         })
+    }
+
+    /// Current summary of a meeting, if any (Phase 7 read side).
+    pub fn get_summary(
+        &self,
+        meeting_id: &str,
+    ) -> Result<Option<super::meeting_store::MeetingSummary>> {
+        self.store
+            .summary_for_meeting(StoreUuid(meeting_id.to_string()))
+            .map_err(Into::into)
     }
 
     /// Fetches one alive (non-tombstoned) session by id.
@@ -2370,22 +2414,193 @@ impl MeetingManager {
             return;
         }
         let failed = counts.oldest_failed.is_some();
-        let destination = if failed {
-            MeetingState::RecoverableError
+        // Phase 7: a finished transcription flows into summarization only when
+        // the user enabled it AND the persisted cloud consent is set. Anything
+        // else completes without ever touching an LLM.
+        let wants_summary = !failed && runtime.summary_enabled && self.env.summary_cloud_consent();
+        let (destination, patch) = if failed {
+            (
+                MeetingState::RecoverableError,
+                SessionPatch {
+                    last_error: Some("sttFailed".to_string()),
+                    ..SessionPatch::default()
+                },
+            )
+        } else if wants_summary {
+            (MeetingState::Summarizing, patch_none())
         } else {
-            MeetingState::Completed
-        };
-        let patch = if failed {
-            SessionPatch {
-                last_error: Some("sttFailed".to_string()),
-                ..SessionPatch::default()
-            }
-        } else {
-            patch_none()
+            (MeetingState::Completed, patch_none())
         };
         if let Err(e) = self.transition(&mut inner, meeting_id, destination, patch) {
             warn!("Queue settlement for {} failed: {}", meeting_id, e);
+            return;
         }
+        let run_summary = destination == MeetingState::Summarizing;
+        drop(inner);
+        if run_summary {
+            // Runs without holding manager locks: the LLM round-trips dominate
+            // this phase and no capture is live anymore.
+            self.run_summary_job(meeting_id, true);
+        }
+    }
+
+    /// Executes the map-reduce summary for one meeting and persists exactly
+    /// one `meeting_summaries` row (U9 upsert — retries cannot duplicate).
+    fn run_summary_job(&self, meeting_id: &str, entered_summarizing: bool) {
+        // Consent is re-checked here: flipping the flag mid-run must not be
+        // able to sneak a cloud call in through a stale decision.
+        let Some((provider_id, model, llm)) = self.env.summary_llm() else {
+            self.finish_summary_job(meeting_id, entered_summarizing, Err("summaryNotConfigured"));
+            return;
+        };
+        if !self.env.summary_cloud_consent() {
+            self.finish_summary_job(
+                meeting_id,
+                entered_summarizing,
+                Err("summaryConsentRequired"),
+            );
+            return;
+        }
+
+        let segments = match self
+            .store
+            .segments_for_meeting(StoreUuid(meeting_id.to_string()))
+        {
+            Ok(segments) => segments,
+            Err(e) => {
+                self.finish_summary_job(meeting_id, entered_summarizing, Err("summaryFailed"));
+                warn!("Summary could not read segments: {}", e);
+                return;
+            }
+        };
+        let spans: Vec<summarize::SummarySpan> = segments
+            .iter()
+            .map(|s| summarize::SummarySpan {
+                start_ms: s.start_ms,
+                text: s.text.clone(),
+            })
+            .collect();
+        if spans.is_empty() {
+            self.finish_summary_job(meeting_id, entered_summarizing, Err("summaryFailed"));
+            return;
+        }
+
+        let fingerprint = summarize::input_fingerprint(&spans);
+        let summarizer = summarize::MeetingSummarizer::new(llm);
+        let outcome = match summarizer.summarize(spans) {
+            Ok(summary) => {
+                let persisted =
+                    self.store
+                        .upsert_summary(super::meeting_store::NewMeetingSummary {
+                            meeting_id: StoreUuid(meeting_id.to_string()),
+                            provider: provider_id.clone(),
+                            model: Some(model),
+                            prompt_version: format!("{}:{fingerprint}", summarize::PROMPT_VERSION),
+                            state: "completed".to_string(),
+                            summary_markdown: summary.summary_markdown,
+                            decisions: serde_json::json!(summary.decisions),
+                            action_items: serde_json::json!(summary.action_items),
+                            open_questions: serde_json::json!(summary.open_questions),
+                            last_error: None,
+                        });
+                match persisted {
+                    Ok(_) => {
+                        info!("Meeting {} summarized", meeting_id);
+                        Ok(())
+                    }
+                    Err(e) => {
+                        warn!("Summary persist failed: {}", e);
+                        Err("summaryFailed")
+                    }
+                }
+            }
+            Err(e) => {
+                let message = match e {
+                    summarize::SummaryError::Llm(m) | summarize::SummaryError::Unparsable(m) => m,
+                };
+                let _ = self
+                    .store
+                    .upsert_summary(super::meeting_store::NewMeetingSummary {
+                        meeting_id: StoreUuid(meeting_id.to_string()),
+                        provider: provider_id,
+                        model: Some(model),
+                        prompt_version: summarize::PROMPT_VERSION.to_string(),
+                        state: "failed".to_string(),
+                        summary_markdown: String::new(),
+                        decisions: serde_json::json!([]),
+                        action_items: serde_json::json!([]),
+                        open_questions: serde_json::json!([]),
+                        last_error: Some(message),
+                    });
+                Err("summaryFailed")
+            }
+        };
+        self.finish_summary_job(meeting_id, entered_summarizing, outcome);
+    }
+
+    /// Terminal bookkeeping for [`Self::run_summary_job`]: walks Summarizing ?
+    /// Completed / RecoverableError when the hook entered via Summarizing; a
+    /// re-summarization started from `completed` refreshes silently.
+    fn finish_summary_job(
+        &self,
+        meeting_id: &str,
+        entered_summarizing: bool,
+        outcome: Result<(), &'static str>,
+    ) {
+        if !entered_summarizing {
+            return;
+        }
+        let mut inner = lock(&self.inner);
+        let (destination, patch) = match outcome {
+            Ok(()) => (MeetingState::Completed, patch_none()),
+            Err(code) => (
+                MeetingState::RecoverableError,
+                SessionPatch {
+                    last_error: Some(code.to_string()),
+                    ..SessionPatch::default()
+                },
+            ),
+        };
+        if let Err(e) = self.transition(&mut inner, meeting_id, destination, patch) {
+            warn!("Summary settlement for {} failed: {}", meeting_id, e);
+        }
+    }
+
+    /// Public re-summarization entry ("Neu-Zusammenfassung"). Refuses while
+    /// capturing or without consent; from `recoverable_error` it walks the
+    /// legal RecoverableError?Summarizing edge, from `completed` it refreshes
+    /// the row in place without faking a state transition.
+    pub fn request_summary(&self, meeting_id: &str) -> Result<MeetingSnapshot, String> {
+        let was_recoverable = {
+            let inner = lock(&self.inner);
+            let runtime = inner
+                .sessions
+                .get(meeting_id)
+                .ok_or_else(|| "meetingNotFound".to_string())?;
+            if runtime.state.is_active() {
+                return Err("meetingIsActive".to_string());
+            }
+            if !runtime.summary_enabled {
+                return Err("summaryNotEnabled".to_string());
+            }
+            runtime.state == MeetingState::RecoverableError
+        };
+
+        if !self.env.summary_cloud_consent() {
+            return Err("summaryConsentRequired".to_string());
+        }
+
+        if was_recoverable {
+            let mut inner = lock(&self.inner);
+            self.transition(
+                &mut inner,
+                meeting_id,
+                MeetingState::Summarizing,
+                patch_none(),
+            )?;
+        }
+        self.run_summary_job(meeting_id, was_recoverable);
+        self.snapshot(meeting_id)
     }
 
     // -- recorder events (SSC O4: serialization point) ----------------------
@@ -2781,8 +2996,6 @@ fn device_row(
 
 /// Inert environment used by [`MeetingManager::open`] and by tests that do not
 /// care about validation inputs.
-#[allow(dead_code)]
-#[derive(Default)]
 pub struct StaticEnvironment {
     /// Device set handed to the recorder.
     pub devices: rec::SourceDeviceSet,
@@ -2794,6 +3007,27 @@ pub struct StaticEnvironment {
     pub provider: ProviderSnapshot,
     /// OS capture permission.
     pub permission_denied: bool,
+    /// Summary cloud consent (Phase 7 tests).
+    pub summary_consent: std::sync::atomic::AtomicBool,
+    /// Injected summary LLM (Phase 7 tests).
+    pub llm: std::sync::Mutex<Option<SummaryLlmConfig>>,
+}
+
+impl Default for StaticEnvironment {
+    fn default() -> Self {
+        Self {
+            devices: rec::SourceDeviceSet {
+                microphone: None,
+                system: None,
+            },
+            checks: Vec::new(),
+            free_bytes: None,
+            provider: ProviderSnapshot::default(),
+            permission_denied: false,
+            summary_consent: std::sync::atomic::AtomicBool::new(false),
+            llm: std::sync::Mutex::new(None),
+        }
+    }
 }
 
 impl MeetingEnvironment for StaticEnvironment {
@@ -2837,6 +3071,15 @@ impl MeetingEnvironment for StaticEnvironment {
     fn microphone_permission_granted(&self) -> bool {
         !self.permission_denied
     }
+
+    fn summary_cloud_consent(&self) -> bool {
+        self.summary_consent
+            .load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    fn summary_llm(&self) -> Option<SummaryLlmConfig> {
+        self.llm.lock().expect("llm").take()
+    }
 }
 
 fn row_to_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<MeetingSession> {
@@ -2854,6 +3097,7 @@ fn row_to_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<MeetingSession> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::managers::meeting_store::{NewTranscriptSegment, SttJobState, WorkerId};
     use std::sync::atomic::{AtomicBool, Ordering};
 
     // ---------------------------------------------------------------- doubles
@@ -3008,6 +3252,8 @@ mod tests {
             free_bytes: Some(50_000_000_000),
             provider: ProviderSnapshot::default(),
             permission_denied: false,
+            summary_consent: std::sync::atomic::AtomicBool::new(false),
+            llm: std::sync::Mutex::new(None),
         }
     }
 
@@ -3153,6 +3399,208 @@ mod tests {
         h.manager
             .rename_session(&draft.meeting_id, ok)
             .expect("exactly-at-limit title accepted");
+    }
+
+    // ------------------------------------------------------- summary (Phase 7)
+
+    /// Scripted LLM shared with the summary unit tests' contract.
+    struct FakeSummaryLlm {
+        answer: String,
+    }
+    impl summarize::SummaryLlm for FakeSummaryLlm {
+        fn complete(&self, _prompt: String) -> Result<String, String> {
+            Ok(self.answer.clone())
+        }
+    }
+
+    const SUMMARY_JSON: &str = r##"{"summary_markdown": "# Besprechung", "decisions": ["OK"],
+        "action_items": ["Protokoll senden"], "open_questions": ["Budget?"]}"##;
+
+    fn env_with_summary(answer: &'static str) -> StaticEnvironment {
+        let mut env = healthy_env();
+        env.summary_consent
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+        env.llm = std::sync::Mutex::new(Some((
+            "openrouter".to_string(),
+            "test-model".to_string(),
+            Box::new(FakeSummaryLlm {
+                answer: answer.to_string(),
+            }),
+        )));
+        env
+    }
+
+    #[test]
+    fn settle_with_summary_enabled_walks_transcribing_summarizing_completed() {
+        let h = harness_with(env_with_summary(SUMMARY_JSON), false);
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, true, true)
+            .unwrap();
+        seed_ready_chunk(&h.manager, &draft.meeting_id);
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::Transcribing
+        );
+        seed_segment_for_first_job(&h.manager, &draft.meeting_id);
+        h.manager.settle_after_queue(&draft.meeting_id);
+
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::Completed
+        );
+
+        let summary = h
+            .manager
+            .store
+            .summary_for_meeting(StoreUuid(draft.meeting_id.clone()))
+            .unwrap()
+            .expect("summary persisted");
+        assert_eq!(summary.state, "completed");
+        assert_eq!(summary.decisions, serde_json::json!(["OK"]));
+        assert_eq!(
+            summary.action_items,
+            serde_json::json!(["Protokoll senden"])
+        );
+        assert_eq!(summary.open_questions, serde_json::json!(["Budget?"]));
+        assert!(summary.prompt_version.contains("meeting-summary-v1"));
+    }
+
+    #[test]
+    fn without_consent_the_summary_never_runs() {
+        let mut env = healthy_env();
+        env.summary_consent
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+        // The LLM slot is left empty on purpose: if the pipeline ever tried to
+        // reach an LLM without consent it would fail loudly here instead of
+        // silently skipping — and the state assertions below pin the skip.
+        let h = harness_with(env, false);
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, true, true)
+            .unwrap();
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        // Straight to Completed: no cloud call, no Summarizing state.
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::Completed
+        );
+        assert!(h
+            .manager
+            .store
+            .summary_for_meeting(StoreUuid(draft.meeting_id.clone()))
+            .unwrap()
+            .is_none());
+    }
+
+    #[test]
+    fn llm_failure_lands_in_recoverable_error_and_persists_a_failed_row() {
+        // Consent on, LLM answers empty -> parse fails after the map call.
+        let mut env = healthy_env();
+        env.summary_consent
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+        env.llm = std::sync::Mutex::new(Some((
+            "openrouter".to_string(),
+            "m".to_string(),
+            Box::new(FakeSummaryLlm {
+                answer: String::new(),
+            }),
+        )));
+        let h = harness_with(env, false);
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, true, true)
+            .unwrap();
+        seed_ready_chunk(&h.manager, &draft.meeting_id);
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::Transcribing
+        );
+        seed_segment_for_first_job(&h.manager, &draft.meeting_id);
+        h.manager.settle_after_queue(&draft.meeting_id);
+
+        // With transcript content and consent present, settlement enters
+        // Summarizing; the broken LLM answer must land the meeting in
+        // recoverable_error and persist the failed row.
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::RecoverableError
+        );
+        let summary = h
+            .manager
+            .store
+            .summary_for_meeting(StoreUuid(draft.meeting_id.clone()))
+            .unwrap()
+            .expect("failed row is persisted");
+        assert_eq!(summary.state, "failed");
+    }
+
+    /// Seeds one ready chunk + one persisted segment through the store API so
+    /// summary flows have real content to work on.
+    fn seed_ready_chunk(manager: &MeetingManager, meeting_id: &str) {
+        let chunk = manager
+            .store
+            .append_chunk(NewAudioChunk {
+                meeting_id: StoreUuid(meeting_id.to_string()),
+                sequence: 0,
+                source: "microphone".to_string(),
+                timeline_start_ms: 0,
+                timeline_end_ms: 2_000,
+                storage_key: format!("audio/{meeting_id}/000000-microphone.wav"),
+                sample_rate: 16_000,
+                sample_count: 32_000,
+                device_id: Some("test-mic".to_string()),
+            })
+            .expect("chunk");
+        manager
+            .store
+            .finalize_chunk(
+                chunk.envelope.id.clone(),
+                ChunkFacts {
+                    file_size: 64_064,
+                    sample_count: 32_000,
+                    checksum: "a".repeat(64),
+                    gap_drift_metadata: None,
+                },
+            )
+            .expect("finalize");
+    }
+
+    /// Persists one segment for the job created by the stop path and marks the
+    /// job succeeded, mirroring what the real queue worker would do before
+    /// settlement runs.
+    fn seed_segment_for_first_job(manager: &MeetingManager, meeting_id: &str) {
+        let _ = meeting_id;
+        let now = chrono::Utc::now();
+        let claim = manager
+            .store
+            .claim_due_stt_job(WorkerId("test-worker".to_string()), now)
+            .expect("claim")
+            .expect("a queued job");
+        let job = claim.job;
+        manager
+            .store
+            .insert_segments(
+                job.id.clone(),
+                vec![NewTranscriptSegment {
+                    source: "microphone".to_string(),
+                    start_ms: 0,
+                    end_ms: 1_500,
+                    text: "Wir einigen uns auf Montag.".to_string(),
+                    word_timestamps: None,
+                    confidence: Some(0.9),
+                    provider: "Local".to_string(),
+                    model_id: Some("local-whisper".to_string()),
+                    sequence: 0,
+                }],
+            )
+            .expect("segments");
+        manager
+            .store
+            .transition_stt_job(job.id, SttJobState::Succeeded, None)
+            .expect("succeed");
     }
 
     /// Pen-test: deleting the session that currently owns the capture must be

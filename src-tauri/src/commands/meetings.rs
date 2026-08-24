@@ -19,6 +19,7 @@ use crate::managers::meeting::{
     MeetingManager, MeetingPreflightReport, MeetingRecoveryOffer, MeetingRecoveryResolution,
     MeetingSession, MeetingSnapshot,
 };
+use serde::Serialize;
 use std::sync::Arc;
 use tauri::State;
 
@@ -194,6 +195,57 @@ pub async fn retry_meeting_jobs(
     meeting_manager.retry_jobs(&meeting_id)
 }
 
+/// Serializable projection of `meeting_summaries` for the detail view.
+#[derive(Serialize, specta::Type)]
+pub struct MeetingSummaryDto {
+    pub state: String,
+    pub provider: String,
+    pub model: Option<String>,
+    pub prompt_version: String,
+    pub summary_markdown: String,
+    pub decisions: Vec<String>,
+    pub action_items: Vec<String>,
+    pub open_questions: Vec<String>,
+    pub last_error: Option<String>,
+}
+
+fn string_list(value: serde_json::Value) -> Vec<String> {
+    serde_json::from_value(value).unwrap_or_default()
+}
+
+/// Phase 7 — current summary of a meeting, if any.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_meeting_summary(
+    meeting_manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+) -> Result<Option<MeetingSummaryDto>, String> {
+    let summary = meeting_manager
+        .get_summary(&meeting_id)
+        .map_err(|e| e.to_string())?;
+    Ok(summary.map(|s| MeetingSummaryDto {
+        state: s.state,
+        provider: s.provider,
+        model: s.model,
+        prompt_version: s.prompt_version,
+        summary_markdown: s.summary_markdown,
+        decisions: string_list(s.decisions),
+        action_items: string_list(s.action_items),
+        open_questions: string_list(s.open_questions),
+        last_error: s.last_error,
+    }))
+}
+
+/// Phase 7 — re-runs the map-reduce summarization ("Neu-Zusammenfassung").
+#[tauri::command]
+#[specta::specta]
+pub async fn request_meeting_summary(
+    meeting_manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+) -> Result<MeetingSnapshot, String> {
+    meeting_manager.request_summary(&meeting_id)
+}
+
 /// Pending crash-recovery offers produced by the startup reconciliation.
 #[tauri::command]
 #[specta::specta]
@@ -238,6 +290,8 @@ mod tests {
             "meeting_list_sessions",
             "meeting_rename_session",
             "meeting_delete_session",
+            "get_meeting_summary",
+            "request_meeting_summary",
         ];
         // Referencing the items binds the names to real functions.
         let _ = super::create_meeting_draft;
@@ -256,7 +310,9 @@ mod tests {
         let _ = super::meeting_list_sessions;
         let _ = super::meeting_rename_session;
         let _ = super::meeting_delete_session;
-        assert_eq!(names.len(), 16);
+        let _ = super::get_meeting_summary;
+        let _ = super::request_meeting_summary;
+        assert_eq!(names.len(), 18);
     }
 
     /// The recovery resolution tokens the frontend sends.

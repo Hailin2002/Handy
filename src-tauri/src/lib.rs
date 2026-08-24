@@ -483,6 +483,8 @@ pub fn run(cli_args: CliArgs) {
             commands::meetings::cancel_meeting,
             commands::meetings::get_meeting_snapshot,
             commands::meetings::retry_meeting_jobs,
+            commands::meetings::get_meeting_summary,
+            commands::meetings::request_meeting_summary,
             commands::meetings::meeting_list_recoveries,
             commands::meetings::meeting_resolve_recovery,
             helpers::clamshell::is_laptop,

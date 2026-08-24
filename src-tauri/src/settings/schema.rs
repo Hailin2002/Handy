@@ -92,6 +92,10 @@ pub struct AppSettings {
     /// dictation).
     #[serde(default)]
     pub meeting_stt_provider: SpeechInputProvider,
+    /// Cloud summarization consent gate (plan summary-provider-contract): the
+    /// cloud path is unreachable while this is false. Default false.
+    #[serde(default)]
+    pub meeting_summary_cloud_consent: bool,
     #[serde(default)]
     pub azure_speech_endpoint: String,
     #[serde(default = "default_azure_speech_language")]
@@ -680,6 +684,7 @@ pub fn get_default_settings() -> AppSettings {
         selected_language: "auto".to_string(),
         speech_input_provider: SpeechInputProvider::default(),
         meeting_stt_provider: SpeechInputProvider::default(),
+        meeting_summary_cloud_consent: false,
         azure_speech_endpoint: String::new(),
         azure_speech_language: default_azure_speech_language(),
         azure_stable_partial_threshold: default_azure_stable_partial_threshold(),
