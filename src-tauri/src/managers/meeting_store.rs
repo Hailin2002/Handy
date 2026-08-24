@@ -642,6 +642,17 @@ pub trait MeetingRepository: Send + Sync {
     /// The "Eingang": alive sessions with no project link.
     fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError>;
 
+    // -- sources (Phase 9) ---------------------------------------------------
+
+    /// Idempotent import: a repeated `content_hash` returns the existing
+    /// source without duplicating anything (plan §13 Phase 9 acceptance).
+    fn create_whatsapp_source(
+        &self,
+        draft: NewWhatsappSource,
+    ) -> Result<(Source, bool), StoreError>;
+    fn list_sources(&self) -> Result<Vec<Source>, StoreError>;
+    fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError>;
+
     /// Read: current summary of a meeting, if any.
     fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError>;
 
@@ -762,6 +773,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use rusqlite::{params, Connection, OptionalExtension};
+use sha2::Digest;
 use rusqlite_migration::{Migrations, M};
 use serde::{Deserialize, Serialize};
 
@@ -991,6 +1003,47 @@ static MIGRATIONS: &[M] = &[
     );
     CREATE INDEX IF NOT EXISTS idx_project_meeting_links_meeting
         ON project_meeting_links (meeting_id);",
+    ),
+    // -- 8 -----------------------------------------------------------------
+    // Phase 9: generic `sources` plus normalised `source_items` (plan §9).
+    // `sources.content_hash` UNIQUE makes a repeated/overlapping export an
+    // idempotent no-op (acceptance: "derselbe Export erzeugt keine Dubletten");
+    // items dedupe per source on their own content hash.
+    M::up(
+        "CREATE TABLE IF NOT EXISTS sources (
+        id TEXT PRIMARY KEY,
+        source_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        ingestion_state TEXT NOT NULL DEFAULT 'imported',
+        parser_version TEXT NOT NULL DEFAULT '',
+        content_hash TEXT NOT NULL UNIQUE,
+        raw_asset_id TEXT,
+        occurred_at INTEGER,
+        revision INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS source_items (
+        id TEXT PRIMARY KEY,
+        source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+        item_type TEXT NOT NULL DEFAULT 'chat_message',
+        external_key TEXT,
+        author_label TEXT,
+        occurred_at INTEGER,
+        sequence INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        is_media INTEGER NOT NULL DEFAULT 0,
+        content_hash TEXT NOT NULL,
+        revision INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_source_items_dedupe
+        ON source_items (source_id, content_hash);
+    CREATE INDEX IF NOT EXISTS idx_source_items_source
+        ON source_items (source_id, sequence);",
     ),
 ];
 
@@ -1557,7 +1610,69 @@ fn project_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Project> {
     })
 }
 
-const PROJECT_COLUMNS: &str = "id, name, description, created_at, updated_at";
+const PROJECT_COLUMNS: &str =
+    "id, name, description, created_at, updated_at";
+
+/// Wire-facing source row (Phase 9).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+pub struct Source {
+    pub id: String,
+    pub source_type: String,
+    pub title: String,
+    pub ingestion_state: String,
+    pub parser_version: String,
+    pub content_hash: String,
+    pub created_at: i64,
+}
+
+/// Wire-facing normalized chat/message item.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+pub struct SourceItem {
+    pub id: String,
+    pub source_id: String,
+    pub author_label: Option<String>,
+    pub occurred_at: Option<i64>,
+    pub sequence: i64,
+    pub text: String,
+    pub is_media: bool,
+}
+
+pub struct NewWhatsappSource {
+    pub title: String,
+    pub parser_version: String,
+    pub content_hash: String,
+    /// `(author_label, text, is_media)` triples in chat order.
+    pub messages: Vec<(Option<String>, String, bool)>,
+}
+
+const SOURCE_COLUMNS: &str =
+    "id, source_type, title, ingestion_state, parser_version, content_hash, created_at";
+
+fn source_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Source> {
+    Ok(Source {
+        id: row.get(0)?,
+        source_type: row.get(1)?,
+        title: row.get(2)?,
+        ingestion_state: row.get(3)?,
+        parser_version: row.get(4)?,
+        content_hash: row.get(5)?,
+        created_at: row.get(6)?,
+    })
+}
+
+fn read_source_by_hash(
+    conn: &Connection,
+    content_hash: &str,
+) -> rusqlite::Result<Option<Source>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {SOURCE_COLUMNS} FROM sources WHERE content_hash = ?1 AND deleted_at IS NULL"
+    ))?;
+    let mut rows = stmt.query_map(params![content_hash], source_from_row)?;
+    match rows.next() {
+        Some(row) => Ok(Some(row?)),
+        None => Ok(None),
+    }
+}
 
 impl MeetingRepository for SqliteMeetingStore {
     // -- Read side ---------------------------------------------------------
@@ -1798,6 +1913,123 @@ impl MeetingRepository for SqliteMeetingStore {
             .map_err(sql_err(op))?;
         let rows = stmt
             .query_map([], |row| row.get(0))
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
+    fn create_whatsapp_source(
+        &self,
+        draft: NewWhatsappSource,
+    ) -> Result<(Source, bool), StoreError> {
+        let op = "create_whatsapp_source";
+        let now = chrono::Utc::now().timestamp_millis();
+
+        // Dedupe first: an identical export must be a visible no-op, not a
+        // second source row (plan §13 Phase 9 acceptance).
+        {
+            let conn = self.locked(op)?;
+            if let Some(existing) =
+                read_source_by_hash(&conn, &draft.content_hash).map_err(sql_err(op))?
+            {
+                return Ok((existing, false));
+            }
+        }
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+        let id = uuid::Uuid::new_v4().to_string();
+        tx.execute(
+            "INSERT INTO sources (id, source_type, title, ingestion_state, parser_version,
+             content_hash, occurred_at, created_at, updated_at)
+             VALUES (?1, 'whatsapp_export', ?2, 'imported', ?3, ?4, ?5, ?6, ?6)",
+            params![
+                id,
+                draft.title.trim(),
+                draft.parser_version,
+                draft.content_hash,
+                now,
+                now
+            ],
+        )
+        .map_err(classify("sources", &Uuid(id.clone()), op))?;
+
+        for (sequence, (author, text, is_media)) in draft.messages.iter().enumerate() {
+            let mut hasher = sha2::Sha256::default();
+            hasher.update(text.as_bytes());
+            let item_hash = format!("{:x}", hasher.finalize());
+            tx.execute(
+                "INSERT OR IGNORE INTO source_items (id, source_id, author_label, sequence,
+                 text, is_media, content_hash, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
+                params![
+                    uuid::Uuid::new_v4().to_string(),
+                    id,
+                    author,
+                    sequence as i64,
+                    text,
+                    *is_media,
+                    item_hash,
+                    now
+                ],
+            )
+            .map_err(classify("source_items", &Uuid(id.clone()), op))?;
+        }
+        tx.commit().map_err(sql_err(op))?;
+        drop(conn);
+
+        {
+            let conn = self.locked(op)?;
+            let source = conn
+                .query_row(
+                    &format!("SELECT {SOURCE_COLUMNS} FROM sources WHERE id = ?1"),
+                    params![id],
+                    source_from_row,
+                )
+                .map_err(sql_err(op))?;
+            Ok((source, true))
+        }
+    }
+
+    fn list_sources(&self) -> Result<Vec<Source>, StoreError> {
+        let op = "list_sources";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT {SOURCE_COLUMNS} FROM sources
+                 WHERE deleted_at IS NULL ORDER BY created_at DESC"
+            ))
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map([], source_from_row)
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
+    fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError> {
+        let op = "list_source_items";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, source_id, author_label, occurred_at, sequence, text, is_media
+                 FROM source_items WHERE source_id = ?1 AND deleted_at IS NULL ORDER BY sequence ASC",
+            )
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![source_id.0], |row| {
+                Ok(SourceItem {
+                    id: row.get(0)?,
+                    source_id: row.get(1)?,
+                    author_label: row.get(2)?,
+                    occurred_at: row.get(3)?,
+                    sequence: row.get(4)?,
+                    text: row.get(5)?,
+                    is_media: row.get::<_, i64>(6)? != 0,
+                })
+            })
             .map_err(sql_err(op))?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(sql_err(op))?;
@@ -2715,6 +2947,18 @@ mod tests {
         fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError> {
             unimplemented!("fake")
         }
+        fn create_whatsapp_source(
+            &self,
+            _draft: NewWhatsappSource,
+        ) -> Result<(Source, bool), StoreError> {
+            unimplemented!("fake")
+        }
+        fn list_sources(&self) -> Result<Vec<Source>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn list_source_items(&self, _source_id: Uuid) -> Result<Vec<SourceItem>, StoreError> {
+            unimplemented!("fake")
+        }
         fn summary_for_meeting(
             &self,
             meeting_id: Uuid,
@@ -3620,7 +3864,53 @@ mod sqlite_tests {
         );
     }
 
-    // -- projects (Phase 8) --------------------------------------------------
+    // -- sources (Phase 9) ----------------------------------------------------
+
+    #[test]
+    fn repeated_whatsapp_import_creates_no_duplicates() {
+        let (_dir, store) = temp_store();
+        let draft = NewWhatsappSource {
+            title: "Team Chat".to_string(),
+            parser_version: "wa-v1".to_string(),
+            content_hash: "deadbeef".to_string(),
+            messages: vec![
+                (Some("Alice".to_string()), "Hallo".to_string(), false),
+                (Some("Bob".to_string()), "<Medien ausgeschlossen>".to_string(), true),
+            ],
+        };
+
+        let (first, created) = store.create_whatsapp_source(draft).expect("import");
+        assert!(created);
+        let (second, created_again) = store
+            .create_whatsapp_source(NewWhatsappSource {
+                title: "Team Chat (1)".to_string(),
+                parser_version: "wa-v1".to_string(),
+                content_hash: "deadbeef".to_string(),
+                messages: vec![],
+            })
+            .expect("re-import");
+        assert!(!created_again, "same hash must be a no-op");
+        assert_eq!(first.id, second.id, "the original source is returned");
+
+        // Distinct content still imports as a new source.
+        let (_other, created_other) = store
+            .create_whatsapp_source(NewWhatsappSource {
+                title: "Anders".to_string(),
+                parser_version: "wa-v1".to_string(),
+                content_hash: "cafebabe".to_string(),
+                messages: vec![],
+            })
+            .expect("other import");
+        assert!(created_other);
+
+        let items = store
+            .list_source_items(Uuid(first.id.clone()))
+            .expect("items");
+        assert_eq!(items.len(), 2);
+        assert!(items[1].is_media);
+        assert_eq!(store.list_sources().expect("sources").len(), 2);
+    }
+
 
     /// Marks a session processed so it counts for the project inbox.
     fn mark_session_completed(store: &SqliteMeetingStore, id: &str) {

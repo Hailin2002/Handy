@@ -1305,6 +1305,40 @@ async projectInboxMeetingIds() : Promise<Result<string[], string>> {
 }
 },
 /**
+ * Imports a WhatsApp chat text. `date_order` is only needed when the preview
+ * cannot disambiguate day/month; pass `dateOrderAmbiguous` handling in UI.
+ */
+async whatsappImportText(title: string, content: string, dateOrder: string | null) : Promise<Result<WhatsappImportResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("whatsapp_import_text", { title, content, dateOrder }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Lists imported sources, newest first.
+ */
+async sourceList() : Promise<Result<Source[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("source_list") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Normalised items of one source (chat rows, chronological).
+ */
+async sourceItems(sourceId: string) : Promise<Result<SourceItem[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("source_items", { sourceId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Pending crash-recovery offers produced by the startup reconciliation.
  */
 async meetingListRecoveries() : Promise<Result<MeetingRecoveryOffer[], string>> {
@@ -1925,6 +1959,14 @@ uncovered_bindings: string[];
 recorder_blocked: boolean }
 export type ShortcutBinding = { id: string; name: string; description: string; default_binding: string; current_binding: string }
 export type SoundTheme = "marimba" | "pop" | "custom"
+/**
+ * Wire-facing source row (Phase 9).
+ */
+export type Source = { id: string; source_type: string; title: string; ingestion_state: string; parser_version: string; content_hash: string; created_at: number }
+/**
+ * Wire-facing normalized chat/message item.
+ */
+export type SourceItem = { id: string; source_id: string; author_label: string | null; occurred_at: number | null; sequence: number; text: string; is_media: boolean }
 export type SpeechInputProvider = "local" | "azure" | "custom"
 /**
  * Phase of the streaming overlay card, emitted to drive its UI state.
@@ -1969,6 +2011,10 @@ export type TranscribeAcceleratorSetting = "auto" | "cpu" | "gpu"
  */
 export type TranscriptRowDto = { start_ms: number; end_ms: number; source: string; text: string; confidence: number | null }
 export type TypingTool = "auto" | "wtype" | "kwtype" | "dotool" | "ydotool" | "xdotool"
+/**
+ * Import outcome: the source plus whether this call created it.
+ */
+export type WhatsappImportResult = { source: Source; created: boolean; item_count: number }
 export type WindowsMicrophonePermissionStatus = { supported: boolean; overall_access: PermissionAccess; device_access: PermissionAccess; app_access: PermissionAccess; desktop_app_access: PermissionAccess }
 
 /** tauri-specta globals **/

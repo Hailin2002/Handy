@@ -129,6 +129,12 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     ));
     app_handle.manage(project_manager.clone());
 
+    // Phase 9: source ingestion shares the same repository.
+    let source_ingestion = Arc::new(crate::managers::source_ingestion::SourceIngestionService::new(
+        meeting_manager.store_handle(),
+    ));
+    app_handle.manage(source_ingestion);
+
     // Local STT queue for meetings (plan §13 Phases 5–6). Pauses between jobs
     // while dictation recording/streaming holds the shared local model. The
     // routing engine dispatches per job to the provider chosen *for that
@@ -502,6 +508,9 @@ pub fn run(cli_args: CliArgs) {
             commands::projects::project_unassign_meeting,
             commands::projects::project_meeting_ids,
             commands::projects::project_inbox_meeting_ids,
+            commands::sources::whatsapp_import_text,
+            commands::sources::source_list,
+            commands::sources::source_items,
             commands::meetings::meeting_list_recoveries,
             commands::meetings::meeting_resolve_recovery,
             helpers::clamshell::is_laptop,
