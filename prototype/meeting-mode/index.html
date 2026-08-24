@@ -103,6 +103,7 @@
       <header class="view-header">
         <h1>Meetings</h1>
         <p class="subtitle">Aufnehmen, transkribieren und zusammenfassen – Standard: lokal auf diesem Gerät.</p>
+        <p class="plan-tag">Plan §6.5 · Meetings-Übersicht inkl. leerer Zustand</p>
       </header>
 
       <!-- Aktives Meeting immer oben, nie durch Suche/Filter wegfilterbar -->
@@ -145,6 +146,11 @@
         <button type="button" class="btn btn-ghost" disabled title="In dieser Prototyp-Version nicht freigegeben">Audiodatei importieren</button>
         <p class="privacy-note">🔒 Datenschutzstatus: Standard lokal auf diesem Gerät.</p>
       </div>
+
+      <fieldset class="mock-fieldset" id="meetings-sim-fieldset">
+        <legend>Prototyp-Simulation (nur im Mock)</legend>
+        <label><input type="checkbox" id="sim-no-meetings"> Leeren Zustand simulieren (Meetings ausblenden)</label>
+      </fieldset>
     </section>
 
     <!-- ========== Ansicht: Laufendes Meeting (Plan §6.11) ========== -->
@@ -158,6 +164,7 @@
         <span class="mono" id="live-duration">00:00:00</span>
         <span id="live-provider">Lokal</span>
         <span class="ok">Audio gespeichert</span>
+        <span class="plan-tag statusbar-tag" title="Plan §6.11: fixierte Statusleiste, Transkriptbereich, fixierte Steuerung – im Aufnahme- und Pausen-Zustand">Plan §6.11 · Aufnahme/Pause</span>
         <button type="button" class="btn btn-ghost btn-small tray-btn" id="btn-tray"
                 title="Fenster minimieren – die Aufnahme läuft im Tray weiter">– In den Tray</button>
       </div>
@@ -187,6 +194,7 @@
       <div class="modal-backdrop" id="stop-confirm" hidden>
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="stop-confirm-title">
           <h2 id="stop-confirm-title">Meeting wirklich beenden?</h2>
+          <p class="plan-tag">Plan §6.9 · Bestätigung vor dem Beenden</p>
           <p>Die Aufnahme wird gestoppt und die Verarbeitung gestartet.</p>
           <div class="row-gap row-end">
             <button type="button" class="btn btn-neutral" id="btn-stop-abbruch">Weiter aufnehmen</button>
@@ -205,6 +213,7 @@
       <header class="view-header">
         <h1 id="proc-title">Meeting wird verarbeitet</h1>
         <p class="subtitle">Du kannst dieses Fenster schließen – die Arbeit läuft im Hintergrund weiter.</p>
+        <p class="plan-tag">Plan §6.12 · Verarbeitungs-Checkliste nach dem Stop</p>
       </header>
       <div class="card">
         <p class="muted small" id="proc-meeting-label"></p>
@@ -284,6 +293,7 @@
         </details>
       </div>
 
+      <p class="plan-tag">Plan §6.13 · Meeting-Detailansicht</p>
       <div class="tabs" role="tablist" aria-label="Meeting-Bereiche">
         <button role="tab" class="tab" data-dtab="uebersicht" aria-selected="true">Übersicht</button>
         <button role="tab" class="tab" data-dtab="transkript" aria-selected="false">Transkript</button>
@@ -552,6 +562,7 @@
       <header class="view-header">
         <h1>Meeting-Ersteinrichtung</h1>
         <p class="subtitle">Erscheint nur beim ersten Öffnen von Meetings – drei kurze Schritte. Danach direkt in den kompakten Startdialog.</p>
+        <p class="plan-tag">Plan §6.6 · Meeting-Ersteinrichtung</p>
       </header>
 
       <!-- Schritt 1: Verarbeitung wählen -->
@@ -699,6 +710,7 @@
 <div class="modal-backdrop" id="start-dialog" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="start-title">
     <h2 id="start-title">Meeting starten</h2>
+    <p class="plan-tag">Plan §6.7 · Kompakter Startdialog</p>
     <!-- Vier Statuszeilen; jede komplett anklickbar und öffnet einen Mini-Picker,
          der auf diese eine Entscheidung begrenzt ist (§6.7). -->
     <ul class="clickable-lines" role="list">
@@ -759,6 +771,7 @@
   <div class="modal modal-countdown" role="alertdialog" aria-modal="true"
        aria-labelledby="countdown-title" aria-describedby="countdown-hint">
     <h2 id="countdown-title">Meeting startet in</h2>
+    <p class="plan-tag">Plan §6.9 · Countdown vor dem Start</p>
     <p class="countdown-number mono" id="countdown-number" aria-hidden="true">3</p>
     <p id="countdown-hint" class="muted">
       Die Aufnahme beginnt erst nach dem Countdown.

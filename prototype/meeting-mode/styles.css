@@ -121,6 +121,24 @@ body {
 .view-header h1 { margin: 0 0 4px; font-size: 24px; }
 .subtitle { color: var(--muted); margin: 0 0 20px; }
 
+/* Sichtbare Plan-Annotation (Gate G4): jede Ansicht/d jeder Dialog trägt den
+   von ihm umgesetzten Plan-Abschnitt sichtbar im UI – nicht nur als
+   HTML-Kommentar. */
+.plan-tag {
+  display: inline-block;
+  width: fit-content;
+  margin: -12px 0 16px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+}
+.modal .plan-tag { margin: -4px 0 10px; }
+.statusbar-tag { margin: 0; align-self: center; }
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -188,8 +206,13 @@ body {
 .clickable-lines li { display: grid; }
 .link-like { color: var(--brand); text-decoration: underline; margin-left: 6px; }
 
-/* Buttons */
+/* Buttons – inline-flex, damit auch <a>-Buttons die 44px-Mindesthöhe
+   wirklich annehmen (min-height greift bei Inline-Elementen nicht). */
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 44px;
   padding: 10px 18px;
   border-radius: 8px;
@@ -198,7 +221,7 @@ body {
   font-weight: 600;
   cursor: pointer;
 }
-.btn-small { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+.btn-small { min-height: 44px; padding: 6px 12px; font-size: 13px; }
 .btn-large { min-height: 52px; padding: 14px 26px; font-size: 16px; }
 .btn-primary   { background: var(--brand); color: var(--brand-contrast); } /* §6.8: Markenfarbe für Start */
 .btn-secondary { background: var(--panel); border-color: var(--brand); color: var(--brand); }
@@ -208,7 +231,8 @@ body {
 .btn:disabled  { opacity: .5; cursor: not-allowed; }
 
 .keycap {
-  min-height: 36px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-bottom-width: 3px;
@@ -239,7 +263,8 @@ input[type="search"], input[type="text"], select {
 
 .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip {
-  min-height: 36px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 6px 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -260,7 +285,7 @@ input[type="search"], input[type="text"], select {
   border-top: 1px solid var(--border);
 }
 .setting-row-inline { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
-.setting-row-inline input[type="checkbox"] { width: 20px; height: 20px; }
+/* Checkbox ist global 44×44 (Gate G2) */
 
 .privacy-note { color: var(--muted); font-size: 13px; }
 
@@ -419,6 +444,8 @@ meter { width: 120px; height: 10px; }
   font-weight: 700;
   width: 100%;
   max-width: 560px;
+  min-height: 44px;               /* Gate G2 */
+  padding: 6px 10px;
   margin-bottom: 4px;
 }
 .detail-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 0; }
@@ -450,7 +477,7 @@ meter { width: 120px; height: 10px; }
 
 /* Geteilte Ansicht (§6.13): nur auf breiten Bildschirmen angeboten, nie Default */
 .split-toggle { display: none; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
-.split-toggle input { width: 20px; height: 20px; }
+.split-toggle input { align-self: center; } /* 44×44 global (Gate G2) */
 @media (min-width: 1100px) {
   .split-toggle { display: inline-flex; }
 }
@@ -553,10 +580,27 @@ meter { width: 120px; height: 10px; }
   cursor: pointer;
 }
 .option-card:hover { border-color: var(--brand); }
-.option-card input[type="radio"] { width: 18px; height: 18px; margin-top: 3px; flex-shrink: 0; }
+.option-card input[type="radio"] { margin-top: 0; align-self: center; } /* 44×44 global (Gate G2) */
 .option-body { display: grid; gap: 4px; }
 .rec-badge { justify-self: start; font-size: 11px; padding: 2px 8px; margin-right: 0; }
-.more-options summary { cursor: pointer; color: var(--brand); padding: 6px 0; }
+/* Plan §6.14 (Gate G2 dieses Blattes): auch native Checkboxen/Radios sind
+   vollwertige 44×44-Ziele; accent-color hält sie sichtbar im Markenbild. */
+input[type="checkbox"], input[type="radio"] {
+  width: 44px;
+  height: 44px;
+  accent-color: var(--brand);
+  flex-shrink: 0;
+}
+/* Mehrere Checkboxen in einer Zeile (Mock-Feldsets) dürfen umlaufen */
+.mock-fieldset label { display: inline-flex; align-items: center; gap: 6px; }
+.more-options summary {
+  cursor: pointer;
+  color: var(--brand);
+  padding: 8px 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
 .more-options .option-card { margin-top: 8px; }
 
 .audio-test-row {
@@ -622,7 +666,7 @@ meter { width: 120px; height: 10px; }
 .opt-sub { color: var(--muted); font-size: 13px; }
 .picker-divider { border-top: 1px dashed var(--border); margin: 6px 0; }
 .sim-note { color: var(--muted); font-size: 13px; margin: 4px 0; }
-.picker-sim { font-size: 13px; color: var(--muted); justify-self: start; min-height: 36px; }
+.picker-sim { font-size: 13px; color: var(--muted); justify-self: start; min-height: 44px; }
 /* „Kein Projekt“ bleibt sichtbar unterschieden: gestrichelt + gedämpft (Gate G2) */
 .picker-none-opt { border-style: dashed; background: #fffdf4; }
 .chip-none { border-style: dashed; color: var(--muted); font-weight: 400; }
@@ -669,7 +713,20 @@ meter { width: 120px; height: 10px; }
 
 /* Beleglinks (Gate G1): jeder KI-Satz und jede Aufgabe hat ≥1 Sprunglink */
 .evidence-list { list-style: none; margin: 4px 0 10px; padding: 0; font-size: 13px; }
-.evidence-link { color: var(--brand); text-decoration: underline; cursor: pointer; }
+.evidence-link {
+  color: var(--brand);
+  text-decoration: underline;
+  cursor: pointer;
+  /* Gate G2: 44px-Hitfläche ohne Layoutverschiebung (Padding + negativer
+     Margin heben sich auf) – Beleglinks bleiben Textlinks im Fluss. */
+  display: inline-block;
+  min-height: 44px;
+  line-height: 20px;
+  box-sizing: border-box;
+  padding: 12px 6px;
+  margin: -12px -6px;
+  vertical-align: middle;
+}
 .evidence-link:hover { background: #e8edfb; }
 
 /* Projekte-Liste (§6.16) */

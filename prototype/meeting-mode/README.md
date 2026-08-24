@@ -149,10 +149,12 @@ Es gibt zwei Prüfharnesses in diesem Verzeichnis:
 
 - **`verify.cjs`** – das vollständige Node/Playwright-Harness. Es prüft
   alle dokumentierten Gates und Regressionen dieses Prototyps
-  (task-0179 bis task-0181: Navigation, Countdown, Farbsemantik,
-  Scroll-Lock, Stop-Bestätigung, Verarbeitungs-Checkliste, Listen-/
-  Detailansicht, Projekte, Zuordnung, WhatsApp-Import) gegen
-  `index.html` und gibt je Prüfung eine `PASS`-/`FAIL`-Zeile aus.
+  (task-0179 bis task-0181 sowie die Journey-Gates G1–G4 des
+  Klick-Prototypen der Kern-Journey: Navigation, Countdown,
+  Farbsemantik, Scroll-Lock, Stop-Bestätigung, Verarbeitungs-
+  Checkliste, Listen-/Detailansicht, Projekte, Zuordnung,
+  WhatsApp-Import, 44px-/Namen-/Fokus-Audit, Plan-Annotationen)
+  gegen `index.html` und gibt je Prüfung eine `PASS`-/`FAIL`-Zeile aus.
   Aufruf aus dem Repo-Stamm:
 
   ```powershell
@@ -198,6 +200,19 @@ diese Verhaltensweisen erfüllt.
 
 - Keine echte Audio-, Transkriptions-, Parser- oder Providerlogik.
 - Kein Anschluss an die Tauri-App; vollständig losgelöst von `src/`.
+
+## Gates dieses Blattes (Klick-Prototyp der Kern-Journey, §6.5–§6.13)
+
+| Gate | Umsetzung | Nachweis |
+| --- | --- | --- |
+| G1 – Alle sieben Stationen (leer, Ersteinrichtung, Startdialog, Aufnahme, Pausiert, Verarbeitung, Detail) klickbar End-to-End mit realistischen deutschen UND englischen Inhalten | Leerer Zustand per Simulation klickbar (`sim-no-meetings`); englische Sprachwahl im Startdialog schaltet Live-Transkript und auto-generierte Kurzfassung auf Englisch; Seed-Bibliothek enthält „Weekly Sync (English)" neben deutschen Meetings; Journey endet in der Detailansicht mit allen vier Tabs | verify.cjs: alle `leaf-G1 …`-Prüfungen |
+| G2 – Jedes interaktive Element ≥44×44 CSS-px, mit Textlabel oder zugänglichem Namen, sichtbarer Tastaturfokus | Systematischer Audit über alle Ansichten + Dialoge (inkl. geöffnetem Aktionsmenü): Größe und Name jedes Elements; native Checkboxen/Radios sind auf 44 px vergrößert, `<a>`-Buttons via inline-flex, Beleglinks über Hitflächen-Padding; Fokus-Outline an 12 Tab-Stops geprüft | verify.cjs: alle `leaf-G2 …`-Prüfungen inkl. „keyboard focus visibly outlined" |
+| G3 – Lauf über lokalen Vorschaubefehl, keine Dateien außerhalb `prototype/meeting-mode/` | `index.html` funktioniert direkt über `file://` (siehe oben); das Harness lädt genau diese Datei und meldet „No JS errors."; es werden keine App-Quelldateien berührt | verify.cjs-Lauf: Exit 0, „No JS errors." |
+| G4 – Jeder Screen trägt eine sichtbare Annotation seines Plan-Abschnitts | Sichtbare `.plan-tag`-Zeile pro Screen: §6.5 (Meetings inkl. leer), §6.6, §6.7, §6.11 („Aufnahme/Pause"), §6.9 (Countdown + Stop-Bestätigung), §6.12, §6.13 | verify.cjs: alle `leaf-G4 …`-Prüfungen |
+
+Anti-Muster nach §6.1/§6.8 sind ebenfalls geprüft: Rot nur im echten
+Aufnahmezustand (Pause orange, beide mit Icon+Text), keine Icon-only-Navigation,
+Löschen nie nur per Hover (Drei-Punkte-Menü per Klick).
 
 ## Gates dieses Blattes (task-0181, Teil 5/5)
 

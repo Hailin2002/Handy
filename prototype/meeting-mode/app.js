@@ -51,7 +51,31 @@
         segments: [["1:04", "Herr Berger bittet um ein Angebot für zwanzig Lizenzen."]],
         audio: true,
         processing: { provider: "Lokal", model: "Whisper Small",
-                      chunksTotal: 11, transcribed: 4, failedChunks: 0, retries: 0 } }
+                      chunksTotal: 11, transcribed: 4, failedChunks: 0, retries: 0 } },
+      /* G1 (dieses Blatt): realistischer englischsprachiger Beispielinhalt,
+         damit der Journey-End-to-End-Durchlauf beide Sprachen zeigt. */
+      { id: nextMeetingId(),
+        title: "Weekly Sync (English)", date: "Tue, 09:00", duration: "00:24:05",
+        provider: "Lokal", status: "fertig",
+        project: null,
+        summary: "Team agreed on the launch date and assigned two follow-up tasks.",
+        decisions: ["Launch moves to March 14.",
+                    "The pricing page is reduced to three tiers."],
+        tasks: [{ text: "Send the updated timeline to stakeholders", done: false },
+                { text: "Draft the pricing page copy", done: true }],
+        questions: ["Does the new pricing tier need a legal review?"],
+        segments: [
+          ["0:03", "Let's start with the launch timeline."],
+          ["0:06", "Proposal: we move the launch to March 14."],
+          ["0:09", "Concern: marketing assets won't be ready by then."],
+          ["0:12", "Decision: launch moves to March 14; assets are due March 7."],
+          ["0:15", "Next topic: simplifying the pricing page to three tiers."],
+          ["0:18", "Action item: draft the pricing copy by Friday."],
+          ["0:21", "Open question: does legal need to review the new tier?"]
+        ],
+        audio: true,
+        processing: { provider: "Lokal", model: "Whisper Small",
+                      chunksTotal: 18, transcribed: 18, failedChunks: 0, retries: 0 } }
     ],
     filter: "alle",
     search: "",
@@ -146,8 +170,13 @@
   function renderMeetings() {
     var list = $("#meeting-list");
     list.innerHTML = "";
-    var shown = state.meetings.filter(meetingMatches);
-    $("#meetings-empty").hidden = state.sessionActive || state.meetings.length > 0;
+    // G1 (dieses Blatt): der leere Zustand muss klickbar erreichbar sein,
+    // ohne alle Seed-Meetings einzeln löschen zu müssen.
+    var emptySim = $("#sim-no-meetings").checked;
+    var meetings = emptySim ? [] : state.meetings;
+    var shown = meetings.filter(meetingMatches);
+    $("#meetings-empty").hidden = state.sessionActive || meetings.length > 0;
+    $("#meetings-sim-fieldset").hidden = state.sessionActive;
 
     shown.forEach(function (m) {
       var li = document.createElement("li");
@@ -246,6 +275,9 @@
   $("#meeting-search").addEventListener("input", function (e) {
     state.search = e.target.value; renderMeetings();
   });
+  /* Leaf-G1: der leere Zustand muss klickbar erreichbar sein, ohne alle
+     Seed-Meetings löschen zu müssen. */
+  $("#sim-no-meetings").addEventListener("change", renderMeetings);
 
   /* ---------- Startdialog (§6.7) ---------- */
   var startDialog = $("#start-dialog");
@@ -637,8 +669,10 @@
     location.hash = "#/meeting-aktiv";
   }
 
-  /* ---------- Laufende Ansicht (§6.11) ---------- */
-  var demoSegments = [
+  /* ---------- Laufende Ansicht (§6.11) ----------
+     G1 (dieses Blatt): das Live-Transkript folgt der im Startdialog gewählten
+     Sprache – realistische deutsche UND englische Beispielinhalte. */
+  var demoSegmentsDe = [
     [2, "Wir starten mit dem Tagesordnungspunkt Budget."],
     [4, "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen."],
     [6, "Einwand: Der Messestand braucht dieses Jahr mehr Mittel."],
@@ -650,6 +684,26 @@
     [18, "Abschließend: Das Protokoll geht heute Abend an alle."],
     [20, "Damit ist der Tagesordnungspunkt Budget abgeschlossen."]
   ];
+  var demoSegmentsEn = [
+    [2, "Let's start with the first agenda item: budget."],
+    [4, "Proposal: we increase the marketing budget by ten percent."],
+    [6, "Concern: the trade fair booth needs a bigger share this year."],
+    [8, "Decision: we postpone the final call by one week."],
+    [10, "Next topic: staffing plan for the fourth quarter."],
+    [12, "Suggestion: two additional working students for support."],
+    [14, "Objection: the budget for that hasn't been approved yet."],
+    [16, "We will verify the numbers by Thursday and follow up."],
+    [18, "To close: the minutes will go out to everyone tonight."],
+    [20, "That wraps up the budget agenda item."]
+  ];
+  function demoSegments() {
+    return dlg.lang === "English" ? demoSegmentsEn : demoSegmentsDe;
+  }
+  function fillerText() {
+    return dlg.lang === "English"
+      ? "Another finished segment from the meeting flow (mock) …"
+      : "Weiteres fertiges Segment aus dem Meetingverlauf (Mock) …";
+  }
   /* Demo-Zeitlupe: eine „Segmentsekunde“ entspricht 500 ms Echtzeit. Ein
      Intervall-Treiber statt fester Timeouts, damit pausierte Segmente beim
      Fortsetzen nachrücken, statt verworfen zu werden. */
@@ -665,17 +719,19 @@
     stickToBottom = true;
     $("#btn-zum-text").hidden = true;
     $("#live-segments").innerHTML = "";
-    $("#listening-state").textContent = "Hört zu …";
+    $("#listening-state").textContent =
+      dlg.lang === "English" ? "Listening …" : "Hört zu …";
     sessionCaptured = [];   // Transkript der Session für die Detailansicht (§6.13)
     segClock = 0;
-    segFired = demoSegments.map(function () { return false; });
+    var scripted = demoSegments();
+    segFired = scripted.map(function () { return false; });
     nextFillerAt = Infinity;
     fillerCount = 0;
     segDriver = window.setInterval(function () {
       if (!state.sessionActive || state.paused) return;   // Pause stoppt die Demo-Zeit
       segClock += 100;
       var scriptedLeft = false;
-      demoSegments.forEach(function (seg, i) {
+      scripted.forEach(function (seg, i) {
         if (!segFired[i]) {
           if (segClock >= seg[0] * SEG_MS) {
             segFired[i] = true;
@@ -691,8 +747,7 @@
       if (segClock >= nextFillerAt && fillerCount < 40) {
         nextFillerAt += 1000;
         fillerCount += 1;
-        appendSegment([Math.round(segClock / SEG_MS),
-                       "Weiteres fertiges Segment aus dem Meetingverlauf (Mock) …"], -1);
+        appendSegment([Math.round(segClock / SEG_MS), fillerText()], -1);
       }
     }, 100);
   }
@@ -708,7 +763,9 @@
     // Nur am unteren Rand mitlaufen; sonst bleibt die Ansicht stehen (§6.11)
     if (stickToBottom) transcriptArea.scrollTop = transcriptArea.scrollHeight;
     $("#listening-state").textContent =
-      i === demoSegments.length - 1 ? "Abschnitt wird transkribiert …" : "Hört zu …";
+      i === demoSegments().length - 1
+        ? (dlg.lang === "English" ? "Transcribing segment …" : "Abschnitt wird transkribiert …")
+        : (dlg.lang === "English" ? "Listening …" : "Hört zu …");
   }
   /* Timeline-Marker (Pause/Fortsetzen); Icon+Text, nie nur Farbe */
   function addTimelineMarker(text) {
@@ -960,8 +1017,13 @@
       m.processing.chunksTotal + " Abschnitten transkribiert");
     procLater(700, function () {
       m.status = "fertig";
-      m.summary = "Automatische Kurzfassung: Besprechung abgeschlossen, " +
-        "Ergebnisse wurden aus " + m.segments.length + " Transkriptsegmenten extrahiert (Mock).";
+      /* Leaf-G1: die Kurzfassung folgt der im Startdialog gewählten
+         Meeting-Sprache – realistische deutsche UND englische Inhalte. */
+      m.summary = dlg.lang === "English"
+        ? "Automatic short summary: meeting completed; results were extracted from " +
+          m.segments.length + " transcript segments (mock)."
+        : "Automatische Kurzfassung: Besprechung abgeschlossen, " +
+          "Ergebnisse wurden aus " + m.segments.length + " Transkriptsegmenten extrahiert (Mock).";
       setStep("summary", "done", "✓ Zusammenfassung erstellt");
       $("#btn-retry-failed").hidden = true;
       $("#btn-open-processing-meeting").hidden = false;   // direkt ins Detail (§6.13)

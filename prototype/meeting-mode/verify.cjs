@@ -1177,6 +1177,274 @@ let page = null;
   check("G2 choosing another project closes suggestion and assigns it",
         await page.evaluate(() => document.getElementById("ai-suggestion").hidden));
 
+  /* =========================================================================
+     Blatt „Klickbarer Meeting-Mode-UX-Prototyp" – dessen eigene Gates G1–G4
+     ========================================================================= */
+
+  // Sichtbare Plan-Annotation (Leaf-G4): eine sichtbare .plan-tag-Zeile im
+  // genannten Screen, die den Plan-Abschnitt nennt.
+  const hasVisiblePlanTag = (sel, rx) => page.evaluate(([s, src]) => {
+    const root = document.querySelector(s);
+    if (!root) return false;
+    const re = new RegExp(src);
+    return [...root.querySelectorAll(".plan-tag")]
+      .some((t) => !!t.offsetParent && re.test(t.textContent));
+  }, [sel, rx.source]);
+
+  /* ===== Leaf-G1: Sieben Stationen klickbar End-to-End (deutsch + englisch)
+     ===== leaf-G4: Annotation je Station wird mitgeprüft ===== */
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(100);
+
+  // (1) Leerer Zustand per Simulation klickbar erreichbar
+  await page.check("#sim-no-meetings");
+  await page.waitForTimeout(60);
+  check("leaf-G1 stage 'empty' visible with heading + primary action",
+        await page.evaluate(() => {
+          const e = document.getElementById("meetings-empty");
+          return !e.hidden && !!e.offsetParent &&
+            /Noch keine Meetings/.test(e.textContent) &&
+            !!e.querySelector("#btn-neues-meeting-empty");
+        }));
+  check("leaf-G4 empty state carries visible Plan §6.5 annotation",
+        await hasVisiblePlanTag("#view-meetings", /§6\.5/));
+  await page.click("#btn-neues-meeting-empty");
+  await page.waitForTimeout(80);
+  check("leaf-G1 empty state's primary action opens the start dialog",
+        await page.evaluate(() => !document.getElementById("start-dialog").hidden));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(60);
+  await page.uncheck("#sim-no-meetings");
+  await page.waitForTimeout(60);
+  check("leaf-G1 leaving the simulation restores the populated list",
+        await page.evaluate(() =>
+          document.getElementById("meetings-empty").hidden &&
+          document.querySelectorAll("#meeting-list li").length >= 2));
+  check("leaf-G1 English sample meeting exists alongside German ones",
+        await page.evaluate(() => {
+          const items = [...document.querySelectorAll("#meeting-list li")];
+          return items.some((li) => li.textContent.indexOf("Weekly Sync (English)") !== -1) &&
+                 items.some((li) => /[äöüß]/i.test(li.textContent));
+        }));
+
+  // (2) Ersteinrichtung
+  await page.click("#btn-open-setup");
+  await page.waitForTimeout(100);
+  check("leaf-G1 stage 'setup' clickable from the Meetings page",
+        await page.evaluate(() => !document.getElementById("view-meeting-einrichtung").hidden));
+  check("leaf-G4 setup carries visible Plan §6.6 annotation",
+        await hasVisiblePlanTag("#view-meeting-einrichtung", /§6\.6/));
+
+  // (3) Kompakter Startdialog mit vier Statuszeilen
+  await page.click("#btn-setup-finish");
+  await page.waitForTimeout(120);
+  check("leaf-G1 stage 'start dialog' shows all four status rows",
+        await page.evaluate(() =>
+          ["row-mic", "row-sys", "row-provider", "row-lang"].every((id) => {
+            const b = document.getElementById(id);
+            return b && !!b.offsetParent;
+          })));
+  check("leaf-G4 start dialog carries visible Plan §6.7 annotation",
+        await hasVisiblePlanTag("#start-dialog", /§6\.7/));
+
+  // Englisch wählen: Statuszeile Sprache → Mini-Picker → Option „English“
+  await page.click("#row-lang");
+  await page.waitForTimeout(60);
+  await page.locator("#row-picker .picker-option", { hasText: "English" }).click();
+  await page.waitForTimeout(60);
+  check("leaf-G1 language row switches to English",
+        /English/.test(await page.textContent("#row-lang-value")));
+
+  // (4)+(5) Aufnahme und Pause mit englischem Live-Transkript
+  await page.click("#btn-meeting-starten");
+  await page.waitForTimeout(3300);
+  check("leaf-G1 stage 'recording' reached after countdown",
+        await page.evaluate(() =>
+          document.getElementById("countdown-overlay").hidden &&
+          !document.getElementById("view-meeting-aktiv").hidden));
+  check("leaf-G4 running view carries visible Plan §6.11 annotation",
+        await hasVisiblePlanTag("#view-meeting-aktiv", /§6\.11/));
+  let enSegment = true;
+  try {
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll("#live-segments li")]
+        .some((li) => /budget/i.test(li.textContent)), null, { timeout: 8000 });
+  } catch (_) { enSegment = false; }
+  check("leaf-G1 live transcript renders realistic English segments", enSegment);
+  await page.click("#btn-pause");
+  await page.waitForTimeout(150);
+  check("leaf-G1 stage 'paused' shows icon + text, orange not red",
+        await page.evaluate(() => {
+          const chip = document.getElementById("live-status-chip");
+          return chip.className.indexOf("status-paused") !== -1 &&
+            document.getElementById("live-status-text").textContent.trim().length > 3 &&
+            getComputedStyle(chip).color !== "rgb(179, 38, 30)";
+        }));
+  await page.click("#btn-pause");   // Fortsetzen
+  await page.waitForTimeout(120);
+
+  // (6) Verarbeitung nach Bestätigung
+  await page.click("#btn-beenden");
+  await page.waitForTimeout(50);
+  check("leaf-G4 stop confirmation is annotated with Plan §6.9",
+        await hasVisiblePlanTag("#stop-confirm", /§6\.9/));
+  await page.click("#btn-stop-ok");
+  await page.waitForTimeout(120);
+  check("leaf-G1 stage 'processing' shows the four-step checklist",
+        await page.evaluate(() =>
+          !document.getElementById("view-verarbeitung").hidden &&
+          document.querySelectorAll("#proc-checklist li").length === 4));
+  check("leaf-G4 processing view carries visible Plan §6.12 annotation",
+        await hasVisiblePlanTag("#view-verarbeitung", /§6\.12/));
+  await page.waitForFunction(
+    () => document.querySelector('#proc-checklist li[data-step="summary"]').className === "done",
+    null, { timeout: 9000 });
+
+  // (7) Detailansicht mit Übersicht/Transkript/Audio/Verarbeitung
+  await page.click("#btn-open-processing-meeting");
+  await page.waitForTimeout(150);
+  check("leaf-G1 stage 'detail' opens defaulting to Overview",
+        await page.evaluate(() =>
+          !document.getElementById("view-meeting-detail").hidden &&
+          document.querySelector('[role="tab"][data-dtab="uebersicht"]')
+            .getAttribute("aria-selected") === "true"));
+  for (const t of ["transkript", "audio", "verarbeitung"]) {
+    await page.click(`[role="tab"][data-dtab="${t}"]`);
+    await page.waitForTimeout(60);
+    check(`leaf-G1 detail tab '${t}' clickable end-to-end`,
+          await page.evaluate((tab) => {
+            const tabEl = document.querySelector(`[role="tab"][data-dtab="${tab}"]`);
+            const panel = document.querySelector(`[data-dpanel="${tab}"]`);
+            return tabEl.getAttribute("aria-selected") === "true" && !panel.hidden;
+          }, t));
+  }
+  check("leaf-G4 detail view carries visible Plan §6.13 annotation",
+        await hasVisiblePlanTag("#view-meeting-detail", /§6\.13/));
+
+  /* ===== Leaf-G2: 44×44-Ziele, Namen, sichtbarer Tastaturfokus ===== */
+  // Systematischer Audit über alle Journey-Screens: jedes gerenderte,
+  // interaktive Element braucht ≥44px Breite UND Höhe sowie einen
+  // zugänglichen Namen (Text, aria-label/-labelledby, Label oder title).
+  async function auditInteractive(rootSel) {
+    return page.evaluate((sel) => {
+      const root = sel === ":doc" ? document : document.querySelector(sel);
+      if (!root || root.closest("[hidden]")) return null;
+      const els = [...root.querySelectorAll(
+        "button, a[href], input:not([type='hidden']), select, textarea, summary, [tabindex]:not([tabindex='-1'])")];
+      const problems = [];
+      for (const el of els) {
+        if (el.closest("[hidden]")) continue;
+        const r = el.getBoundingClientRect();
+        if (!r.width && !r.height) continue;   // nicht gerendert (z. B. Menü zu)
+        const desc = "<" + el.tagName.toLowerCase() +
+          (el.id ? "#" + el.id : "") +
+          (el.className && typeof el.className === "string" ? "." + el.className.split(" ").join(".") : "") + ">";
+        let name = el.getAttribute("aria-label") || "";
+        const lb = el.getAttribute("aria-labelledby");
+        if (!name && lb) {
+          name = lb.split(/\s+/).map((id) => document.getElementById(id))
+            .filter(Boolean).map((n) => n.textContent).join(" ");
+        }
+        if (!name && /^(input|select|textarea)$/i.test(el.tagName)) {
+          name = el.labels && el.labels[0] ? el.labels[0].textContent : "";
+        }
+        if (!name) name = el.textContent.replace(/\s+/g, " ").trim() || el.title || "";
+        if (r.width < 43.5 || r.height < 43.5)
+          problems.push("size " + Math.round(r.width) + "x" + Math.round(r.height) + ": " + desc);
+        if (!name.trim()) problems.push("no accessible name: " + desc);
+      }
+      return problems;
+    }, rootSel);
+  }
+
+  // Alle Ansichten nacheinander sichtbar machen und auditieren; Menüs in der
+  // Detailansicht werden geöffnet, damit ihre Punkte mitgeprüft werden.
+  const screensToAudit = [
+    ["#/diktieren", "#view-diktieren"],
+    ["#/meetings", "#view-meetings"],
+    ["#/meeting-einrichtung", "#view-meeting-einrichtung"],
+    ["#/projekte", "#view-projekte"],
+    ["#/eingang", "#view-eingang"],
+    ["#/import", "#view-import"],
+    ["#/diktatverlauf", "#view-diktatverlauf"],
+    ["#/einstellungen", "#view-einstellungen"],
+    ["#/hilfe", "#view-hilfe"],
+  ];
+  for (const [route, sel] of screensToAudit) {
+    await page.goto(url + route);
+    await page.waitForTimeout(120);
+    const problems = await auditInteractive(sel);
+    check(`leaf-G2 ${route} interactive elements ≥44px + named` +
+          (problems.length ? ` (${problems.slice(0, 3).join("; ")})` : ""),
+          problems !== null && problems.length === 0);
+  }
+  check("leaf-G4 diktieren context page keeps the no-meeting-start rule",
+        await page.evaluate(() =>
+          !/Meeting starten/.test(document.querySelector("#view-diktieren").textContent)));
+
+  // Meeting-Detail inkl. geöffnetem Aktionsmenü
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(100);
+  await page.click("#meeting-list li .card-open");
+  await page.waitForTimeout(120);
+  await page.click("#detail-more-menu summary");
+  await page.waitForTimeout(60);
+  const detailProblems = await auditInteractive("#view-meeting-detail");
+  check("leaf-G2 #/meeting-detail (menu open) elements ≥44px + named" +
+        (detailProblems.length ? ` (${detailProblems.slice(0, 3).join("; ")})` : ""),
+        detailProblems.length === 0);
+
+  // Laufendansicht inkl. Stop-Bestätigung und Countdown-Overlay
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(100);
+  await page.click("#btn-neues-meeting");
+  await page.waitForTimeout(60);
+  const dlgProblems = await auditInteractive("#start-dialog");
+  check("leaf-G2 start dialog elements ≥44px + named" +
+        (dlgProblems.length ? ` (${dlgProblems.slice(0, 3).join("; ")})` : ""),
+        dlgProblems.length === 0);
+  await page.click("#btn-meeting-starten");
+  await page.waitForTimeout(200);
+  const cdProblems = await auditInteractive("#countdown-overlay");
+  check("leaf-G2 countdown overlay elements ≥44px + named", cdProblems.length === 0);
+  await page.waitForTimeout(3200);
+  const runProblems = await auditInteractive("#view-meeting-aktiv");
+  check("leaf-G2 running view elements ≥44px + named" +
+        (runProblems.length ? ` (${runProblems.slice(0, 3).join("; ")})` : ""),
+        runProblems.length === 0);
+  await page.click("#btn-beenden");
+  await page.waitForTimeout(60);
+  const scProblems = await auditInteractive("#stop-confirm");
+  check("leaf-G2 stop confirmation elements ≥44px + named", scProblems.length === 0);
+  await page.keyboard.press("Escape");
+
+  // Sichtbarer Tastaturfokus: 12 Tab-Stops auf der Meetings-Seite müssen alle
+  // eine erkennbare Outline zeigen (:focus-visible, Plan §6.14).
+  await page.goto(url + "#/meetings");
+  await page.waitForTimeout(120);
+  let focusOk = true;
+  const focusFails = [];
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press("Tab");
+    await page.waitForTimeout(20);
+    const st = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const cs = getComputedStyle(el);
+      return { tag: el.tagName.toLowerCase(), id: el.id,
+               style: cs.outlineStyle, w: parseFloat(cs.outlineWidth),
+               color: cs.outlineColor };
+    });
+    if (!st) continue;
+    if (st.style === "none" || !(st.w > 0) || st.color === "rgba(0, 0, 0, 0)") {
+      focusOk = false;
+      focusFails.push(JSON.stringify(st));
+    }
+  }
+  check("leaf-G2 keyboard focus visibly outlined at every Tab stop" +
+        (focusFails.length ? ` (fails: ${focusFails.slice(0, 3).join(", ")})` : ""),
+        focusOk);
+
   console.log(results.map(([s, n]) => `${s}  ${n}`).join("\n"));
   console.log(errors.length ? "\nJS ERRORS:\n" + errors.join("\n") : "\nNo JS errors.");
   if (errors.length) process.exitCode = 1;
