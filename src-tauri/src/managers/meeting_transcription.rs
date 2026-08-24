@@ -108,6 +108,19 @@ impl MeetingSttEngine for LocalMeetingSttEngine {
         _ctx: &JobContext,
         audio: &[f32],
     ) -> Result<Vec<EngineSegment>, EngineError> {
+        // The queue runs outside the dictation UI: warm the engine from the
+        // user's selected model on first use, then transcribe. A missing
+        // download is a config mistake (permanent); anything else may recover.
+        if let Err(e) = self.manager.ensure_model_loaded() {
+            let message = format!("meeting model warmup failed: {e:#}");
+            return Err(
+                if message.contains("not downloaded") || message.contains("no model selected") {
+                    EngineError::Permanent(message)
+                } else {
+                    EngineError::Transient(message)
+                },
+            );
+        }
         let text = self
             .manager
             .transcribe(audio.to_vec())

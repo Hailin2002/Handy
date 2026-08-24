@@ -830,11 +830,26 @@ impl MeetingEnvironment for AppEnvironment {
             .clone()
             .filter(|name| !name.is_empty())
             .map(rec::SourceOpenRequest::new);
-        let system = settings
+        let system = match settings
             .selected_output_device
             .clone()
             .filter(|name| !name.is_empty())
-            .map(rec::SourceOpenRequest::new);
+        {
+            // Explicit choice: bind to that render device.
+            Some(name) => {
+                let mut request = rec::SourceOpenRequest::new(name);
+                request.follow_default_device = false;
+                Some(request)
+            }
+            // No choice yet: follow the OS default output instead of silently
+            // recording nothing (real-world finding: YouTube played, system
+            // track empty because the setting was never touched).
+            None => {
+                let mut request = rec::SourceOpenRequest::new("");
+                request.follow_default_device = true;
+                Some(request)
+            }
+        };
         rec::SourceDeviceSet { microphone, system }
     }
 

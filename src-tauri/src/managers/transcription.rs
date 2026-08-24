@@ -470,6 +470,24 @@ impl TranscriptionManager {
         }
     }
 
+    /// Loads the user's selected model only when nothing is loaded yet.
+    ///
+    /// The meeting STT queue runs independently of the dictation UI, so it
+    /// cannot rely on the dictation flow having warmed the engine. Calling
+    /// this before [`Self::transcribe`] makes the meeting path self-sufficient
+    /// without thrashing a reload when a model is already resident.
+    pub fn ensure_model_loaded(&self) -> Result<()> {
+        if self.get_current_model().is_some() {
+            return Ok(());
+        }
+        let settings = get_settings(&self.app_handle);
+        let model_id = settings.selected_model.clone();
+        if model_id.is_empty() {
+            anyhow::bail!("no model selected");
+        }
+        self.load_model(&model_id)
+    }
+
     pub fn load_model(&self, model_id: &str) -> Result<()> {
         self.load_model_with_device(model_id, None)
     }
