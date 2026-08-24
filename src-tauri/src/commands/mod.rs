@@ -1,6 +1,7 @@
 pub mod audio;
 pub mod history;
 pub mod meetings;
+pub mod projects;
 pub mod models;
 pub mod transcription;
 

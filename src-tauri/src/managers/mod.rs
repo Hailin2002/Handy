@@ -12,6 +12,7 @@ pub mod meeting_transcription;
 pub mod meeting_cloud;
 pub mod meeting_export;
 pub mod meeting_summary;
+pub mod project;
 
 pub mod audio;
 pub mod gguf_meta;

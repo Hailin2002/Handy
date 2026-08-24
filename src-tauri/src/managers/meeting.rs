@@ -1253,6 +1253,13 @@ impl MeetingManager {
         )
     }
 
+    /// The shared repository behind this manager, so sibling managers (e.g.
+    /// [`crate::managers::project::ProjectManager`]) read and write the same
+    /// SQLite file without a second connection.
+    pub fn store_handle(&self) -> Arc<SqliteMeetingStore> {
+        self.store.clone()
+    }
+
     /// Opens (and migrates) the database at an explicit path with default
     /// (inert) event/environment seams. Public so tests can prove persistence
     /// across a full close/reopen cycle.

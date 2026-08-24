@@ -123,6 +123,12 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // `Weak` back-reference), so it is attached right after construction.
     meeting_manager.attach_recorder_events();
 
+    // Phase 8: projects share the meeting repository (same SQLite file).
+    let project_manager = Arc::new(crate::managers::project::ProjectManager::new(
+        meeting_manager.store_handle(),
+    ));
+    app_handle.manage(project_manager.clone());
+
     // Local STT queue for meetings (plan §13 Phases 5–6). Pauses between jobs
     // while dictation recording/streaming holds the shared local model. The
     // routing engine dispatches per job to the provider chosen *for that
@@ -488,6 +494,14 @@ pub fn run(cli_args: CliArgs) {
             commands::meetings::meeting_transcript,
             commands::meetings::export_meeting,
             commands::meetings::delete_meeting_data,
+            commands::projects::project_create,
+            commands::projects::project_list,
+            commands::projects::project_rename,
+            commands::projects::project_delete,
+            commands::projects::project_assign_meeting,
+            commands::projects::project_unassign_meeting,
+            commands::projects::project_meeting_ids,
+            commands::projects::project_inbox_meeting_ids,
             commands::meetings::meeting_list_recoveries,
             commands::meetings::meeting_resolve_recovery,
             helpers::clamshell::is_laptop,
