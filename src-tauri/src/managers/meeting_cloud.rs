@@ -300,29 +300,46 @@ impl CloudTranscriber for AzureFastTranscriptionClient {
                     ))
                 })?;
 
-            let status = response.status();
-            if !status.is_success() {
-                let body = response.text().await.unwrap_or_default();
-                let detail = first_error_line(&body);
-                let kind = if classify_status(status.as_u16()) {
-                    CloudJobError::Permanent
-                } else {
-                    CloudJobError::Transient
-                };
-                return Err(kind(format!(
-                    "azure returned HTTP {} ({}): {}",
-                    status.as_u16(),
-                    endpoint_host,
-                    detail
-                )));
-            }
-
-            let body = response.text().await.map_err(|e| {
-                CloudJobError::Transient(format!("azure response read failed: {e}"))
-            })?;
-            parse_azure_response(&body).map_err(CloudJobError::Transient)
+            interpret_response(response, "azure", endpoint_host, parse_azure_response).await
         })
     }
+}
+
+/// Shared request→parse tail for both cloud clients: transport failures are
+/// transient by definition, HTTP statuses are classified once, and the success
+/// body is handed to the provider-specific parser. Keeping this in one place
+/// guarantees both clients stay byte-identical in their error vocabulary.
+async fn interpret_response<F>(
+    response: reqwest::Response,
+    label: &'static str,
+    host: String,
+    parse: F,
+) -> Result<Vec<CloudPhrase>, CloudJobError>
+where
+    F: FnOnce(&str) -> Result<Vec<CloudPhrase>, String>,
+{
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        let detail = first_error_line(&body);
+        let kind = if classify_status(status.as_u16()) {
+            CloudJobError::Permanent
+        } else {
+            CloudJobError::Transient
+        };
+        return Err(kind(format!(
+            "{label} returned HTTP {} ({}): {}",
+            status.as_u16(),
+            host,
+            detail
+        )));
+    }
+
+    let body = response
+        .text()
+        .await
+        .map_err(|e| CloudJobError::Transient(format!("{label} response read failed: {e}")))?;
+    parse(&body).map_err(CloudJobError::Transient)
 }
 
 /// Parses a fast-transcription JSON payload into phrases.
@@ -361,7 +378,13 @@ pub fn parse_azure_response(body: &str) -> Result<Vec<CloudPhrase>, String> {
             continue;
         }
         out.push(CloudPhrase {
-            channel: phrase.get("channel").and_then(Value::as_i64).unwrap_or(0) as u16,
+            // Clamp instead of casting: a hostile or buggy payload could carry
+            // negative or oversized channel numbers that would silently wrap.
+            channel: phrase
+                .get("channel")
+                .and_then(Value::as_i64)
+                .unwrap_or(0)
+                .clamp(0, u16::MAX.into()) as u16,
             // Azure ticks are 100 ns; 10_000 ticks per millisecond.
             offset_ms: offset_ticks.unwrap_or(0) / 10_000,
             duration_ms: duration_ticks.unwrap_or(0) / 10_000,
@@ -423,27 +446,13 @@ impl CloudTranscriber for CustomEndpointClient {
                     ))
                 })?;
 
-            let status = response.status();
-            if !status.is_success() {
-                let body = response.text().await.unwrap_or_default();
-                let detail = first_error_line(&body);
-                let kind = if classify_status(status.as_u16()) {
-                    CloudJobError::Permanent
-                } else {
-                    CloudJobError::Transient
-                };
-                return Err(kind(format!(
-                    "custom endpoint returned HTTP {} ({}): {}",
-                    status.as_u16(),
-                    endpoint_host,
-                    detail
-                )));
-            }
-
-            let body = response.text().await.map_err(|e| {
-                CloudJobError::Transient(format!("custom endpoint response read failed: {e}"))
-            })?;
-            parse_custom_response(&body).map_err(CloudJobError::Transient)
+            interpret_response(
+                response,
+                "custom endpoint",
+                endpoint_host,
+                parse_custom_response,
+            )
+            .await
         })
     }
 }
@@ -555,7 +564,13 @@ use crate::managers::meeting_transcription::{
 /// Converts cloud phrases into queue segments, dropping empty text and
 /// clamping spans to the submitted audio length.
 fn phrases_to_segments(phrases: Vec<CloudPhrase>, audio_samples: usize) -> Vec<EngineSegment> {
-    let duration_ms_rel_cap = (audio_samples as i64) * 1000 / 16_000;
+    // Saturating conversion: sample counts cannot reach i64 range in practice,
+    // but the clamp keeps the invariant explicit instead of relying on the
+    // two's-complement wrap of an unchecked cast.
+    let duration_ms_rel_cap = i64::try_from(audio_samples)
+        .unwrap_or(i64::MAX)
+        .saturating_mul(1000)
+        / 16_000;
     phrases
         .into_iter()
         .filter(|phrase| !phrase.text.trim().is_empty())

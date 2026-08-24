@@ -118,7 +118,10 @@ impl MeetingSttEngine for LocalMeetingSttEngine {
         }
         Ok(vec![EngineSegment {
             start_ms_rel: 0,
-            end_ms_rel: (audio.len() as i64) * 1000 / 16_000,
+            end_ms_rel: i64::try_from(audio.len())
+                .unwrap_or(i64::MAX)
+                .saturating_mul(1000)
+                / 16_000,
             text: text.to_string(),
             confidence: None,
         }])
@@ -552,16 +555,15 @@ impl MeetingTranscriptionQueue {
     }
 
     /// Next free segment ordering slot within the session.
+    /// Next free segment ordering slot within the session. A single indexed
+    /// MAX lookup — this runs once per persisted job, so materializing every
+    /// existing segment (texts, word timestamps) just for its maximum would
+    /// scale linearly with transcript length.
     fn next_sequence(&self, meeting_id: &super::meeting_store::Uuid) -> Result<i64, JobFailure> {
-        let max = self
-            .store
-            .segments_for_meeting(meeting_id.clone())
-            .map_err(JobFailure::Store)?
-            .into_iter()
-            .map(|segment| segment.sequence)
-            .max()
-            .unwrap_or(-1);
-        Ok(max + 1)
+        self.store
+            .max_segment_sequence(meeting_id.clone())
+            .map(|max| max + 1)
+            .map_err(JobFailure::Store)
     }
 
     /// Bounded exponential backoff for the attempt just failed.

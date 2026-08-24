@@ -609,6 +609,10 @@ pub trait MeetingRepository: Send + Sync {
     /// Read: transcript segments of a meeting, timeline-ordered.
     fn segments_for_meeting(&self, meeting_id: Uuid) -> Result<Vec<TranscriptSegment>, StoreError>;
 
+    /// Read: highest segment `sequence` of a meeting (`-1` when none), so the
+    /// queue can allocate the next slot without materializing every row.
+    fn max_segment_sequence(&self, meeting_id: Uuid) -> Result<i64, StoreError>;
+
     /// Read: current summary of a meeting, if any.
     fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError>;
 
@@ -1512,6 +1516,18 @@ impl MeetingRepository for SqliteMeetingStore {
         Ok(segments)
     }
 
+    fn max_segment_sequence(&self, meeting_id: Uuid) -> Result<i64, StoreError> {
+        let op = "max_segment_sequence";
+        let conn = self.locked(op)?;
+        conn.query_row(
+            "SELECT COALESCE(MAX(sequence), -1) FROM meeting_transcript_segments
+             WHERE meeting_id = ?1 AND deleted_at IS NULL",
+            params![meeting_id.0],
+            |row| row.get(0),
+        )
+        .map_err(sql_err(op))
+    }
+
     fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError> {
         let op = "summary_for_meeting";
         let conn = self.locked(op)?;
@@ -2356,6 +2372,9 @@ mod tests {
             &self,
             meeting_id: Uuid,
         ) -> Result<Vec<TranscriptSegment>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn max_segment_sequence(&self, _meeting_id: Uuid) -> Result<i64, StoreError> {
             unimplemented!("fake")
         }
         fn summary_for_meeting(

@@ -147,7 +147,9 @@ fn initialize_core_logic(app_handle: &AppHandle) {
         routing.register("Local", local_engine);
 
         let settings = crate::settings::get_settings(app_handle);
-        let cloud_timeout = std::time::Duration::from_secs(120);
+        // Cloud STT round-trips are bounded so a hung endpoint can never stall
+        // the queue worker (and thus settlement) indefinitely.
+        let cloud_timeout = std::time::Duration::from_secs(MEETING_CLOUD_TIMEOUT_SECS);
         match settings.meeting_stt_provider {
             crate::settings::SpeechInputProvider::Azure => {
                 match (
@@ -303,6 +305,11 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // Create the recording overlay window (hidden by default)
     utils::create_recording_overlay(app_handle);
 }
+
+/// Per-request timeout for cloud meeting-STT HTTP calls (Azure Fast
+/// Transcription, custom endpoints). Generous: chunks are up to a few minutes
+/// of audio and providers queue internally.
+const MEETING_CLOUD_TIMEOUT_SECS: u64 = 120;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(cli_args: CliArgs) {
