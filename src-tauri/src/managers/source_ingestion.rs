@@ -82,4 +82,29 @@ impl SourceIngestionService {
             reason: code.to_string(),
         }
     }
+
+    /// Parses without persisting — the wizard's preview step.
+    pub fn preview_whatsapp_text(
+        &self,
+        content: &str,
+        date_order: Option<DateOrder>,
+    ) -> Result<ChatPreviewDto, String> {
+        let preview = whatsapp_importer::parse_chat(content, date_order)
+            .map_err(|e| format!("previewFailed: {e}"))?;
+        Ok(ChatPreviewDto {
+            participants: preview.participants,
+            message_count: preview.messages.len() as i64,
+            media_count: preview.media_messages as i64,
+            date_order_ambiguous: preview.date_order_ambiguous,
+        })
+    }
+}
+
+/// Serializable preview for the import wizard.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct ChatPreviewDto {
+    pub participants: Vec<String>,
+    pub message_count: i64,
+    pub media_count: i64,
+    pub date_order_ambiguous: bool,
 }

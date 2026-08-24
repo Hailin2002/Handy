@@ -513,6 +513,7 @@ pub fn run(cli_args: CliArgs) {
             commands::sources::whatsapp_import_text,
             commands::sources::source_list,
             commands::sources::source_items,
+            commands::sources::whatsapp_preview_text,
             commands::tasks::task_create_manual,
             commands::tasks::task_suggest,
             commands::tasks::task_list,

@@ -55,6 +55,18 @@ pub async fn whatsapp_import_text(
     })
 }
 
+/// Phase 9 wizard preview: parse stats without persisting anything.
+#[tauri::command]
+#[specta::specta]
+pub async fn whatsapp_preview_text(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    content: String,
+    date_order: Option<String>,
+) -> Result<crate::managers::source_ingestion::ChatPreviewDto, String> {
+    let order = parse_date_order(date_order)?;
+    ingestion.preview_whatsapp_text(&content, order)
+}
+
 /// Lists imported sources, newest first.
 #[tauri::command]
 #[specta::specta]

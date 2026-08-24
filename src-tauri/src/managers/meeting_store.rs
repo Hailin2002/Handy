@@ -642,6 +642,10 @@ pub trait MeetingRepository: Send + Sync {
     /// The "Eingang": alive sessions with no project link.
     fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError>;
 
+    /// Removes all project links of one meeting — used when the meeting
+    /// itself is fully deleted, so projects keep no dangling members.
+    fn delete_project_links_for_meeting(&self, meeting_id: Uuid) -> Result<(), StoreError>;
+
     // -- sources (Phase 9) ---------------------------------------------------
 
     /// Idempotent import: a repeated `content_hash` returns the existing
@@ -2090,6 +2094,17 @@ impl MeetingRepository for SqliteMeetingStore {
         Ok(rows)
     }
 
+    fn delete_project_links_for_meeting(&self, meeting_id: Uuid) -> Result<(), StoreError> {
+        let op = "delete_project_links_for_meeting";
+        let conn = self.locked(op)?;
+        conn.execute(
+            "DELETE FROM project_meeting_links WHERE meeting_id = ?1",
+            params![meeting_id.0],
+        )
+        .map_err(sql_err(op))?;
+        Ok(())
+    }
+
     fn create_whatsapp_source(
         &self,
         draft: NewWhatsappSource,
@@ -3252,6 +3267,9 @@ mod tests {
             unimplemented!("fake")
         }
         fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn delete_project_links_for_meeting(&self, _meeting_id: Uuid) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
         fn create_whatsapp_source(

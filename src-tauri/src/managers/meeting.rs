@@ -1470,7 +1470,9 @@ impl MeetingManager {
         match scope {
             DeleteScope::AudioOnly => self.store.delete_meeting_audio_rows(uuid)?,
             DeleteScope::Everything => {
-                self.store.purge_meeting_content(uuid)?;
+                self.store.purge_meeting_content(uuid.clone())?;
+                // No dangling project memberships for a deleted meeting.
+                self.store.delete_project_links_for_meeting(uuid)?;
                 if !self.soft_delete_session(meeting_id)? {
                     anyhow::bail!("meeting session {meeting_id} not found");
                 }
@@ -3209,7 +3211,9 @@ fn row_to_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<MeetingSession> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::managers::meeting_store::{NewTranscriptSegment, SttJobState, WorkerId};
+    use crate::managers::meeting_store::{
+        NewProjectTask, NewTranscriptSegment, SttJobState, Uuid, WorkerId,
+    };
     use std::sync::atomic::{AtomicBool, Ordering};
 
     // ---------------------------------------------------------------- doubles
@@ -3713,7 +3717,141 @@ mod tests {
             .expect("succeed");
     }
 
-    /// Controlled deletion (plan §11): AudioOnly keeps transcript rows,
+    /// Full-journey smoke (plan §13 end-to-end): record → STT → summary →
+    /// export → project assignment → WhatsApp dedupe → tasks → controlled
+    /// deletion. One chain, so a regression anywhere breaks loudly here.
+    #[test]
+    fn the_whole_plan_journey_works_end_to_end() {
+        let h = harness_with(env_with_summary(SUMMARY_JSON), false);
+
+        // -- 1. Meeting lifecycle with pinned provider ----------------------
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start_with_provider(
+                &draft.meeting_id,
+                None,
+                false,
+                true,
+                true,
+                Some(crate::settings::SpeechInputProvider::Azure),
+            )
+            .unwrap();
+        assert_eq!(
+            h.manager.session_provider(&draft.meeting_id).0,
+            "Azure Speech"
+        );
+
+        // -- 2. Capture + local STT queue path ------------------------------
+        seed_ready_chunk(&h.manager, &draft.meeting_id);
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        seed_segment_for_first_job(&h.manager, &draft.meeting_id);
+        h.manager.settle_after_queue(&draft.meeting_id);
+
+        // -- 3. Summary pipeline --------------------------------------------
+        let meeting = StoreUuid(draft.meeting_id.clone());
+        let summary = h
+            .manager
+            .store
+            .summary_for_meeting(meeting.clone())
+            .unwrap()
+            .expect("summary persisted");
+        assert_eq!(summary.state, "completed");
+
+        // -- 4. Export -------------------------------------------------------
+        for format in [
+            export::ExportFormat::Markdown,
+            export::ExportFormat::Txt,
+            export::ExportFormat::Json,
+        ] {
+            let payload = h
+                .manager
+                .build_export(&draft.meeting_id, format)
+                .unwrap()
+                .unwrap();
+            assert!(!payload.content.is_empty(), "{format:?} rendered empty");
+        }
+
+        // -- 5. Projects: create + assign + inbox -----------------------------
+        let store = h.manager.store_handle();
+        let project = store
+            .create_project(crate::managers::meeting_store::NewProject {
+                name: "Journey".to_string(),
+                description: String::new(),
+            })
+            .unwrap();
+        store
+            .assign_meeting_to_project(StoreUuid(project.id.clone()), meeting.clone())
+            .unwrap();
+        assert_eq!(
+            store
+                .list_meeting_ids_for_project(StoreUuid(project.id.clone()))
+                .unwrap(),
+            vec![draft.meeting_id.clone()]
+        );
+
+        // -- 6. WhatsApp import is idempotent ---------------------------------
+        let ingestion =
+            crate::managers::source_ingestion::SourceIngestionService::new(store.clone());
+        let chat = "31.12.24, 23:59 - Alice: Journeys end";
+        let first = ingestion.ingest_whatsapp_text("Chat", chat, None).unwrap();
+        assert!(first.created);
+        let second = ingestion.ingest_whatsapp_text("Chat", chat, None).unwrap();
+        assert!(!second.created, "same content must not duplicate");
+        assert_eq!(first.source.id, second.source.id);
+
+        // -- 7. Task workflow protects manual edits ---------------------------
+        let pid = StoreUuid(project.id.clone());
+        let (task, created) = store
+            .suggest_task(NewProjectTask {
+                project_id: pid.clone(),
+                title: "Follow up".to_string(),
+                description: String::new(),
+                origin: "ai",
+            })
+            .unwrap();
+        assert!(created);
+        store
+            .decide_task(
+                Uuid(task.id.clone()),
+                "accepted",
+                Some("Follow up Friday".into()),
+                None,
+            )
+            .unwrap();
+        let (_same, not_created) = store
+            .suggest_task(NewProjectTask {
+                project_id: pid,
+                title: "Follow up".to_string(),
+                description: String::new(),
+                origin: "ai",
+            })
+            .unwrap();
+        assert!(!not_created);
+        let tasks = store.list_tasks(Uuid(project.id.clone())).unwrap();
+        assert_eq!(tasks[0].title, "Follow up Friday", "manual edit survives");
+
+        // -- 8. Controlled deletion keeps transcript on AudioOnly --------------
+        h.manager
+            .delete_meeting_data(&draft.meeting_id, DeleteScope::AudioOnly)
+            .unwrap();
+        assert!(h.manager.get_transcript(&draft.meeting_id).unwrap().len() == 1);
+        assert!(h.manager.get_summary(&draft.meeting_id).unwrap().is_some());
+
+        // Everything removes session + content.
+        h.manager
+            .delete_meeting_data(&draft.meeting_id, DeleteScope::Everything)
+            .unwrap();
+        assert!(h.manager.get_session(&draft.meeting_id).unwrap().is_none());
+        // The project survives and simply has no members anymore.
+        assert_eq!(
+            store
+                .list_meeting_ids_for_project(StoreUuid(project.id))
+                .unwrap(),
+            Vec::<String>::new()
+        );
+    }
+
+    /// Controlled deletion (plan §11): AudioOnly keeps the transcript,
     /// Everything removes all content rows and the session itself.
     #[test]
     fn controlled_deletion_respects_the_two_scopes() {
