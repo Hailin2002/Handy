@@ -831,21 +831,26 @@ impl MeetingEnvironment for AppEnvironment {
         // Meetings pick their STT provider independently of dictation
         // (plan §13 Phase 6 acceptance).
         let effective = override_provider.unwrap_or(settings.meeting_stt_provider);
+        // `configured` must mirror the exact condition under which lib.rs
+        // registers the cloud engine: otherwise a missing secret would pass
+        // preflight, pin "Azure Speech" on the session and then silently
+        // transcribe locally while the UI keeps claiming cloud.
+        let azure_configured = !settings.azure_speech_endpoint.trim().is_empty()
+            && crate::secret_store::get_secret(crate::secret_store::SPEECH_PIPELINE_SCOPE, "azure")
+                .is_some();
         let (kind, name, configured) = match effective {
             crate::settings::SpeechInputProvider::Local => (
                 "local",
                 "Local".to_string(),
                 !settings.selected_model.is_empty(),
             ),
-            crate::settings::SpeechInputProvider::Azure => (
-                "cloud",
-                "Azure Speech".to_string(),
-                !settings.azure_speech_endpoint.is_empty(),
-            ),
+            crate::settings::SpeechInputProvider::Azure => {
+                ("cloud", "Azure Speech".to_string(), azure_configured)
+            }
             crate::settings::SpeechInputProvider::Custom => (
                 "cloud",
                 "Custom endpoint".to_string(),
-                !settings.custom_stt_endpoint.is_empty(),
+                !settings.custom_stt_endpoint.trim().is_empty(),
             ),
         };
         ProviderSnapshot {
