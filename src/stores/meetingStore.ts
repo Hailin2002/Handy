@@ -329,6 +329,7 @@ export const useMeetingStore = create<MeetingStoreState>()((set, get) => {
           microphoneOnly: request.microphoneOnly,
           summaryEnabled: request.summaryEnabled,
           consentAcknowledged: request.consentAcknowledged,
+          sttProvider: request.sttProvider,
         },
         "startFailed",
       );

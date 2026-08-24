@@ -180,7 +180,12 @@
       "summaryToggle": "Nach dem Meeting zusammenfassen",
       "summaryHint": "Die Zusammenfassung entsteht, sobald das Transkript vollständig ist.",
       "storageHint": "Pro Stunde Mikrofon und Systemaudio werden rund 0,25 GB Speicher belegt.",
-      "moreSettings": "Weitere Einstellungen"
+      "moreSettings": "Weitere Einstellungen",
+      "providerLabel": "Transkriptionsanbieter für dieses Meeting",
+      "providerHint": "Cloud-Anbieter brauchen Endpoint und Schlüssel in den Einstellungen. Die Wahl gilt nur für dieses Meeting.",
+      "providerLocal": "Auf dem Gerät",
+      "providerAzure": "Azure Speech (Cloud)",
+      "providerCustom": "Eigener Endpunkt (Cloud)"
     },
     "live": {
       "heading": "Live-Transkript",

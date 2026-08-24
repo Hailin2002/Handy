@@ -180,7 +180,12 @@
       "summaryToggle": "Summarise after the meeting",
       "summaryHint": "The summary is created once the transcript is complete.",
       "storageHint": "About 0.25 GB of storage is used per hour of microphone and system audio.",
-      "moreSettings": "More settings"
+      "moreSettings": "More settings",
+      "providerLabel": "Proveedor de transcripci�n para esta reuni�n",
+      "providerHint": "Los proveedores en la nube necesitan su punto de conexi�n y clave configurados en los ajustes. La elecci�n solo aplica a esta reuni�n.",
+      "providerLocal": "En el dispositivo",
+      "providerAzure": "Azure Speech (nube)",
+      "providerCustom": "Punto de conexi�n propio (nube)"
     },
     "live": {
       "heading": "Live transcript",

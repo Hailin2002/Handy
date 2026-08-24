@@ -50,6 +50,9 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
   const [summaryEnabled, setSummaryEnabled] = useState(true);
   const [consent, setConsent] = useState(false);
   const [microphoneOnly, setMicrophoneOnly] = useState(false);
+  const [sttProvider, setSttProvider] = useState<"local" | "azure" | "custom">(
+    "local",
+  );
   const startingRef = useRef(false);
 
   const preflight = useMeetingStore((state) => state.preflight);
@@ -109,6 +112,7 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
         microphoneOnly,
         summaryEnabled,
         consentAcknowledged: consent,
+        sttProvider,
       });
       if (started) onStarted();
     } finally {
@@ -166,6 +170,28 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
           {t("meeting.session.micOnly.badge")}
         </p>
       )}
+
+      {/* Provider picker (§13 Phase 6): per-meeting STT choice, independent
+          of the dictation provider. */}
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium">{t("meeting.setup.providerLabel")}</span>
+        <select
+          className="rounded-md border border-mid-gray/30 bg-background px-2 py-1.5 text-sm"
+          value={sttProvider}
+          onChange={(event) =>
+            setSttProvider(
+              event.target.value as "local" | "azure" | "custom",
+            )
+          }
+        >
+          <option value="local">{t("meeting.setup.providerLocal")}</option>
+          <option value="azure">{t("meeting.setup.providerAzure")}</option>
+          <option value="custom">{t("meeting.setup.providerCustom")}</option>
+        </select>
+        <span className="text-xs text-text/50">
+          {t("meeting.setup.providerHint")}
+        </span>
+      </label>
 
       {/* Summary switch (§6.7). A plain checkbox keeps the whole dialog
           keyboard operable with a single tab order (§6.14). */}

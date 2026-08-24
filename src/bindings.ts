@@ -1015,6 +1015,9 @@ async updateRecordingRetentionPeriod(period: string) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Creates a meeting in state `draft`.
+ */
 async meetingCreateSession(title: string | null) : Promise<Result<MeetingSession, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("meeting_create_session", { title }) };
@@ -1023,6 +1026,9 @@ async meetingCreateSession(title: string | null) : Promise<Result<MeetingSession
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Opens one meeting by id.
+ */
 async meetingGetSession(id: string) : Promise<Result<MeetingSession | null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("meeting_get_session", { id }) };
@@ -1031,6 +1037,9 @@ async meetingGetSession(id: string) : Promise<Result<MeetingSession | null, stri
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Lists meetings, newest first, optionally filtered by title.
+ */
 async meetingListSessions(query: string | null) : Promise<Result<MeetingSession[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("meeting_list_sessions", { query }) };
@@ -1056,6 +1065,175 @@ async meetingRenameSession(id: string, title: string) : Promise<Result<MeetingSe
 async meetingDeleteSession(id: string) : Promise<Result<boolean, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("meeting_delete_session", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * T01 — creates the draft the compact start dialog works on.
+ */
+async createMeetingDraft(title: string | null) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_meeting_draft", { title }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Runs the full Startvalidierung and returns the compact start-dialog rows.
+ */
+async preflightMeeting() : Promise<Result<MeetingPreflightReport, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("preflight_meeting") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * T02/T03 — consent gate, validation, device opening. `stt_provider` pins
+ * this meeting's transcription backend (plan §13 Phase 6); `None` uses the
+ * global meeting default.
+ */
+async startMeeting(meetingId: string, title: string | null, microphoneOnly: boolean, summaryEnabled: boolean, consentAcknowledged: boolean, sttProvider: SpeechInputProvider | null) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_meeting", { meetingId, title, microphoneOnly, summaryEnabled, consentAcknowledged, sttProvider }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * T05 — pause the running capture.
+ */
+async pauseMeeting(meetingId: string) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("pause_meeting", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * T06 — resume a paused capture after re-validating devices and disk.
+ */
+async resumeMeeting(meetingId: string) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("resume_meeting", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * T07 → T08/T09/T15 — controlled stop. `abort` only changes the destination.
+ */
+async stopMeeting(meetingId: string, abort: boolean | null) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_meeting", { meetingId, abort }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * T16 — user abort before or at start.
+ */
+async cancelMeeting(meetingId: string) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cancel_meeting", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * O5 snapshot-first handshake: the authoritative rebuild source for every
+ * window (main, overlay, tray).
+ */
+async getMeetingSnapshot(meetingId: string) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_meeting_snapshot", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * T14 — retry every permanently failed STT job of a meeting.
+ */
+async retryMeetingJobs(meetingId: string) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("retry_meeting_jobs", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Phase 7 — current summary of a meeting, if any.
+ */
+async getMeetingSummary(meetingId: string) : Promise<Result<MeetingSummaryDto | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_meeting_summary", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Phase 7 — re-runs the map-reduce summarization ("Neu-Zusammenfassung").
+ */
+async requestMeetingSummary(meetingId: string) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("request_meeting_summary", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Phase 7 — renders the meeting as Markdown, TXT or JSON. The frontend
+ * persists the file via the dialog/fs plugins.
+ */
+async exportMeeting(meetingId: string, format: ExportFormat) : Promise<Result<MeetingExportDto | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_meeting", { meetingId, format }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Phase 7 — controlled deletion with the plan's two scopes.
+ */
+async deleteMeetingData(meetingId: string, scope: DeleteScope) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_meeting_data", { meetingId, scope }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Pending crash-recovery offers produced by the startup reconciliation.
+ */
+async meetingListRecoveries() : Promise<Result<MeetingRecoveryOffer[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_list_recoveries") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Applies the user's decision to one recovery offer.
+ */
+async meetingResolveRecovery(meetingId: string, resolution: MeetingRecoveryResolution) : Promise<Result<boolean, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_resolve_recovery", { meetingId, resolution }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1124,7 +1302,18 @@ whats_new_last_seen_version?: string; selected_model?: string; onboarding_comple
  * Which input channel to use on the selected microphone device.
  * None means "average all channels" (original behavior).
  */
-selected_channel?: number | null; clamshell_microphone?: string | null; selected_output_device?: string | null; translate_to_english?: boolean; selected_language?: string; speech_input_provider?: SpeechInputProvider; azure_speech_endpoint?: string; azure_speech_language?: string; azure_stable_partial_threshold?: number; azure_segmentation_silence_ms?: number; custom_stt_endpoint?: string; speech_pipeline_api_keys?: SecretMap; deepl_translation_enabled?: boolean; deepl_target_language?: string; deepl_sentence_delay_ms?: number; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; paste_delay_after_ms?: number; 
+selected_channel?: number | null; clamshell_microphone?: string | null; selected_output_device?: string | null; translate_to_english?: boolean; selected_language?: string; speech_input_provider?: SpeechInputProvider; 
+/**
+ * STT provider for *meetings*, independent of the dictation provider
+ * (plan §13 Phase 6 acceptance: per-meeting choice without touching
+ * dictation).
+ */
+meeting_stt_provider?: SpeechInputProvider; 
+/**
+ * Cloud summarization consent gate (plan summary-provider-contract): the
+ * cloud path is unreachable while this is false. Default false.
+ */
+meeting_summary_cloud_consent?: boolean; azure_speech_endpoint?: string; azure_speech_language?: string; azure_stable_partial_threshold?: number; azure_segmentation_silence_ms?: number; custom_stt_endpoint?: string; speech_pipeline_api_keys?: SecretMap; deepl_translation_enabled?: boolean; deepl_target_language?: string; deepl_sentence_delay_ms?: number; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; paste_delay_after_ms?: number; 
 /**
  * Debug-gated ("beta") receipt-sequenced paste: restore the clipboard only
  * after the target app actually reads the transcript, instead of after a
@@ -1150,6 +1339,11 @@ export type AzureSpeechAuth = { token: string; region: string; language: string;
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
+/**
+ * Controlled-deletion scope (plan §11): keep the transcript but drop the raw
+ * recording, or remove everything.
+ */
+export type DeleteScope = "audioOnly" | "everything"
 export type EngineType = 
 /**
  * Any GGML/GGUF model loaded through transcribe-cpp (Whisper, Parakeet,
@@ -1157,6 +1351,7 @@ export type EngineType =
  * the file, so this one variant covers the whole transcribe-cpp family.
  */
 "TranscribeCpp" | "Parakeet" | "Moonshine" | "MoonshineStreaming" | "SenseVoice" | "GigaAM" | "Canary" | "Cohere"
+export type ExportFormat = "markdown" | "txt" | "json"
 export type GpuDeviceOption = { id: string; name: string; total_vram_mb: number }
 export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean }
 export type HistoryUpdatePayload = { action: "added"; entry: HistoryEntry } | { action: "updated"; entry: HistoryEntry } | { action: "deleted"; id: number } | { action: "toggled"; id: number }
@@ -1177,11 +1372,235 @@ export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
 /**
+ * Phase 7 — export payload: rendered content plus filename suggestion.
+ */
+export type MeetingExportDto = { filename: string; mime: string; content: string }
+/**
+ * Per-source job counters (LV §2.2).
+ */
+export type MeetingJobCounts = { 
+/**
+ * Waiting for a worker.
+ */
+queued: number; 
+/**
+ * Claimed and running.
+ */
+running: number; 
+/**
+ * Backing off before the next attempt.
+ */
+retry_wait: number; 
+/**
+ * Terminally failed.
+ */
+failed: number; 
+/**
+ * Completed successfully.
+ */
+succeeded: number }
+/**
+ * `meeting://jobs-updated` (LV §2.2) — aggregates only, never per-job churn.
+ */
+export type MeetingJobsUpdatedEvent = { 
+/**
+ * Session id.
+ */
+meeting_id: string; 
+/**
+ * Counters keyed by `MeetingAudioSource` token.
+ */
+per_source: Partial<{ [key in string]: MeetingJobCounts }>; 
+/**
+ * Jobs that are neither succeeded nor failed.
+ */
+total_backlog: number; 
+/**
+ * Failure summary, when at least one job failed.
+ */
+oldest_failed?: MeetingOldestFailed | null; 
+/**
+ * Revision at emission time.
+ */
+state_revision?: number | null; 
+/**
+ * Processing-checklist totals (plan §6.12).
+ */
+eligible_total?: number | null; 
+/**
+ * Successfully transcribed units.
+ */
+succeeded_total?: number | null; 
+/**
+ * Chunks prepared for processing.
+ */
+prepared_total?: number | null; 
+/**
+ * Chunks already prepared.
+ */
+prepared_done?: number | null }
+/**
+ * Oldest failure block of `meeting://jobs-updated`.
+ */
+export type MeetingOldestFailed = { 
+/**
+ * How many jobs are in `failed`.
+ */
+count: number; 
+/**
+ * RFC3339 instant of the first failure, when known.
+ */
+first_failed_at?: string | null }
+/**
+ * One preflight row.
+ */
+export type MeetingPreflightCheck = { 
+/**
+ * Row identity.
+ */
+id: MeetingPreflightCheckId; 
+/**
+ * Traffic light.
+ */
+status: MeetingPreflightStatus; 
+/**
+ * Human-readable current value ("Default microphone", "Deutsch", …).
+ */
+value?: string | null; 
+/**
+ * Error taxonomy code so the UI can pick the repair copy.
+ */
+code?: string | null; 
+/**
+ * Pre-redacted detail line.
+ */
+detail?: string | null }
+/**
+ * One row of the compact start dialog (plan §6.7 / "Startvalidierung").
+ */
+export type MeetingPreflightCheckId = 
+/**
+ * Microphone device row.
+ */
+"microphone" | 
+/**
+ * System/loopback device row.
+ */
+"systemAudio" | 
+/**
+ * STT provider/model row.
+ */
+"transcription" | 
+/**
+ * Recognition language row.
+ */
+"language" | 
+/**
+ * Free disk space row.
+ */
+"disk" | 
+/**
+ * OS capture permission row.
+ */
+"permission"
+/**
+ * Result of `preflight_meeting`.
+ */
+export type MeetingPreflightReport = { 
+/**
+ * One row per [`MeetingPreflightCheckId`].
+ */
+checks: MeetingPreflightCheck[]; 
+/**
+ * The start button is only enabled once this is true.
+ */
+can_start: boolean; 
+/**
+ * Loopback unavailable ⇒ the user may explicitly fall back (plan E5).
+ */
+microphone_only_available?: boolean | null }
+/**
+ * Traffic light of one preflight row.
+ */
+export type MeetingPreflightStatus = 
+/**
+ * Ready to record.
+ */
+"ok" | 
+/**
+ * Usable, but degraded (e.g. mic-only fallback).
+ */
+"warning" | 
+/**
+ * Blocks the start button.
+ */
+"error"
+/**
+ * Why a session was interrupted (startup-recovery-dataflow §3 S7).
+ */
+export type MeetingRecoveryCause = 
+/**
+ * The process died while the session was active.
+ */
+"crash" | 
+/**
+ * The machine slept and the capture never resumed.
+ */
+"sleep_wake" | 
+/**
+ * Cause could not be determined.
+ */
+"unknown"
+/**
+ * One pending recovery offer (`meeting_list_recoveries`).
+ */
+export type MeetingRecoveryOffer = { 
+/**
+ * Session id.
+ */
+meeting_id: string; 
+/**
+ * Session title, for the banner.
+ */
+title: string; 
+/**
+ * Interruption cause.
+ */
+cause: MeetingRecoveryCause; 
+/**
+ * Chunks that survived and are offered for processing.
+ */
+recovered_chunks: number; 
+/**
+ * Chunks that could not be repaired.
+ */
+damaged_chunks: number; 
+/**
+ * Files quarantined into `recovery/`.
+ */
+quarantined_files: number; 
+/**
+ * RFC3339 instant of the last observed update before the interruption.
+ */
+interrupted_at?: string | null }
+/**
+ * How the user resolves a recovery offer (startup-recovery §5 U2–U4).
+ */
+export type MeetingRecoveryResolution = 
+/**
+ * Keep the audio and start processing.
+ */
+"recover" | 
+/**
+ * Decide later; the offer stays.
+ */
+"later" | 
+/**
+ * Delete the session and its assets.
+ */
+"delete"
+/**
  * Frontend-facing projection of one persisted meeting session.
- * 
- * Lean on purpose: it carries exactly what the Meetings library/detail views
- * render today. Capture-related columns stay in SQLite until the recording
- * leaf exposes them through its own DTOs.
  */
 export type MeetingSession = { 
 /**
@@ -1193,7 +1612,7 @@ id: string;
  */
 title: string; 
 /**
- * Lifecycle state (currently always [`SESSION_STATE_DRAFT`]).
+ * Lifecycle state token.
  */
 state: string; 
 /**
@@ -1212,6 +1631,132 @@ created_at: number;
  * Last mutation instant, Unix epoch milliseconds.
  */
 updated_at: number }
+/**
+ * `get_meeting_snapshot` (SSC §5 / LV §6.2). The UI is a pure function of
+ * this snapshot plus subsequent events.
+ */
+export type MeetingSnapshot = { 
+/**
+ * Session id.
+ */
+meeting_id: string; 
+/**
+ * Current title.
+ */
+title: string; 
+/**
+ * Current state.
+ */
+state: MeetingState; 
+/**
+ * Current revision (O5 handshake value).
+ */
+state_revision: number; 
+/**
+ * Banked capture milliseconds (pause-corrected, excludes the running leg).
+ */
+elapsed_ms: number; 
+/**
+ * Epoch ms at which the current capture leg started; null while frozen.
+ */
+running_since: number | null; 
+/**
+ * Whether the session captures the microphone only.
+ */
+microphone_only: boolean | null; 
+/**
+ * Where processing happens.
+ */
+provider_kind: string; 
+/**
+ * Provider display name.
+ */
+provider_name: string | null; 
+/**
+ * Whether a summary is requested.
+ */
+summary_enabled: boolean | null; 
+/**
+ * Highest persisted transcript sequence.
+ */
+transcript_head_sequence: number | null; 
+/**
+ * Current job aggregates.
+ */
+jobs: MeetingJobsUpdatedEvent | null; 
+/**
+ * Last observed levels per source token.
+ */
+levels: Partial<{ [key in string]: number }> | null; 
+/**
+ * Last operator-visible error.
+ */
+last_error: MeetingSnapshotError | null }
+/**
+ * Compact error projection inside [`MeetingSnapshot`].
+ */
+export type MeetingSnapshotError = { 
+/**
+ * Taxonomy code.
+ */
+code: string; 
+/**
+ * Redacted detail.
+ */
+detail?: string | null }
+/**
+ * The SSC §2.1 state set, verbatim. Serialization matches
+ * `MeetingSessionState` in `src/lib/types/meeting.ts`.
+ */
+export type MeetingState = 
+/**
+ * Start dialog open, nothing captured yet.
+ */
+"draft" | 
+/**
+ * Validation/opening of devices in progress.
+ */
+"starting" | 
+/**
+ * Configured sources capturing; chunks rolling.
+ */
+"recording" | 
+/**
+ * Capture frozen at a marker; nothing stored or transmitted.
+ */
+"paused" | 
+/**
+ * Controlled finalization of all open chunks.
+ */
+"stopping" | 
+/**
+ * Capture done; STT jobs outstanding.
+ */
+"transcribing" | 
+/**
+ * Optional; summary provider running over the complete transcript.
+ */
+"summarizing" | 
+/**
+ * All jobs succeeded; terminal success.
+ */
+"completed" | 
+/**
+ * User aborted after audio was secured; processing not started.
+ */
+"stopped_unprocessed" | 
+/**
+ * User aborted before/at start; terminal.
+ */
+"cancelled" | 
+/**
+ * Data-preserving failure that blocks progress.
+ */
+"recoverable_error"
+/**
+ * Serializable projection of `meeting_summaries` for the detail view.
+ */
+export type MeetingSummaryDto = { state: string; provider: string; model: string | null; prompt_version: string; summary_markdown: string; decisions: string[]; action_items: string[]; open_questions: string[]; last_error: string | null }
 export type ModelInfo = { id: string; name: string; description: string; filename: string; source: ModelSource; size_mb: number; is_downloaded: boolean; is_downloading: boolean; partial_size: number; is_directory: boolean; engine_type: EngineType; accuracy_score: number; speed_score: number; supports_translation: boolean; is_recommended: boolean; supported_languages: string[]; supports_language_selection: boolean; is_custom: boolean; supports_streaming: boolean; supports_language_detection: boolean }
 export type ModelLoadStatus = { is_loaded: boolean; current_model: string | null }
 /**

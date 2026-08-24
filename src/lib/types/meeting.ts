@@ -209,4 +209,6 @@ export interface MeetingStartRequest {
   microphoneOnly: boolean;
   summaryEnabled: boolean;
   consentAcknowledged: boolean;
+  /** Pins this meeting's STT provider (Phase 6); omit for the global default. */
+  sttProvider?: "local" | "azure" | "custom";
 }
