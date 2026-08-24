@@ -1426,6 +1426,16 @@ impl MeetingManager {
             .map_err(Into::into)
     }
 
+    /// Chronological transcript of a meeting (Phase 7 detail view).
+    pub fn get_transcript(
+        &self,
+        meeting_id: &str,
+    ) -> Result<Vec<super::meeting_store::TranscriptSegment>> {
+        self.store
+            .segments_for_meeting(StoreUuid(meeting_id.to_string()))
+            .map_err(Into::into)
+    }
+
     /// Controlled deletion (plan §11). `AudioOnly` removes the raw recording
     /// (asset files + chunk rows) while keeping transcript and summary;
     /// `Everything` additionally tombstones transcript and summary rows and

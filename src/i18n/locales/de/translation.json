@@ -337,6 +337,17 @@
         "title": "Geräte haben sich während der Pause geändert",
         "body": "Im Transkript wird ein neuer Quellenabschnitt begonnen."
       }
+    },
+    "detail": {
+      "summaryHeading": "Zusammenfassung",
+      "transcriptHeading": "Transkript",
+      "decisions": "Entscheidungen",
+      "actionItems": "Aufgaben",
+      "openQuestions": "Offene Fragen",
+      "summaryFailed": "Die Zusammenfassung konnte nicht erstellt werden.",
+      "resummarize": "Erneut zusammenfassen",
+      "resummarizeDone": "Zusammenfassung aktualisiert",
+      "resummarizeFailed": "Erneutes Zusammenfassen fehlgeschlagen"
     }
   },
   "onboarding": {

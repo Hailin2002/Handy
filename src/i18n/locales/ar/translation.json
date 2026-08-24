@@ -337,6 +337,17 @@
         "title": "Devices changed while paused",
         "body": "A new source section will be started in the transcript."
       }
+    },
+    "detail": {
+      "summaryHeading": "Summary",
+      "transcriptHeading": "Transcript",
+      "decisions": "Decisions",
+      "actionItems": "Action items",
+      "openQuestions": "Open questions",
+      "summaryFailed": "The summary could not be created.",
+      "resummarize": "Summarise again",
+      "resummarizeDone": "Summary updated",
+      "resummarizeFailed": "Re-summarising failed"
     }
   },
   "onboarding": {

@@ -246,6 +246,38 @@ pub async fn request_meeting_summary(
     meeting_manager.request_summary(&meeting_id)
 }
 
+/// Phase 7 — chronological transcript rows of a completed meeting.
+#[derive(Serialize, specta::Type)]
+pub struct TranscriptRowDto {
+    pub start_ms: i64,
+    pub end_ms: i64,
+    pub source: String,
+    pub text: String,
+    pub confidence: Option<f32>,
+}
+
+/// Phase 7 — chronological transcript of a meeting for the detail view.
+#[tauri::command]
+#[specta::specta]
+pub async fn meeting_transcript(
+    meeting_manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+) -> Result<Vec<TranscriptRowDto>, String> {
+    let segments = meeting_manager
+        .get_transcript(&meeting_id)
+        .map_err(|e| e.to_string())?;
+    Ok(segments
+        .into_iter()
+        .map(|s| TranscriptRowDto {
+            start_ms: s.start_ms,
+            end_ms: s.end_ms,
+            source: s.source,
+            text: s.text,
+            confidence: s.confidence,
+        })
+        .collect())
+}
+
 /// Phase 7 — export payload: rendered content plus filename suggestion.
 #[derive(Serialize, specta::Type)]
 pub struct MeetingExportDto {

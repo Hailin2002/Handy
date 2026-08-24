@@ -1195,6 +1195,17 @@ async requestMeetingSummary(meetingId: string) : Promise<Result<MeetingSnapshot,
 }
 },
 /**
+ * Phase 7 — chronological transcript of a meeting for the detail view.
+ */
+async meetingTranscript(meetingId: string) : Promise<Result<TranscriptRowDto[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_transcript", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Phase 7 — renders the meeting as Markdown, TXT or JSON. The frontend
  * persists the file via the dialog/fs plugins.
  */
@@ -1872,6 +1883,10 @@ export type StreamWorkKind = "transcribing" | "polishing"
  */
 export type Theme = "system" | "light" | "dark"
 export type TranscribeAcceleratorSetting = "auto" | "cpu" | "gpu"
+/**
+ * Phase 7 — chronological transcript rows of a completed meeting.
+ */
+export type TranscriptRowDto = { start_ms: number; end_ms: number; source: string; text: string; confidence: number | null }
 export type TypingTool = "auto" | "wtype" | "kwtype" | "dotool" | "ydotool" | "xdotool"
 export type WindowsMicrophonePermissionStatus = { supported: boolean; overall_access: PermissionAccess; device_access: PermissionAccess; app_access: PermissionAccess; desktop_app_access: PermissionAccess }
 

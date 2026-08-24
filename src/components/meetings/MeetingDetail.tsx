@@ -1,8 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Play, Trash2 } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Copy, Download, Play, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { commands, type MeetingSession } from "@/bindings";
+import {
+  commands,
+  type ExportFormat,
+  type MeetingSession,
+  type MeetingSummaryDto,
+  type TranscriptRowDto,
+} from "@/bindings";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -43,6 +49,32 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const lastSessionId = useRef(session.id);
+
+  // Phase 7 detail content.
+  const [summary, setSummary] = useState<MeetingSummaryDto | null>(null);
+  const [transcript, setTranscript] = useState<TranscriptRowDto[]>([]);
+  const [resummarizing, setResummarizing] = useState(false);
+
+  const loadContent = useCallback(async () => {
+    try {
+      const [summaryResult, transcriptResult] = await Promise.all([
+        commands.getMeetingSummary(session.id),
+        commands.meetingTranscript(session.id),
+      ]);
+      if (summaryResult.status === "ok" && summaryResult.data) {
+        setSummary(summaryResult.data);
+      }
+      if (transcriptResult.status === "ok" && transcriptResult.data) {
+        setTranscript(transcriptResult.data);
+      }
+    } catch (error) {
+      console.error("Failed to load meeting content:", error);
+    }
+  }, [session.id]);
+
+  useEffect(() => {
+    void loadContent();
+  }, [loadContent]);
 
   // Re-seed the editor when a different meeting is opened; keep in-place
   // drafts when only the same session's data refreshes after a save.
@@ -95,6 +127,58 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
     }
   };
 
+  const handleResummarize = async () => {
+    if (resummarizing) return;
+    setResummarizing(true);
+    try {
+      const result = await commands.requestMeetingSummary(session.id);
+      if (result.status === "ok") {
+        toast.success(t("meeting.detail.resummarizeDone"));
+        await loadContent();
+      } else {
+        toast.error(t("meeting.detail.resummarizeFailed"), {
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to re-summarize meeting:", error);
+      toast.error(t("meeting.detail.resummarizeFailed"));
+    } finally {
+      setResummarizing(false);
+    }
+  };
+
+  const copyText = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(t(key));
+    } catch (error) {
+      console.error("Clipboard write failed:", error);
+      toast.error(t("meetings.copyFailed"));
+    }
+  };
+
+  const handleExport = async (format: ExportFormat) => {
+    try {
+      const result = await commands.exportMeeting(session.id, format);
+      if (result.status !== "ok" || !result.data) {
+        toast.error(t("meetings.exportError"));
+        return;
+      }
+      // Browser-style download works inside the Tauri webview for blobs.
+      const blob = new Blob([result.data.content], { type: result.data.mime });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = result.data.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error(t("meetings.exportError"));
+    }
+  };
+
   return (
     <section className="w-full" aria-label={t("nav.meetings")}>
       <div className="flex items-center gap-2">
@@ -141,6 +225,96 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
             {t("common.delete")}
           </Button>
         </div>
+
+        {/* Phase 7 — summary, transcript, copy/export/re-summarize. */}
+        {summary?.state === "completed" && (
+          <div className="rounded-lg border border-mid-gray/20 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-medium">
+                {t("meeting.detail.summaryHeading")}
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void copyText(summary.summary_markdown, "meetings.copied")}
+              >
+                <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                {t("meetings.copySummary")}
+              </Button>
+            </div>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-text/80">
+              {summary.summary_markdown}
+            </p>
+            {summary.decisions.length > 0 && (
+              <p className="mt-2 text-xs text-text/60">
+                {t("meeting.detail.decisions")}: {summary.decisions.join("; ")}
+              </p>
+            )}
+            {summary.action_items.length > 0 && (
+              <p className="mt-1 text-xs text-text/60">
+                {t("meeting.detail.actionItems")}: {summary.action_items.join("; ")}
+              </p>
+            )}
+            {summary.open_questions.length > 0 && (
+              <p className="mt-1 text-xs text-text/60">
+                {t("meeting.detail.openQuestions")}: {summary.open_questions.join("; ")}
+              </p>
+            )}
+          </div>
+        )}
+
+        {transcript.length > 0 && (
+          <div className="rounded-lg border border-mid-gray/20 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-medium">
+                {t("meeting.detail.transcriptHeading")}
+              </h3>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    void copyText(
+                      transcript
+                        .map((row) => `${row.text}`)
+                        .join("\n"),
+                      "meetings.copied",
+                    )
+                  }
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                  {t("meetings.copyTranscript")}
+                </Button>
+                {(["markdown", "txt", "json"] as ExportFormat[]).map((format) => (
+                  <Button
+                    key={format}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void handleExport(format)}
+                  >
+                    <Download className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                    {format.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm text-text/80">
+              {transcript.map((row, index) => (
+                <li key={`${row.start_ms}-${index}`}>{row.text}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {summary?.state === "failed" && (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+            <span className="text-sm">{t("meeting.detail.summaryFailed")}</span>
+            <Button size="sm" onClick={handleResummarize} disabled={resummarizing}>
+              <RefreshCw className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              {t("meeting.detail.resummarize")}
+            </Button>
+          </div>
+        )}
 
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm text-text/80">
           <dt className="text-text/50">{t("meetings.statusLabel")}</dt>
