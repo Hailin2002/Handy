@@ -841,7 +841,7 @@ mod tests {
         assert_eq!(ints[0], 0, "NaN maps to silence");
         assert_eq!(ints[1], 32_767, "+inf clamps");
         assert_eq!(ints[2], -32_768, "-inf clamps");
-        assert!(ints[3].abs() <= 32_767);
+        assert!(ints[3] > 0 && ints[3] < 32_767);
     }
 
     #[test]

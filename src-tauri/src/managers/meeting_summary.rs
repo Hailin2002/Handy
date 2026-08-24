@@ -460,7 +460,7 @@ mod tests {
 
     #[test]
     fn llm_failures_propagate_as_retryable_errors() {
-        let mut failing = ScriptedLlm::ok(&[]);
+        let failing = ScriptedLlm::ok(&[]);
         failing
             .answers
             .lock()

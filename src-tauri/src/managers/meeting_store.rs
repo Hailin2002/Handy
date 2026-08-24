@@ -653,6 +653,33 @@ pub trait MeetingRepository: Send + Sync {
     fn list_sources(&self) -> Result<Vec<Source>, StoreError>;
     fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError>;
 
+    // -- project tasks & snapshots (Phase 10) --------------------------------
+
+    /// Manual task creation (origin `manual`, state `accepted`).
+    fn create_manual_task(&self, draft: NewProjectTask) -> Result<ProjectTask, StoreError>;
+    /// AI suggestion: insert-only and idempotent on the content hash, so a
+    /// human-edited or rejected twin is never overwritten or duplicated.
+    fn suggest_task(&self, draft: NewProjectTask) -> Result<(ProjectTask, bool), StoreError>;
+    fn list_tasks(&self, project_id: Uuid) -> Result<Vec<ProjectTask>, StoreError>;
+    /// Applies a user decision (`accepted | edited | rejected`) plus optional
+    /// edited title/description; stamps human_edited_at.
+    fn decide_task(
+        &self,
+        id: Uuid,
+        state: &str,
+        title: Option<String>,
+        description: Option<String>,
+    ) -> Result<ProjectTask, StoreError>;
+    fn create_snapshot(
+        &self,
+        project_id: Uuid,
+        summary_markdown: String,
+        prompt_version: String,
+        model: Option<String>,
+        source_marker: String,
+    ) -> Result<ProjectSnapshot, StoreError>;
+    fn list_snapshots(&self, project_id: Uuid) -> Result<Vec<ProjectSnapshot>, StoreError>;
+
     /// Read: current summary of a meeting, if any.
     fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError>;
 
@@ -773,9 +800,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use rusqlite::{params, Connection, OptionalExtension};
-use sha2::Digest;
 use rusqlite_migration::{Migrations, M};
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 
 use super::change_log::{self, ChangeLogEntry, ChangeOperation};
 
@@ -1044,6 +1071,41 @@ static MIGRATIONS: &[M] = &[
         ON source_items (source_id, content_hash);
     CREATE INDEX IF NOT EXISTS idx_source_items_source
         ON source_items (source_id, sequence);",
+    ),
+    // -- 9 -----------------------------------------------------------------
+    // Phase 10: `project_snapshots` (versioned analysis states) and
+    // `project_tasks` with the suggestion workflow. The UNIQUE
+    // (project_id, content_hash) on tasks makes repeated AI runs idempotent;
+    // suggestions are insert-only so a human edit can never be overwritten.
+    M::up(
+        "CREATE TABLE IF NOT EXISTS project_snapshots (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        summary_markdown TEXT NOT NULL DEFAULT '',
+        prompt_version TEXT NOT NULL DEFAULT '',
+        model TEXT,
+        source_marker TEXT NOT NULL DEFAULT '',
+        revision INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS project_tasks (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        state TEXT NOT NULL DEFAULT 'suggested',
+        origin TEXT NOT NULL DEFAULT 'ai',
+        content_hash TEXT NOT NULL,
+        human_edited_at INTEGER,
+        revision INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_project_tasks_dedupe
+        ON project_tasks (project_id, content_hash);",
     ),
 ];
 
@@ -1610,8 +1672,7 @@ fn project_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Project> {
     })
 }
 
-const PROJECT_COLUMNS: &str =
-    "id, name, description, created_at, updated_at";
+const PROJECT_COLUMNS: &str = "id, name, description, created_at, updated_at";
 
 /// Wire-facing source row (Phase 9).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
@@ -1660,10 +1721,87 @@ fn source_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Source> {
     })
 }
 
-fn read_source_by_hash(
-    conn: &Connection,
-    content_hash: &str,
-) -> rusqlite::Result<Option<Source>> {
+const TASK_COLUMNS: &str = "id, project_id, title, description, state, origin, human_edited_at";
+
+/// Stable dedupe key for AI suggestions: same title+description text is the
+/// same task regardless of which run produced it.
+fn content_hash_of(title: &str, description: &str) -> String {
+    let mut hasher = sha2::Sha256::default();
+    hasher.update(title.trim().as_bytes());
+    hasher.update([0x1f]);
+    hasher.update(description.trim().as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+/// Shared insert path for manual tasks and AI suggestions (plan §10).
+fn insert_task_impl(
+    store: &SqliteMeetingStore,
+    draft: NewProjectTask,
+    state: &str,
+    content_hash: Option<String>,
+) -> Result<ProjectTask, StoreError> {
+    let op = "insert_task";
+    let now = chrono::Utc::now().timestamp_millis();
+    let id = uuid::Uuid::new_v4().to_string();
+    let hash = content_hash.unwrap_or_else(|| content_hash_of(&draft.title, &draft.description));
+    let conn = store.locked(op)?;
+    conn.execute(
+        "INSERT INTO project_tasks (id, project_id, title, description, state, origin,
+         content_hash, human_edited_at, created_at, updated_at)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?9)",
+        params![
+            id,
+            draft.project_id.0,
+            draft.title.trim(),
+            draft.description.trim(),
+            state,
+            draft.origin,
+            hash,
+            if draft.origin == "manual" {
+                Some(now)
+            } else {
+                None
+            },
+            now
+        ],
+    )
+    .map_err(classify("project_tasks", &Uuid(id.clone()), op))?;
+    conn.query_row(
+        &format!("SELECT {TASK_COLUMNS} FROM project_tasks WHERE id = ?1"),
+        params![id],
+        task_from_row,
+    )
+    .map_err(sql_err(op))
+}
+
+fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<ProjectTask> {
+    Ok(ProjectTask {
+        id: row.get(0)?,
+        project_id: row.get(1)?,
+        title: row.get(2)?,
+        description: row.get(3)?,
+        state: row.get(4)?,
+        origin: row.get(5)?,
+        human_edited_at: row.get(6)?,
+    })
+}
+
+const SNAPSHOT_COLUMNS: &str =
+    "id, project_id, summary_markdown, prompt_version, model, source_marker, created_at";
+
+fn snapshot_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<ProjectSnapshot> {
+    Ok(ProjectSnapshot {
+        id: row.get(0)?,
+        project_id: row.get(1)?,
+        summary_markdown: row.get(2)?,
+        prompt_version: row.get(3)?,
+        model: row.get(4)?,
+        source_marker: row.get(5)?,
+        created_at: row.get(6)?,
+    })
+}
+
+fn read_source_by_hash(conn: &Connection, content_hash: &str) -> rusqlite::Result<Option<Source>> {
     let mut stmt = conn.prepare(&format!(
         "SELECT {SOURCE_COLUMNS} FROM sources WHERE content_hash = ?1 AND deleted_at IS NULL"
     ))?;
@@ -1672,6 +1810,39 @@ fn read_source_by_hash(
         Some(row) => Ok(Some(row?)),
         None => Ok(None),
     }
+}
+
+/// Wire-facing project task (Phase 10).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+pub struct ProjectTask {
+    pub id: String,
+    pub project_id: String,
+    pub title: String,
+    pub description: String,
+    /// `suggested | accepted | edited | rejected`
+    pub state: String,
+    /// `ai | manual` — who created it first.
+    pub origin: String,
+    pub human_edited_at: Option<i64>,
+}
+
+pub struct NewProjectTask {
+    pub project_id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub origin: &'static str,
+}
+
+/// Wire-facing versioned snapshot (Phase 10).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+pub struct ProjectSnapshot {
+    pub id: String,
+    pub project_id: String,
+    pub summary_markdown: String,
+    pub prompt_version: String,
+    pub model: Option<String>,
+    pub source_marker: String,
+    pub created_at: i64,
 }
 
 impl MeetingRepository for SqliteMeetingStore {
@@ -1990,6 +2161,142 @@ impl MeetingRepository for SqliteMeetingStore {
                 .map_err(sql_err(op))?;
             Ok((source, true))
         }
+    }
+
+    fn create_manual_task(&self, draft: NewProjectTask) -> Result<ProjectTask, StoreError> {
+        insert_task_impl(self, draft, "accepted", None)
+    }
+
+    fn suggest_task(&self, draft: NewProjectTask) -> Result<(ProjectTask, bool), StoreError> {
+        let op = "suggest_task";
+        let content_hash = content_hash_of(&draft.title, &draft.description);
+        {
+            let conn = self.locked(op)?;
+            if let Some(existing) = conn
+                .query_row(
+                    &format!(
+                        "SELECT {TASK_COLUMNS} FROM project_tasks
+                         WHERE project_id = ?1 AND content_hash = ?2 AND deleted_at IS NULL"
+                    ),
+                    params![draft.project_id.0, content_hash],
+                    task_from_row,
+                )
+                .optional()
+                .map_err(sql_err(op))?
+            {
+                // Insert-only doctrine (WR-1..WR-4): a human-edited or
+                // rejected twin is never touched by later AI runs.
+                return Ok((existing, false));
+            }
+        }
+        let task = insert_task_impl(self, draft, "suggested", Some(content_hash))?;
+        Ok((task, true))
+    }
+
+    fn list_tasks(&self, project_id: Uuid) -> Result<Vec<ProjectTask>, StoreError> {
+        let op = "list_tasks";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT {TASK_COLUMNS} FROM project_tasks
+                 WHERE project_id = ?1 AND deleted_at IS NULL ORDER BY created_at ASC"
+            ))
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![project_id.0], task_from_row)
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
+    fn decide_task(
+        &self,
+        id: Uuid,
+        state: &str,
+        title: Option<String>,
+        description: Option<String>,
+    ) -> Result<ProjectTask, StoreError> {
+        let op = "decide_task";
+        let now = chrono::Utc::now().timestamp_millis();
+        let conn = self.locked(op)?;
+        let updated = conn
+            .execute(
+                "UPDATE project_tasks SET
+                state = ?2,
+                title = COALESCE(?3, title),
+                description = COALESCE(?4, description),
+                human_edited_at = ?5,
+                revision = revision + 1,
+                updated_at = ?5
+             WHERE id = ?1 AND deleted_at IS NULL",
+                params![id.0, state, title, description, now],
+            )
+            .map_err(classify("project_tasks", &id, op))?;
+        if updated == 0 {
+            return Err(StoreError::NotFound {
+                entity: "project_tasks",
+                id,
+            });
+        }
+        conn.query_row(
+            &format!("SELECT {TASK_COLUMNS} FROM project_tasks WHERE id = ?1"),
+            params![id.0],
+            task_from_row,
+        )
+        .map_err(sql_err(op))
+    }
+
+    fn create_snapshot(
+        &self,
+        project_id: Uuid,
+        summary_markdown: String,
+        prompt_version: String,
+        model: Option<String>,
+        source_marker: String,
+    ) -> Result<ProjectSnapshot, StoreError> {
+        let op = "create_snapshot";
+        let now = chrono::Utc::now().timestamp_millis();
+        let id = uuid::Uuid::new_v4().to_string();
+        let conn = self.locked(op)?;
+        conn.execute(
+            "INSERT INTO project_snapshots (id, project_id, summary_markdown, prompt_version,
+             model, source_marker, created_at, updated_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?7)",
+            params![
+                id,
+                project_id.0,
+                summary_markdown,
+                prompt_version,
+                model,
+                source_marker,
+                now
+            ],
+        )
+        .map_err(classify("project_snapshots", &Uuid(id.clone()), op))?;
+        conn.query_row(
+            &format!("SELECT {SNAPSHOT_COLUMNS} FROM project_snapshots WHERE id = ?1"),
+            params![id],
+            snapshot_from_row,
+        )
+        .map_err(sql_err(op))
+    }
+
+    fn list_snapshots(&self, project_id: Uuid) -> Result<Vec<ProjectSnapshot>, StoreError> {
+        let op = "list_snapshots";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT {SNAPSHOT_COLUMNS} FROM project_snapshots
+                 WHERE project_id = ?1 AND deleted_at IS NULL ORDER BY created_at DESC"
+            ))
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![project_id.0], snapshot_from_row)
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
     }
 
     fn list_sources(&self) -> Result<Vec<Source>, StoreError> {
@@ -2959,6 +3266,37 @@ mod tests {
         fn list_source_items(&self, _source_id: Uuid) -> Result<Vec<SourceItem>, StoreError> {
             unimplemented!("fake")
         }
+        fn create_manual_task(&self, _draft: NewProjectTask) -> Result<ProjectTask, StoreError> {
+            unimplemented!("fake")
+        }
+        fn suggest_task(&self, _draft: NewProjectTask) -> Result<(ProjectTask, bool), StoreError> {
+            unimplemented!("fake")
+        }
+        fn list_tasks(&self, _project_id: Uuid) -> Result<Vec<ProjectTask>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn decide_task(
+            &self,
+            _id: Uuid,
+            _state: &str,
+            _title: Option<String>,
+            _description: Option<String>,
+        ) -> Result<ProjectTask, StoreError> {
+            unimplemented!("fake")
+        }
+        fn create_snapshot(
+            &self,
+            _project_id: Uuid,
+            _summary_markdown: String,
+            _prompt_version: String,
+            _model: Option<String>,
+            _source_marker: String,
+        ) -> Result<ProjectSnapshot, StoreError> {
+            unimplemented!("fake")
+        }
+        fn list_snapshots(&self, _project_id: Uuid) -> Result<Vec<ProjectSnapshot>, StoreError> {
+            unimplemented!("fake")
+        }
         fn summary_for_meeting(
             &self,
             meeting_id: Uuid,
@@ -3875,7 +4213,11 @@ mod sqlite_tests {
             content_hash: "deadbeef".to_string(),
             messages: vec![
                 (Some("Alice".to_string()), "Hallo".to_string(), false),
-                (Some("Bob".to_string()), "<Medien ausgeschlossen>".to_string(), true),
+                (
+                    Some("Bob".to_string()),
+                    "<Medien ausgeschlossen>".to_string(),
+                    true,
+                ),
             ],
         };
 
@@ -3911,8 +4253,105 @@ mod sqlite_tests {
         assert_eq!(store.list_sources().expect("sources").len(), 2);
     }
 
+    // -- tasks & snapshots (Phase 10) ------------------------------------------
 
-    /// Marks a session processed so it counts for the project inbox.
+    #[test]
+    fn ai_suggestions_dedupe_and_never_overwrite_manual_edits() {
+        let (_dir, store) = temp_store();
+        let project = store
+            .create_project(NewProject {
+                name: "P".into(),
+                description: String::new(),
+            })
+            .expect("project");
+        let pid = Uuid(project.id.clone());
+
+        let (first, created) = store
+            .suggest_task(NewProjectTask {
+                project_id: pid.clone(),
+                title: "Protokoll senden".to_string(),
+                description: "An alle Teilnehmer".to_string(),
+                origin: "ai",
+            })
+            .expect("suggest");
+        assert!(created);
+        assert_eq!(first.state, "suggested");
+
+        let edited = store
+            .decide_task(
+                Uuid(first.id.clone()),
+                "edited",
+                Some("Protokoll bis Freitag senden".to_string()),
+                None,
+            )
+            .expect("edit");
+        assert!(edited.human_edited_at.is_some());
+
+        // A later AI run proposing the SAME task must not duplicate or
+        // overwrite the user's edit.
+        let (again, created_again) = store
+            .suggest_task(NewProjectTask {
+                project_id: pid.clone(),
+                title: "Protokoll senden".to_string(),
+                description: "An alle Teilnehmer".to_string(),
+                origin: "ai",
+            })
+            .expect("re-suggest");
+        assert!(!created_again);
+        assert_eq!(again.id, first.id);
+        assert_eq!(
+            again.title, "Protokoll bis Freitag senden",
+            "the manual edit survives"
+        );
+
+        let manual = store
+            .create_manual_task(NewProjectTask {
+                project_id: pid.clone(),
+                title: "Raum buchen".to_string(),
+                description: String::new(),
+                origin: "manual",
+            })
+            .expect("manual task");
+        assert_eq!(manual.state, "accepted");
+        assert_eq!(store.list_tasks(pid).expect("tasks").len(), 2);
+    }
+
+    #[test]
+    fn snapshots_are_versioned_append_only() {
+        let (_dir, store) = temp_store();
+        let project = store
+            .create_project(NewProject {
+                name: "P".into(),
+                description: String::new(),
+            })
+            .expect("project");
+        let pid = Uuid(project.id.clone());
+
+        let v1 = store
+            .create_snapshot(
+                pid.clone(),
+                "Stand 1".into(),
+                "pv1".into(),
+                Some("m".into()),
+                "r1".into(),
+            )
+            .expect("snapshot 1");
+        let v2 = store
+            .create_snapshot(
+                pid.clone(),
+                "Stand 2".into(),
+                "pv1".into(),
+                Some("m".into()),
+                "r2".into(),
+            )
+            .expect("snapshot 2");
+        assert_ne!(v1.id, v2.id, "snapshots are append-only versions");
+
+        let listed = store.list_snapshots(pid).expect("list");
+        assert_eq!(listed.len(), 2);
+        assert_eq!(listed[0].summary_markdown, "Stand 2", "newest first");
+    }
+
     fn mark_session_completed(store: &SqliteMeetingStore, id: &str) {
         let conn = store.locked("test_mark_session").expect("lock");
         conn.execute(

@@ -53,4 +53,9 @@ impl ProjectManager {
     pub fn inbox(&self) -> Result<Vec<String>, StoreError> {
         self.store.list_unassigned_meeting_ids()
     }
+
+    /// Repository access for the task/snapshot command layer (Phase 10).
+    pub fn store(&self) -> Arc<dyn MeetingRepository> {
+        self.store.clone()
+    }
 }

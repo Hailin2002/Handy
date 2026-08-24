@@ -45,8 +45,8 @@ impl SourceIngestionService {
         content: &str,
         date_order: Option<DateOrder>,
     ) -> Result<IngestResult, StoreError> {
-        let preview = whatsapp_importer::parse_chat(content, date_order)
-            .map_err(|e| self.invalid(&e))?;
+        let preview =
+            whatsapp_importer::parse_chat(content, date_order).map_err(|e| self.invalid(&e))?;
         if preview.date_order_ambiguous {
             return Err(self.invalid("dateOrderAmbiguous"));
         }
@@ -61,14 +61,12 @@ impl SourceIngestionService {
             .map(|m| (m.author.clone(), m.text.clone(), m.is_media))
             .collect();
 
-        let (source, created) =
-            self.store
-                .create_whatsapp_source(NewWhatsappSource {
-                    title: title.to_string(),
-                    parser_version: PARSER_VERSION.to_string(),
-                    content_hash,
-                    messages,
-                })?;
+        let (source, created) = self.store.create_whatsapp_source(NewWhatsappSource {
+            title: title.to_string(),
+            parser_version: PARSER_VERSION.to_string(),
+            content_hash,
+            messages,
+        })?;
         let items = self.store.list_source_items(Uuid(source.id.clone()))?;
         Ok(IngestResult {
             source,

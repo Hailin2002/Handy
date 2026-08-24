@@ -4,6 +4,7 @@ pub mod meetings;
 pub mod models;
 pub mod projects;
 pub mod sources;
+pub mod tasks;
 pub mod transcription;
 
 use crate::settings::{get_settings, update_settings, AppSettings, LogLevel};

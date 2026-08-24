@@ -1339,6 +1339,72 @@ async sourceItems(sourceId: string) : Promise<Result<SourceItem[], string>> {
 }
 },
 /**
+ * Manual task creation (origin `manual`, immediately accepted).
+ */
+async taskCreateManual(projectId: string, title: string, description: string | null) : Promise<Result<ProjectTask, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("task_create_manual", { projectId, title, description }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * AI suggestion ingestion: insert-only, idempotent per content hash.
+ */
+async taskSuggest(projectId: string, title: string, description: string | null) : Promise<Result<ProjectTask, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("task_suggest", { projectId, title, description }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Alive tasks of one project.
+ */
+async taskList(projectId: string) : Promise<Result<ProjectTask[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("task_list", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Applies a user decision: `accepted | edited | rejected`.
+ */
+async taskDecide(taskId: string, state: string, title: string | null, description: string | null) : Promise<Result<ProjectTask, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("task_decide", { taskId, state, title, description }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Creates a new versioned snapshot for a project (append-only).
+ */
+async snapshotCreate(projectId: string, summaryMarkdown: string, promptVersion: string, model: string | null, sourceMarker: string) : Promise<Result<ProjectSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("snapshot_create", { projectId, summaryMarkdown, promptVersion, model, sourceMarker }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Snapshots of one project, newest first.
+ */
+async snapshotList(projectId: string) : Promise<Result<ProjectSnapshot[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("snapshot_list", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Pending crash-recovery offers produced by the startup reconciliation.
  */
 async meetingListRecoveries() : Promise<Result<MeetingRecoveryOffer[], string>> {
@@ -1923,6 +1989,22 @@ export type PostProcessProvider = { id: string; label: string; base_url: string;
  * the frontend without an envelope projection.
  */
 export type Project = { id: string; name: string; description: string; created_at: number; updated_at: number }
+/**
+ * Wire-facing versioned snapshot (Phase 10).
+ */
+export type ProjectSnapshot = { id: string; project_id: string; summary_markdown: string; prompt_version: string; model: string | null; source_marker: string; created_at: number }
+/**
+ * Wire-facing project task (Phase 10).
+ */
+export type ProjectTask = { id: string; project_id: string; title: string; description: string; 
+/**
+ * `suggested | accepted | edited | rejected`
+ */
+state: string; 
+/**
+ * `ai | manual` — who created it first.
+ */
+origin: string; human_edited_at: number | null }
 export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" | "weeks_2" | "months_3"
 export type SecretMap = Partial<{ [key in string]: string }>
 export type SecureInputStatus = { 

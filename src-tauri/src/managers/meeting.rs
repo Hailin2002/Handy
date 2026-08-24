@@ -3581,9 +3581,7 @@ mod tests {
 
     #[test]
     fn without_consent_the_summary_never_runs() {
-        let mut env = healthy_env();
-        env.summary_consent
-            .store(false, std::sync::atomic::Ordering::SeqCst);
+        let env = healthy_env();
         // The LLM slot is left empty on purpose: if the pipeline ever tried to
         // reach an LLM without consent it would fail loudly here instead of
         // silently skipping — and the state assertions below pin the skip.
