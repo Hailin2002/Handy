@@ -8,6 +8,8 @@ pub mod meeting;
 pub mod meeting_store;
 // Local STT queue draining persistent meeting jobs (plan §13 Phase 5).
 pub mod meeting_transcription;
+// Cloud STT backends for meeting jobs (plan §13 Phase 6).
+pub mod meeting_cloud;
 
 pub mod audio;
 pub mod gguf_meta;

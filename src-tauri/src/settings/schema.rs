@@ -87,6 +87,11 @@ pub struct AppSettings {
     pub selected_language: String,
     #[serde(default)]
     pub speech_input_provider: SpeechInputProvider,
+    /// STT provider for *meetings*, independent of the dictation provider
+    /// (plan §13 Phase 6 acceptance: per-meeting choice without touching
+    /// dictation).
+    #[serde(default)]
+    pub meeting_stt_provider: SpeechInputProvider,
     #[serde(default)]
     pub azure_speech_endpoint: String,
     #[serde(default = "default_azure_speech_language")]
@@ -674,6 +679,7 @@ pub fn get_default_settings() -> AppSettings {
         translate_to_english: false,
         selected_language: "auto".to_string(),
         speech_input_provider: SpeechInputProvider::default(),
+        meeting_stt_provider: SpeechInputProvider::default(),
         azure_speech_endpoint: String::new(),
         azure_speech_language: default_azure_speech_language(),
         azure_stable_partial_threshold: default_azure_stable_partial_threshold(),

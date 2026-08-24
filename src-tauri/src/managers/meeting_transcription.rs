@@ -30,11 +30,62 @@ use super::meeting_store::{
 use super::transcription::TranscriptionManager;
 use crate::audio_toolkit::vad::{SileroVad, VoiceActivityDetector};
 
-/// Engine abstraction over the dictation transcription stack. Kept as a trait
-/// so unit tests can substitute a deterministic fake instead of loading GGML.
+/// One recognized span, in milliseconds relative to the submitted audio start.
+#[derive(Debug, Clone)]
+pub struct EngineSegment {
+    /// Span start relative to the job audio.
+    pub start_ms_rel: i64,
+    /// Span end relative to the job audio.
+    pub end_ms_rel: i64,
+    /// Recognized display text.
+    pub text: String,
+    /// Recognition confidence, when the engine reports one.
+    pub confidence: Option<f32>,
+}
+
+/// Per-job execution context the routing engine dispatches on. Carried from
+/// the session's persisted provider snapshot so a meeting keeps its provider
+/// even if global settings change mid-recording.
+#[derive(Debug, Clone)]
+pub struct JobContext {
+    /// Provider name stored on the session (routing key), e.g. "Azure Speech".
+    pub provider_name: String,
+    /// Recognition language hint, when configured.
+    pub language: Option<String>,
+}
+
+/// Why an engine call failed. Drives the queue's retry policy: permanent
+/// failures (bad key, wrong endpoint) never retry; transient ones back off.
+#[derive(Debug, Clone)]
+pub enum EngineError {
+    /// No retry can help — surface immediately as terminal.
+    Permanent(String),
+    /// Network hiccups, throttling and 5xx — retry with backoff.
+    Transient(String),
+}
+
+impl From<CloudJobError> for EngineError {
+    fn from(value: CloudJobError) -> Self {
+        match value {
+            CloudJobError::Permanent(m) => EngineError::Permanent(m),
+            CloudJobError::Transient(m) => EngineError::Transient(m),
+        }
+    }
+}
+
+/// Re-exported so cloud engines can share one error vocabulary with the queue.
+pub use super::meeting_cloud::CloudJobError;
+
+/// Engine abstraction over every meeting STT backend (local Whisper, Azure
+/// Fast Transcription, custom endpoints). Kept as a trait so unit tests can
+/// substitute deterministic fakes instead of loading GGML or hitting network.
 pub trait MeetingSttEngine: Send + Sync {
-    /// Transcribes 16 kHz mono samples; returns trimmed text.
-    fn transcribe(&self, audio: Vec<f32>) -> anyhow::Result<String>;
+    /// Transcribes 16 kHz mono samples into relative segments.
+    fn transcribe(
+        &self,
+        ctx: &JobContext,
+        audio: &[f32],
+    ) -> Result<Vec<EngineSegment>, EngineError>;
 
     /// Stable model label persisted on produced segments (`model_id`).
     fn model_label(&self) -> String;
@@ -52,14 +103,77 @@ impl LocalMeetingSttEngine {
 }
 
 impl MeetingSttEngine for LocalMeetingSttEngine {
-    fn transcribe(&self, audio: Vec<f32>) -> anyhow::Result<String> {
-        self.manager
-            .transcribe(audio)
-            .map_err(|e| anyhow::anyhow!("meeting stt engine failed: {e:#}"))
+    fn transcribe(
+        &self,
+        _ctx: &JobContext,
+        audio: &[f32],
+    ) -> Result<Vec<EngineSegment>, EngineError> {
+        let text = self
+            .manager
+            .transcribe(audio.to_vec())
+            .map_err(|e| EngineError::Transient(format!("meeting stt engine failed: {e:#}")))?;
+        let text = text.trim();
+        if text.is_empty() {
+            return Ok(Vec::new());
+        }
+        Ok(vec![EngineSegment {
+            start_ms_rel: 0,
+            end_ms_rel: (audio.len() as i64) * 1000 / 16_000,
+            text: text.to_string(),
+            confidence: None,
+        }])
     }
 
     fn model_label(&self) -> String {
         "local-whisper".to_string()
+    }
+}
+
+/// Dispatches to the engine registered for the job's provider name. Assembled
+/// once at startup from the configured providers; unknown names fall back to
+/// whichever engine was registered first (the local engine).
+pub struct RoutingMeetingSttEngine {
+    engines: Mutex<Vec<(String, Arc<dyn MeetingSttEngine>)>>,
+    fallback: Arc<dyn MeetingSttEngine>,
+}
+
+impl RoutingMeetingSttEngine {
+    pub fn new(fallback: Arc<dyn MeetingSttEngine>) -> Self {
+        Self {
+            engines: Mutex::new(Vec::new()),
+            fallback,
+        }
+    }
+
+    pub fn register(self: &Arc<Self>, provider_name: &str, engine: Arc<dyn MeetingSttEngine>) {
+        self.engines
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push((provider_name.to_string(), engine));
+    }
+
+    fn resolve(&self, provider_name: &str) -> Arc<dyn MeetingSttEngine> {
+        self.engines
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter()
+            .find(|(name, _)| name == provider_name)
+            .map(|(_, engine)| Arc::clone(engine))
+            .unwrap_or_else(|| Arc::clone(&self.fallback))
+    }
+}
+
+impl MeetingSttEngine for RoutingMeetingSttEngine {
+    fn transcribe(
+        &self,
+        ctx: &JobContext,
+        audio: &[f32],
+    ) -> Result<Vec<EngineSegment>, EngineError> {
+        self.resolve(&ctx.provider_name).transcribe(ctx, audio)
+    }
+
+    fn model_label(&self) -> String {
+        "routed".to_string()
     }
 }
 
@@ -377,30 +491,46 @@ impl MeetingTranscriptionQueue {
             return Ok(Vec::new());
         }
 
-        let text = self
-            .engine
-            .transcribe(audio)
-            .map_err(|e| JobFailure::Transient(format!("{e:#}")))?;
-        let text = text.trim();
-        if text.is_empty() {
+        let ctx = JobContext {
+            provider_name: job.provider.clone(),
+            language: job
+                .config_snapshot
+                .get("language")
+                .and_then(|value| value.as_str())
+                .map(str::to_string),
+        };
+        let engine_segments = self.engine.transcribe(&ctx, &audio).map_err(|e| match e {
+            EngineError::Permanent(message) => JobFailure::Permanent(message),
+            EngineError::Transient(message) => JobFailure::Transient(message),
+        })?;
+        if engine_segments.is_empty() {
             return Ok(Vec::new());
         }
 
-        let sequence = self.next_sequence(&job.meeting_id)?;
-        let draft = NewTranscriptSegment {
-            source: job.source.clone(),
-            start_ms: job.timeline_start_ms,
-            end_ms: job.timeline_end_ms,
-            text: text.to_string(),
-            word_timestamps: None,
-            confidence: None,
-            provider: job.provider.clone(),
-            model_id: Some(self.engine.model_label()),
-            sequence,
-        };
+        let model_label = self.engine.model_label();
+        let mut drafts = Vec::with_capacity(engine_segments.len());
+        for (sequence, segment) in (self.next_sequence(&job.meeting_id)?..).zip(engine_segments) {
+            // Engine offsets are relative to the submitted audio; project them
+            // onto the session timeline and clamp to the job's coverage.
+            let rel_start = segment.start_ms_rel.max(0);
+            let rel_end = segment.end_ms_rel.max(rel_start);
+            let start_ms = (job.timeline_start_ms + rel_start).min(job.timeline_end_ms);
+            let end_ms = (job.timeline_start_ms + rel_end).clamp(start_ms, job.timeline_end_ms);
+            drafts.push(NewTranscriptSegment {
+                source: job.source.clone(),
+                start_ms,
+                end_ms,
+                text: segment.text.trim().to_string(),
+                word_timestamps: None,
+                confidence: segment.confidence,
+                provider: job.provider.clone(),
+                model_id: Some(model_label.clone()),
+                sequence,
+            });
+        }
         let inserted = self
             .store
-            .insert_segments(job.id.clone(), vec![draft])
+            .insert_segments(job.id.clone(), drafts)
             .map_err(JobFailure::Store)?;
         Ok(inserted.iter().map(segment_dto).collect())
     }
@@ -462,7 +592,7 @@ fn redact(message: &str) -> String {
 }
 
 /// Decodes a PCM16 mono WAV written by the recorder into f32 samples.
-fn decode_wav_pcm16_mono(path: &Path) -> Result<Vec<f32>, String> {
+pub(crate) fn decode_wav_pcm16_mono(path: &Path) -> Result<Vec<f32>, String> {
     let reader = hound::WavReader::open(path).map_err(|e| format!("open failed: {e}"))?;
     let spec = reader.spec();
     if spec.channels != 1 {
@@ -578,7 +708,7 @@ mod tests {
             Self::default().with_scripted(vec![Ok(text.to_string())])
         }
 
-        fn with_scripted(mut self, script: Vec<Result<String, String>>) -> Self {
+        fn with_scripted(self, script: Vec<Result<String, String>>) -> Self {
             *self.results.lock().expect("results") = script.into_iter().collect();
             self
         }
@@ -603,12 +733,31 @@ mod tests {
     }
 
     impl MeetingSttEngine for FakeEngine {
-        fn transcribe(&self, _audio: Vec<f32>) -> anyhow::Result<String> {
+        fn transcribe(
+            &self,
+            _ctx: &JobContext,
+            audio: &[f32],
+        ) -> Result<Vec<EngineSegment>, EngineError> {
             self.calls.fetch_add(1, Ordering::SeqCst);
-            match self.results.lock().expect("results").pop_front() {
+            let text = match self.results.lock().expect("results").pop_front() {
                 Some(Ok(text)) => Ok(text),
-                Some(Err(err)) => Err(anyhow::anyhow!(err)),
+                Some(Err(err)) => Err(err),
                 None => Ok("fallback".to_string()),
+            };
+            match text {
+                Ok(text) => {
+                    let text = text.trim();
+                    if text.is_empty() {
+                        return Ok(Vec::new());
+                    }
+                    Ok(vec![EngineSegment {
+                        start_ms_rel: 0,
+                        end_ms_rel: (audio.len() as i64) * 1000 / 16_000,
+                        text: text.to_string(),
+                        confidence: None,
+                    }])
+                }
+                Err(err) => Err(EngineError::Transient(err)),
             }
         }
 
@@ -709,7 +858,7 @@ mod tests {
             bits_per_sample: 16,
             sample_format: hound::SampleFormat::Int,
         };
-        let mut writer = hound::WavWriter::create(&path, spec).expect("writer");
+        let mut writer = hound::WavWriter::create(path, spec).expect("writer");
         for index in 0..sample_count {
             let value = ((index % 16000) as i16).wrapping_mul(2);
             writer.write_sample(value).expect("sample");
@@ -900,8 +1049,12 @@ mod tests {
 
         struct AlwaysBroken;
         impl MeetingSttEngine for AlwaysBroken {
-            fn transcribe(&self, _audio: Vec<f32>) -> anyhow::Result<String> {
-                Err(anyhow::anyhow!("engine broken"))
+            fn transcribe(
+                &self,
+                _ctx: &JobContext,
+                _audio: &[f32],
+            ) -> Result<Vec<EngineSegment>, EngineError> {
+                Err(EngineError::Transient("engine broken".to_string()))
             }
             fn model_label(&self) -> String {
                 "broken".to_string()
@@ -1205,6 +1358,122 @@ mod tests {
         writer.finalize().expect("finalize");
 
         assert!(decode_wav_pcm16_mono(&path).is_err());
+    }
+
+    #[test]
+    fn permanent_engine_errors_fail_immediately_without_retry() {
+        let (_dir, store) = temp_store();
+        let audio_dir = tempfile::tempdir().expect("audio root");
+        let session = store
+            .create_session(session_draft("BadKey"))
+            .expect("session");
+
+        let key = "audio/000009-microphone.wav";
+        write_wav(
+            &audio_dir
+                .path()
+                .join(session.envelope.id.0.as_str())
+                .join(key),
+            2_000,
+        );
+        let chunk = ready_chunk(&store, &session.envelope.id, 9, key, 2_000);
+
+        store
+            .enqueue_stt_job(NewSttJob {
+                meeting_id: session.envelope.id.clone(),
+                chunk_ids: vec![chunk.envelope.id.clone()],
+                source: "microphone".to_string(),
+                timeline_start_ms: 480_000,
+                timeline_end_ms: 540_000,
+                provider: "Azure Speech".to_string(),
+                config_snapshot: serde_json::json!({ "kind": "cloud" }),
+                next_attempt_at: None,
+            })
+            .expect("enqueue");
+
+        struct InvalidApiKey;
+        impl MeetingSttEngine for InvalidApiKey {
+            fn transcribe(
+                &self,
+                _ctx: &JobContext,
+                _audio: &[f32],
+            ) -> Result<Vec<EngineSegment>, EngineError> {
+                Err(EngineError::Permanent("invalid api key".to_string()))
+            }
+            fn model_label(&self) -> String {
+                "azure-fast-transcription".to_string()
+            }
+        }
+
+        let paused = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let delegate = Arc::new(RecordingDelegate::default());
+        // Zero backoff would make a transient failure instantly claimable —
+        // the assertion below proves the failure was treated as permanent.
+        let queue = queue_for(
+            Arc::clone(&store),
+            audio_dir.path().to_path_buf(),
+            Arc::new(InvalidApiKey),
+            paused,
+            test_config(3, 0),
+            Arc::clone(&delegate),
+        );
+
+        assert!(queue.poll_once());
+        assert!(!queue.poll_once(), "permanent errors must not be retried");
+    }
+
+    #[test]
+    fn routing_dispatches_by_provider_name_with_local_fallback() {
+        struct Named(&'static str);
+        impl MeetingSttEngine for Named {
+            fn transcribe(
+                &self,
+                _ctx: &JobContext,
+                audio: &[f32],
+            ) -> Result<Vec<EngineSegment>, EngineError> {
+                Ok(vec![EngineSegment {
+                    start_ms_rel: 0,
+                    end_ms_rel: (audio.len() as i64) * 1000 / 16_000,
+                    text: self.0.to_string(),
+                    confidence: None,
+                }])
+            }
+            fn model_label(&self) -> String {
+                self.0.to_string()
+            }
+        }
+
+        let fallback = Arc::new(Named("local"));
+        let routing = Arc::new(RoutingMeetingSttEngine::new(fallback));
+        routing.register("Azure Speech", Arc::new(Named("azure")));
+
+        let audio = vec![0.0f32; 16_000];
+        let azure_ctx = JobContext {
+            provider_name: "Azure Speech".to_string(),
+            language: None,
+        };
+        let local_ctx = JobContext {
+            provider_name: "Local".to_string(),
+            language: None,
+        };
+        let unknown_ctx = JobContext {
+            provider_name: "Not Registered".to_string(),
+            language: None,
+        };
+
+        assert_eq!(
+            routing.transcribe(&azure_ctx, &audio).expect("ok")[0].text,
+            "azure"
+        );
+        assert_eq!(
+            routing.transcribe(&local_ctx, &audio).expect("ok")[0].text,
+            "local",
+            "unregistered names fall back to the local engine"
+        );
+        assert_eq!(
+            routing.transcribe(&unknown_ctx, &audio).expect("ok")[0].text,
+            "local"
+        );
     }
 
     #[test]

@@ -799,7 +799,9 @@ impl MeetingEnvironment for AppEnvironment {
 
     fn provider(&self) -> ProviderSnapshot {
         let settings = crate::settings::get_settings(&self.app);
-        let (kind, name, configured) = match settings.speech_input_provider {
+        // Meetings pick their STT provider independently of dictation
+        // (plan §13 Phase 6 acceptance).
+        let (kind, name, configured) = match settings.meeting_stt_provider {
             crate::settings::SpeechInputProvider::Local => (
                 "local",
                 "Local".to_string(),
@@ -1984,6 +1986,40 @@ impl MeetingManager {
         self.snapshot(meeting_id)
     }
 
+    /// The provider snapshot persisted at session creation, so a meeting keeps
+    /// its STT backend even if global settings change mid-recording. Falls
+    /// back to the live environment when the row predates the column.
+    fn session_provider(&self, meeting_id: &str) -> (String, serde_json::Value) {
+        let stored: Option<(String, String, Option<String>)> = {
+            let conn = lock(&self.conn);
+            conn.query_row(
+                "SELECT stt_provider, provider_config_snapshot, language
+                 FROM meeting_sessions WHERE id = ?1",
+                params![meeting_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get::<_, Option<String>>(2)?)),
+            )
+            .optional()
+            .unwrap_or(None)
+        };
+        match stored {
+            Some((name, snapshot_raw, language)) => {
+                let mut config: serde_json::Value =
+                    serde_json::from_str(&snapshot_raw).unwrap_or(serde_json::json!({}));
+                if let Some(language) = language.filter(|l| !l.is_empty()) {
+                    config["language"] = serde_json::Value::String(language);
+                }
+                (name, config)
+            }
+            None => {
+                let provider = self.env.provider();
+                (
+                    provider.name.clone(),
+                    serde_json::json!({ "kind": provider.kind }),
+                )
+            }
+        }
+    }
+
     /// Enqueues one STT job per not-yet-covered `ready` chunk (plan line 1193:
     /// segment-wise processing; STT §3 idempotent enqueue).
     ///
@@ -2007,7 +2043,7 @@ impl MeetingManager {
         if rows.is_empty() {
             return Ok(0);
         }
-        let provider = self.env.provider();
+        let (provider_name, provider_config) = self.session_provider(meeting_id);
         let mut enqueued = 0usize;
         for (id, source, start, end) in rows {
             self.store.enqueue_stt_job(NewSttJob {
@@ -2016,8 +2052,8 @@ impl MeetingManager {
                 source,
                 timeline_start_ms: start,
                 timeline_end_ms: end,
-                provider: provider.name.clone(),
-                config_snapshot: serde_json::json!({ "kind": provider.kind }),
+                provider: provider_name.clone(),
+                config_snapshot: provider_config.clone(),
                 next_attempt_at: None,
             })?;
             enqueued += 1;
@@ -2056,15 +2092,15 @@ impl MeetingManager {
         if covered {
             return Ok(false);
         }
-        let provider = self.env.provider();
+        let (provider_name, provider_config) = self.session_provider(meeting_id);
         self.store.enqueue_stt_job(NewSttJob {
             meeting_id: StoreUuid(meeting_id.to_string()),
             chunk_ids: vec![StoreUuid(chunk_id)],
             source: source.to_string(),
             timeline_start_ms: start,
             timeline_end_ms: end,
-            provider: provider.name.clone(),
-            config_snapshot: serde_json::json!({ "kind": provider.kind }),
+            provider: provider_name,
+            config_snapshot: provider_config,
             next_attempt_at: None,
         })?;
         Ok(true)
