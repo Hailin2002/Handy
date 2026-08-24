@@ -1237,5 +1237,26 @@
     "noMeetings": "No meetings assigned yet",
     "unlink": "Unlink",
     "assignFromInbox": "Assign a meeting from the inbox"
+  },
+  "whatsapp": {
+    "title": "Import WhatsApp chat",
+    "titlePlaceholder": "Source title (e.g. team name)",
+    "contentPlaceholder": "Paste the exported chat text here�",
+    "dateOrderLabel": "Date order (only needed if ambiguous)",
+    "dateOrderAuto": "Detect automatically",
+    "dateOrderDayFirst": "Day first (25.12.24)",
+    "dateOrderMonthFirst": "Month first (12.25.24)",
+    "preview": "Analyse",
+    "import": "Import",
+    "previewFailed": "Could not analyse the chat text",
+    "importFailed": "Import failed",
+    "imported": "Imported {{count}} messages",
+    "alreadyImported": "This export was already imported � nothing duplicated.",
+    "previewMessages_one": "{{count}} message",
+    "previewMessages_other": "{{count}} messages",
+    "previewParticipants_one": "{{count}} participant",
+    "previewParticipants_other": "{{count}} participants",
+    "previewMedia": "{{count}} media placeholders kept as markers",
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
   }
 }

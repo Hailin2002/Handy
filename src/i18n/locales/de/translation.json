@@ -1237,5 +1237,26 @@
     "noMeetings": "Noch keine Meetings zugeordnet",
     "unlink": "Trennen",
     "assignFromInbox": "Meeting aus dem Eingang zuordnen"
+  },
+  "whatsapp": {
+    "title": "WhatsApp-Chat importieren",
+    "titlePlaceholder": "Quellentitel (z. B. Teamname)",
+    "contentPlaceholder": "Exportierten Chattext hier einf�gen�",
+    "dateOrderLabel": "Datumsreihenfolge (nur bei Mehrdeutigkeit n�tig)",
+    "dateOrderAuto": "Automatisch erkennen",
+    "dateOrderDayFirst": "Tag zuerst (25.12.24)",
+    "dateOrderMonthFirst": "Monat zuerst (12.25.24)",
+    "preview": "Analysieren",
+    "import": "Importieren",
+    "previewFailed": "Chattext konnte nicht analysiert werden",
+    "importFailed": "Import fehlgeschlagen",
+    "imported": "{{count}} Nachrichten importiert",
+    "alreadyImported": "Dieser Export wurde bereits importiert � nichts wurde dupliziert.",
+    "previewMessages_one": "{{count}} Nachricht",
+    "previewMessages_other": "{{count}} Nachrichten",
+    "previewParticipants_one": "{{count}} Teilnehmer",
+    "previewParticipants_other": "{{count}} Teilnehmer",
+    "previewMedia": "{{count}} Medienpl�tze als Marker erhalten",
+    "ambiguousDates": "In diesem Export lassen sich Tag und Monat nicht unterscheiden. Bitte w�hle die Reihenfolge explizit, bevor du importierst."
   }
 }

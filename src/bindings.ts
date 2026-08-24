@@ -1339,6 +1339,17 @@ async sourceItems(sourceId: string) : Promise<Result<SourceItem[], string>> {
 }
 },
 /**
+ * Phase 9 wizard preview: parse stats without persisting anything.
+ */
+async whatsappPreviewText(content: string, dateOrder: string | null) : Promise<Result<ChatPreviewDto, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("whatsapp_preview_text", { content, dateOrder }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Manual task creation (origin `manual`, immediately accepted).
  */
 async taskCreateManual(projectId: string, title: string, description: string | null) : Promise<Result<ProjectTask, string>> {
@@ -1524,6 +1535,10 @@ export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AvailableAccelerators = { transcribe: string[]; ort: string[]; gpu_devices: GpuDeviceOption[] }
 export type AzureSpeechAuth = { token: string; region: string; language: string; stable_partial_threshold: number; segmentation_silence_ms: number; deepl_enabled: boolean; translation_delay_ms: number }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
+/**
+ * Serializable preview for the import wizard.
+ */
+export type ChatPreviewDto = { participants: string[]; message_count: number; media_count: number; date_order_ambiguous: boolean }
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
 /**

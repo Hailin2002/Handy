@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { WhatsAppImportDialog } from "@/components/sources/WhatsAppImportDialog";
 import { Plus, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -45,6 +46,7 @@ export const MeetingsPage: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [setupSession, setSetupSession] = useState<MeetingSession | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const createInFlight = useRef(false);
 
   const liveSession = useMeetingStore((state) => state.session);
@@ -242,11 +244,22 @@ export const MeetingsPage: React.FC = () => {
 
       <header className="flex w-full items-center justify-between gap-4">
         <h2 className="text-lg font-semibold">{t("nav.meetings")}</h2>
-        <Button onClick={createMeeting} disabled={creating}>
-          <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
-          {t("meetings.newMeeting")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setImportOpen(true)}>
+            {t("whatsapp.title")}
+          </Button>
+          <Button onClick={createMeeting} disabled={creating}>
+            <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
+            {t("meetings.newMeeting")}
+          </Button>
+        </div>
       </header>
+
+      <WhatsAppImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => void refresh()}
+      />
 
       <div className="flex items-center gap-2">
         <Input
