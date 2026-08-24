@@ -28,14 +28,311 @@
     "settings": "Einstellungen",
     "about": "Hilfe & Über",
     "activeMeeting": "Aufnahme läuft · {{duration}}",
-    "meetingsEmptyBody": "Meetings folgen mit dem Meeting-Modus. Diktieren funktioniert wie gewohnt.",
     "projectsEmptyBody": "Projekte bündeln Status, Aufgaben, Meetings und importierte Quellen."
   },
   "meetings": {
     "emptyBenefit": "Nehmen Sie Meetings auf und erhalten Sie Transkripte und Zusammenfassungen, ohne die App zu verlassen.",
     "newMeeting": "Neues Meeting",
     "importAudio": "Audiodatei importieren",
-    "privacyLocal": "Standard: lokal auf diesem Gerät"
+    "privacyLocal": "Standard: lokal auf diesem Gerät",
+    "searchPlaceholder": "Meetings durchsuchen",
+    "search": "Suchen",
+    "backToList": "Zurück zu den Meetings",
+    "saveTitle": "Titel speichern",
+    "saveError": "Der Titel konnte nicht gespeichert werden. Bitte erneut versuchen.",
+    "createError": "Das Meeting konnte nicht erstellt werden. Bitte erneut versuchen.",
+    "deleteError": "Das Meeting konnte nicht gelöscht werden. Bitte erneut versuchen.",
+    "deleteConfirmTitle": "Dieses Meeting löschen?",
+    "deleteConfirmBody": "Damit werden das Meeting samt Transkript und Zusammenfassung endgültig gelöscht.",
+    "titleInputLabel": "Meeting-Titel",
+    "statusLabel": "Status",
+    "createdLabel": "Erstellt",
+    "notFound": "Dieses Meeting wurde nicht gefunden.",
+    "loadError": "Meetings konnten nicht geladen werden.",
+    "stateDraft": "Entwurf",
+    "stateRecording": "Aufnahme",
+    "stateCompleted": "Abgeschlossen",
+    "stateOther": "In Verarbeitung",
+    "badgeRecording": "Aufnahme",
+    "badgeStopping": "Stoppen",
+    "badgeInterrupted": "Unterbrochen",
+    "badgeAttention": "Aufmerksamkeit nötig",
+    "badgeComplete": "Abgeschlossen",
+    "badgeProcessing": "In Verarbeitung",
+    "badgePaused": "Pausiert"
+  },
+  "meeting": {
+    "actions": {
+      "startMeeting": "Meeting starten",
+      "pause": "Pause",
+      "resume": "Fortsetzen",
+      "endMeeting": "Meeting beenden",
+      "keepRecording": "Weiter aufnehmen",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "tryAgain": "Erneut versuchen",
+      "switchDevice": "Gerät wechseln",
+      "openSettings": "Einstellungen öffnen",
+      "openSystemSettings": "Systemeinstellungen öffnen",
+      "reconnect": "Neu verbinden",
+      "recordMicOnly": "Nur Mikrofon aufnehmen",
+      "continueWithoutSystemAudio": "Ohne Systemaudio fortfahren",
+      "workInBackground": "Im Hintergrund weiterarbeiten",
+      "retryFailedSegments": "Fehlerhafte Abschnitte erneut versuchen",
+      "openMeeting": "Meeting öffnen",
+      "deleteRecording": "Aufnahme löschen",
+      "recover": "Wiederherstellen und verarbeiten",
+      "decideLater": "Später entscheiden",
+      "testSystemAudio": "Systemaudio testen",
+      "jumpToLatest": "Zum aktuellen Text",
+      "cancelMeetingStart": "Meetingstart abbrechen",
+      "useLocal": "Lokal verarbeiten",
+      "finishDictation": "Diktat beenden",
+      "resumeWithDevices": "Mit diesen Geräten fortfahren",
+      "confirmDelete": "Ich verstehe — endgültig löschen"
+    },
+    "session": {
+      "draft": {
+        "hint": "Es wird noch nichts aufgenommen."
+      },
+      "starting": {
+        "title": "Meeting wird gestartet…",
+        "body": "Mikrofon und Systemaudio werden geprüft…"
+      },
+      "recording": {
+        "title": "Aufnahme läuft",
+        "saved": "Audio gespeichert",
+        "provider": {
+          "local": "Lokal",
+          "cloud": "Cloud ({{provider}})"
+        }
+      },
+      "paused": {
+        "title": "Pausiert",
+        "body": "Während der Pause wird kein Audio gespeichert oder übertragen."
+      },
+      "stopping": {
+        "title": "Aufnahme wird beendet…",
+        "body": "Die Audiodateien werden finalisiert. Das dauert nur einen Moment.",
+        "done": "Aufnahme beendet — Audio gespeichert."
+      },
+      "completed": {
+        "title": "Meeting abgeschlossen",
+        "saved": "Transkript und Zusammenfassung sind auf diesem Gerät gespeichert."
+      },
+      "cancelled": {
+        "title": "Aufnahme abgebrochen",
+        "body": "Das bisher aufgenommene Audio wurde behalten. Es wurde nichts gelöscht."
+      },
+      "micOnly": {
+        "badge": "Nur Mikrofon — Systemaudio wird nicht aufgenommen"
+      },
+      "durationLabel": "Aufnahmedauer {{duration}}"
+    },
+    "consent": {
+      "beforeStart": {
+        "title": "Bevor du aufnimmst",
+        "body": "Die Aufnahme eines Gesprächs erfordert die Einwilligung aller Beteiligten. Speak zeigt während des gesamten Meetings einen Aufnahmehinweis und ist kein heimlicher Recorder.",
+        "acknowledge": "Alle Beteiligten haben zugestimmt"
+      },
+      "indicator": {
+        "label": "Dieses Meeting wird aufgenommen."
+      }
+    },
+    "cloud": {
+      "notice": {
+        "azure": {
+          "title": "Cloud-Transkription ausgewählt",
+          "body": "Audio von Mikrofon und Systemaudio wird zu Microsoft Azure hochgeladen und dort transkribiert. Bei lokaler Verarbeitung verlässt nichts dieses Gerät."
+        }
+      },
+      "active": {
+        "azure": "Audio wird zu Azure hochgeladen.",
+        "azureProcessing": "Audioabschnitte werden zur Transkription zu Azure hochgeladen.",
+        "llm": "Transkripttext wird zur Erstellung der Zusammenfassung an {{provider}} gesendet."
+      }
+    },
+    "preflight": {
+      "title": "Startprüfungen",
+      "description": "Speak prüft Geräte, Speicherplatz und Transkription, bevor die Aufnahme beginnt.",
+      "recheck": "Erneut prüfen",
+      "blocked": "Behebe die unten markierten Prüfungen vor dem Start.",
+      "unavailable": "Speak kann die Startprüfungen gerade nicht ausführen, deshalb ist keine Aufnahme möglich.",
+      "pending": "Startprüfungen laufen…",
+      "status": {
+        "ok": "Funktioniert",
+        "warning": "Prüfen",
+        "error": "Nicht bereit",
+        "checking": "Wird geprüft…"
+      },
+      "row": {
+        "microphone": "Mikrofon",
+        "systemAudio": "Systemaudio",
+        "transcription": "Transkription",
+        "language": "Sprache",
+        "disk": "Speicherplatz",
+        "permission": "Berechtigungen"
+      }
+    },
+    "setup": {
+      "title": "Meeting starten",
+      "description": "Gib dem Meeting einen Namen und starte, wenn die Prüfungen unten stimmen.",
+      "summaryToggle": "Nach dem Meeting zusammenfassen",
+      "summaryHint": "Die Zusammenfassung entsteht, sobald das Transkript vollständig ist.",
+      "storageHint": "Pro Stunde Mikrofon und Systemaudio werden rund 0,25 GB Speicher belegt.",
+      "moreSettings": "Weitere Einstellungen"
+    },
+    "live": {
+      "heading": "Live-Transkript",
+      "transcriptEmpty": "Fertige Transkriptabschnitte erscheinen hier, während das Meeting läuft.",
+      "backlog": "{{count}} Abschnitte warten",
+      "status": {
+        "listening": "Hört zu",
+        "transcribing": "Abschnitt wird transkribiert",
+        "behind": "Verarbeitung liegt zurück"
+      },
+      "levels": {
+        "microphone": "Mikrofonpegel",
+        "system": "Systemaudiopegel",
+        "value": "{{label}}: {{percent}} %"
+      },
+      "stopConfirm": {
+        "title": "Meeting beenden?",
+        "body": "Die Aufnahme wird finalisiert und die Verarbeitung startet. Nichts bisher Aufgenommenes wird gelöscht."
+      }
+    },
+    "processing": {
+      "title": "Meeting wird verarbeitet",
+      "closeOk": "Du kannst dieses Fenster schließen.",
+      "done": "Meeting fertig",
+      "summarizing": "Zusammenfassung wird erstellt…",
+      "backlog": "{{count}} Abschnitte warten",
+      "step": {
+        "saved": "Aufnahme sicher gespeichert",
+        "prepared": "{{done}} von {{total}} Audioabschnitten vorbereitet",
+        "transcribed": "{{done}} von {{total}} Abschnitten transkribiert",
+        "summary": "Zusammenfassung",
+        "summarySkipped": "Zusammenfassung ist für dieses Meeting ausgeschaltet"
+      },
+      "state": {
+        "pending": "Wartet",
+        "running": "Läuft",
+        "done": "Fertig"
+      },
+      "failed": "{{count}} Abschnitte sind fehlgeschlagen und können erneut versucht werden."
+    },
+    "recovery": {
+      "heading": "Unterbrochene Meetings",
+      "title": "Meetingaufnahme wiederherstellen?",
+      "body": "Speak wurde während „{{title}}“ unerwartet geschlossen. Das bis dahin aufgenommene Audio wurde gespeichert und kann verarbeitet werden.",
+      "counts": "{{recovered}} Abschnitte wiederhergestellt, {{damaged}} beschädigt.",
+      "causeCrash": "Durch unerwartetes Schließen unterbrochen",
+      "causeSleepWake": "Unterbrochen, weil dieser PC in den Ruhezustand ging",
+      "causeUnknown": "Der Grund der Unterbrechung ist unbekannt"
+    },
+    "errors": {
+      "generic": {
+        "title": "Etwas benötigt deine Aufmerksamkeit",
+        "body": "Das Meeting konnte nicht fortgesetzt werden. Versuche es erneut oder öffne die Einstellungen."
+      },
+      "backendUnavailable": {
+        "title": "Meetingaufnahme ist noch nicht verfügbar",
+        "body": "Dieser Build kann keine Meetings aufnehmen, weil der Aufnahmedienst fehlt. Bereits gespeicherte Daten bleiben unberührt."
+      },
+      "recoverable": {
+        "title": "Etwas benötigt deine Aufmerksamkeit"
+      },
+      "micLost": {
+        "title": "Mikrofon getrennt",
+        "body": "Dein Mikrofon funktioniert nicht mehr. Systemaudio wird weiter aufgenommen."
+      },
+      "systemLost": {
+        "title": "Systemaudio gestoppt",
+        "body": "Das Ausgabegerät liefert kein Audio mehr. Dein Mikrofon wird weiter aufgenommen."
+      },
+      "noLoopback": {
+        "title": "Systemaudio kann nicht aufgenommen werden",
+        "body": "Speak kann dieses Ausgabegerät nicht mithören. Du kannst nur das Mikrofon aufnehmen."
+      },
+      "exclusiveMode": {
+        "title": "Ausgabegerät ist belegt",
+        "body": "Das Ausgabegerät läuft im Exclusive-Mode, deshalb kann Systemaudio nicht aufgenommen werden."
+      },
+      "diskFull": {
+        "title": "Aufnahme gestoppt — Speicher voll",
+        "body": "Speak hat die Aufnahme gestoppt, um deine Daten zu schützen. Alles bisher Aufgenommene ist gespeichert."
+      },
+      "cloudUnreachable": {
+        "title": "Cloud-Transkription nicht erreichbar",
+        "body": "Die Aufnahme läuft lokal weiter. Abschnitte werden transkribiert, sobald der Dienst wieder antwortet."
+      },
+      "cloudConfig": {
+        "title": "Cloud-Transkription ist nicht konfiguriert",
+        "body": "Die gespeicherten Zugangsdaten wurden abgelehnt. Die Aufnahme läuft lokal weiter."
+      },
+      "micPermission": {
+        "title": "Mikrofonzugriff erforderlich",
+        "body": "Speak braucht Mikrofonzugriff, um Meetings aufzunehmen. Erlaube den Zugriff in den Datenschutzeinstellungen des Systems."
+      },
+      "missingKey": {
+        "title": "Einrichtung unvollständig",
+        "body": "Die Transkription ist noch nicht konfiguriert. Öffne die Einstellungen, um die Einrichtung abzuschließen."
+      },
+      "slept": {
+        "title": "Aufnahme wurde unterbrochen",
+        "body": "Dieser PC ging in den Ruhezustand. Die Aufnahme wurde sicher gestoppt und kann fortgesetzt werden."
+      },
+      "startFailed": {
+        "title": "Das Meeting konnte nicht gestartet werden",
+        "body": "Es wurde nichts aufgenommen. Prüfe die Geräte und versuche es erneut."
+      },
+      "pauseFailed": {
+        "title": "Das Meeting konnte nicht pausiert werden",
+        "body": "Die Aufnahme läuft weiter. Versuche es erneut."
+      },
+      "resumeFailed": {
+        "title": "Das Meeting konnte nicht fortgesetzt werden",
+        "body": "Das Meeting bleibt pausiert. Prüfe die Geräte und versuche es erneut."
+      },
+      "stopFailed": {
+        "title": "Das Meeting konnte nicht beendet werden",
+        "body": "Die Aufnahme läuft weiter und es ging nichts verloren. Versuche es erneut."
+      },
+      "cancelFailed": {
+        "title": "Das Meeting konnte nicht abgebrochen werden",
+        "body": "Versuche es erneut oder beende das Meeting stattdessen."
+      },
+      "retryFailed": {
+        "title": "Die Abschnitte konnten nicht erneut eingereiht werden",
+        "body": "Das Audio ist weiterhin gespeichert. Versuche es erneut."
+      },
+      "recoveryFailed": {
+        "title": "Die Aufnahme konnte nicht wiederhergestellt werden",
+        "body": "Das gespeicherte Audio bleibt unberührt. Versuche es erneut oder öffne das Meeting."
+      },
+      "preflightFailed": {
+        "title": "Die Startprüfungen konnten nicht abgeschlossen werden",
+        "body": "Führe die Prüfungen erneut aus, bevor du das Meeting startest."
+      }
+    },
+    "warnings": {
+      "diskLow": {
+        "title": "Speicher fast voll",
+        "body": "Ein einstündiges Meeting mit Mikrofon und Systemaudio braucht rund 0,25 GB."
+      },
+      "silence": {
+        "title": "Kein Systemton erkannt",
+        "body": "Das gewählte Ausgabegerät ist stumm. Wenn du Ton über ein anderes Gerät hörst, ist möglicherweise das falsche ausgewählt."
+      },
+      "backlog": {
+        "title": "Verarbeitung liegt zurück",
+        "body": "Abschnitte warten auf der Festplatte und werden nach dem Meeting transkribiert. Es geht nichts verloren."
+      },
+      "devicesChanged": {
+        "title": "Geräte haben sich während der Pause geändert",
+        "body": "Im Transkript wird ein neuer Quellenabschnitt begonnen."
+      }
+    }
   },
   "onboarding": {
     "subtitle": "Wähle ein Transkriptionsmodell, um loszulegen",
@@ -727,6 +1024,37 @@
     "tabs": {
       "modelsProviders": "Modelle & Provider",
       "meetingsEmptyBody": "Meeting-Einstellungen folgen mit dem Meeting-Modus."
+    },
+    "meetings": {
+      "shortcut": {
+        "title": "Meeting-Tastenkürzel",
+        "description": "Tastenkürzel zum Starten, Beenden und Pausieren von Meetings. Änderungen werden erst nach dem Ende des laufenden Meetings wirksam.",
+        "unassigned": "Nicht belegt",
+        "recordButtonAria": "{{name}}-Tastenkürzel ändern, aktuell {{shortcut}}. Klicken, um eine neue Tastenkombination aufzunehmen.",
+        "pressKeys": "Tasten drücken…",
+        "escapeHint": "Tastenkürzel wird aufgenommen. Drücken Sie Escape zum Abbrechen.",
+        "reset": "Zurücksetzen",
+        "disable": "Deaktivieren",
+        "test": "Shortcut testen",
+        "testing": "Wird getestet…",
+        "testOk": "{{shortcut}} kann registriert werden.",
+        "testFail": "{{shortcut}} kann nicht registriert werden: {{error}}",
+        "errors": {
+          "singleKey": "Meeting-Tastenkürzel bestehen aus mindestens einer Modifikatortaste plus einer weiteren Taste, z. B. Strg+Alt+Leertaste.",
+          "conflict": "Dieses Tastenkürzel ist bereits belegt durch:",
+          "osRejected": "Das Betriebssystem kann dieses Tastenkürzel nicht registrieren: {{error}} Es wurde nichts gespeichert."
+        },
+        "actions": {
+          "startStop": {
+            "name": "Meeting starten/beenden",
+            "description": "Startet ein Meeting nach kurzem Countdown; erneutes Drücken fragt vor dem Beenden nach."
+          },
+          "pauseResume": {
+            "name": "Meeting pausieren/fortsetzen",
+            "description": "Pausiert und setzt die aktuelle Meeting-Aufnahme fort."
+          }
+        }
+      }
     }
   },
   "footer": {
@@ -762,6 +1090,9 @@
   "dictation": {
     "title": "Diktieren",
     "subtitle": "Sprich überall — dein Gesprochenes wird in die aktive App geschrieben.",
+    "config": {
+      "title": "Aktuelle Konfiguration"
+    },
     "status": {
       "title": "Status",
       "ready": "Bereit",

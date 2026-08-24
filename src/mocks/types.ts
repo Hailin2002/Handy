@@ -1,4 +1,8 @@
 import type { AppSettings, ModelInfo } from "@/bindings";
+import type {
+  MeetingPreflightReport,
+  MeetingRecoveryOffer,
+} from "@/lib/types/meeting";
 
 /**
  * Browser-side mock layer for the Tauri IPC bridge used by Playwright tests.
@@ -36,6 +40,10 @@ export interface SpeakMockConfig {
   appVersion?: string;
   /** System locale reported by the os plugin. */
   locale?: string;
+  /** Report returned by `preflight_meeting` (defaults to all-green). */
+  meetingPreflight?: MeetingPreflightReport;
+  /** Pending crash-recovery offers served by `meeting_list_recoveries`. */
+  meetingRecoveries?: MeetingRecoveryOffer[];
 }
 
 /**

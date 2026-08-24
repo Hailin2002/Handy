@@ -1,113 +1,107 @@
-// Standalone render + type assertions for the MeetingList §6.5 first-run
-// empty state (no JS unit-test runner in this repo). Run with:
-//   node_modules\.bin\esbuild.cmd src/components/meetings/meetingList.render.test.tsx --bundle --format=esm --platform=node "--define:import.meta.env={}" "--banner:js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);" --outfile=$env:TEMP\meetingList.render.test.mjs --log-level=warning
-//   node $env:TEMP\meetingList.render.test.mjs
-// (ESM is required because productNav.ts reads `import.meta.env`; the define
-// stubs Vite's env object as empty, i.e. the build flag is off in tests, and
-// the banner gives the bundled react-dom CJS deps a working `require`.)
-import assert from "node:assert";
+// Render + type assertions for the MeetingList §6.5 first-run empty state.
+// Runs under vitest (`npx vitest run`).
+import { describe, it, expect, beforeAll } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import { MeetingList } from "./MeetingList";
 
-i18next.use(initReactI18next).init({
-  lng: "en",
-  initImmediate: false,
-  resources: {
-    en: {
-      translation: {
-        nav: { meetings: "Meetings" },
-        meetings: {
-          emptyBenefit:
-            "Record your meetings and get transcripts and summaries without leaving the app.",
-          newMeeting: "New Meeting",
-          importAudio: "Import audio file",
-          privacyLocal: "Default: local on this device",
+beforeAll(async () => {
+  await i18next.use(initReactI18next).init({
+    lng: "en",
+    initImmediate: false,
+    resources: {
+      en: {
+        translation: {
+          nav: { meetings: "Meetings" },
+          meetings: {
+            emptyBenefit:
+              "Record your meetings and get transcripts and summaries without leaving the app.",
+            newMeeting: "New Meeting",
+            importAudio: "Import audio file",
+            privacyLocal: "Default: local on this device",
+          },
         },
       },
     },
-  },
+  });
 });
 
 const render = (props: Parameters<typeof MeetingList>[0]) =>
   renderToStaticMarkup(<MeetingList {...props} />);
 
-// --- G3: hidden unless the meeting feature flag is enabled ------------------
+describe("MeetingList feature flag (G3)", () => {
+  it("renders nothing with the flag off", () => {
+    expect(render({ flagEnabled: false })).toBe("");
+  });
 
-assert.strictEqual(
-  render({ flagEnabled: false }),
-  "",
-  "with the flag off the component must render nothing",
-);
+  it("follows MEETING_MODE_ENABLED (on by default) with no override", () => {
+    // The production default (flagEnabled omitted) resolves to the real build
+    // flag; since the wave-1 delivery the flag defaults to ON (productNav.ts),
+    // so the component must render the §6.5 state without any explicit
+    // override.
+    const defaultFlagHtml = render({});
+    expect(defaultFlagHtml).not.toBe("");
+    // the default-flag render must show the primary action
+    expect(defaultFlagHtml.includes("New Meeting")).toBe(true);
+  });
+});
 
-// The production default (flagEnabled omitted) resolves to the real build
-// flag; in this bundle VITE_ENABLE_MEETING_MODE is unset, so it must hide.
-const defaultFlagHtml = render({});
-if (defaultFlagHtml !== "") {
-  assert.fail(
-    "with no override the component must follow MEETING_MODE_ENABLED (off in tests)",
-  );
-}
+describe("MeetingList §6.5 empty state (G1/G2)", () => {
+  let html: string;
 
-// --- G1/G2: exactly the §6.5 empty-state elements, via EmptyState ------------
+  beforeAll(() => {
+    html = render({ flagEnabled: true });
+  });
 
-const html = render({ flagEnabled: true });
+  it("renders the §6.5 heading, benefit, primary action and privacy line", () => {
+    expect(html).toMatch(/<h2[^>]*>Meetings<\/h2>/);
+    expect(
+      html.includes(
+        "Record your meetings and get transcripts and summaries without leaving the app.",
+      ),
+    ).toBe(true);
+    expect(html.includes("New Meeting")).toBe(true);
+    expect(html.includes("Default: local on this device")).toBe(true);
+  });
 
-assert.match(html, /<h2[^>]*>Meetings<\/h2>/, "§6.5 heading must render");
-assert.ok(
-  html.includes(
-    "Record your meetings and get transcripts and summaries without leaving the app.",
-  ),
-  "one-sentence benefit description must render",
-);
-assert.ok(html.includes("New Meeting"), "primary action label must render");
-assert.ok(
-  html.includes("Default: local on this device"),
-  "privacy status line must render",
-);
+  it("renders through the shared EmptyState primitive (status role, icon)", () => {
+    expect(html).toMatch(/role="status"/);
+    expect(html.includes("<svg")).toBe(true); // EmptyState renders its icon
+    expect(html.includes('aria-hidden="true"')).toBe(true); // decorative glyphs hidden
+  });
 
-// G2: rendered through the shared EmptyState primitive (status role, icon).
-assert.match(html, /role="status"/, "must use the EmptyState primitive shell");
-assert.ok(html.includes("<svg"), "EmptyState renders its required icon");
-assert.ok(html.includes('aria-hidden="true"'), "decorative glyphs stay hidden");
+  it("renders nothing more: no import action, table or configuration controls", () => {
+    // secondary import action must be flag-gated off by default (§6.5)
+    expect(html.includes("Import audio file")).toBe(false);
+    expect(html.includes("<table")).toBe(false);
+    expect(html.includes("<input")).toBe(false);
+    expect(html.includes("<select")).toBe(false);
+  });
 
-// G1 "nothing more": no secondary import action while flag-gated off,
-// no table, no configuration controls.
-assert.ok(
-  !html.includes("Import audio file"),
-  "secondary import action must be flag-gated off by default (§6.5)",
-);
-assert.ok(!html.includes("<table"), "no empty table (§6.5)");
-assert.ok(!html.includes("<input"), "no configuration inputs (§6.5)");
-assert.ok(!html.includes("<select"), "no configuration selects (§6.5)");
+  it("renders the primary action large (ui/Button lg = min-h-[48px])", () => {
+    const buttonMatch = /<button[^>]*class="([^"]*)"/.exec(html);
+    expect(buttonMatch).toBeTruthy();
+    expect((buttonMatch as RegExpExecArray)[1].includes("min-h-[48px]")).toBe(
+      true,
+    );
+  });
 
-// Large primary action: ui/Button lg = min-h-[48px].
-const buttonMatch = /<button[^>]*class="([^"]*)"/.exec(html);
-assert.ok(buttonMatch, "a button must render");
-assert.ok(
-  buttonMatch[1].includes("min-h-[48px]"),
-  "the primary action must be large (lg)",
-);
+  it("leaks no raw translation keys into markup", () => {
+    expect(html.includes("meetings.")).toBe(false);
+    expect(html.includes("nav.")).toBe(false);
+  });
+});
 
-// i18n completeness: no raw keys leak into markup.
-assert.ok(!html.includes("meetings."), "raw translation keys must not leak");
-assert.ok(!html.includes("nav."), "raw translation keys must not leak");
-
-// --- G1: secondary import action appears only when explicitly enabled -------
-
-const htmlWithImport = render({ flagEnabled: true, importEnabled: true });
-assert.ok(
-  htmlWithImport.includes("Import audio file"),
-  "flag-gated import action renders when importEnabled",
-);
-const primaryIdx = htmlWithImport.indexOf("bg-background-ui");
-const secondaryIdx = htmlWithImport.indexOf("bg-mid-gray/10");
-assert.notStrictEqual(primaryIdx, -1, "primary variant classes missing");
-assert.notStrictEqual(secondaryIdx, -1, "secondary variant classes missing");
-assert.ok(
-  primaryIdx < secondaryIdx,
-  "New Meeting must stay the primary action",
-);
-
-console.log("meetingList.render.test: all assertions passed");
+describe("MeetingList secondary import action (G1)", () => {
+  it("appears only when explicitly enabled and stays secondary", () => {
+    const htmlWithImport = render({ flagEnabled: true, importEnabled: true });
+    expect(htmlWithImport.includes("Import audio file")).toBe(true);
+    const primaryIdx = htmlWithImport.indexOf("bg-background-ui");
+    const secondaryIdx = htmlWithImport.indexOf("bg-mid-gray/10");
+    expect(primaryIdx).not.toBe(-1); // primary variant classes missing
+    expect(secondaryIdx).not.toBe(-1); // secondary variant classes missing
+    // New Meeting must stay the primary action
+    expect(primaryIdx < secondaryIdx).toBe(true);
+  });
+});

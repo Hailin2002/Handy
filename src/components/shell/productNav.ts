@@ -54,13 +54,17 @@ export const SECONDARY_NAV: readonly ProductNavEntry[] = [
 ];
 
 /**
- * Feature flag for meeting mode. Meeting mode does not exist yet, so the
- * pinned active-meeting entry under "Meetings" stays hidden unless the flag
- * is enabled at build time AND an active meeting is reported (which cannot
- * happen today — see ActiveMeetingNavItem).
+ * Feature flag for meeting mode.
+ *
+ * Wave-1 delivery: the real meetings journey (list, create, open, save,
+ * delete — backed by the Rust `MeetingManager` over SQLite) ships in the
+ * production app, so the flag now defaults to ON. It stays overridable to
+ * `false` via `VITE_ENABLE_MEETING_MODE` so the surface can still be hidden
+ * in an emergency rollback build; tests may also pin either branch
+ * explicitly (see ActiveMeetingNavItem.render.test).
  */
 export const MEETING_MODE_ENABLED: boolean =
-  import.meta.env.VITE_ENABLE_MEETING_MODE === "true";
+  import.meta.env.VITE_ENABLE_MEETING_MODE !== "false";
 
 export interface ActiveMeetingInfo {
   /** Seconds elapsed since the meeting recording started. */

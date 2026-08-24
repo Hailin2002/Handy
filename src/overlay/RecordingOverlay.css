@@ -24,11 +24,13 @@
     transparent
   );
   /* Neutrals. muted/faint are overlay-specific secondary/tertiary text grays
-     (no theme equivalent). */
+     (no theme equivalent). faint is used for the timer text and meets >=4.5:1
+     on the card surface in its theme (--light-s-faint 4.52:1,
+     --dark-s-faint 4.68:1); the previous values were 2.72:1 / 2.70:1. */
   --light-s-muted: #6e6e6e;
   --dark-s-muted: #a3a09a;
-  --light-s-faint: #9a9a9a;
-  --dark-s-faint: #6f6c66;
+  --light-s-faint: #747474;
+  --dark-s-faint: #98948c;
   /* Hairlines reuse the app's mid-gray at low opacity in light — same vocabulary
      as the app's border-mid-gray/* utilities — and flip to the near-white text
      token for contrast on dark. */
@@ -472,4 +474,62 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ============================================================
+   D7 — Reduced motion: honour `prefers-reduced-motion` in the
+   overlay window, mirroring the global block in App.css. Every
+   decorative motion is disabled — card pop-in, width/radius morph,
+   sdot-pulse, swave-arming, scaret-blink, spinner rotation, hover/
+   active scale — while short opacity fades (<=200ms) remain so
+   state changes stay perceivable without movement. Progress keeps
+   its non-animated indication: the static spinner ring and the
+   working label text stay visible.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  /* Card pop-in + width/radius morph: appear and settle instantly. */
+  .scard {
+    animation: none;
+    transition: none;
+    will-change: auto;
+  }
+  /* Dismiss keeps only a short opacity fade; no scale-down. */
+  .scard.leaving {
+    transform: none;
+    transition: opacity 200ms ease;
+  }
+  /* Text-region open/close: opacity fade only, shortened to <=200ms. */
+  .stext {
+    transition: opacity 200ms ease;
+  }
+  .stimer {
+    transition-duration: 200ms;
+  }
+  /* Decorative infinite loops. */
+  .scaret {
+    animation: none;
+  }
+  .sdot.ready {
+    animation: none;
+  }
+  /* The arming wave keeps its muted static bars; only the travelling
+     pulse stops (`animation-name: none` beats the per-bar delays). */
+  .swave.arming i {
+    animation: none;
+  }
+  /* Spinner decoration: rotation stops, but the ring with its accent
+     arc stays as a static progress icon next to the label text. */
+  .sspinner {
+    animation: none;
+  }
+  /* Hover/active scale is movement; keep only the colour feedback. */
+  .sx {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+  .sx:hover,
+  .sx:active {
+    transform: none;
+  }
 }

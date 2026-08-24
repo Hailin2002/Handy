@@ -13,10 +13,12 @@ import AccessibilityPermissions from "./components/AccessibilityPermissions";
 import SecureInputWarning from "./components/SecureInputWarning";
 import { DictationHome } from "./components/dictation/DictationHome";
 import Footer from "./components/footer";
+import { MeetingsPage } from "./components/meetings";
 import Onboarding, { AccessibilityOnboarding } from "./components/onboarding";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
 import {
+  MEETING_MODE_ENABLED,
   ProductPlaceholder,
   SettingsPage,
   hashTargetsSettingsView,
@@ -44,12 +46,12 @@ const renderProductContent = (
     case "dictate":
       return <DictationHome onOpenSettings={onOpenDictationSettings} />;
     case "meetings":
-      return (
-        <ProductPlaceholder
-          titleKey="nav.meetings"
-          bodyKey="nav.meetingsEmptyBody"
-        />
-      );
+      // Real meetings journey (plan §6.5): live list from the Rust
+      // MeetingManager, create/open/save/delete backed by SQLite. The flag
+      // only stays for emergency-rollback builds (defaults to ON).
+      return MEETING_MODE_ENABLED ? (
+        <MeetingsPage />
+      ) : null;
     case "projects":
       return (
         <ProductPlaceholder

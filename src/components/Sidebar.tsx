@@ -9,6 +9,11 @@ import {
 } from "./shell/productNav";
 import { NavItem } from "./shell/NavItem";
 import { ActiveMeetingNavItem } from "./shell/ActiveMeetingNavItem";
+import {
+  isMeetingCapturing,
+  useMeetingElapsedSeconds,
+  useMeetingStore,
+} from "@/stores/meetingStore";
 
 /**
  * Product navigation sidebar (plan §6.3):
@@ -18,22 +23,39 @@ import { ActiveMeetingNavItem } from "./shell/ActiveMeetingNavItem";
  *   Einstellungen / Hilfe & Über
  *
  * While a meeting is recording and meeting mode is enabled, a pinned
- * `Aufnahme läuft · mm:ss` entry with a red status dot appears directly below
- * "Meetings". Until then the slot renders nothing.
+ * `Aufnahme läuft · hh:mm:ss` entry with a red status dot appears directly
+ * below "Meetings". The entry is derived from `meetingStore` - the same
+ * backend state machine the recorder view reads - so the recording status is
+ * consistent across every surface (plan 6.2 rule 9).
  */
 interface SidebarProps {
   activeView: ProductViewId;
   onViewChange: (view: ProductViewId) => void;
-  /** Reported by meeting mode once it exists; always null today. */
+  /**
+   * Optional override for the pinned active-meeting entry. Left undefined in
+   * the app, where the value is derived from `meetingStore` below; render
+   * tests pass it explicitly to pin either branch.
+   */
   activeMeeting?: ActiveMeetingInfo | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   onViewChange,
-  activeMeeting = null,
+  activeMeeting,
 }) => {
   const { t } = useTranslation();
+  // Single source of truth for "is a meeting running" (plan line 926: main
+  // window, overlay and tray all read the same MeetingManager state). The
+  // clock ticks in a local hook, never in the store (FSC B5).
+  const session = useMeetingStore((state) => state.session);
+  const elapsedSeconds = useMeetingElapsedSeconds();
+  const derivedActiveMeeting: ActiveMeetingInfo | null = isMeetingCapturing(
+    session?.state,
+  )
+    ? { elapsedSeconds }
+    : null;
+  const meeting = activeMeeting !== undefined ? activeMeeting : derivedActiveMeeting;
 
   const renderEntries = (entries: typeof PRIMARY_NAV) =>
     entries.flatMap((entry) => [
@@ -45,12 +67,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         onClick={() => onViewChange(entry.id)}
       />,
       // Pinned active-meeting slot directly below "Meetings" (plan §6.3);
-      // renders nothing until meeting mode exists.
+      // renders nothing while no meeting is capturing.
       ...(entry.id === "meetings"
         ? [
             <ActiveMeetingNavItem
               key="active-meeting"
-              meeting={activeMeeting}
+              meeting={meeting}
               onOpen={() => onViewChange("meetings")}
             />,
           ]

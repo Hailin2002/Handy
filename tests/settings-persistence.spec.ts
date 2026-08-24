@@ -20,17 +20,56 @@ const audioFeedbackToggle = (page: Page) =>
     })
     .getByRole("checkbox");
 
+/**
+ * Clicks the visible toggle track for the Audio Feedback row.
+ *
+ * The checkbox itself is `sr-only` (1px, clipped, negative margin) and only
+ * exists as the peer/accessible input of the styled switch. A forced click on
+ * that invisible 1px box is not a faithful user interaction — Firefox's real
+ * hit-test lands on the surrounding container instead of the label and the
+ * state never flips ("Clicking the checkbox did not change its state").
+ * Users click the visible track, which sits inside the wrapping <label> and
+ * toggles the very same input in every browser.
+ */
+const clickAudioFeedbackSwitch = async (page: Page): Promise<void> => {
+  await page
+    .locator(".min-h-12", {
+      has: page.getByRole("heading", {
+        name: tEn("settings.sound.audioFeedback.label"),
+      }),
+    })
+    .locator("label")
+    .click();
+};
+
+/**
+ * The sound controls live on the Einstellungen page's "Diktieren" tab
+ * (plan §6.3); the app boots on the DictationHome start view, so navigate
+ * there first.
+ */
+const openDictationSettingsTab = async (page: Page): Promise<void> => {
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: tEn("nav.settings") })
+    .click();
+  await page
+    .getByRole("tablist", { name: tEn("nav.settingsTabsAriaLabel") })
+    .getByRole("tab", { name: tEn("nav.dictate") })
+    .click();
+};
+
 test.describe("Settings persistence through the mocked store bridge", () => {
   test("toggling audio feedback persists the change via the store bridge", async ({
     page,
   }) => {
     await installTauriMock(page);
     await page.goto("/");
+    await openDictationSettingsTab(page);
 
     const toggle = audioFeedbackToggle(page);
     await expect(toggle).not.toBeChecked();
 
-    await toggle.check({ force: true });
+    await clickAudioFeedbackSwitch(page);
 
     // UI reflects the optimistic update.
     await expect(toggle).toBeChecked();
@@ -53,6 +92,7 @@ test.describe("Settings persistence through the mocked store bridge", () => {
       settings: { audio_feedback: true },
     });
     await page.goto("/");
+    await openDictationSettingsTab(page);
 
     const toggle = audioFeedbackToggle(page);
     await expect(toggle).toBeChecked();

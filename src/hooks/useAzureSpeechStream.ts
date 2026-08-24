@@ -327,11 +327,10 @@ export const useAzureSpeechStream = () => {
           const text = event.result.text?.trim();
           if (!text || runtimeRef.current !== runtime) return;
           runtime.segmentChain = runtime.segmentChain.then(async () => {
-            const result = await commands.azureSpeechFinal(
-              runtime.sessionId,
-              text,
-            );
-            commandError(result);
+            // azure_speech_final is a fire-and-forget command (returns void,
+            // no Result envelope) — errors are surfaced server-side via
+            // transcription-error events.
+            await commands.azureSpeechFinal(runtime.sessionId, text);
           });
           queueTranslation(runtime);
         };

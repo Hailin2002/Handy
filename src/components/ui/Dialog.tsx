@@ -177,7 +177,7 @@ export const Dialog: React.FC<DialogProps> = ({
               {title}
             </h2>
             {description && (
-              <p id={descriptionId} className="mt-1 text-sm text-mid-gray">
+              <p id={descriptionId} className="mt-1 text-sm text-text-muted">
                 {description}
               </p>
             )}
@@ -186,7 +186,7 @@ export const Dialog: React.FC<DialogProps> = ({
             <IconButton
               onClick={() => onOpenChange(false)}
               aria-label={closeLabel}
-              className="text-mid-gray hover:bg-mid-gray/10 hover:text-text"
+              className="text-text-muted hover:bg-mid-gray/10 hover:text-text"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </IconButton>

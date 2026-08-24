@@ -5,14 +5,19 @@
    utilities */
 @theme inline {
   --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
   --color-background: var(--color-background);
   --color-background-ui: var(--color-background-ui);
+  --color-background-ui-hover: var(--color-background-ui-hover);
+  --color-accent-foreground: var(--color-accent-foreground);
   --color-logo-primary: var(--color-logo-primary);
   --color-logo-stroke: var(--color-logo-stroke);
   --color-text-stroke: var(--color-text-stroke);
   --color-mid-gray: var(--color-mid-gray);
   --color-warning: var(--color-warning);
   --color-error: var(--color-error);
+  --color-info: var(--color-info);
+  --color-success: var(--color-success);
 }
 
 :root {
@@ -104,4 +109,26 @@
   fill: var(--color-logo-stroke);
   stroke: var(--color-logo-stroke);
   stroke-width: 1;
+}
+
+/* ============================================================
+   D7 — Reduced motion: honour `prefers-reduced-motion` globally.
+   The decorative Tailwind motion utilities (animate-pulse,
+   animate-spin, animate-ping, animate-bounce) are disabled
+   app-wide, including every settings/model/onboarding spinner and
+   pulsing status dot. Functional spinners keep their non-animated
+   state indication: the static ring/arc glyph stays visible next
+   to the accompanying progress text. Short opacity fades
+   (<=200ms) are unaffected. Overlay-specific animations are
+   mirrored in src/overlay/RecordingOverlay.css; the inline
+   retry animations in HistorySettings.tsx gate on the same media
+   query via matchMedia (inline styles can't be reached from CSS).
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin,
+  .animate-ping,
+  .animate-bounce {
+    animation: none !important;
+  }
 }

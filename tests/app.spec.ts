@@ -109,28 +109,34 @@ test.describe("Dictation shell regression (mocked Tauri IPC)", () => {
     // dictation home must live inside the sidebar <nav> (the plain navigation
     // entry). Anything else would be a leaked meeting start control (G2).
     const leakCheck = async () => {
-      const offenders = await page.evaluate(() => {
-        const pattern = /meeting|record|aufnahme/i;
-        return [...document.querySelectorAll("button")]
-          .filter((button) => {
-            const label =
-              (button.textContent ?? "") +
-              (button.getAttribute("aria-label") ?? "");
-            return pattern.test(label) && !button.closest("nav");
-          })
-          .map((button) => button.textContent?.trim() ?? "");
-      });
+      const offenders = await recordControlsOutsideNav(page);
       expect(offenders).toEqual([]);
     };
     await leakCheck();
 
-    // Even the Meetings destination is a placeholder without any control:
-    // navigating there must never reveal a start/record affordance either.
+    // Even the Meetings destination stays a separate product (plan §6.2
+    // rule 1): its primary action is creating a meeting — never a recording
+    // start/stop control shared with dictation.
     await page
       .getByRole("navigation")
       .getByRole("button", { name: tEn("nav.meetings") })
       .click();
-    await expect(page.getByText(tEn("nav.meetingsEmptyBody"))).toBeVisible();
+    const newMeeting = page.getByRole("button", {
+      name: tEn("meetings.newMeeting"),
+    });
+    await expect(newMeeting).toBeVisible();
+    // Meeting management controls are fine here; what must never appear is a
+    // recording start/stop control outside the sidebar.
+    const meetingViewControls = await recordControlsOutsideNav(page);
+    expect(
+      meetingViewControls.filter((label) => /record|aufnahme/i.test(label)),
+    ).toEqual([]);
+
+    // Returning to dictation, no meeting control remains on that surface.
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name: tEn("nav.dictate") })
+      .click();
     await leakCheck();
   });
 
@@ -242,6 +248,23 @@ test.describe("Dictation shell regression (mocked Tauri IPC)", () => {
 /* -------------------------------------------------------------------------- */
 /* helpers                                                                    */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Buttons outside the sidebar <nav> whose label mentions meetings/recording —
+ * i.e. leaked meeting start controls on a non-meetings surface (G2).
+ */
+const recordControlsOutsideNav = (page: Page): Promise<string[]> =>
+  page.evaluate(() => {
+    const pattern = /meeting|record|aufnahme/i;
+    return [...document.querySelectorAll("button")]
+      .filter((button) => {
+        const label =
+          (button.textContent ?? "") +
+          (button.getAttribute("aria-label") ?? "");
+        return pattern.test(label) && !button.closest("nav");
+      })
+      .map((button) => button.textContent?.trim() ?? "");
+  });
 
 const firstDeleteButton = (page: Page, id: number) =>
   page.locator(`[data-history-delete="${id}"]`);

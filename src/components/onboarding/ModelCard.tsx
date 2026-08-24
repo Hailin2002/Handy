@@ -166,7 +166,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
         <div className="flex flex-col items-start flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h3
-              className={`text-base font-semibold text-text ${isClickable ? "group-hover:text-logo-primary" : ""} transition-colors`}
+              className={`text-base font-semibold text-text transition-colors`}
             >
               {displayName}
             </h3>
@@ -200,7 +200,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
           <div className="hidden sm:flex items-center ms-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <p className="text-xs text-text/60 w-24 text-end">
+                <p className="text-text-muted text-xs w-24 text-end">
                   {t("onboarding.modelCard.accuracy")}
                 </p>
                 <div className="w-16 h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
@@ -211,7 +211,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <p className="text-xs text-text/60 w-24 text-end">
+                <p className="text-text-muted text-xs w-24 text-end">
                   {t("onboarding.modelCard.speed")}
                 </p>
                 <div className="w-16 h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
@@ -232,7 +232,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
       <div className="flex items-center gap-3 w-full -mb-0.5 mt-0.5 h-5">
         {capabilityLanguages.length > 0 && (
           <div
-            className="flex items-center gap-1 text-xs text-text/50"
+            className="flex items-center gap-1 text-xs text-text-muted"
             title={
               capabilityLanguages.length === 1
                 ? t("modelSelector.capabilities.singleLanguage")
@@ -245,7 +245,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
         )}
         {model.supports_translation && (
           <div
-            className="flex items-center gap-1 text-xs text-text/50"
+            className="flex items-center gap-1 text-xs text-text-muted"
             title={t("modelSelector.capabilities.translation")}
           >
             <Languages className="w-3.5 h-3.5" />
@@ -254,7 +254,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
         )}
         {model.supports_streaming && (
           <div
-            className="flex items-center gap-1 text-xs text-text/50"
+            className="flex items-center gap-1 text-xs text-text-muted"
             title={t("modelSelector.capabilities.streaming")}
           >
             <AudioLines className="w-3.5 h-3.5" />
@@ -262,7 +262,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
           </div>
         )}
         {showModelSize && (
-          <span className="flex items-center gap-1.5 ms-auto text-xs text-text/50">
+          <span className="flex items-center gap-1.5 ms-auto text-xs text-text-muted">
             {status === "downloadable" ? (
               <Download className="w-3.5 h-3.5" />
             ) : (
@@ -270,7 +270,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
             )}
             <span>{formattedModelSize}</span>
             {debugMode && quantLabel && (
-              <span className="text-text/40">{quantLabel}</span>
+              <span className="text-text-muted">{quantLabel}</span>
             )}
           </span>
         )}
@@ -280,7 +280,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
             size="sm"
             onClick={handleDelete}
             title={t("modelSelector.deleteModel", { modelName: displayName })}
-            className="flex items-center gap-1.5 text-logo-primary/85 hover:text-logo-primary hover:bg-logo-primary/10"
+            className="flex items-center gap-1.5 text-text-muted hover:text-error hover:bg-error/10"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>{t("common.delete")}</span>
@@ -298,14 +298,14 @@ const ModelCard: React.FC<ModelCardProps> = ({
             />
           </div>
           <div className="flex items-center justify-between text-xs mt-1">
-            <span className="text-text/50">
+            <span className="text-text-muted">
               {t("modelSelector.downloading", {
                 percentage: Math.round(downloadProgress),
               })}
             </span>
             <div className="flex items-center gap-2">
               {downloadSpeed !== undefined && downloadSpeed > 0 && (
-                <span className="tabular-nums text-text/50">
+                <span className="tabular-nums text-text-muted">
                   {t("modelSelector.downloadSpeed", {
                     speed: downloadSpeed.toFixed(1),
                   })}
@@ -334,7 +334,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
           <div className="w-full h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
             <div className="h-full bg-logo-primary rounded-full animate-pulse w-full" />
           </div>
-          <p className="text-xs text-text/50 mt-1">
+          <p className="text-xs text-text-muted mt-1">
             {t("modelSelector.verifyingGeneric")}
           </p>
         </div>
@@ -344,7 +344,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
           <div className="w-full h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
             <div className="h-full bg-logo-primary rounded-full animate-pulse w-full" />
           </div>
-          <p className="text-xs text-text/50 mt-1">
+          <p className="text-xs text-text-muted mt-1">
             {t("modelSelector.extractingGeneric")}
           </p>
         </div>

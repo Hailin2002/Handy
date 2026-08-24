@@ -19,6 +19,29 @@ import { IconButton } from "../../ui/IconButton";
 
 const PAGE_SIZE = 30;
 
+/**
+ * D7: reactively tracks `prefers-reduced-motion`. The retry animations in
+ * HistoryEntryComponent are inline styles, which the CSS media-query blocks
+ * in App.css / RecordingOverlay.css cannot override — so they gate on this
+ * hook instead. Live-updates if the user flips the OS setting mid-session.
+ */
+function usePrefersReducedMotion(): boolean {
+  const [reducedMotion, setReducedMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReducedMotion(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return reducedMotion;
+}
+
 interface OpenRecordingsButtonProps {
   onClick: () => void;
   label: string;
@@ -387,6 +410,10 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
   const { t, i18n } = useTranslation();
   const [showCopied, setShowCopied] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  // D7: suppress the decorative retry animations under reduced motion; the
+  // static retranscribe icon plus the "Transcribing…" text remain as the
+  // non-animated progress indication.
+  const reducedMotion = usePrefersReducedMotion();
 
   const hasTranscription = entry.transcription_text.trim().length > 0;
 
@@ -467,7 +494,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
               width={16}
               height={16}
               style={
-                retrying
+                retrying && !reducedMotion
                   ? { animation: "spin 1s linear infinite reverse" }
                   : undefined
               }
@@ -494,12 +521,12 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
               : "text-text/40"
         }`}
         style={
-          retrying
+          retrying && !reducedMotion
             ? { animation: "transcribe-pulse 3s ease-in-out infinite" }
             : undefined
         }
       >
-        {retrying && (
+        {retrying && !reducedMotion && (
           <style>{`
             @keyframes transcribe-pulse {
               0%, 100% { color: color-mix(in srgb, var(--color-text) 40%, transparent); }

@@ -11,29 +11,32 @@ interface AlertProps {
   className?: string;
 }
 
+// All variants use the semantic status tokens from theme.css. Their light/dark
+// values are tuned so both the icon and the text keep >=3:1 / >=4.5:1 against
+// the token-tinted container below (bg-<token>/10) in either theme.
 const variantStyles: Record<
   AlertVariant,
   { container: string; icon: string; text: string }
 > = {
   error: {
-    container: "bg-red-500/10",
-    icon: "text-red-500",
-    text: "text-red-400",
+    container: "bg-error/10",
+    icon: "text-error",
+    text: "text-error",
   },
   warning: {
-    container: "bg-yellow-500/10",
-    icon: "text-yellow-500",
-    text: "text-yellow-400",
+    container: "bg-warning/10",
+    icon: "text-warning",
+    text: "text-warning",
   },
   info: {
-    container: "bg-blue-500/10",
-    icon: "text-blue-500",
-    text: "text-blue-400",
+    container: "bg-info/10",
+    icon: "text-info",
+    text: "text-info",
   },
   success: {
-    container: "bg-green-500/10",
-    icon: "text-green-500",
-    text: "text-green-400",
+    container: "bg-success/10",
+    icon: "text-success",
+    text: "text-success",
   },
 };
 

@@ -13,10 +13,16 @@ import {
 const germanOptionLabel = `${LANGUAGE_METADATA.de.nativeName} (${LANGUAGE_METADATA.de.name})`;
 const englishOptionLabel = `${LANGUAGE_METADATA.en.nativeName} (${LANGUAGE_METADATA.en.name})`;
 
-const openAboutSection = async (page: Page) => {
+// The application-language selector lives on Einstellungen → Allgemein
+// (AppGeneralTab, plan §6.3); About no longer hosts it.
+const openLanguageSettings = async (page: Page) => {
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: tEn("sidebar.about") })
+    .getByRole("button", { name: tEn("nav.settings") })
+    .click();
+  await page
+    .getByRole("tablist", { name: tEn("nav.settingsTabsAriaLabel") })
+    .getByRole("tab", { name: tEn("sidebar.general") })
     .click();
 };
 
@@ -26,7 +32,7 @@ test.describe("Locale switching (en/de)", () => {
   }) => {
     await installTauriMock(page);
     await page.goto("/");
-    await openAboutSection(page);
+    await openLanguageSettings(page);
 
     // Open the application-language dropdown (its closed state shows the
     // currently selected language) and pick German.
@@ -36,13 +42,14 @@ test.describe("Locale switching (en/de)", () => {
       .getByRole("button", { name: germanOptionLabel })
       .click();
 
-    // Sidebar re-renders with German catalog strings.
+    // Sidebar re-renders with German catalog strings (product navigation,
+    // plan §6.3).
     const sidebar = page.getByRole("navigation");
     await expect(
-      sidebar.getByRole("button", { name: tDe("sidebar.general") }),
+      sidebar.getByRole("button", { name: tDe("nav.dictate") }),
     ).toBeVisible();
     await expect(
-      sidebar.getByRole("button", { name: tDe("sidebar.history") }),
+      sidebar.getByRole("button", { name: tDe("nav.history") }),
     ).toBeVisible();
 
     // Document language attribute follows the active locale.
@@ -66,7 +73,7 @@ test.describe("Locale switching (en/de)", () => {
     await page.goto("/");
 
     const sidebar = page.getByRole("navigation");
-    for (const key of ["sidebar.general", "sidebar.history", "sidebar.advanced"]) {
+    for (const key of ["nav.dictate", "nav.meetings", "nav.settings"]) {
       await expect(
         sidebar.getByRole("button", { name: tDe(key) }),
       ).toBeVisible();

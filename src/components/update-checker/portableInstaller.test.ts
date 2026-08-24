@@ -1,6 +1,6 @@
-// Standalone assert check (no JS unit-test runner in this repo). Run with:
-//   bun src/components/update-checker/portableInstaller.test.ts
-import assert from "node:assert";
+// Portable-installer URL resolution assertions. Runs under vitest
+// (`npx vitest run`).
+import { describe, it, expect } from "vitest";
 import {
   resolvePortableInstallerUrl,
   PORTABLE_RELEASES_URL,
@@ -26,40 +26,41 @@ const manifest = {
   },
 };
 
-// x64 Windows -> the x64 NSIS asset, pinned to the release tag
-assert.equal(
-  resolvePortableInstallerUrl(manifest, "windows", "x86_64"),
-  X64_SETUP,
-);
+describe("resolvePortableInstallerUrl", () => {
+  it("maps x64 Windows to the x64 NSIS asset pinned to the release tag", () => {
+    expect(resolvePortableInstallerUrl(manifest, "windows", "x86_64")).toEqual(
+      X64_SETUP,
+    );
+  });
 
-// arm64 Windows -> the arm64 NSIS asset
-assert.equal(
-  resolvePortableInstallerUrl(manifest, "windows", "aarch64"),
-  ARM64_SETUP,
-);
+  it("maps arm64 Windows to the arm64 NSIS asset", () => {
+    expect(resolvePortableInstallerUrl(manifest, "windows", "aarch64")).toEqual(
+      ARM64_SETUP,
+    );
+  });
 
-// no manifest (check() failed or returned no update) -> releases page fallback
-assert.equal(
-  resolvePortableInstallerUrl(undefined, "windows", "x86_64"),
-  PORTABLE_RELEASES_URL,
-);
+  it("falls back to the releases page when there is no manifest", () => {
+    // check() failed or returned no update
+    expect(resolvePortableInstallerUrl(undefined, "windows", "x86_64")).toEqual(
+      PORTABLE_RELEASES_URL,
+    );
+  });
 
-// no NSIS bundle for this arch -> releases page fallback
-assert.equal(
-  resolvePortableInstallerUrl(manifest, "windows", "x86"),
-  PORTABLE_RELEASES_URL,
-);
+  it("falls back to the releases page when no NSIS bundle exists for the arch", () => {
+    expect(resolvePortableInstallerUrl(manifest, "windows", "x86")).toEqual(
+      PORTABLE_RELEASES_URL,
+    );
+  });
 
-// non-Windows portable install -> releases page, never a Windows .exe
-assert.equal(
-  resolvePortableInstallerUrl(manifest, "macos", "aarch64"),
-  PORTABLE_RELEASES_URL,
-);
+  it("never offers a Windows .exe to a non-Windows portable install", () => {
+    expect(resolvePortableInstallerUrl(manifest, "macos", "aarch64")).toEqual(
+      PORTABLE_RELEASES_URL,
+    );
+  });
 
-// malformed manifest -> releases page fallback
-assert.equal(
-  resolvePortableInstallerUrl({ platforms: "nope" }, "windows", "x86_64"),
-  PORTABLE_RELEASES_URL,
-);
-
-console.log("portableInstaller: all assertions passed");
+  it("falls back to the releases page for a malformed manifest", () => {
+    expect(
+      resolvePortableInstallerUrl({ platforms: "nope" }, "windows", "x86_64"),
+    ).toEqual(PORTABLE_RELEASES_URL);
+  });
+});

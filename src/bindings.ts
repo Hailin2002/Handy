@@ -149,6 +149,12 @@ async changeSpeechPipelineApiKeySetting(providerId: string, apiKey: string) : Pr
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Save/test UI helper: sends a short silent WAV through the exact configured
+ * Azure short-audio endpoint. A successful HTTP response proves that the
+ * region/endpoint, API key, language and network path work together; the
+ * expected recognition result itself is `NoMatch` because the audio is silent.
+ */
 async testAzureSpeechConnection() : Promise<Result<string, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("test_azure_speech_connection") };
@@ -165,21 +171,11 @@ async getAzureSpeechAuth() : Promise<Result<AzureSpeechAuth, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async azureSpeechInterim(sessionId: number, text: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("azure_speech_interim", { sessionId, text }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
+async azureSpeechInterim(sessionId: number, text: string) : Promise<void> {
+    await TAURI_INVOKE("azure_speech_interim", { sessionId, text });
 },
-async azureSpeechFinal(sessionId: number, text: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("azure_speech_final", { sessionId, text }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
+async azureSpeechFinal(sessionId: number, text: string) : Promise<void> {
+    await TAURI_INVOKE("azure_speech_final", { sessionId, text });
 },
 async azureSpeechTranslatePending(sessionId: number) : Promise<Result<null, string>> {
     try {
@@ -197,8 +193,8 @@ async azureSpeechComplete(sessionId: number, error: string | null) : Promise<Res
     else return { status: "error", error: e  as any };
 }
 },
-async azureSpeechStatus(sessionId: number, status: string) : Promise<null> {
-    return await TAURI_INVOKE("azure_speech_status", { sessionId, status });
+async azureSpeechStatus(sessionId: number, status: string) : Promise<void> {
+    await TAURI_INVOKE("azure_speech_status", { sessionId, status });
 },
 async changeDeeplTranslationEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
@@ -1019,11 +1015,55 @@ async updateRecordingRetentionPeriod(period: string) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
+async meetingCreateSession(title: string | null) : Promise<Result<MeetingSession, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_create_session", { title }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async meetingGetSession(id: string) : Promise<Result<MeetingSession | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_get_session", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async meetingListSessions(query: string | null) : Promise<Result<MeetingSession[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_list_sessions", { query }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
- * Checks if the Mac is a laptop by detecting battery presence
- * 
- * This uses pmset to check for battery information.
- * Returns true if a battery is detected (laptop), false otherwise (desktop)
+ * Saves an edited title. Returns the updated session.
+ */
+async meetingRenameSession(id: string, title: string) : Promise<Result<MeetingSession, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_rename_session", { id, title }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Deletes a meeting (soft delete). Returns whether an alive session was found.
+ */
+async meetingDeleteSession(id: string) : Promise<Result<boolean, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_delete_session", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stub implementation for non-macOS platforms
+ * Always returns false since laptop detection is macOS-specific
  */
 async isLaptop() : Promise<Result<boolean, string>> {
     try {
@@ -1084,19 +1124,19 @@ whats_new_last_seen_version?: string; selected_model?: string; onboarding_comple
  * Which input channel to use on the selected microphone device.
  * None means "average all channels" (original behavior).
  */
-selected_channel?: number | null; clamshell_microphone?: string | null; selected_output_device?: string | null; translate_to_english?: boolean; selected_language?: string; speech_input_provider?: SpeechInputProvider; azure_speech_endpoint?: string; azure_speech_language?: string; azure_stable_partial_threshold?: number; azure_segmentation_silence_ms?: number; custom_stt_endpoint?: string; speech_pipeline_api_keys?: SecretMap; deepl_translation_enabled?: boolean; deepl_target_language?: string; deepl_sentence_delay_ms?: number; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; paste_delay_after_ms?: number;
+selected_channel?: number | null; clamshell_microphone?: string | null; selected_output_device?: string | null; translate_to_english?: boolean; selected_language?: string; speech_input_provider?: SpeechInputProvider; azure_speech_endpoint?: string; azure_speech_language?: string; azure_stable_partial_threshold?: number; azure_segmentation_silence_ms?: number; custom_stt_endpoint?: string; speech_pipeline_api_keys?: SecretMap; deepl_translation_enabled?: boolean; deepl_target_language?: string; deepl_sentence_delay_ms?: number; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; paste_delay_after_ms?: number; 
 /**
  * Debug-gated ("beta") receipt-sequenced paste: restore the clipboard only
  * after the target app actually reads the transcript, instead of after a
  * fixed delay. See `paste_tx`. macOS and Windows only.
  */
-reliable_paste?: boolean; typing_tool?: TypingTool; external_script_path?: string | null; filler_word_removal_enabled?: boolean; custom_filler_words?: string[] | null; transcribe_accelerator?: TranscribeAcceleratorSetting; ort_accelerator?: OrtAcceleratorSetting;
+reliable_paste?: boolean; typing_tool?: TypingTool; external_script_path?: string | null; filler_word_removal_enabled?: boolean; custom_filler_words?: string[] | null; transcribe_accelerator?: TranscribeAcceleratorSetting; ort_accelerator?: OrtAcceleratorSetting; 
 /**
  * Stable transcribe.cpp device selector. This is derived from the backend's
  * `device_id` when available (or its name for backends such as Metal),
  * never from the process-local device registry index.
  */
-transcribe_gpu_device?: string | null; extra_recording_buffer_ms?: number; vad_enabled?: boolean;
+transcribe_gpu_device?: string | null; extra_recording_buffer_ms?: number; vad_enabled?: boolean; 
 /**
  * Which recording overlay to show: None / Minimal / Live. Streaming mode is
  * not gated on this — that follows model capability. Migrated from the old
@@ -1106,6 +1146,7 @@ overlay_style?: OverlayStyle }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AvailableAccelerators = { transcribe: string[]; ort: string[]; gpu_devices: GpuDeviceOption[] }
+export type AzureSpeechAuth = { token: string; region: string; language: string; stable_partial_threshold: number; segmentation_silence_ms: number; deepl_enabled: boolean; translation_delay_ms: number }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
@@ -1135,6 +1176,42 @@ key_down: number; key_up: number; flags_changed: number; mouse: number; duration
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
+/**
+ * Frontend-facing projection of one persisted meeting session.
+ * 
+ * Lean on purpose: it carries exactly what the Meetings library/detail views
+ * render today. Capture-related columns stay in SQLite until the recording
+ * leaf exposes them through its own DTOs.
+ */
+export type MeetingSession = { 
+/**
+ * Stable UUIDv4 (plan §9 line 1151).
+ */
+id: string; 
+/**
+ * User-editable title.
+ */
+title: string; 
+/**
+ * Lifecycle state (currently always [`SESSION_STATE_DRAFT`]).
+ */
+state: string; 
+/**
+ * Capture start, Unix epoch milliseconds.
+ */
+started_at: number; 
+/**
+ * Capture end, if finalized.
+ */
+ended_at: number | null; 
+/**
+ * Creation instant, Unix epoch milliseconds.
+ */
+created_at: number; 
+/**
+ * Last mutation instant, Unix epoch milliseconds.
+ */
+updated_at: number }
 export type ModelInfo = { id: string; name: string; description: string; filename: string; source: ModelSource; size_mb: number; is_downloaded: boolean; is_downloading: boolean; partial_size: number; is_directory: boolean; engine_type: EngineType; accuracy_score: number; speed_score: number; supports_translation: boolean; is_recommended: boolean; supported_languages: string[]; supports_language_selection: boolean; is_custom: boolean; supports_streaming: boolean; supports_language_detection: boolean }
 export type ModelLoadStatus = { is_loaded: boolean; current_model: string | null }
 /**
@@ -1212,8 +1289,6 @@ recorder_blocked: boolean }
 export type ShortcutBinding = { id: string; name: string; description: string; default_binding: string; current_binding: string }
 export type SoundTheme = "marimba" | "pop" | "custom"
 export type SpeechInputProvider = "local" | "azure" | "custom"
-
-export type AzureSpeechAuth = { token: string; region: string; language: string; stable_partial_threshold: number; segmentation_silence_ms: number; deepl_enabled: boolean; translation_delay_ms: number }
 /**
  * Phase of the streaming overlay card, emitted to drive its UI state.
  */

@@ -76,6 +76,10 @@ export const createMockRuntime = (config: SpeakMockConfig): MockRuntime => {
     }
   };
 
+  // Lifecycle handlers publish `meeting://*` events through this hook, so the
+  // mock reproduces the real persist-then-publish ordering.
+  backend.emit = emitEvent;
+
   return {
     backend,
     internals: {

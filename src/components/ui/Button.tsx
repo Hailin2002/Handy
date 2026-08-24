@@ -28,7 +28,11 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantClasses = {
     primary:
-      "text-white bg-background-ui border-background-ui hover:bg-background-ui/80 hover:border-background-ui/80",
+      // Dark on-accent ink (--color-accent-foreground) instead of white: white
+      // only reaches ~3.6:1 on the pink button fill; the ink is >=5.2:1. The
+      // hover step is a solid lighter pink (--color-background-ui-hover), not
+      // an alpha fade, so the ink keeps >=4.5:1 in dark mode too.
+      "text-accent-foreground bg-background-ui border-background-ui hover:bg-background-ui-hover hover:border-background-ui-hover",
     "primary-soft":
       "text-text bg-logo-primary/20 border-transparent hover:bg-logo-primary/30",
     secondary:

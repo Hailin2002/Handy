@@ -1,5 +1,11 @@
-import type { ModelInfo } from "@/bindings";
+import type { MeetingSession, ModelInfo } from "@/bindings";
+import type { MeetingRecoveryOffer } from "@/lib/types/meeting";
 import type { MockInvocation, SpeakMockConfig } from "./types";
+import {
+  handleMeetingLifecycleCommand,
+  initialRecoveries,
+  type MeetingLifecycleState,
+} from "./meetingLifecycle";
 import { applySettingWrite } from "./settingCommands";
 import {
   DEFAULT_MOCK_APP_VERSION,
@@ -10,8 +16,9 @@ import {
 } from "./fixtures";
 
 /**
- * In-memory stand-in for the Rust backend: settings store, model catalog and
- * the invocation log used by tests to assert what crossed the IPC bridge.
+ * In-memory stand-in for the Rust backend: settings store, model catalog,
+ * meeting sessions and the invocation log used by tests to assert what
+ * crossed the IPC bridge.
  */
 export class MockBackend {
   readonly config: SpeakMockConfig;
@@ -21,6 +28,21 @@ export class MockBackend {
   models: ModelInfo[];
 
   currentModel: string;
+
+  /** Mirror of `MeetingManager` (SQLite) for e2e runs of the meetings journey. */
+  meetings: MeetingSession[];
+
+  /** Per-meeting session-lifecycle simulation (see `meetingLifecycle.ts`). */
+  readonly lifecycles: Map<string, MeetingLifecycleState>;
+
+  /** Pending crash-recovery offers served by `meeting_list_recoveries`. */
+  recoveries: MeetingRecoveryOffer[];
+
+  /**
+   * Bound by the runtime to its `emitEvent` so lifecycle handlers can publish
+   * `meeting://*` events exactly like the Rust side would.
+   */
+  emit?: (event: string, payload?: unknown) => void;
 
   readonly invocations: MockInvocation[];
 
@@ -32,6 +54,9 @@ export class MockBackend {
       config.currentModel ??
       config.settings?.selected_model ??
       DEFAULT_MOCK_CURRENT_MODEL;
+    this.meetings = [];
+    this.lifecycles = new Map();
+    this.recoveries = initialRecoveries(config.meetingRecoveries);
     this.invocations = [];
   }
 
@@ -61,6 +86,14 @@ export const handleCommand = (
 ): unknown | undefined => {
   // Persisted setting writes (tauri-specta Result commands resolve to null).
   if (applySettingWrite(backend, command, args)) return null;
+
+  // --- meetings journey (mirror of managers/meeting.rs) -------------------
+  const meetingHandler = handleMeetingCommand(backend, command, args);
+  if (meetingHandler !== undefined) return meetingHandler;
+
+  // --- meeting session lifecycle (mirror of the planned MeetingManager) ---
+  const lifecycleHandler = handleMeetingLifecycleCommand(backend, command, args);
+  if (lifecycleHandler !== undefined) return lifecycleHandler;
 
   switch (command) {
     // --- app / window plumbing -------------------------------------------
@@ -214,3 +247,86 @@ export const handleCommand = (
 
 // Marker consumed by the runtime; never returned to the frontend.
 export const LISTEN_SENTINEL = Symbol("mock-event-listen");
+
+/** Mock-side session row; carries the soft-delete marker internally only. */
+type MockMeetingRow = MeetingSession & { deleted_at: number | null };
+
+/**
+ * In-memory mirror of the Rust `MeetingManager` semantics (soft delete,
+ * newest-first list, title LIKE filter). Returns `undefined` when `command`
+ * is not a meeting command so the main switch can handle it (or fail loudly).
+ */
+const handleMeetingCommand = (
+  backend: MockBackend,
+  command: string,
+  args: Record<string, unknown>,
+): unknown | undefined => {
+  const alive = () =>
+    backend.meetings.filter((m) => (m as MockMeetingRow).deleted_at === null);
+  switch (command) {
+    case "meeting_create_session": {
+      const now = Date.now();
+      const title =
+        typeof args.title === "string" && args.title.trim().length > 0
+          ? args.title.trim()
+          : "Meeting";
+      const session: MockMeetingRow = {
+        id: crypto.randomUUID(),
+        title,
+        state: "draft",
+        started_at: now,
+        ended_at: null,
+        created_at: now,
+        updated_at: now,
+        deleted_at: null,
+      };
+      backend.meetings.push(session);
+      const { deleted_at: _deleted, ...visible } = session;
+      return { ...visible };
+    }
+    case "meeting_get_session":
+      return alive().find((m) => m.id === args.id) ?? null;
+    case "meeting_list_sessions": {
+      const query = typeof args.query === "string" ? args.query : "";
+      // Newest first like the manager (`ORDER BY created_at DESC, rowid DESC`):
+      // array index stands in for rowid so same-millisecond inserts keep the
+      // newest-insert-first order instead of JS sort stability preserving
+      // insertion order.
+      return alive()
+        .map((m, idx) => ({ m, idx }))
+        .filter(({ m }) =>
+          query === "" || m.title.toLowerCase().includes(query.toLowerCase()),
+        )
+        .sort(
+          (a, b) =>
+            b.m.created_at - a.m.created_at ||
+            b.idx - a.idx,
+        )
+        .map(({ m }) => {
+          const { deleted_at: _deleted, ...visible } = m as MockMeetingRow;
+          return { ...visible };
+        });
+    }
+    case "meeting_rename_session": {
+      const session = alive().find((m) => m.id === args.id);
+      if (!session) throw new Error(`Meeting ${String(args.id)} not found`);
+      const title = typeof args.title === "string" ? args.title.trim() : "";
+      if (!title) throw new Error("Meeting title must not be empty");
+      session.title = title;
+      session.updated_at = Date.now();
+      // Strip the internal soft-delete marker: the Rust command returns the
+      // `MeetingSession` DTO only, so the mock must not leak `deleted_at`.
+      const { deleted_at: _deleted, ...visible } = session as MockMeetingRow;
+      return { ...visible };
+    }
+    case "meeting_delete_session": {
+      const session = alive().find((m) => m.id === args.id);
+      if (!session) return false;
+      (session as MockMeetingRow).deleted_at = Date.now();
+      session.updated_at = Date.now();
+      return true;
+    }
+    default:
+      return undefined;
+  }
+};

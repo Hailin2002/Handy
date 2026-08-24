@@ -28,14 +28,311 @@
     "settings": "設定",
     "about": "說明與關於",
     "activeMeeting": "錄音中 · {{duration}}",
-    "meetingsEmptyBody": "會議功能將隨會議模式推出。聽寫功能照常可用。",
     "projectsEmptyBody": "專案將彙整狀態、任務、會議與匯入的來源。"
   },
   "meetings": {
     "emptyBenefit": "錄製會議並取得逐字稿與摘要，無需離開應用程式。",
     "newMeeting": "新增會議",
     "importAudio": "匯入音訊檔案",
-    "privacyLocal": "預設：在此裝置上本機處理"
+    "privacyLocal": "預設：在此裝置上本機處理",
+    "searchPlaceholder": "搜尋會議",
+    "search": "搜尋",
+    "backToList": "返回會議清單",
+    "saveTitle": "儲存標題",
+    "saveError": "儲存標題失敗，請再試一次。",
+    "createError": "建立會議失敗，請再試一次。",
+    "deleteError": "刪除會議失敗，請再試一次。",
+    "deleteConfirmTitle": "刪除此會議？",
+    "deleteConfirmBody": "這將永久刪除此會議及其轉錄與摘要。",
+    "titleInputLabel": "會議標題",
+    "statusLabel": "狀態",
+    "createdLabel": "建立時間",
+    "notFound": "找不到此會議。",
+    "loadError": "無法載入會議。",
+    "stateDraft": "草稿",
+    "stateRecording": "錄音中",
+    "stateCompleted": "已完成",
+    "stateOther": "處理中",
+    "badgeRecording": "Recording",
+    "badgeStopping": "Stopping",
+    "badgeInterrupted": "Interrupted",
+    "badgeAttention": "Attention needed",
+    "badgeComplete": "Completed",
+    "badgeProcessing": "Processing",
+    "badgePaused": "Paused"
+  },
+  "meeting": {
+    "actions": {
+      "startMeeting": "Start meeting",
+      "pause": "Pause",
+      "resume": "Resume",
+      "endMeeting": "End meeting",
+      "keepRecording": "Keep recording",
+      "cancel": "Cancel",
+      "close": "Close",
+      "tryAgain": "Try again",
+      "switchDevice": "Switch device",
+      "openSettings": "Open settings",
+      "openSystemSettings": "Open system settings",
+      "reconnect": "Reconnect",
+      "recordMicOnly": "Record microphone only",
+      "continueWithoutSystemAudio": "Continue without system audio",
+      "workInBackground": "Continue in background",
+      "retryFailedSegments": "Retry failed segments",
+      "openMeeting": "Open meeting",
+      "deleteRecording": "Delete recording",
+      "recover": "Recover and process",
+      "decideLater": "Decide later",
+      "testSystemAudio": "Test system audio",
+      "jumpToLatest": "Jump to current text",
+      "cancelMeetingStart": "Cancel meeting start",
+      "useLocal": "Process locally",
+      "finishDictation": "Finish dictation",
+      "resumeWithDevices": "Continue with these devices",
+      "confirmDelete": "I understand — delete permanently"
+    },
+    "session": {
+      "draft": {
+        "hint": "Nothing is being recorded yet."
+      },
+      "starting": {
+        "title": "Starting meeting…",
+        "body": "Checking microphone and system audio…"
+      },
+      "recording": {
+        "title": "Recording",
+        "saved": "Audio saved",
+        "provider": {
+          "local": "Local",
+          "cloud": "Cloud ({{provider}})"
+        }
+      },
+      "paused": {
+        "title": "Paused",
+        "body": "No audio is being saved or uploaded while paused."
+      },
+      "stopping": {
+        "title": "Finishing recording…",
+        "body": "Finalising the audio files. This takes only a moment.",
+        "done": "Recording ended — audio saved."
+      },
+      "completed": {
+        "title": "Meeting completed",
+        "saved": "Transcript and summary are stored on this device."
+      },
+      "cancelled": {
+        "title": "Recording cancelled",
+        "body": "The audio captured so far has been kept. Nothing was deleted."
+      },
+      "micOnly": {
+        "badge": "Microphone only — system audio is not being recorded"
+      },
+      "durationLabel": "Recording duration {{duration}}"
+    },
+    "consent": {
+      "beforeStart": {
+        "title": "Before you record",
+        "body": "Recording a conversation requires the consent of everyone involved. Speak shows a recording indicator for the whole meeting and is not designed as a stealth recorder.",
+        "acknowledge": "Everyone involved has consented"
+      },
+      "indicator": {
+        "label": "This meeting is being recorded."
+      }
+    },
+    "cloud": {
+      "notice": {
+        "azure": {
+          "title": "Cloud transcription selected",
+          "body": "Audio from your microphone and system audio will be uploaded to Microsoft Azure and transcribed there. With local processing, nothing leaves this device."
+        }
+      },
+      "active": {
+        "azure": "Audio is being uploaded to Azure.",
+        "azureProcessing": "Audio segments are being uploaded to Azure for transcription.",
+        "llm": "Transcript text is being sent to {{provider}} to create the summary."
+      }
+    },
+    "preflight": {
+      "title": "Start checks",
+      "description": "Speak checks devices, storage and transcription before recording starts.",
+      "recheck": "Check again",
+      "blocked": "Fix the checks marked below before starting.",
+      "unavailable": "Speak cannot run the start checks right now, so recording is unavailable.",
+      "pending": "Running start checks…",
+      "status": {
+        "ok": "Works",
+        "warning": "Needs attention",
+        "error": "Not ready",
+        "checking": "Checking…"
+      },
+      "row": {
+        "microphone": "Microphone",
+        "systemAudio": "System audio",
+        "transcription": "Transcription",
+        "language": "Language",
+        "disk": "Storage",
+        "permission": "Permissions"
+      }
+    },
+    "setup": {
+      "title": "Start meeting",
+      "description": "Give the meeting a name and start when the checks below look right.",
+      "summaryToggle": "Summarise after the meeting",
+      "summaryHint": "The summary is created once the transcript is complete.",
+      "storageHint": "About 0.25 GB of storage is used per hour of microphone and system audio.",
+      "moreSettings": "More settings"
+    },
+    "live": {
+      "heading": "Live transcript",
+      "transcriptEmpty": "Finished transcript sections appear here while the meeting runs.",
+      "backlog": "{{count}} sections waiting",
+      "status": {
+        "listening": "Listening",
+        "transcribing": "Section is being transcribed",
+        "behind": "Processing is behind"
+      },
+      "levels": {
+        "microphone": "Microphone level",
+        "system": "System audio level",
+        "value": "{{label}}: {{percent}}%"
+      },
+      "stopConfirm": {
+        "title": "End meeting?",
+        "body": "The recording is finalised and processing starts. Nothing recorded so far is deleted."
+      }
+    },
+    "processing": {
+      "title": "Processing meeting",
+      "closeOk": "You can close this window.",
+      "done": "Meeting ready",
+      "summarizing": "Creating summary…",
+      "backlog": "{{count}} segments waiting",
+      "step": {
+        "saved": "Recording saved safely",
+        "prepared": "{{done}} of {{total}} audio segments prepared",
+        "transcribed": "{{done}} of {{total}} segments transcribed",
+        "summary": "Summary",
+        "summarySkipped": "Summary is switched off for this meeting"
+      },
+      "state": {
+        "pending": "Waiting",
+        "running": "In progress",
+        "done": "Done"
+      },
+      "failed": "{{count}} segments failed and can be retried."
+    },
+    "recovery": {
+      "heading": "Interrupted meetings",
+      "title": "Recover meeting recording?",
+      "body": "Speak was closed unexpectedly during “{{title}}”. The audio captured up to that point was saved and can be processed.",
+      "counts": "{{recovered}} sections recovered, {{damaged}} damaged.",
+      "causeCrash": "Interrupted by an unexpected close",
+      "causeSleepWake": "Interrupted because this PC went to sleep",
+      "causeUnknown": "The reason for the interruption is unknown"
+    },
+    "errors": {
+      "generic": {
+        "title": "Something needs your attention",
+        "body": "The meeting could not continue. Try again or open the settings."
+      },
+      "backendUnavailable": {
+        "title": "Meeting recording is not available yet",
+        "body": "This build cannot record meetings because the recording service is missing. Everything already saved is untouched."
+      },
+      "recoverable": {
+        "title": "Something needs your attention"
+      },
+      "micLost": {
+        "title": "Microphone disconnected",
+        "body": "Your microphone stopped working. System audio is still being recorded."
+      },
+      "systemLost": {
+        "title": "System audio stopped",
+        "body": "The output device stopped delivering audio. Your microphone is still being recorded."
+      },
+      "noLoopback": {
+        "title": "System audio can’t be captured",
+        "body": "Speak can’t listen to this output device. You can record the microphone only."
+      },
+      "exclusiveMode": {
+        "title": "Output device is busy",
+        "body": "The output device is running in exclusive mode, so system audio can’t be captured."
+      },
+      "diskFull": {
+        "title": "Recording stopped — storage full",
+        "body": "Speak stopped the recording to protect your data. Everything captured so far is saved."
+      },
+      "cloudUnreachable": {
+        "title": "Cloud transcription is unreachable",
+        "body": "Recording continues on this device. Sections will be transcribed as soon as the service responds again."
+      },
+      "cloudConfig": {
+        "title": "Cloud transcription is not configured",
+        "body": "The stored credentials were rejected. Recording continues locally."
+      },
+      "micPermission": {
+        "title": "Microphone access required",
+        "body": "Speak needs microphone access to record meetings. Grant access in the system privacy settings."
+      },
+      "missingKey": {
+        "title": "Setup incomplete",
+        "body": "Transcription is not configured yet. Open the settings to finish the setup."
+      },
+      "slept": {
+        "title": "Recording was interrupted",
+        "body": "This PC went to sleep. The recording stopped safely and can be continued."
+      },
+      "startFailed": {
+        "title": "The meeting could not be started",
+        "body": "Nothing was recorded. Check the devices and try again."
+      },
+      "pauseFailed": {
+        "title": "The meeting could not be paused",
+        "body": "Recording continues. Try again."
+      },
+      "resumeFailed": {
+        "title": "The meeting could not be resumed",
+        "body": "The meeting stays paused. Check the devices and try again."
+      },
+      "stopFailed": {
+        "title": "The meeting could not be ended",
+        "body": "The recording is still running and nothing was lost. Try again."
+      },
+      "cancelFailed": {
+        "title": "The meeting could not be cancelled",
+        "body": "Try again or end the meeting instead."
+      },
+      "retryFailed": {
+        "title": "The segments could not be queued again",
+        "body": "The audio is still saved. Try again."
+      },
+      "recoveryFailed": {
+        "title": "The recording could not be recovered",
+        "body": "The saved audio is untouched. Try again or open the meeting."
+      },
+      "preflightFailed": {
+        "title": "The start checks could not be completed",
+        "body": "Run the checks again before starting the meeting."
+      }
+    },
+    "warnings": {
+      "diskLow": {
+        "title": "Storage almost full",
+        "body": "A one-hour meeting with microphone and system audio needs roughly 0.25 GB."
+      },
+      "silence": {
+        "title": "No system sound detected",
+        "body": "The selected output device is silent. If you hear sound through another device, the wrong one may be selected."
+      },
+      "backlog": {
+        "title": "Processing is behind",
+        "body": "Sections are queued on disk and will be transcribed after the meeting. Nothing is lost."
+      },
+      "devicesChanged": {
+        "title": "Devices changed while paused",
+        "body": "A new source section will be started in the transcript."
+      }
+    }
   },
   "onboarding": {
     "subtitle": "首先，請選擇一種模型",
@@ -727,6 +1024,37 @@
     "tabs": {
       "modelsProviders": "模型與供應商",
       "meetingsEmptyBody": "會議設定將隨會議模式一起推出。"
+    },
+    "meetings": {
+      "shortcut": {
+        "title": "Meeting Shortcuts",
+        "description": "Keyboard shortcuts for starting, stopping and pausing meetings. Changes take effect after the current meeting ends.",
+        "unassigned": "Not configured",
+        "recordButtonAria": "Change {{name}} shortcut, currently {{shortcut}}. Click to record a new key combination.",
+        "pressKeys": "Press keys…",
+        "escapeHint": "Recording a shortcut. Press Escape to cancel.",
+        "reset": "Reset",
+        "disable": "Disable",
+        "test": "Test shortcut",
+        "testing": "Testing…",
+        "testOk": "{{shortcut}} can be registered.",
+        "testFail": "{{shortcut}} cannot be registered: {{error}}",
+        "errors": {
+          "singleKey": "Meeting shortcuts need at least one modifier key plus a regular key, e.g. Ctrl+Alt+Space.",
+          "conflict": "This shortcut is already used by:",
+          "osRejected": "The operating system cannot register this shortcut: {{error}} Nothing was saved."
+        },
+        "actions": {
+          "startStop": {
+            "name": "Start/end meeting",
+            "description": "Starts a meeting after a short countdown; pressing it again asks for confirmation before ending the meeting."
+          },
+          "pauseResume": {
+            "name": "Pause/resume meeting",
+            "description": "Pauses and resumes the current meeting recording."
+          }
+        }
+      }
     }
   },
   "footer": {
@@ -762,6 +1090,9 @@
   "dictation": {
     "title": "語音輸入",
     "subtitle": "隨時隨地說話——你的話會輸入到使用中的應用程式。",
+    "config": {
+      "title": "目前設定"
+    },
     "status": {
       "title": "狀態",
       "ready": "就緒",
@@ -770,63 +1101,63 @@
       "error": "錯誤",
       "genericError": "錄音或轉寫時發生問題。"
     },
-      "errorOpenSettings": "開啟語音輸入設定",
-      "shortcut": {
-        "description": "用於開始與停止語音輸入的目前全域快速鍵。",
-        "openAria": "語音輸入快速鍵 {{shortcut}} —— 開啟語音輸入設定以變更",
-        "missing": "未設定"
-      },
-      "mode": {
-        "title": "模式",
-        "hold": "按住",
-        "toggle": "按一下切換",
-        "holdDescription": "說話時按住快速鍵。",
-        "toggleDescription": "按一次快速鍵開始，再按一次停止。"
-      },
-      "target": {
-        "title": "語音辨識",
-        "description": "你的語音在哪裡被辨識。",
-        "local": "本機",
-        "azure": "Azure",
-        "custom": "自訂"
-      },
-      "language": {
-        "title": "語言與模型",
-        "description": "辨識語言；本機辨識時也包括使用的模型。",
-        "withModel": "{{language}} · {{model}}"
-      },
-      "test": {
-        "title": "測試語音輸入",
-        "button": "測試語音輸入",
-        "privacy": "僅保留在此視窗內——不會複製或貼上任何內容。",
-        "start": "測試語音輸入",
-        "stop": "停止測試錄音",
-        "idleHint": "最多錄製 {{seconds}} 秒，並只在這裡播放。",
-        "recordingHint": "錄音中……{{seconds}} 秒後自動停止。",
-        "retry": "重試",
-        "error": {
-          "unavailable": {
-            "title": "麥克風無法使用",
-            "description": "找不到可用的麥克風。請連接一個，或在設定中選擇其他輸入裝置。"
-          },
-          "denied": {
-            "title": "麥克風存取被拒絕",
-            "description": "此視窗需要麥克風權限才能執行測試。"
-          },
-          "failed": {
-            "title": "測試錄音失敗",
-            "description": "無法錄製測試音訊。請再試一次。"
-          }
+    "errorOpenSettings": "開啟語音輸入設定",
+    "shortcut": {
+      "description": "用於開始與停止語音輸入的目前全域快速鍵。",
+      "openAria": "語音輸入快速鍵 {{shortcut}} —— 開啟語音輸入設定以變更",
+      "missing": "未設定"
+    },
+    "mode": {
+      "title": "模式",
+      "hold": "按住",
+      "toggle": "按一下切換",
+      "holdDescription": "說話時按住快速鍵。",
+      "toggleDescription": "按一次快速鍵開始，再按一次停止。"
+    },
+    "target": {
+      "title": "語音辨識",
+      "description": "你的語音在哪裡被辨識。",
+      "local": "本機",
+      "azure": "Azure",
+      "custom": "自訂"
+    },
+    "language": {
+      "title": "語言與模型",
+      "description": "辨識語言；本機辨識時也包括使用的模型。",
+      "withModel": "{{language}} · {{model}}"
+    },
+    "test": {
+      "title": "測試語音輸入",
+      "button": "測試語音輸入",
+      "privacy": "僅保留在此視窗內——不會複製或貼上任何內容。",
+      "start": "測試語音輸入",
+      "stop": "停止測試錄音",
+      "idleHint": "最多錄製 {{seconds}} 秒，並只在這裡播放。",
+      "recordingHint": "錄音中……{{seconds}} 秒後自動停止。",
+      "retry": "重試",
+      "error": {
+        "unavailable": {
+          "title": "麥克風無法使用",
+          "description": "找不到可用的麥克風。請連接一個，或在設定中選擇其他輸入裝置。"
         },
-        "preview": {
-          "label": "測試錄音預覽",
-          "playbackAria": "播放測試錄音",
-          "duration": "時長：{{duration}}",
-          "discard": "刪除錄音"
+        "denied": {
+          "title": "麥克風存取被拒絕",
+          "description": "此視窗需要麥克風權限才能執行測試。"
+        },
+        "failed": {
+          "title": "測試錄音失敗",
+          "description": "無法錄製測試音訊。請再試一次。"
         }
       },
-      "settingsLink": "語音輸入設定"
+      "preview": {
+        "label": "測試錄音預覽",
+        "playbackAria": "播放測試錄音",
+        "duration": "時長：{{duration}}",
+        "discard": "刪除錄音"
+      }
     },
+    "settingsLink": "語音輸入設定"
+  },
   "errors": {
     "loadDirectory": "載入目錄時發生錯誤: {{error}}",
     "micPermissionDeniedTitle": "麥克風存取被拒絕",

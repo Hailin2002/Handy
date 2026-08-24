@@ -28,14 +28,311 @@
     "settings": "Indstillinger",
     "about": "Hjælp & om",
     "activeMeeting": "Optagelse i gang · {{duration}}",
-    "meetingsEmptyBody": "Møder kommer med mødetilstanden. Diktering fungerer som sædvanlig.",
     "projectsEmptyBody": "Projekter samler status, opgaver, møder og importerede kilder."
   },
   "meetings": {
     "emptyBenefit": "Optag dine møder og få transskriptioner og resuméer uden at forlade appen.",
     "newMeeting": "Nyt møde",
     "importAudio": "Importér lydfil",
-    "privacyLocal": "Standard: lokalt på denne enhed"
+    "privacyLocal": "Standard: lokalt på denne enhed",
+    "searchPlaceholder": "Søg møder",
+    "search": "Søg",
+    "backToList": "Tilbage til møder",
+    "saveTitle": "Gem titel",
+    "saveError": "Kunne ikke gemme titlen. Prøv igen.",
+    "createError": "Kunne ikke oprette mødet. Prøv igen.",
+    "deleteError": "Kunne ikke slette mødet. Prøv igen.",
+    "deleteConfirmTitle": "Slette dette møde?",
+    "deleteConfirmBody": "Dette sletter mødet med dets transskription og resumé permanent.",
+    "titleInputLabel": "Mødets titel",
+    "statusLabel": "Status",
+    "createdLabel": "Oprettet",
+    "notFound": "Mødet blev ikke fundet.",
+    "loadError": "Møder kunne ikke indlæses.",
+    "stateDraft": "Udkast",
+    "stateRecording": "Optager",
+    "stateCompleted": "Afsluttet",
+    "stateOther": "Behandler",
+    "badgeRecording": "Recording",
+    "badgeStopping": "Stopping",
+    "badgeInterrupted": "Interrupted",
+    "badgeAttention": "Attention needed",
+    "badgeComplete": "Completed",
+    "badgeProcessing": "Processing",
+    "badgePaused": "Paused"
+  },
+  "meeting": {
+    "actions": {
+      "startMeeting": "Start meeting",
+      "pause": "Pause",
+      "resume": "Resume",
+      "endMeeting": "End meeting",
+      "keepRecording": "Keep recording",
+      "cancel": "Cancel",
+      "close": "Close",
+      "tryAgain": "Try again",
+      "switchDevice": "Switch device",
+      "openSettings": "Open settings",
+      "openSystemSettings": "Open system settings",
+      "reconnect": "Reconnect",
+      "recordMicOnly": "Record microphone only",
+      "continueWithoutSystemAudio": "Continue without system audio",
+      "workInBackground": "Continue in background",
+      "retryFailedSegments": "Retry failed segments",
+      "openMeeting": "Open meeting",
+      "deleteRecording": "Delete recording",
+      "recover": "Recover and process",
+      "decideLater": "Decide later",
+      "testSystemAudio": "Test system audio",
+      "jumpToLatest": "Jump to current text",
+      "cancelMeetingStart": "Cancel meeting start",
+      "useLocal": "Process locally",
+      "finishDictation": "Finish dictation",
+      "resumeWithDevices": "Continue with these devices",
+      "confirmDelete": "I understand — delete permanently"
+    },
+    "session": {
+      "draft": {
+        "hint": "Nothing is being recorded yet."
+      },
+      "starting": {
+        "title": "Starting meeting…",
+        "body": "Checking microphone and system audio…"
+      },
+      "recording": {
+        "title": "Recording",
+        "saved": "Audio saved",
+        "provider": {
+          "local": "Local",
+          "cloud": "Cloud ({{provider}})"
+        }
+      },
+      "paused": {
+        "title": "Paused",
+        "body": "No audio is being saved or uploaded while paused."
+      },
+      "stopping": {
+        "title": "Finishing recording…",
+        "body": "Finalising the audio files. This takes only a moment.",
+        "done": "Recording ended — audio saved."
+      },
+      "completed": {
+        "title": "Meeting completed",
+        "saved": "Transcript and summary are stored on this device."
+      },
+      "cancelled": {
+        "title": "Recording cancelled",
+        "body": "The audio captured so far has been kept. Nothing was deleted."
+      },
+      "micOnly": {
+        "badge": "Microphone only — system audio is not being recorded"
+      },
+      "durationLabel": "Recording duration {{duration}}"
+    },
+    "consent": {
+      "beforeStart": {
+        "title": "Before you record",
+        "body": "Recording a conversation requires the consent of everyone involved. Speak shows a recording indicator for the whole meeting and is not designed as a stealth recorder.",
+        "acknowledge": "Everyone involved has consented"
+      },
+      "indicator": {
+        "label": "This meeting is being recorded."
+      }
+    },
+    "cloud": {
+      "notice": {
+        "azure": {
+          "title": "Cloud transcription selected",
+          "body": "Audio from your microphone and system audio will be uploaded to Microsoft Azure and transcribed there. With local processing, nothing leaves this device."
+        }
+      },
+      "active": {
+        "azure": "Audio is being uploaded to Azure.",
+        "azureProcessing": "Audio segments are being uploaded to Azure for transcription.",
+        "llm": "Transcript text is being sent to {{provider}} to create the summary."
+      }
+    },
+    "preflight": {
+      "title": "Start checks",
+      "description": "Speak checks devices, storage and transcription before recording starts.",
+      "recheck": "Check again",
+      "blocked": "Fix the checks marked below before starting.",
+      "unavailable": "Speak cannot run the start checks right now, so recording is unavailable.",
+      "pending": "Running start checks…",
+      "status": {
+        "ok": "Works",
+        "warning": "Needs attention",
+        "error": "Not ready",
+        "checking": "Checking…"
+      },
+      "row": {
+        "microphone": "Microphone",
+        "systemAudio": "System audio",
+        "transcription": "Transcription",
+        "language": "Language",
+        "disk": "Storage",
+        "permission": "Permissions"
+      }
+    },
+    "setup": {
+      "title": "Start meeting",
+      "description": "Give the meeting a name and start when the checks below look right.",
+      "summaryToggle": "Summarise after the meeting",
+      "summaryHint": "The summary is created once the transcript is complete.",
+      "storageHint": "About 0.25 GB of storage is used per hour of microphone and system audio.",
+      "moreSettings": "More settings"
+    },
+    "live": {
+      "heading": "Live transcript",
+      "transcriptEmpty": "Finished transcript sections appear here while the meeting runs.",
+      "backlog": "{{count}} sections waiting",
+      "status": {
+        "listening": "Listening",
+        "transcribing": "Section is being transcribed",
+        "behind": "Processing is behind"
+      },
+      "levels": {
+        "microphone": "Microphone level",
+        "system": "System audio level",
+        "value": "{{label}}: {{percent}}%"
+      },
+      "stopConfirm": {
+        "title": "End meeting?",
+        "body": "The recording is finalised and processing starts. Nothing recorded so far is deleted."
+      }
+    },
+    "processing": {
+      "title": "Processing meeting",
+      "closeOk": "You can close this window.",
+      "done": "Meeting ready",
+      "summarizing": "Creating summary…",
+      "backlog": "{{count}} segments waiting",
+      "step": {
+        "saved": "Recording saved safely",
+        "prepared": "{{done}} of {{total}} audio segments prepared",
+        "transcribed": "{{done}} of {{total}} segments transcribed",
+        "summary": "Summary",
+        "summarySkipped": "Summary is switched off for this meeting"
+      },
+      "state": {
+        "pending": "Waiting",
+        "running": "In progress",
+        "done": "Done"
+      },
+      "failed": "{{count}} segments failed and can be retried."
+    },
+    "recovery": {
+      "heading": "Interrupted meetings",
+      "title": "Recover meeting recording?",
+      "body": "Speak was closed unexpectedly during “{{title}}”. The audio captured up to that point was saved and can be processed.",
+      "counts": "{{recovered}} sections recovered, {{damaged}} damaged.",
+      "causeCrash": "Interrupted by an unexpected close",
+      "causeSleepWake": "Interrupted because this PC went to sleep",
+      "causeUnknown": "The reason for the interruption is unknown"
+    },
+    "errors": {
+      "generic": {
+        "title": "Something needs your attention",
+        "body": "The meeting could not continue. Try again or open the settings."
+      },
+      "backendUnavailable": {
+        "title": "Meeting recording is not available yet",
+        "body": "This build cannot record meetings because the recording service is missing. Everything already saved is untouched."
+      },
+      "recoverable": {
+        "title": "Something needs your attention"
+      },
+      "micLost": {
+        "title": "Microphone disconnected",
+        "body": "Your microphone stopped working. System audio is still being recorded."
+      },
+      "systemLost": {
+        "title": "System audio stopped",
+        "body": "The output device stopped delivering audio. Your microphone is still being recorded."
+      },
+      "noLoopback": {
+        "title": "System audio can’t be captured",
+        "body": "Speak can’t listen to this output device. You can record the microphone only."
+      },
+      "exclusiveMode": {
+        "title": "Output device is busy",
+        "body": "The output device is running in exclusive mode, so system audio can’t be captured."
+      },
+      "diskFull": {
+        "title": "Recording stopped — storage full",
+        "body": "Speak stopped the recording to protect your data. Everything captured so far is saved."
+      },
+      "cloudUnreachable": {
+        "title": "Cloud transcription is unreachable",
+        "body": "Recording continues on this device. Sections will be transcribed as soon as the service responds again."
+      },
+      "cloudConfig": {
+        "title": "Cloud transcription is not configured",
+        "body": "The stored credentials were rejected. Recording continues locally."
+      },
+      "micPermission": {
+        "title": "Microphone access required",
+        "body": "Speak needs microphone access to record meetings. Grant access in the system privacy settings."
+      },
+      "missingKey": {
+        "title": "Setup incomplete",
+        "body": "Transcription is not configured yet. Open the settings to finish the setup."
+      },
+      "slept": {
+        "title": "Recording was interrupted",
+        "body": "This PC went to sleep. The recording stopped safely and can be continued."
+      },
+      "startFailed": {
+        "title": "The meeting could not be started",
+        "body": "Nothing was recorded. Check the devices and try again."
+      },
+      "pauseFailed": {
+        "title": "The meeting could not be paused",
+        "body": "Recording continues. Try again."
+      },
+      "resumeFailed": {
+        "title": "The meeting could not be resumed",
+        "body": "The meeting stays paused. Check the devices and try again."
+      },
+      "stopFailed": {
+        "title": "The meeting could not be ended",
+        "body": "The recording is still running and nothing was lost. Try again."
+      },
+      "cancelFailed": {
+        "title": "The meeting could not be cancelled",
+        "body": "Try again or end the meeting instead."
+      },
+      "retryFailed": {
+        "title": "The segments could not be queued again",
+        "body": "The audio is still saved. Try again."
+      },
+      "recoveryFailed": {
+        "title": "The recording could not be recovered",
+        "body": "The saved audio is untouched. Try again or open the meeting."
+      },
+      "preflightFailed": {
+        "title": "The start checks could not be completed",
+        "body": "Run the checks again before starting the meeting."
+      }
+    },
+    "warnings": {
+      "diskLow": {
+        "title": "Storage almost full",
+        "body": "A one-hour meeting with microphone and system audio needs roughly 0.25 GB."
+      },
+      "silence": {
+        "title": "No system sound detected",
+        "body": "The selected output device is silent. If you hear sound through another device, the wrong one may be selected."
+      },
+      "backlog": {
+        "title": "Processing is behind",
+        "body": "Sections are queued on disk and will be transcribed after the meeting. Nothing is lost."
+      },
+      "devicesChanged": {
+        "title": "Devices changed while paused",
+        "body": "A new source section will be started in the transcript."
+      }
+    }
   },
   "onboarding": {
     "subtitle": "For at komme i gang skal du vælge en transskriptionsmodel",
@@ -727,6 +1024,37 @@
     "tabs": {
       "modelsProviders": "Modeller og udbydere",
       "meetingsEmptyBody": "Mødeindstillinger kommer med mødetilstand."
+    },
+    "meetings": {
+      "shortcut": {
+        "title": "Meeting Shortcuts",
+        "description": "Keyboard shortcuts for starting, stopping and pausing meetings. Changes take effect after the current meeting ends.",
+        "unassigned": "Not configured",
+        "recordButtonAria": "Change {{name}} shortcut, currently {{shortcut}}. Click to record a new key combination.",
+        "pressKeys": "Press keys…",
+        "escapeHint": "Recording a shortcut. Press Escape to cancel.",
+        "reset": "Reset",
+        "disable": "Disable",
+        "test": "Test shortcut",
+        "testing": "Testing…",
+        "testOk": "{{shortcut}} can be registered.",
+        "testFail": "{{shortcut}} cannot be registered: {{error}}",
+        "errors": {
+          "singleKey": "Meeting shortcuts need at least one modifier key plus a regular key, e.g. Ctrl+Alt+Space.",
+          "conflict": "This shortcut is already used by:",
+          "osRejected": "The operating system cannot register this shortcut: {{error}} Nothing was saved."
+        },
+        "actions": {
+          "startStop": {
+            "name": "Start/end meeting",
+            "description": "Starts a meeting after a short countdown; pressing it again asks for confirmation before ending the meeting."
+          },
+          "pauseResume": {
+            "name": "Pause/resume meeting",
+            "description": "Pauses and resumes the current meeting recording."
+          }
+        }
+      }
     }
   },
   "footer": {
@@ -765,6 +1093,9 @@
   "dictation": {
     "title": "Diktering",
     "subtitle": "Tal hvor som helst — dine ord skrives i den aktive app.",
+    "config": {
+      "title": "Aktuel konfiguration"
+    },
     "status": {
       "title": "Status",
       "ready": "Klar",
@@ -773,63 +1104,63 @@
       "error": "Fejl",
       "genericError": "Noget gik galt under optagelse eller transskription."
     },
-      "errorOpenSettings": "Åbn indstillinger for diktering",
-      "shortcut": {
-        "description": "Den aktuelle globale genvej til at starte og stoppe diktering.",
-        "openAria": "Dikteringsgenvej {{shortcut}} — åbn indstillinger for diktering for at ændre den",
-        "missing": "Ikke konfigureret"
-      },
-      "mode": {
-        "title": "Tilstand",
-        "hold": "Hold nede",
-        "toggle": "Tryk for at skifte",
-        "holdDescription": "Hold genvejen nede, mens du taler.",
-        "toggleDescription": "Tryk på genvejen én gang for at starte og igen for at stoppe."
-      },
-      "target": {
-        "title": "Talegenkendelse",
-        "description": "Hvor din tale transskriberes.",
-        "local": "Lokalt",
-        "azure": "Azure",
-        "custom": "Brugerdefineret"
-      },
-      "language": {
-        "title": "Sprog og model",
-        "description": "Genkendelsessprog og ved lokal genkendelse den aktive model.",
-        "withModel": "{{language}} · {{model}}"
-      },
-      "test": {
-        "title": "Test diktering",
-        "button": "Test diktering",
-        "privacy": "Forbliver i dette vindue — intet kopieres eller indsættes.",
-        "start": "Test diktering",
-        "stop": "Stop testoptagelsen",
-        "idleHint": "Optager op til {{seconds}} s og afspiller den kun her.",
-        "recordingHint": "Optager… stopper automatisk efter {{seconds}} s.",
-        "retry": "Prøv igen",
-        "error": {
-          "unavailable": {
-            "title": "Mikrofonen er ikke tilgængelig",
-            "description": "Der blev ikke fundet en brugbar mikrofon. Tilslut én, eller vælg en anden inputenhed i indstillingerne."
-          },
-          "denied": {
-            "title": "Adgang til mikrofonen nægtet",
-            "description": "Dette vindue kræver mikrofontilladelse for at køre testen."
-          },
-          "failed": {
-            "title": "Testoptagelsen mislykkedes",
-            "description": "Testoptagelsen kunne ikke registreres. Prøv igen."
-          }
+    "errorOpenSettings": "Åbn indstillinger for diktering",
+    "shortcut": {
+      "description": "Den aktuelle globale genvej til at starte og stoppe diktering.",
+      "openAria": "Dikteringsgenvej {{shortcut}} — åbn indstillinger for diktering for at ændre den",
+      "missing": "Ikke konfigureret"
+    },
+    "mode": {
+      "title": "Tilstand",
+      "hold": "Hold nede",
+      "toggle": "Tryk for at skifte",
+      "holdDescription": "Hold genvejen nede, mens du taler.",
+      "toggleDescription": "Tryk på genvejen én gang for at starte og igen for at stoppe."
+    },
+    "target": {
+      "title": "Talegenkendelse",
+      "description": "Hvor din tale transskriberes.",
+      "local": "Lokalt",
+      "azure": "Azure",
+      "custom": "Brugerdefineret"
+    },
+    "language": {
+      "title": "Sprog og model",
+      "description": "Genkendelsessprog og ved lokal genkendelse den aktive model.",
+      "withModel": "{{language}} · {{model}}"
+    },
+    "test": {
+      "title": "Test diktering",
+      "button": "Test diktering",
+      "privacy": "Forbliver i dette vindue — intet kopieres eller indsættes.",
+      "start": "Test diktering",
+      "stop": "Stop testoptagelsen",
+      "idleHint": "Optager op til {{seconds}} s og afspiller den kun her.",
+      "recordingHint": "Optager… stopper automatisk efter {{seconds}} s.",
+      "retry": "Prøv igen",
+      "error": {
+        "unavailable": {
+          "title": "Mikrofonen er ikke tilgængelig",
+          "description": "Der blev ikke fundet en brugbar mikrofon. Tilslut én, eller vælg en anden inputenhed i indstillingerne."
         },
-        "preview": {
-          "label": "Forhåndsvisning af din testoptagelse",
-          "playbackAria": "Afspil testoptagelsen",
-          "duration": "Varighed: {{duration}}",
-          "discard": "Kassér optagelsen"
+        "denied": {
+          "title": "Adgang til mikrofonen nægtet",
+          "description": "Dette vindue kræver mikrofontilladelse for at køre testen."
+        },
+        "failed": {
+          "title": "Testoptagelsen mislykkedes",
+          "description": "Testoptagelsen kunne ikke registreres. Prøv igen."
         }
       },
-      "settingsLink": "Indstillinger for diktering"
+      "preview": {
+        "label": "Forhåndsvisning af din testoptagelse",
+        "playbackAria": "Afspil testoptagelsen",
+        "duration": "Varighed: {{duration}}",
+        "discard": "Kassér optagelsen"
+      }
     },
+    "settingsLink": "Indstillinger for diktering"
+  },
   "errors": {
     "loadDirectory": "Fejl ved indlæsning af mappe: {{error}}",
     "micPermissionDeniedTitle": "Mikrofonadgang nægtet",

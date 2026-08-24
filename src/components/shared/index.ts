@@ -11,3 +11,8 @@ export type {
   StateShellProps,
   StateTone,
 } from "./stateShell";
+export { MeetingStateBadge, meetingStateBadgeStates } from "./MeetingStateBadge";
+export type {
+  MeetingStateBadgeProps,
+  MeetingStateBadgeState,
+} from "./MeetingStateBadge";
