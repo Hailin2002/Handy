@@ -1227,5 +1227,15 @@
     "learnMore": "해결 방법",
     "recorderBlocked": "지금은 단축키를 등록할 수 없습니다. macOS Secure Input이 키 이벤트를 차단하고 있습니다. Secure Input 경고를 먼저 해결하세요.",
     "dismiss": "닫기"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

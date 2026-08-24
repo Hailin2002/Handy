@@ -1227,5 +1227,15 @@
     "learnMore": "यसलाई कसरी ठिक गर्ने",
     "recorderBlocked": "अहिले सर्टकट रेकर्ड गर्न सकिँदैन — macOS Secure Input ले कुञ्जी इभेन्टहरू रोकिरहेको छ। पहिले Secure Input चेतावनी समाधान गर्नुहोस्।",
     "dismiss": "हटाउनुहोस्"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

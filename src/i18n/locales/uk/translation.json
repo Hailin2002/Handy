@@ -1227,5 +1227,15 @@
     "learnMore": "Як це виправити",
     "recorderBlocked": "Зараз неможливо записати комбінацію — Secure Input у macOS блокує події клавіш. Спершу усуньте попередження про Secure Input.",
     "dismiss": "Приховати"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

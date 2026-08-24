@@ -1227,5 +1227,15 @@
     "learnMore": "Jak to vyřešit",
     "recorderBlocked": "Zkratky teď nelze nahrát — Secure Input v macOS blokuje události kláves. Nejprve vyřešte upozornění na Secure Input.",
     "dismiss": "Zavřít"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

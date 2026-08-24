@@ -1227,5 +1227,15 @@
     "learnMore": "Cómo solucionarlo",
     "recorderBlocked": "Ahora mismo no se pueden grabar atajos: Secure Input de macOS está bloqueando los eventos de teclado. Resuelve primero el aviso de Secure Input.",
     "dismiss": "Descartar"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

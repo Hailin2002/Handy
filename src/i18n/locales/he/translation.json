@@ -1227,5 +1227,15 @@
     "learnMore": "איך לתקן את זה",
     "recorderBlocked": "לא ניתן להקליט קיצורים כרגע — Secure Input של macOS חוסם אירועי מקשים. פתור תחילה את אזהרת Secure Input.",
     "dismiss": "התעלם"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

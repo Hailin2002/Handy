@@ -1227,5 +1227,15 @@
     "learnMore": "How to fix",
     "recorderBlocked": "Can't record shortcuts right now — macOS Secure Input is blocking key events. Resolve the Secure Input warning first.",
     "dismiss": "Dismiss"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

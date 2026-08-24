@@ -1227,5 +1227,15 @@
     "learnMore": "Come risolvere",
     "recorderBlocked": "Non è possibile registrare scorciatoie in questo momento: Secure Input di macOS sta bloccando gli eventi dei tasti. Risolvi prima l'avviso di Secure Input.",
     "dismiss": "Ignora"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

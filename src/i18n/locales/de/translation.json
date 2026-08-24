@@ -1227,5 +1227,15 @@
     "learnMore": "So behebst du das",
     "recorderBlocked": "Tastenkürzel können gerade nicht aufgezeichnet werden — macOS Secure Input blockiert Tastenereignisse. Behebe zuerst die Secure-Input-Warnung.",
     "dismiss": "Ausblenden"
+  },
+  "projects": {
+    "namePlaceholder": "Name des neuen Projekts",
+    "create": "Erstellen",
+    "createError": "Projekt konnte nicht erstellt werden",
+    "deleteError": "Projekt konnte nicht gel�scht werden",
+    "empty": "Noch keine Projekte",
+    "noMeetings": "Noch keine Meetings zugeordnet",
+    "unlink": "Trennen",
+    "assignFromInbox": "Meeting aus dem Eingang zuordnen"
   }
 }

@@ -1227,5 +1227,15 @@
     "learnMore": "如何解決",
     "recorderBlocked": "目前無法錄製快捷鍵——macOS 的 Secure Input 正在阻擋按鍵事件。請先解決 Secure Input 警告。",
     "dismiss": "關閉"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

@@ -1227,5 +1227,15 @@
     "learnMore": "解決方法",
     "recorderBlocked": "現在ショートカットを記録できません。macOS の Secure Input がキーイベントをブロックしています。先に Secure Input の警告を解消してください。",
     "dismiss": "閉じる"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }

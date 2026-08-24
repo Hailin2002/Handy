@@ -14,6 +14,7 @@ import SecureInputWarning from "./components/SecureInputWarning";
 import { DictationHome } from "./components/dictation/DictationHome";
 import Footer from "./components/footer";
 import { MeetingsPage } from "./components/meetings";
+import { ProjectsPage } from "./components/projects/ProjectsPage";
 import Onboarding, { AccessibilityOnboarding } from "./components/onboarding";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
@@ -53,12 +54,7 @@ const renderProductContent = (
         <MeetingsPage />
       ) : null;
     case "projects":
-      return (
-        <ProductPlaceholder
-          titleKey="nav.projects"
-          bodyKey="nav.projectsEmptyBody"
-        />
-      );
+      return <ProjectsPage />;
     case "history":
       return <HistorySettings />;
     case "settings":

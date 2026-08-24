@@ -1227,5 +1227,15 @@
     "learnMore": "Cách khắc phục",
     "recorderBlocked": "Hiện không thể ghi phím tắt — Secure Input của macOS đang chặn các sự kiện phím. Hãy xử lý cảnh báo Secure Input trước.",
     "dismiss": "Bỏ qua"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox"
   }
 }
