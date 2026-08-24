@@ -3323,6 +3323,33 @@ mod tests {
         assert_eq!(default_name, "Local");
     }
 
+    /// Fail-testing: a corrupted or hostile provider snapshot in the database
+    /// must degrade to an empty config, never panic the queue thread.
+    #[test]
+    fn session_provider_survives_a_corrupted_snapshot() {
+        let h = harness();
+        let draft = h.manager.create_draft(None).unwrap();
+        {
+            let conn = lock(&h.manager.conn);
+            conn.execute(
+                "UPDATE meeting_sessions
+                 SET stt_provider = 'Azure Speech',
+                     provider_config_snapshot = '{not json at all',
+                     language = NULL
+                 WHERE id = ?1",
+                params![draft.meeting_id],
+            )
+            .expect("corrupt snapshot");
+        }
+        let (name, config) = h.manager.session_provider(&draft.meeting_id);
+        assert_eq!(name, "Azure Speech");
+        assert_eq!(
+            config,
+            serde_json::json!({}),
+            "unparsable config degrades to empty"
+        );
+    }
+
     /// O2: revisions are strictly increasing, and exactly one event is
     /// published per transition (no gaps caused by concurrent emissions).
     #[test]

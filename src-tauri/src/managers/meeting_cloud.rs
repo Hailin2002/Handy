@@ -157,14 +157,69 @@ pub fn encode_multipart(fields: &[MultipartField<'_>], boundary: &str) -> Vec<u8
     body
 }
 
-/// Per-request boundary. Uniqueness only matters within one request, so wall
-/// clock nanos are plenty.
-fn multipart_boundary() -> String {
+/// Per-request boundary base. Uniqueness only matters within one request.
+fn multipart_boundary(attempt: usize) -> String {
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.subsec_nanos())
         .unwrap_or(0);
-    format!("speak-stt-{nanos}")
+    format!(
+        "speak-stt-{nanos}-{}",
+        attempt.wrapping_mul(7).wrapping_add(3)
+    )
+}
+
+/// Collision-checked variant of [`encode_multipart`]: returns `None` when any
+/// field payload would fake one of the delimiters under this boundary.
+fn try_encode_multipart(fields: &[MultipartField<'_>], boundary: &str) -> Option<Vec<u8>> {
+    let body = encode_multipart(fields, boundary);
+    let delim = format!("--{boundary}").into_bytes();
+    let expected = fields.len() + 1;
+    let occurrences = body.windows(delim.len()).filter(|w| *w == delim).count();
+    (occurrences == expected).then_some(body)
+}
+
+/// Builds a complete multipart request: `(content-type header value, body)`.
+///
+/// Adversarial or simply unlucky audio bytes could otherwise contain a byte
+/// sequence that fakes a delimiter and corrupts the request server-side, so
+/// the chosen boundary is verified against the fully encoded body and rotated
+/// on collision.
+pub fn multipart_request(
+    fields: &[MultipartField<'_>],
+) -> Result<(String, Vec<u8>), CloudJobError> {
+    for attempt in 0..16 {
+        let boundary = multipart_boundary(attempt);
+        if let Some(body) = try_encode_multipart(fields, &boundary) {
+            return Ok((format!("multipart/form-data; boundary={boundary}"), body));
+        }
+    }
+    Err(CloudJobError::Permanent(
+        "multipart boundary collision".to_string(),
+    ))
+}
+
+/// Validates an endpoint once at construction: malformed URLs are permanent
+/// configuration errors, not transient network failures worth retrying.
+fn validated_endpoint(endpoint: &str) -> Result<String, CloudJobError> {
+    let trimmed = endpoint.trim();
+    if trimmed.is_empty() {
+        return Err(CloudJobError::Permanent("endpoint is empty".to_string()));
+    }
+    let url = reqwest::Url::parse(trimmed)
+        .map_err(|e| CloudJobError::Permanent(format!("invalid endpoint: {e}")))?;
+    match url.scheme() {
+        "http" | "https" => {}
+        other => {
+            return Err(CloudJobError::Permanent(format!(
+                "endpoint scheme must be http(s), got '{other}:'"
+            )))
+        }
+    }
+    if url.host_str().is_none() || url.host_str() == Some("") {
+        return Err(CloudJobError::Permanent("endpoint has no host".to_string()));
+    }
+    Ok(trimmed.trim_end_matches('/').to_string())
 }
 
 /// Strips an endpoint down to its host so diagnostics never leak paths,
@@ -192,7 +247,7 @@ impl AzureFastTranscriptionClient {
 
     pub fn new(endpoint: String, key: String, timeout: Duration) -> Result<Self, CloudJobError> {
         Ok(Self {
-            endpoint: endpoint.trim_end_matches('/').to_string(),
+            endpoint: validated_endpoint(&endpoint)?,
             key,
             http: http_client(timeout)?,
         })
@@ -222,24 +277,17 @@ impl CloudTranscriber for AzureFastTranscriptionClient {
         let key = self.key.clone();
         let endpoint_host = endpoint_host(&self.endpoint);
         cloud_runtime().block_on(async move {
-            let boundary = multipart_boundary();
-            let body = encode_multipart(
-                &[
-                    MultipartField::text("definition", &definition.to_string()),
-                    MultipartField::file("audio", "audio.wav", "audio/wav", wav),
-                ],
-                &boundary,
-            );
+            let (content_type, body) = multipart_request(&[
+                MultipartField::text("definition", &definition.to_string()),
+                MultipartField::file("audio", "audio.wav", "audio/wav", wav),
+            ])?;
 
             let response = self
                 .http
                 .post(url)
                 .header("Ocp-Apim-Subscription-Key", key)
                 .header("Accept", "application/json")
-                .header(
-                    "Content-Type",
-                    format!("multipart/form-data; boundary={boundary}"),
-                )
+                .header("Content-Type", content_type)
                 .body(body)
                 .send()
                 .await
@@ -340,7 +388,7 @@ pub struct CustomEndpointClient {
 impl CustomEndpointClient {
     pub fn new(endpoint: String, key: String, timeout: Duration) -> Result<Self, CloudJobError> {
         Ok(Self {
-            endpoint: endpoint.trim_end_matches('/').to_string(),
+            endpoint: validated_endpoint(&endpoint)?,
             key,
             http: http_client(timeout)?,
         })
@@ -357,20 +405,14 @@ impl CloudTranscriber for CustomEndpointClient {
         let key = self.key.clone();
         let endpoint_host = endpoint_host(&self.endpoint);
         cloud_runtime().block_on(async move {
-            let boundary = multipart_boundary();
-            let body = encode_multipart(
-                &[MultipartField::file("audio", "audio.wav", "audio/wav", wav)],
-                &boundary,
-            );
+            let (content_type, body) =
+                multipart_request(&[MultipartField::file("audio", "audio.wav", "audio/wav", wav)])?;
 
             let response = self
                 .http
                 .post(endpoint)
                 .bearer_auth(key)
-                .header(
-                    "Content-Type",
-                    format!("multipart/form-data; boundary={boundary}"),
-                )
+                .header("Content-Type", content_type)
                 .body(body)
                 .send()
                 .await
@@ -722,6 +764,135 @@ mod tests {
         assert!(text.ends_with("\r\n--BOUND--\r\n"));
         // Binary payload must survive verbatim.
         assert!(text.as_bytes().windows(3).any(|w| w == [1, 2, 3]));
+    }
+
+    // -- fail-testing: hostile inputs ---------------------------------------
+
+    #[test]
+    fn multipart_boundary_collision_is_detected_not_corrupted() {
+        // Payload engineered to look like a multipart delimiter: a naive
+        // encoder would produce a body a server cannot parse.
+        let evil =
+            b"--BOUND\r\nContent-Disposition: form-data; name=\"fake\"\r\n\r\nx\r\n".to_vec();
+        let fields = [MultipartField::file("audio", "a.wav", "audio/wav", evil)];
+        let body = encode_multipart(&fields, "BOUND");
+        // Exactly one delimiter per field plus the terminator is allowed; the
+        // payload above fakes an extra one.
+        let needle = b"--BOUND";
+        let occurrences = body.windows(needle.len()).filter(|w| *w == needle).count();
+        assert!(
+            occurrences >= 3,
+            "precondition: adversarial payload injects delimiters ({occurrences})"
+        );
+        assert!(
+            try_encode_multipart(&fields, "BOUND").is_none(),
+            "colliding boundary must be rejected"
+        );
+    }
+
+    #[test]
+    fn multipart_request_survives_adversarial_payloads() {
+        let evil = "--speak-stt-1\r\nContent-Disposition: form-data; name=\"f\""
+            .as_bytes()
+            .to_vec();
+        let fields = [
+            MultipartField::text("definition", "{\"channels\":[0]}"),
+            MultipartField::file("audio", "a.wav", "audio/wav", evil),
+        ];
+        let (content_type, body) = multipart_request(&fields).expect("request built");
+        let boundary = content_type
+            .strip_prefix("multipart/form-data; boundary=")
+            .expect("content type");
+        let delim = format!("--{boundary}").into_bytes();
+        let occurrences = body.windows(delim.len()).filter(|w| *w == delim).count();
+        assert_eq!(
+            occurrences,
+            fields.len() + 1,
+            "exactly one delimiter per field plus terminator"
+        );
+    }
+
+    #[test]
+    fn nonfinite_samples_encode_without_panicking() {
+        let samples = vec![f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 0.25];
+        let encoded = encode_wav_pcm16_mono(&samples);
+        // Header (44 bytes standard PCM) + 4 samples * 2 bytes.
+        assert_eq!(encoded.len(), 44 + 8);
+        let pcm = &encoded[44..];
+        let ints: Vec<i16> = pcm
+            .chunks_exact(2)
+            .map(|c| i16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        assert_eq!(ints[0], 0, "NaN maps to silence");
+        assert_eq!(ints[1], 32_767, "+inf clamps");
+        assert_eq!(ints[2], -32_768, "-inf clamps");
+        assert!(ints[3].abs() <= 32_767);
+    }
+
+    #[test]
+    fn azure_parser_skips_hostile_field_types() {
+        let body = serde_json::json!({
+            "recognizedPhrases": [
+                { "offsetInTicks": "not-a-number", "nBest": [{ "display": "skipped" }] },
+                { "offsetInTicks": 5_000_000i64, "durationInTicks": -10i64,
+                  "channel": 1.9, "nBest": "not-an-array" },
+                { "offsetInTicks": 9_000_000i64, "durationInTicks": 2_000_000i64,
+                  "nBest": [{ "display": 42 }] },
+                { "offsetInTicks": 1_000_000i64, "durationInTicks": 1_000_000i64,
+                  "nBest": [{ "display": "ok", "confidence": "high" }] }
+            ]
+        });
+        let phrases = parse_azure_response(&body.to_string()).expect("parse");
+        // Only the last entry has both a numeric offset and readable text.
+        assert_eq!(phrases.len(), 1);
+        assert_eq!(phrases[0].text, "ok");
+        assert_eq!(
+            phrases[0].confidence, None,
+            "non-numeric confidence dropped"
+        );
+    }
+
+    #[test]
+    fn custom_parser_tolerates_wrong_types_and_inverted_ranges() {
+        let body = serde_json::json!({
+            "segments": [
+                { "start_ms": 1.5, "end_ms": 900, "text": "float start falls back to 0" },
+                { "start_ms": 500, "end_ms": 100, "text": "inverted" },
+                { "start_ms": 200, "end_ms": 300, "text": 12345 },
+                { "start_ms": 0, "end_ms": 100, "text": "   " }
+            ]
+        });
+        let phrases = parse_custom_response(&body.to_string()).expect("parse");
+        assert_eq!(phrases.len(), 2, "non-string and blank text are skipped");
+        assert_eq!(phrases[0].offset_ms, 0);
+        assert_eq!(phrases[0].duration_ms, 900);
+        assert_eq!(phrases[1].duration_ms, 0, "inverted range clamps to zero");
+    }
+
+    #[test]
+    fn invalid_endpoints_are_rejected_at_construction() {
+        let timeout = Duration::from_secs(1);
+        for endpoint in ["not a url", "", "http://", "ftp://x/y"] {
+            let custom = CustomEndpointClient::new(endpoint.to_string(), "k".into(), timeout);
+            assert!(
+                matches!(custom, Err(CloudJobError::Permanent(_))),
+                "custom rejects invalid endpoint {endpoint:?}"
+            );
+            let azure =
+                AzureFastTranscriptionClient::new(endpoint.to_string(), "k".into(), timeout);
+            assert!(
+                matches!(azure, Err(CloudJobError::Permanent(_))),
+                "azure rejects invalid endpoint {endpoint:?}"
+            );
+        }
+        AzureFastTranscriptionClient::new(
+            "https://region.api.cognitive.microsoft.com".into(),
+            "k".into(),
+            timeout,
+        )
+        .expect("valid azure endpoint accepted");
+        CustomEndpointClient::new("https://example.com/stt".into(), "k".into(), timeout)
+            .expect("valid custom endpoint accepted");
     }
 
     #[test]

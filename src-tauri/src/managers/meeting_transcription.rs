@@ -507,9 +507,20 @@ impl MeetingTranscriptionQueue {
             return Ok(Vec::new());
         }
 
+        // Defensive pre-filter: a misbehaving engine may emit blank spans
+        // (e.g. a custom endpoint echoing whitespace). Persisting them would
+        // put unrenderable rows into every transcript view — and filtering
+        // before sequence assignment keeps the numbering gap-free.
+        let kept: Vec<EngineSegment> = engine_segments
+            .into_iter()
+            .filter(|segment| !segment.text.trim().is_empty())
+            .collect();
+        if kept.is_empty() {
+            return Ok(Vec::new());
+        }
         let model_label = self.engine.model_label();
-        let mut drafts = Vec::with_capacity(engine_segments.len());
-        for (sequence, segment) in (self.next_sequence(&job.meeting_id)?..).zip(engine_segments) {
+        let mut drafts = Vec::with_capacity(kept.len());
+        for (sequence, segment) in (self.next_sequence(&job.meeting_id)?..).zip(kept) {
             // Engine offsets are relative to the submitted audio; project them
             // onto the session timeline and clamp to the job's coverage.
             let rel_start = segment.start_ms_rel.max(0);
@@ -1358,6 +1369,77 @@ mod tests {
         writer.finalize().expect("finalize");
 
         assert!(decode_wav_pcm16_mono(&path).is_err());
+    }
+
+    /// A misbehaving engine that emits blank spans must not put unrenderable
+    /// rows into the transcript.
+    #[test]
+    fn blank_engine_segments_are_not_persisted() {
+        struct Blankish;
+        impl MeetingSttEngine for Blankish {
+            fn transcribe(
+                &self,
+                _ctx: &JobContext,
+                _audio: &[f32],
+            ) -> Result<Vec<EngineSegment>, EngineError> {
+                let span = |text: &str| EngineSegment {
+                    start_ms_rel: 0,
+                    end_ms_rel: 100,
+                    text: text.to_string(),
+                    confidence: None,
+                };
+                Ok(vec![span(""), span("   \n\t "), span("real")])
+            }
+            fn model_label(&self) -> String {
+                "blankish".to_string()
+            }
+        }
+
+        let (_dir, store) = temp_store();
+        let audio_dir = tempfile::tempdir().expect("audio root");
+        let session = store
+            .create_session(session_draft("Blank"))
+            .expect("session");
+        let key = "audio/000010-microphone.wav";
+        write_wav(
+            &audio_dir
+                .path()
+                .join(session.envelope.id.0.as_str())
+                .join(key),
+            1_000,
+        );
+        let chunk = ready_chunk(&store, &session.envelope.id, 10, key, 1_000);
+        store
+            .enqueue_stt_job(NewSttJob {
+                meeting_id: session.envelope.id.clone(),
+                chunk_ids: vec![chunk.envelope.id.clone()],
+                source: "microphone".to_string(),
+                timeline_start_ms: 0,
+                timeline_end_ms: 1_000,
+                provider: "Local".to_string(),
+                config_snapshot: serde_json::json!({}),
+                next_attempt_at: None,
+            })
+            .expect("enqueue");
+
+        let paused = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let delegate = Arc::new(RecordingDelegate::default());
+        let queue = queue_for(
+            Arc::clone(&store),
+            audio_dir.path().to_path_buf(),
+            Arc::new(Blankish),
+            paused,
+            test_config(3, 0),
+            Arc::clone(&delegate),
+        );
+
+        assert!(queue.poll_once());
+        let segments = store
+            .segments_for_meeting(session.envelope.id.clone())
+            .expect("segments");
+        assert_eq!(segments.len(), 1, "only the non-blank span is persisted");
+        assert_eq!(segments[0].text, "real");
+        assert_eq!(segments[0].sequence, 0);
     }
 
     #[test]
