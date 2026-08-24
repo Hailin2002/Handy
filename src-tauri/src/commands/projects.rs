@@ -34,7 +34,9 @@ pub async fn project_rename(
     project_id: String,
     name: String,
 ) -> Result<crate::managers::meeting_store::Project, String> {
-    project_manager.rename(&project_id, name).map_err(|e| e.to_string())
+    project_manager
+        .rename(&project_id, name)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -43,7 +45,9 @@ pub async fn project_delete(
     project_manager: State<'_, Arc<ProjectManager>>,
     project_id: String,
 ) -> Result<(), String> {
-    project_manager.delete(&project_id).map_err(|e| e.to_string())
+    project_manager
+        .delete(&project_id)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -77,7 +81,9 @@ pub async fn project_meeting_ids(
     project_manager: State<'_, Arc<ProjectManager>>,
     project_id: String,
 ) -> Result<Vec<String>, String> {
-    project_manager.meeting_ids(&project_id).map_err(|e| e.to_string())
+    project_manager
+        .meeting_ids(&project_id)
+        .map_err(|e| e.to_string())
 }
 
 /// The "Eingang": processed meetings without any project link.

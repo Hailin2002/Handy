@@ -628,8 +628,16 @@ pub trait MeetingRepository: Send + Sync {
     fn rename_project(&self, id: Uuid, name: String) -> Result<Project, StoreError>;
     fn soft_delete_project(&self, id: Uuid) -> Result<(), StoreError>;
     /// Idempotent: re-assigning an already-linked pair succeeds silently.
-    fn assign_meeting_to_project(&self, project_id: Uuid, meeting_id: Uuid) -> Result<(), StoreError>;
-    fn unassign_meeting_from_project(&self, project_id: Uuid, meeting_id: Uuid) -> Result<(), StoreError>;
+    fn assign_meeting_to_project(
+        &self,
+        project_id: Uuid,
+        meeting_id: Uuid,
+    ) -> Result<(), StoreError>;
+    fn unassign_meeting_from_project(
+        &self,
+        project_id: Uuid,
+        meeting_id: Uuid,
+    ) -> Result<(), StoreError>;
     fn list_meeting_ids_for_project(&self, project_id: Uuid) -> Result<Vec<String>, StoreError>;
     /// The "Eingang": alive sessions with no project link.
     fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError>;
@@ -754,8 +762,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use rusqlite::{params, Connection, OptionalExtension};
-use serde::{Deserialize, Serialize};
 use rusqlite_migration::{Migrations, M};
+use serde::{Deserialize, Serialize};
 
 use super::change_log::{self, ChangeLogEntry, ChangeOperation};
 
@@ -1549,8 +1557,7 @@ fn project_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Project> {
     })
 }
 
-const PROJECT_COLUMNS: &str =
-    "id, name, description, created_at, updated_at";
+const PROJECT_COLUMNS: &str = "id, name, description, created_at, updated_at";
 
 impl MeetingRepository for SqliteMeetingStore {
     // -- Read side ---------------------------------------------------------
@@ -1687,14 +1694,18 @@ impl MeetingRepository for SqliteMeetingStore {
             });
         }
         let conn = self.locked(op)?;
-        let updated = conn.execute(
-            "UPDATE projects SET name = ?2, revision = revision + 1, updated_at = ?3
+        let updated = conn
+            .execute(
+                "UPDATE projects SET name = ?2, revision = revision + 1, updated_at = ?3
              WHERE id = ?1 AND deleted_at IS NULL",
-            params![id.0, name, chrono::Utc::now().timestamp_millis()],
-        )
-        .map_err(classify("projects", &id, op))?;
+                params![id.0, name, chrono::Utc::now().timestamp_millis()],
+            )
+            .map_err(classify("projects", &id, op))?;
         if updated == 0 {
-            return Err(StoreError::NotFound { entity: "projects", id });
+            return Err(StoreError::NotFound {
+                entity: "projects",
+                id,
+            });
         }
         conn.query_row(
             &format!("SELECT {PROJECT_COLUMNS} FROM projects WHERE id = ?1"),
@@ -1723,19 +1734,31 @@ impl MeetingRepository for SqliteMeetingStore {
         Ok(())
     }
 
-    fn assign_meeting_to_project(&self, project_id: Uuid, meeting_id: Uuid) -> Result<(), StoreError> {
+    fn assign_meeting_to_project(
+        &self,
+        project_id: Uuid,
+        meeting_id: Uuid,
+    ) -> Result<(), StoreError> {
         let op = "assign_meeting_to_project";
         let conn = self.locked(op)?;
         conn.execute(
             "INSERT OR IGNORE INTO project_meeting_links (project_id, meeting_id, created_at)
              VALUES (?1, ?2, ?3)",
-            params![project_id.0, meeting_id.0, chrono::Utc::now().timestamp_millis()],
+            params![
+                project_id.0,
+                meeting_id.0,
+                chrono::Utc::now().timestamp_millis()
+            ],
         )
         .map_err(sql_err(op))?;
         Ok(())
     }
 
-    fn unassign_meeting_from_project(&self, project_id: Uuid, meeting_id: Uuid) -> Result<(), StoreError> {
+    fn unassign_meeting_from_project(
+        &self,
+        project_id: Uuid,
+        meeting_id: Uuid,
+    ) -> Result<(), StoreError> {
         let op = "unassign_meeting_from_project";
         let conn = self.locked(op)?;
         conn.execute(
@@ -2669,13 +2692,24 @@ mod tests {
         fn soft_delete_project(&self, _id: Uuid) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
-        fn assign_meeting_to_project(&self, _project_id: Uuid, _meeting_id: Uuid) -> Result<(), StoreError> {
+        fn assign_meeting_to_project(
+            &self,
+            _project_id: Uuid,
+            _meeting_id: Uuid,
+        ) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
-        fn unassign_meeting_from_project(&self, _project_id: Uuid, _meeting_id: Uuid) -> Result<(), StoreError> {
+        fn unassign_meeting_from_project(
+            &self,
+            _project_id: Uuid,
+            _meeting_id: Uuid,
+        ) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
-        fn list_meeting_ids_for_project(&self, _project_id: Uuid) -> Result<Vec<String>, StoreError> {
+        fn list_meeting_ids_for_project(
+            &self,
+            _project_id: Uuid,
+        ) -> Result<Vec<String>, StoreError> {
             unimplemented!("fake")
         }
         fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError> {
@@ -3607,10 +3641,15 @@ mod sqlite_tests {
                 description: "First".to_string(),
             })
             .expect("project");
-        let session = store.create_session(draft_session("Sync")).expect("session");
+        let session = store
+            .create_session(draft_session("Sync"))
+            .expect("session");
 
         // Unprocessed drafts never appear in the inbox.
-        assert!(store.list_unassigned_meeting_ids().expect("inbox").is_empty());
+        assert!(store
+            .list_unassigned_meeting_ids()
+            .expect("inbox")
+            .is_empty());
         mark_session_completed(&store, &session.envelope.id.0);
         let project_id = Uuid(project.id.clone());
         let meeting_id = session.envelope.id.clone();
@@ -3629,7 +3668,10 @@ mod sqlite_tests {
                 .expect("members"),
             vec![meeting_id.0.clone()]
         );
-        assert!(store.list_unassigned_meeting_ids().expect("inbox").is_empty());
+        assert!(store
+            .list_unassigned_meeting_ids()
+            .expect("inbox")
+            .is_empty());
 
         store
             .unassign_meeting_from_project(project_id.clone(), meeting_id.clone())
@@ -3644,7 +3686,9 @@ mod sqlite_tests {
             .rename_project(project_id.clone(), "  Beta  ".to_string())
             .expect("rename");
         assert_eq!(renamed.name, "Beta");
-        assert!(store.rename_project(project_id.clone(), "   ".to_string()).is_err());
+        assert!(store
+            .rename_project(project_id.clone(), "   ".to_string())
+            .is_err());
 
         store.soft_delete_project(project_id).expect("delete");
         assert!(store.list_projects().expect("list").is_empty());
@@ -3654,14 +3698,20 @@ mod sqlite_tests {
     fn deleted_project_releases_meetings_to_the_inbox() {
         let (_dir, store) = temp_store();
         let project = store
-            .create_project(NewProject { name: "Temp".into(), description: String::new() })
+            .create_project(NewProject {
+                name: "Temp".into(),
+                description: String::new(),
+            })
             .expect("project");
         let session = store.create_session(draft_session("Meeting")).expect("s");
         mark_session_completed(&store, &session.envelope.id.0);
         store
             .assign_meeting_to_project(Uuid(project.id.clone()), session.envelope.id.clone())
             .expect("assign");
-        assert!(store.list_unassigned_meeting_ids().expect("inbox").is_empty());
+        assert!(store
+            .list_unassigned_meeting_ids()
+            .expect("inbox")
+            .is_empty());
 
         store.soft_delete_project(Uuid(project.id)).expect("delete");
         // Unlinking never deletes the meeting (plan §11).

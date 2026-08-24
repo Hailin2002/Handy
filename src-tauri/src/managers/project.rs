@@ -37,13 +37,16 @@ impl ProjectManager {
     }
 
     pub fn unassign_meeting(&self, project_id: &str, meeting_id: &str) -> Result<(), StoreError> {
-        self.store
-            .unassign_meeting_from_project(Uuid(project_id.to_string()), Uuid(meeting_id.to_string()))
+        self.store.unassign_meeting_from_project(
+            Uuid(project_id.to_string()),
+            Uuid(meeting_id.to_string()),
+        )
     }
 
     /// Meetings linked to one project (chronological by link insertion).
     pub fn meeting_ids(&self, project_id: &str) -> Result<Vec<String>, StoreError> {
-        self.store.list_meeting_ids_for_project(Uuid(project_id.to_string()))
+        self.store
+            .list_meeting_ids_for_project(Uuid(project_id.to_string()))
     }
 
     /// The "Eingang": processed meetings with no project assignment.
