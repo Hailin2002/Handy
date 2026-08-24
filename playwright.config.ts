@@ -28,14 +28,19 @@ const selectedProjects = (() => {
 
 const KNOWN_PROJECTS = [DEV_PROJECT, PROD_PROJECT];
 // Unknown filters (e.g. globs) may still select any project -> start both.
-const selectionIsKnown =
+// An EMPTY selection means no --project filter was given, so EVERY project
+// runs (`npm run test:playwright`) -> both servers are needed as well.
+// Regression: treating the empty filter as a known narrow selection computed
+// `includes(...)` over an empty list and started ZERO web servers, so the
+// plain unfiltered suite failed every test with `connect ECONNREFUSED`.
+const startsAllProjects =
   selectedProjects.length === 0 ||
-  selectedProjects.some((name) => KNOWN_PROJECTS.includes(name));
+  !selectedProjects.some((name) => KNOWN_PROJECTS.includes(name));
 
 const wantsDevServer =
-  !selectionIsKnown || selectedProjects.includes(DEV_PROJECT);
+  startsAllProjects || selectedProjects.includes(DEV_PROJECT);
 const wantsProdServer =
-  !selectionIsKnown || selectedProjects.includes(PROD_PROJECT);
+  startsAllProjects || selectedProjects.includes(PROD_PROJECT);
 
 const devServer = {
   command: "npx vite dev",

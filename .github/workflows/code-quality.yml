@@ -12,6 +12,7 @@ on:
       - ".prettierrc*"
       - "tsconfig*"
       - "tailwind.config.*"
+      - "vitest.config.*"
       - ".github/workflows/**"
   pull_request:
     paths:
@@ -23,6 +24,7 @@ on:
       - ".prettierrc*"
       - "tsconfig*"
       - "tailwind.config.*"
+      - "vitest.config.*"
       - ".github/workflows/**"
 
 concurrency:
@@ -50,3 +52,6 @@ jobs:
 
       - name: Run prettier
         run: bun run format:check
+
+      - name: Run unit tests
+        run: bun run test:unit

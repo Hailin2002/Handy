@@ -1,7 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { resolve } from "path";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
+
+// ESM-safe equivalent of the CJS __dirname global so the config also loads under
+// `--configLoader native` (Vite ≥6.3), where no CJS globals exist.
+const dirName = dirname(fileURLToPath(import.meta.url));
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -12,8 +17,8 @@ export default defineConfig(async () => ({
   // Path aliases
   resolve: {
     alias: {
-      "@": resolve(__dirname, "./src"),
-      "@/bindings": resolve(__dirname, "./src/bindings.ts"),
+      "@": resolve(dirName, "./src"),
+      "@/bindings": resolve(dirName, "./src/bindings.ts"),
     },
   },
 
@@ -21,8 +26,8 @@ export default defineConfig(async () => ({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, "index.html"),
-        overlay: resolve(__dirname, "src/overlay/index.html"),
+        main: resolve(dirName, "index.html"),
+        overlay: resolve(dirName, "src/overlay/index.html"),
       },
     },
   },
