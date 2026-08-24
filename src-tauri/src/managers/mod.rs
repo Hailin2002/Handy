@@ -6,6 +6,8 @@ pub mod knowledge_store;
 // Concrete session persistence backing the wave-1 meeting journey.
 pub mod meeting;
 pub mod meeting_store;
+// Local STT queue draining persistent meeting jobs (plan §13 Phase 5).
+pub mod meeting_transcription;
 
 pub mod audio;
 pub mod gguf_meta;

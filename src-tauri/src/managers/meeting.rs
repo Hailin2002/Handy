@@ -36,6 +36,9 @@ use super::meeting_store::{
     meeting_db_path, open_meeting_database, ChunkFacts, ChunkState as StoreChunkState,
     MeetingRepository, NewSttJob, SessionPatch, SqliteMeetingStore, StoreError, Uuid as StoreUuid,
 };
+use super::meeting_transcription::{
+    MeetingSttEngine, MeetingTranscriptionQueue, QueueConfig, QueueDelegate,
+};
 use crate::audio_toolkit::audio::meeting_recorder as rec;
 use anyhow::Result;
 use log::{debug, error, info, warn};
@@ -1139,6 +1142,8 @@ pub struct MeetingManager {
     inner: Mutex<ManagerInner>,
     recoveries: Mutex<Vec<MeetingRecoveryOffer>>,
     recorder_events: Mutex<Option<mpsc::Sender<(String, rec::RecorderEvent)>>>,
+    /// Local STT queue (plan §13 Phase 5); attached after construction.
+    queue: Mutex<Option<Arc<MeetingTranscriptionQueue>>>,
 }
 
 impl MeetingManager {
@@ -1208,6 +1213,7 @@ impl MeetingManager {
             }),
             recoveries: Mutex::new(Vec::new()),
             recorder_events: Mutex::new(None),
+            queue: Mutex::new(None),
         })
     }
 
@@ -1229,6 +1235,37 @@ impl MeetingManager {
             })
             .map(|_| ())
             .unwrap_or_else(|e| error!("Failed to spawn meeting event pump: {}", e));
+    }
+
+    /// Attaches and spawns the local STT queue (plan §13 Phase 5). Must be
+    /// called once, after the manager is behind an `Arc`, because the delegate
+    /// holds a `Weak` back-reference.
+    pub fn attach_transcription_queue(
+        self: &Arc<Self>,
+        engine: Arc<dyn MeetingSttEngine>,
+        dictation_active: Arc<dyn Fn() -> bool + Send + Sync>,
+        vad_model_path: Option<PathBuf>,
+    ) {
+        let queue = MeetingTranscriptionQueue::new(
+            Arc::clone(&self.store),
+            self.assets_root.clone(),
+            engine,
+            dictation_active,
+            vad_model_path,
+            Arc::new(ManagerDelegate {
+                manager: Arc::downgrade(self),
+            }),
+            QueueConfig::default(),
+        );
+        *lock(&self.queue) = Some(Arc::clone(&queue));
+        queue.spawn();
+    }
+
+    /// Nudges the STT queue when new work may have become claimable.
+    fn wake_queue(&self) {
+        if let Some(queue) = lock(&self.queue).as_ref() {
+            queue.wake();
+        }
     }
 
     // -- wave-1 CRUD --------------------------------------------------------
@@ -1881,6 +1918,7 @@ impl MeetingManager {
         self.transition(&mut inner, meeting_id, destination, ended)?;
         drop(inner);
         self.publish_jobs(meeting_id);
+        self.wake_queue();
         self.snapshot(meeting_id)
     }
 
@@ -1942,10 +1980,15 @@ impl MeetingManager {
         }
         drop(inner);
         self.publish_jobs(meeting_id);
+        self.wake_queue();
         self.snapshot(meeting_id)
     }
 
-    /// Enqueues one STT job per source over that source's `ready` chunks.
+    /// Enqueues one STT job per not-yet-covered `ready` chunk (plan line 1193:
+    /// segment-wise processing; STT §3 idempotent enqueue).
+    ///
+    /// A chunk is "covered" once any `meeting_stt_job_chunks` row references
+    /// it, regardless of that job's state — retries own their chunks.
     fn enqueue_ready_chunks(&self, meeting_id: &str) -> Result<usize> {
         let rows: Vec<(String, String, i64, i64)> = {
             let conn = lock(&self.conn);
@@ -1953,7 +1996,8 @@ impl MeetingManager {
                 "SELECT id, source, timeline_start_ms, timeline_end_ms
                  FROM meeting_audio_chunks
                  WHERE meeting_id = ?1 AND state = 'ready' AND deleted_at IS NULL
-                 ORDER BY source, sequence",
+                   AND id NOT IN (SELECT chunk_id FROM meeting_stt_job_chunks)
+                 ORDER BY sequence",
             )?;
             let mapped = stmt.query_map(params![meeting_id], |row| {
                 Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
@@ -1964,17 +2008,11 @@ impl MeetingManager {
             return Ok(0);
         }
         let provider = self.env.provider();
-        let mut by_source: HashMap<String, Vec<(String, i64, i64)>> = HashMap::new();
-        for (id, source, start, end) in rows {
-            by_source.entry(source).or_default().push((id, start, end));
-        }
         let mut enqueued = 0usize;
-        for (source, chunks) in by_source {
-            let start = chunks.iter().map(|c| c.1).min().unwrap_or(0);
-            let end = chunks.iter().map(|c| c.2).max().unwrap_or(0);
+        for (id, source, start, end) in rows {
             self.store.enqueue_stt_job(NewSttJob {
                 meeting_id: StoreUuid(meeting_id.to_string()),
-                chunk_ids: chunks.into_iter().map(|c| StoreUuid(c.0)).collect(),
+                chunk_ids: vec![StoreUuid(id)],
                 source,
                 timeline_start_ms: start,
                 timeline_end_ms: end,
@@ -1985,6 +2023,51 @@ impl MeetingManager {
             enqueued += 1;
         }
         Ok(enqueued)
+    }
+
+    /// Incremental counterpart of [`Self::enqueue_ready_chunks`] for one chunk
+    /// the recorder just finalized. Returns `false` when the chunk is already
+    /// covered by a job or not in `ready` state yet.
+    fn enqueue_chunk_job(&self, meeting_id: &str, info: &rec::FinalizedChunkInfo) -> Result<bool> {
+        let source = MeetingAudioSource::from_recorder(info.source).as_str();
+        let row: Option<(String, i64, i64)> = {
+            let conn = lock(&self.conn);
+            conn.query_row(
+                "SELECT id, timeline_start_ms, timeline_end_ms
+                 FROM meeting_audio_chunks
+                 WHERE meeting_id = ?1 AND sequence = ?2 AND source = ?3
+                   AND state = 'ready' AND deleted_at IS NULL",
+                params![meeting_id, info.sequence as i64, source],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .optional()?
+        };
+        let Some((chunk_id, start, end)) = row else {
+            return Ok(false);
+        };
+        let covered: bool = {
+            let conn = lock(&self.conn);
+            conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM meeting_stt_job_chunks WHERE chunk_id = ?1)",
+                params![chunk_id],
+                |row| row.get(0),
+            )?
+        };
+        if covered {
+            return Ok(false);
+        }
+        let provider = self.env.provider();
+        self.store.enqueue_stt_job(NewSttJob {
+            meeting_id: StoreUuid(meeting_id.to_string()),
+            chunk_ids: vec![StoreUuid(chunk_id)],
+            source: source.to_string(),
+            timeline_start_ms: start,
+            timeline_end_ms: end,
+            provider: provider.name.clone(),
+            config_snapshot: serde_json::json!({ "kind": provider.kind }),
+            next_attempt_at: None,
+        })?;
+        Ok(true)
     }
 
     // -- snapshots and aggregates ------------------------------------------
@@ -2105,6 +2188,42 @@ impl MeetingManager {
         }
     }
 
+    /// Queue-drain settlement: when a session in `transcribing` has no
+    /// backlog left, it advances to `completed` — or `recoverable_error` when
+    /// jobs failed terminally (SSC T10/T11/T13; STT §3.2).
+    fn settle_after_queue(&self, meeting_id: &str) {
+        let Ok(counts) = self.job_counts(meeting_id) else {
+            return;
+        };
+        if counts.total_backlog > 0 {
+            return;
+        }
+        let mut inner = lock(&self.inner);
+        let Some(runtime) = inner.sessions.get(meeting_id) else {
+            return;
+        };
+        if runtime.state != MeetingState::Transcribing {
+            return;
+        }
+        let failed = counts.oldest_failed.is_some();
+        let destination = if failed {
+            MeetingState::RecoverableError
+        } else {
+            MeetingState::Completed
+        };
+        let patch = if failed {
+            SessionPatch {
+                last_error: Some("sttFailed".to_string()),
+                ..SessionPatch::default()
+            }
+        } else {
+            patch_none()
+        };
+        if let Err(e) = self.transition(&mut inner, meeting_id, destination, patch) {
+            warn!("Queue settlement for {} failed: {}", meeting_id, e);
+        }
+    }
+
     // -- recorder events (SSC O4: serialization point) ----------------------
 
     fn handle_recorder_event(&self, meeting_id: &str, event: &rec::RecorderEvent) {
@@ -2152,6 +2271,21 @@ impl MeetingManager {
                 warn!("Controlled stop for {} ({:?})", meeting_id, reason);
                 if let Err(e) = self.stop(meeting_id, false) {
                     error!("Controlled stop failed for {}: {}", meeting_id, e);
+                }
+            }
+            rec::RecorderEvent::ChunkFinalized { info } => {
+                // Incremental STT (plan line 1332): one job per finalized
+                // chunk while recording; enqueue is idempotent per chunk.
+                match self.enqueue_chunk_job(meeting_id, info) {
+                    Ok(true) => {
+                        self.publish_jobs(meeting_id);
+                        self.wake_queue();
+                    }
+                    Ok(false) => {}
+                    Err(e) => {
+                        // The stop-path enqueue is the safety net for this.
+                        warn!("Could not enqueue chunk job for {}: {}", meeting_id, e);
+                    }
                 }
             }
             _ => {}
@@ -2378,6 +2512,43 @@ impl MeetingManager {
 /// Empty patch; [`MeetingManager::transition`] fills in the state itself.
 fn patch_none() -> SessionPatch {
     SessionPatch::default()
+}
+
+/// STT-queue callbacks routed back into the manager. Holds a `Weak` so the
+/// worker thread never keeps the manager (and its DB handles) alive.
+struct ManagerDelegate {
+    manager: Weak<MeetingManager>,
+}
+
+impl QueueDelegate for ManagerDelegate {
+    fn on_segments_persisted(&self, meeting_id: &str, segments: Vec<MeetingTranscriptSegmentDto>) {
+        let Some(manager) = self.manager.upgrade() else {
+            return;
+        };
+        let last_sequence = segments.last().map(|s| s.sequence).unwrap_or(0);
+        let revision = lock(&manager.inner)
+            .sessions
+            .get(meeting_id)
+            .map(|r| r.revision);
+        manager.publish(
+            TOPIC_TRANSCRIPT_DELTA,
+            &MeetingTranscriptDeltaEvent {
+                meeting_id: meeting_id.to_string(),
+                last_sequence,
+                state_revision: revision,
+                truncated: None,
+                segments,
+            },
+        );
+    }
+
+    fn on_queue_progress(&self, meeting_id: &str) {
+        let Some(manager) = self.manager.upgrade() else {
+            return;
+        };
+        manager.publish_jobs(meeting_id);
+        manager.settle_after_queue(meeting_id);
+    }
 }
 
 /// Maps a recorder failure onto the error taxonomy code the UI renders.

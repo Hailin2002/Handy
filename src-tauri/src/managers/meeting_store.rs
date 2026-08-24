@@ -655,6 +655,20 @@ pub trait MeetingRepository: Send + Sync {
         err: Option<String>,
     ) -> Result<(), StoreError>;
 
+    /// U4 policy hook — move the *currently claimed* job back to `retry_wait`
+    /// with an explicit backoff deadline. The queue owns retry scheduling
+    /// (stt-provider-contract §3); the store only persists its decision.
+    fn reschedule_stt_job(
+        &self,
+        id: Uuid,
+        next_attempt_at: DateTime<Utc>,
+        err: Option<String>,
+    ) -> Result<(), StoreError>;
+
+    /// Read — chunks referenced by one job, in consumption order
+    /// (`meeting_stt_job_chunks.position`). Input side of the STT queue.
+    fn chunks_for_job(&self, job_id: Uuid) -> Result<Vec<AudioChunk>, StoreError>;
+
     /// U8 — batched segment INSERT + one log row per inserted segment, single
     /// transaction.
     fn insert_segments(
@@ -2023,6 +2037,99 @@ impl MeetingRepository for SqliteMeetingStore {
         tx.commit().map_err(sql_err(op))
     }
 
+    // -- U4: reschedule_stt_job --------------------------------------------
+
+    fn reschedule_stt_job(
+        &self,
+        id: Uuid,
+        next_attempt_at: DateTime<Utc>,
+        err: Option<String>,
+    ) -> Result<(), StoreError> {
+        let op = "U4 reschedule_stt_job";
+        let now = self.now();
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        let current =
+            read_job(&tx, &id.0)
+                .map_err(sql_err(op))?
+                .ok_or_else(|| StoreError::NotFound {
+                    entity: "meeting_stt_jobs",
+                    id: id.clone(),
+                })?;
+        if job_state_is_terminal(current.state) {
+            return Err(StoreError::Conflict {
+                entity: "meeting_stt_jobs",
+                id,
+                reason: format!(
+                    "job is in terminal state '{}' and cannot be rescheduled",
+                    job_state_token(current.state)
+                ),
+            });
+        }
+        // Only a held lease can be pushed back; anything else means two
+        // workers disagree about who owns the job.
+        if current.state != SttJobState::Running {
+            return Err(StoreError::Conflict {
+                entity: "meeting_stt_jobs",
+                id,
+                reason: format!(
+                    "job is '{}', only a 'running' lease can move to 'retry_wait'",
+                    job_state_token(current.state)
+                ),
+            });
+        }
+
+        tx.execute(
+            "UPDATE meeting_stt_jobs
+             SET state = 'retry_wait', next_attempt_at = ?2,
+                 last_error = COALESCE(?3, last_error),
+                 claimed_by = NULL, claimed_at = NULL, updated_at = ?4
+             WHERE id = ?1",
+            params![id.0, to_ms(next_attempt_at), err, to_ms(now)],
+        )
+        .map_err(classify("meeting_stt_jobs", &id, op))?;
+
+        tx.commit().map_err(sql_err(op))
+    }
+
+    // -- read: chunks_for_job ----------------------------------------------
+
+    fn chunks_for_job(&self, job_id: Uuid) -> Result<Vec<AudioChunk>, StoreError> {
+        let op = "read chunks_for_job";
+        let conn = self.locked(op)?;
+
+        let ids: Vec<String> = {
+            let mut stmt = conn
+                .prepare(
+                    "SELECT chunk_id FROM meeting_stt_job_chunks
+                     WHERE job_id = ?1 ORDER BY position ASC, chunk_id ASC",
+                )
+                .map_err(sql_err(op))?;
+            let mapped = stmt
+                .query_map(params![job_id.0], |row| row.get(0))
+                .map_err(sql_err(op))?;
+            mapped
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(sql_err(op))?
+        };
+
+        let mut chunks = Vec::with_capacity(ids.len());
+        for chunk_id in ids {
+            match read_chunk(&conn, &chunk_id).map_err(sql_err(op))? {
+                Some(chunk) => chunks.push(chunk),
+                None => {
+                    return Err(StoreError::NotFound {
+                        entity: ENTITY_CHUNKS,
+                        id: Uuid(chunk_id),
+                    })
+                }
+            }
+        }
+        Ok(chunks)
+    }
+
     // -- U8: insert_segments -----------------------------------------------
 
     fn insert_segments(
@@ -2275,6 +2382,20 @@ mod tests {
             to: SttJobState,
             err: Option<String>,
         ) -> Result<(), StoreError> {
+            let _ = (id, to, err);
+            unimplemented!("fake")
+        }
+        fn reschedule_stt_job(
+            &self,
+            id: Uuid,
+            next_attempt_at: DateTime<Utc>,
+            err: Option<String>,
+        ) -> Result<(), StoreError> {
+            let _ = (id, next_attempt_at, err);
+            unimplemented!("fake")
+        }
+        fn chunks_for_job(&self, job_id: Uuid) -> Result<Vec<AudioChunk>, StoreError> {
+            let _ = job_id;
             unimplemented!("fake")
         }
         fn insert_segments(

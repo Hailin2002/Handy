@@ -122,6 +122,29 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // The recorder-event pump needs the manager behind its `Arc` (it holds a
     // `Weak` back-reference), so it is attached right after construction.
     meeting_manager.attach_recorder_events();
+
+    // Local STT queue for meetings (plan §13 Phase 5). Pauses between jobs
+    // while dictation recording/streaming holds the shared local model.
+    {
+        let vad_model_path = app_handle
+            .path()
+            .resolve(
+                "resources/models/silero_vad_v4.onnx",
+                tauri::path::BaseDirectory::Resource,
+            )
+            .ok();
+        let recording_for_gate = Arc::clone(&recording_manager);
+        let transcription_for_gate = Arc::clone(&transcription_manager);
+        meeting_manager.attach_transcription_queue(
+            Arc::new(managers::meeting_transcription::LocalMeetingSttEngine::new(
+                transcription_manager.clone(),
+            )),
+            Arc::new(move || {
+                recording_for_gate.is_recording() || transcription_for_gate.is_streaming()
+            }),
+            vad_model_path,
+        );
+    }
     // Durable, content-addressed asset storage for meeting audio (plan 5,
     // module-placement-map B11). Managed so later leaves resolve it from
     // Tauri state instead of constructing a second root.
