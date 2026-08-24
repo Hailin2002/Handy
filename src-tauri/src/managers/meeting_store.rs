@@ -613,6 +613,14 @@ pub trait MeetingRepository: Send + Sync {
     /// queue can allocate the next slot without materializing every row.
     fn max_segment_sequence(&self, meeting_id: Uuid) -> Result<i64, StoreError>;
 
+    /// Controlled deletion (plan §11): tombstones the chunk rows of a meeting
+    /// (raw recording metadata) while keeping transcript and summary.
+    fn delete_meeting_audio_rows(&self, meeting_id: Uuid) -> Result<(), StoreError>;
+
+    /// Controlled deletion: tombstones chunk, transcript and summary rows of
+    /// a meeting. The session row itself is soft-deleted separately.
+    fn purge_meeting_content(&self, meeting_id: Uuid) -> Result<(), StoreError>;
+
     /// Read: current summary of a meeting, if any.
     fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError>;
 
@@ -1447,6 +1455,36 @@ fn classify<'a>(
     }
 }
 
+/// Shared tombstone helper for the controlled-deletion methods (plan §11).
+fn tombstone_rows_impl(
+    store: &SqliteMeetingStore,
+    op: &'static str,
+    meeting_id: &str,
+    entity: &'static str,
+) -> Result<(), StoreError> {
+    let conn = store.locked(op)?;
+    conn.execute(
+        &format!(
+            "UPDATE {entity} SET deleted_at = ?2, revision = revision + 1,
+             updated_at = ?2 WHERE meeting_id = ?1 AND deleted_at IS NULL"
+        ),
+        params![meeting_id, chrono::Utc::now().timestamp_millis()],
+    )
+    .map_err(classify(entity, &Uuid(meeting_id.to_string()), op))?;
+    Ok(())
+}
+
+impl SqliteMeetingStore {
+    fn tombstone_rows(
+        &self,
+        op: &'static str,
+        meeting_id: &str,
+        entity: &'static str,
+    ) -> Result<(), StoreError> {
+        tombstone_rows_impl(self, op, meeting_id, entity)
+    }
+}
+
 impl MeetingRepository for SqliteMeetingStore {
     // -- Read side ---------------------------------------------------------
 
@@ -1526,6 +1564,35 @@ impl MeetingRepository for SqliteMeetingStore {
             |row| row.get(0),
         )
         .map_err(sql_err(op))
+    }
+
+    fn delete_meeting_audio_rows(&self, meeting_id: Uuid) -> Result<(), StoreError> {
+        self.tombstone_rows(
+            "delete_meeting_audio_rows",
+            &meeting_id.0,
+            "meeting_audio_chunks",
+        )
+    }
+
+    fn purge_meeting_content(&self, meeting_id: Uuid) -> Result<(), StoreError> {
+        let op = "purge_meeting_content";
+        let now = chrono::Utc::now().timestamp_millis();
+        let conn = self.locked(op)?;
+        for entity in [
+            "meeting_audio_chunks",
+            "meeting_transcript_segments",
+            "meeting_summaries",
+        ] {
+            conn.execute(
+                &format!(
+                    "UPDATE {entity} SET deleted_at = ?2, revision = revision + 1,
+                     updated_at = ?2 WHERE meeting_id = ?1 AND deleted_at IS NULL"
+                ),
+                params![meeting_id.0, now],
+            )
+            .map_err(classify(entity, &meeting_id, op))?;
+        }
+        Ok(())
     }
 
     fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError> {
@@ -2375,6 +2442,12 @@ mod tests {
             unimplemented!("fake")
         }
         fn max_segment_sequence(&self, _meeting_id: Uuid) -> Result<i64, StoreError> {
+            unimplemented!("fake")
+        }
+        fn delete_meeting_audio_rows(&self, _meeting_id: Uuid) -> Result<(), StoreError> {
+            unimplemented!("fake")
+        }
+        fn purge_meeting_content(&self, _meeting_id: Uuid) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
         fn summary_for_meeting(

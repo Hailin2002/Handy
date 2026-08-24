@@ -246,6 +246,46 @@ pub async fn request_meeting_summary(
     meeting_manager.request_summary(&meeting_id)
 }
 
+/// Phase 7 — export payload: rendered content plus filename suggestion.
+#[derive(Serialize, specta::Type)]
+pub struct MeetingExportDto {
+    pub filename: String,
+    pub mime: String,
+    pub content: String,
+}
+
+/// Phase 7 — renders the meeting as Markdown, TXT or JSON. The frontend
+/// persists the file via the dialog/fs plugins.
+#[tauri::command]
+#[specta::specta]
+pub async fn export_meeting(
+    meeting_manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+    format: crate::managers::meeting_export::ExportFormat,
+) -> Result<Option<MeetingExportDto>, String> {
+    let export = meeting_manager
+        .build_export(&meeting_id, format)
+        .map_err(|e| e.to_string())?;
+    Ok(export.map(|e| MeetingExportDto {
+        filename: e.filename,
+        mime: e.mime,
+        content: e.content,
+    }))
+}
+
+/// Phase 7 — controlled deletion with the plan's two scopes.
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_meeting_data(
+    meeting_manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+    scope: crate::managers::meeting::DeleteScope,
+) -> Result<(), String> {
+    meeting_manager
+        .delete_meeting_data(&meeting_id, scope)
+        .map_err(|e| e.to_string())
+}
+
 /// Pending crash-recovery offers produced by the startup reconciliation.
 #[tauri::command]
 #[specta::specta]
@@ -292,6 +332,8 @@ mod tests {
             "meeting_delete_session",
             "get_meeting_summary",
             "request_meeting_summary",
+            "export_meeting",
+            "delete_meeting_data",
         ];
         // Referencing the items binds the names to real functions.
         let _ = super::create_meeting_draft;
@@ -312,7 +354,9 @@ mod tests {
         let _ = super::meeting_delete_session;
         let _ = super::get_meeting_summary;
         let _ = super::request_meeting_summary;
-        assert_eq!(names.len(), 18);
+        let _ = super::export_meeting;
+        let _ = super::delete_meeting_data;
+        assert_eq!(names.len(), 20);
     }
 
     /// The recovery resolution tokens the frontend sends.

@@ -10,6 +10,7 @@ pub mod meeting_store;
 pub mod meeting_transcription;
 // Cloud STT backends for meeting jobs (plan §13 Phase 6).
 pub mod meeting_cloud;
+pub mod meeting_export;
 pub mod meeting_summary;
 
 pub mod audio;

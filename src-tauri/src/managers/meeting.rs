@@ -41,7 +41,22 @@ use super::meeting_transcription::{
     MeetingSttEngine, MeetingTranscriptionQueue, QueueConfig, QueueDelegate,
 };
 use crate::audio_toolkit::audio::meeting_recorder as rec;
+use crate::managers::meeting_export as export;
 use crate::managers::meeting_summary as summarize;
+use crate::storage::asset_store::AssetStore as _;
+
+/// Controlled-deletion scope (plan §11): keep the transcript but drop the raw
+/// recording, or remove everything.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum DeleteScope {
+    AudioOnly,
+    Everything,
+}
+
+fn string_list_of(value: &serde_json::Value) -> Vec<String> {
+    serde_json::from_value(value.clone()).unwrap_or_default()
+}
 use anyhow::Result;
 use log::{debug, error, info, warn};
 use rusqlite::{params, Connection, OptionalExtension};
@@ -1409,6 +1424,86 @@ impl MeetingManager {
         self.store
             .summary_for_meeting(StoreUuid(meeting_id.to_string()))
             .map_err(Into::into)
+    }
+
+    /// Controlled deletion (plan §11). `AudioOnly` removes the raw recording
+    /// (asset files + chunk rows) while keeping transcript and summary;
+    /// `Everything` additionally tombstones transcript and summary rows and
+    /// soft-deletes the session. Refused while the meeting owns the capture.
+    pub fn delete_meeting_data(&self, meeting_id: &str, scope: DeleteScope) -> Result<()> {
+        {
+            let inner = lock(&self.inner);
+            if inner.capture_owner.as_deref() == Some(meeting_id)
+                || inner
+                    .sessions
+                    .get(meeting_id)
+                    .is_some_and(|r| r.state.is_active())
+            {
+                anyhow::bail!("meetingIsActive");
+            }
+        }
+
+        let uuid = StoreUuid(meeting_id.to_string());
+        // Files first: a row tombstone without its bytes is recoverable; the
+        // reverse would claim deletion that did not happen.
+        crate::storage::asset_store::LocalAssetStore::with_root(self.assets_root.clone())
+            .delete_meeting_tree(meeting_id)
+            .map_err(|e| anyhow::anyhow!("asset delete failed: {e}"))?;
+
+        match scope {
+            DeleteScope::AudioOnly => self.store.delete_meeting_audio_rows(uuid)?,
+            DeleteScope::Everything => {
+                self.store.purge_meeting_content(uuid)?;
+                if !self.soft_delete_session(meeting_id)? {
+                    anyhow::bail!("meeting session {meeting_id} not found");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Renders one export payload from persisted rows (Phase 7 read side).
+    pub fn build_export(
+        &self,
+        meeting_id: &str,
+        format: export::ExportFormat,
+    ) -> Result<Option<export::MeetingExport>> {
+        let Some(session) = self.get_session(meeting_id)? else {
+            return Ok(None);
+        };
+        let segments = self
+            .store
+            .segments_for_meeting(StoreUuid(meeting_id.to_string()))?;
+        let export_segments: Vec<export::ExportSegment> = segments
+            .iter()
+            .map(|s| export::ExportSegment {
+                start_ms: s.start_ms,
+                end_ms: s.end_ms,
+                source: s.source.clone(),
+                text: s.text.clone(),
+            })
+            .collect();
+        let summary = self
+            .store
+            .summary_for_meeting(StoreUuid(meeting_id.to_string()))?
+            .filter(|s| s.state == "completed")
+            .map(|s| export::ExportSummary {
+                provider: s.provider,
+                model: s.model,
+                prompt_version: s.prompt_version,
+                summary_markdown: s.summary_markdown,
+                decisions: string_list_of(&s.decisions),
+                action_items: string_list_of(&s.action_items),
+                open_questions: string_list_of(&s.open_questions),
+            });
+        Ok(Some(export::render(
+            format,
+            meeting_id,
+            &session.title,
+            session.started_at,
+            &export_segments,
+            summary.as_ref(),
+        )))
     }
 
     /// Fetches one alive (non-tombstoned) session by id.
@@ -3258,7 +3353,7 @@ mod tests {
     }
 
     struct Harness {
-        _dir: tempfile::TempDir,
+        dir: tempfile::TempDir,
         manager: MeetingManager,
         sink: Arc<RecordingSink>,
         db_path: PathBuf,
@@ -3277,7 +3372,7 @@ mod tests {
         )
         .expect("open manager");
         Harness {
-            _dir: dir,
+            dir: dir,
             manager,
             sink,
             db_path,
@@ -3601,6 +3696,63 @@ mod tests {
             .store
             .transition_stt_job(job.id, SttJobState::Succeeded, None)
             .expect("succeed");
+    }
+
+    /// Controlled deletion (plan §11): AudioOnly keeps transcript rows,
+    /// Everything removes all content rows and the session itself.
+    #[test]
+    fn controlled_deletion_respects_the_two_scopes() {
+        let h = harness();
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, false, true)
+            .unwrap();
+        seed_ready_chunk(&h.manager, &draft.meeting_id);
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        seed_segment_for_first_job(&h.manager, &draft.meeting_id);
+
+        // A raw audio directory exists for this meeting before deletion.
+        let meeting_tree = h
+            .dir
+            .path()
+            .join("assets")
+            .join("meetings")
+            .join(&draft.meeting_id);
+        std::fs::create_dir_all(&meeting_tree).expect("create tree");
+
+        // AudioOnly keeps transcript rows and the session.
+        h.manager
+            .delete_meeting_data(&draft.meeting_id, DeleteScope::AudioOnly)
+            .unwrap();
+        assert!(!meeting_tree.exists(), "audio files are removed");
+        {
+            let conn = lock(&h.manager.conn);
+            let alive_segments: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM meeting_transcript_segments
+                     WHERE meeting_id = ?1 AND deleted_at IS NULL",
+                    params![draft.meeting_id],
+                    |r| r.get(0),
+                )
+                .unwrap_or(-1);
+            assert_eq!(alive_segments, 1, "transcript survives AudioOnly");
+        }
+
+        // Everything additionally tombstones content and the session.
+        h.manager
+            .delete_meeting_data(&draft.meeting_id, DeleteScope::Everything)
+            .unwrap();
+        assert!(h.manager.get_session(&draft.meeting_id).unwrap().is_none());
+
+        let conn = lock(&h.manager.conn);
+        let alive_segments: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM meeting_transcript_segments WHERE meeting_id = ?1 AND deleted_at IS NULL",
+                params![draft.meeting_id],
+                |r| r.get(0),
+            )
+            .unwrap_or(-1);
+        assert_eq!(alive_segments, 0, "segments are gone after full purge");
     }
 
     /// Pen-test: deleting the session that currently owns the capture must be

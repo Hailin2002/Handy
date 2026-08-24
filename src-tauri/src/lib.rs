@@ -1,4 +1,4 @@
-﻿mod actions;
+mod actions;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod apple_intelligence;
 mod audio_feedback;
@@ -25,7 +25,7 @@ mod secure_input;
 pub mod settings;
 mod shortcut;
 mod signal_handle;
-// Persistence seam (plan Â§5, module-placement-map B11/E3); scaffold only.
+// Persistence seam (plan §5, module-placement-map B11/E3); scaffold only.
 mod storage;
 // Public for integration tests (src-tauri/tests): negative-path STT tests call
 // `transcribe_cloud` against a local mock HTTP server.
@@ -123,10 +123,10 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // `Weak` back-reference), so it is attached right after construction.
     meeting_manager.attach_recorder_events();
 
-    // Local STT queue for meetings (plan Â§13 Phases 5â€“6). Pauses between jobs
+    // Local STT queue for meetings (plan §13 Phases 5–6). Pauses between jobs
     // while dictation recording/streaming holds the shared local model. The
     // routing engine dispatches per job to the provider chosen *for that
-    // meeting* â€” independent of the dictation provider.
+    // meeting* — independent of the dictation provider.
     {
         let vad_model_path = app_handle
             .path()
@@ -262,8 +262,8 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // This matches the pattern used for Enigo initialization.
 
     // Set up signal handlers for toggling transcription. On Linux, SIGUSR1 is
-    // deliberately not handled â€” it belongs to WebKitGTK's garbage collector
-    // (#1660) â€” see signal_handle.rs.
+    // deliberately not handled — it belongs to WebKitGTK's garbage collector
+    // (#1660) — see signal_handle.rs.
     #[cfg(unix)]
     signal_handle::setup_signal_handler(app_handle.clone());
 
@@ -485,6 +485,8 @@ pub fn run(cli_args: CliArgs) {
             commands::meetings::retry_meeting_jobs,
             commands::meetings::get_meeting_summary,
             commands::meetings::request_meeting_summary,
+            commands::meetings::export_meeting,
+            commands::meetings::delete_meeting_data,
             commands::meetings::meeting_list_recoveries,
             commands::meetings::meeting_resolve_recovery,
             helpers::clamshell::is_laptop,
@@ -605,20 +607,20 @@ pub fn run(cli_args: CliArgs) {
             specta_builder.mount_events(app);
 
             // Headless one-shot path (`--transcribe-file` / `--list-devices` /
-            // `--list-models`): initialize only what transcription needs â€” the
+            // `--list-models`): initialize only what transcription needs — the
             // store/paths plugins, the model + transcription managers, and the
-            // transcribe-cpp backend + accelerator settings â€” then run on a worker
+            // transcribe-cpp backend + accelerator settings — then run on a worker
             // thread and exit. Deliberately skips the window, tray, overlay, audio
             // recorder (so it never opens the mic, even with always_on_microphone),
             // signal handlers, and autostart that initialize_core_logic sets up.
             if headless_mode {
                 // One-time legacy-secret migration BEFORE anything reads
                 // settings on this path (audit F-6,
-                // docs/reviews/secrets-exposure-and-durability-audit.md Â§3.2):
+                // docs/reviews/secrets-exposure-and-durability-audit.md §3.2):
                 // ModelManager/TranscriptionManager init and
                 // apply_accelerator_settings all call get_settings, and a read
                 // of an older store re-persists it with the API-key maps
-                // serialized as `{}` â€” which would silently destroy plain-text
+                // serialized as `{}` — which would silently destroy plain-text
                 // keys that were never moved into the OS keychain. The load
                 // inside this transaction also hydrates the in-memory maps.
                 secret_store::migrate_secrets_at_startup(app.handle());
