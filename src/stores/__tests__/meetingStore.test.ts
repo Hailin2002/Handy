@@ -123,6 +123,45 @@ describe("meetingStore", () => {
     expect(useMeetingStore.getState().levels.microphone).toBe(0);
   });
 
+  it("drops hostile level updates: unknown source and non-finite peaks", () => {
+    const store = useMeetingStore.getState();
+    store.adoptSnapshot(snapshot({ state: "recording", state_revision: 3 }));
+
+    store.applyLevelUpdate({
+      meeting_id: "m-1",
+      // @ts-expect-error simulating a buggy/hostile payload
+      source: "hacked",
+      peak: 0.9,
+      rms: 0.4,
+    });
+    store.applyLevelUpdate({
+      meeting_id: "m-1",
+      source: "microphone",
+      peak: Number.NaN,
+      rms: Number.NaN,
+    });
+    store.applyLevelUpdate({
+      meeting_id: "m-1",
+      source: "system",
+      peak: Number.POSITIVE_INFINITY,
+      rms: Number.NaN,
+    });
+
+    const levels = useMeetingStore.getState().levels;
+    expect(Object.keys(levels).sort()).toEqual(["microphone", "system"]);
+    expect(levels.microphone).toBe(0);
+    expect(levels.system).toBe(0);
+
+    // A well-formed frame still lands afterwards.
+    store.applyLevelUpdate({
+      meeting_id: "m-1",
+      source: "microphone",
+      peak: 0.5,
+      rms: 0.25,
+    });
+    expect(useMeetingStore.getState().levels.microphone).toBe(0.5);
+  });
+
   it("applies transcript deltas append-only and idempotently", () => {
     const store = useMeetingStore.getState();
     store.adoptSnapshot(snapshot());

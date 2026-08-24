@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, HardDrive, Mic, Play } from "lucide-react";
 import { toast } from "sonner";
@@ -50,6 +50,7 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
   const [summaryEnabled, setSummaryEnabled] = useState(true);
   const [consent, setConsent] = useState(false);
   const [microphoneOnly, setMicrophoneOnly] = useState(false);
+  const startingRef = useRef(false);
 
   const preflight = useMeetingStore((state) => state.preflight);
   const preflightStatus = useMeetingStore((state) => state.preflightStatus);
@@ -93,16 +94,26 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
     !busy;
 
   const handleStart = async () => {
+    // Synchronous re-entry guard: `canStart` derives from store state that
+    // updates asynchronously, so a same-frame double-click would otherwise
+    // fire two start commands (the second failing loudly against the
+    // capture-owner guard).
+    if (startingRef.current) return;
     if (!canStart) return;
-    if (dirty) await persistTitle();
-    const started = await startMeeting({
-      meetingId: session.id,
-      title: title.trim() || session.title,
-      microphoneOnly,
-      summaryEnabled,
-      consentAcknowledged: consent,
-    });
-    if (started) onStarted();
+    startingRef.current = true;
+    try {
+      if (dirty) await persistTitle();
+      const started = await startMeeting({
+        meetingId: session.id,
+        title: title.trim() || session.title,
+        microphoneOnly,
+        summaryEnabled,
+        consentAcknowledged: consent,
+      });
+      if (started) onStarted();
+    } finally {
+      startingRef.current = false;
+    }
   };
 
   return (

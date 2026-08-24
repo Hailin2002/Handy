@@ -714,6 +714,18 @@ pub trait MeetingEnvironment: Send + Sync {
     fn microphone_permission_granted(&self) -> bool;
 }
 
+/// Pen-test hardening: a pathological title (megabytes pasted, zero-width
+/// spam) must be rejected at the boundary instead of flowing into the
+/// database, every event payload and every render path.
+const MAX_TITLE_CHARS: usize = 500;
+
+fn ensure_title_reasonable(title: &str) -> Result<()> {
+    if title.chars().count() > MAX_TITLE_CHARS {
+        anyhow::bail!("meetingTitleTooLong");
+    }
+    Ok(())
+}
+
 /// Free bytes available to the calling user on the volume holding `path`.
 ///
 /// Windows uses `GetDiskFreeSpaceExW` directly (no extra crate feature),
@@ -1297,6 +1309,7 @@ impl MeetingManager {
             Some(t) if !t.is_empty() => t,
             _ => fallback_title(started_at),
         };
+        ensure_title_reasonable(&title)?;
         let id = uuid::Uuid::new_v4().to_string();
         {
             let conn = lock(&self.conn);
@@ -1389,6 +1402,7 @@ impl MeetingManager {
         if title.is_empty() {
             anyhow::bail!("Meeting title must not be empty");
         }
+        ensure_title_reasonable(&title)?;
         {
             let conn = lock(&self.conn);
             let updated = conn.execute(
@@ -1410,7 +1424,24 @@ impl MeetingManager {
     }
 
     /// Soft-deletes a session (tombstone, plan §9 line 1152).
+    /// Soft-deletes a session (tombstone, plan §9 line 1152).
+    ///
+    /// Pen-tester's rule: a session that owns the capture must never be
+    /// tombstoned underneath its recorder — that would orphan a live writer,
+    /// land new chunks on a deleted row and manufacture a bogus recovery
+    /// offer on the next start. Stop or cancel first.
     pub fn soft_delete_session(&self, id: &str) -> Result<bool> {
+        {
+            let inner = lock(&self.inner);
+            if inner.capture_owner.as_deref() == Some(id) {
+                anyhow::bail!("meetingIsActive");
+            }
+            if let Some(runtime) = inner.sessions.get(id) {
+                if runtime.state.is_active() {
+                    anyhow::bail!("meetingIsActive");
+                }
+            }
+        }
         let conn = lock(&self.conn);
         let updated = conn.execute(
             "UPDATE meeting_sessions SET deleted_at = ?2, revision = revision + 1, updated_at = ?2
@@ -3097,6 +3128,47 @@ mod tests {
             .unwrap();
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].id, beta.id);
+    }
+
+    /// Pen-test: hostile titles (empty, oversized) are rejected at the
+    /// boundary instead of flowing into the database and every event.
+    #[test]
+    fn titles_are_length_capped_and_non_empty() {
+        let h = harness();
+        let draft = h.manager.create_draft(None).unwrap();
+
+        let long = "x".repeat(MAX_TITLE_CHARS + 1);
+        assert!(h.manager.rename_session(&draft.meeting_id, long).is_err());
+        assert!(h
+            .manager
+            .create_session(Some("y".repeat(MAX_TITLE_CHARS + 1)))
+            .is_err());
+
+        let ok = "x".repeat(MAX_TITLE_CHARS);
+        h.manager
+            .rename_session(&draft.meeting_id, ok)
+            .expect("exactly-at-limit title accepted");
+    }
+
+    /// Pen-test: deleting the session that currently owns the capture must be
+    /// refused — the recorder would keep writing into a tombstoned row.
+    #[test]
+    fn delete_refuses_an_actively_capturing_session() {
+        let h = harness();
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, false, true)
+            .unwrap();
+
+        let err = h
+            .manager
+            .soft_delete_session(&draft.meeting_id)
+            .expect_err("active capture must block deletion");
+        assert!(err.to_string().contains("meetingIsActive"));
+
+        // After stopping, deletion works as usual.
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        assert!(h.manager.soft_delete_session(&draft.meeting_id).unwrap());
     }
 
     /// Delete hides the session from get/list but keeps the tombstoned row.

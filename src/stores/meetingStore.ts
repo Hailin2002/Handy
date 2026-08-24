@@ -493,7 +493,12 @@ export const useMeetingStore = create<MeetingStoreState>()((set, get) => {
       if (!session || session.meetingId !== event.meeting_id) return;
       // Meters only move while capturing (LV 2.3 suppression rule).
       if (session.state !== "recording") return;
-      const level = Math.min(1, Math.max(0, event.peak ?? event.rms ?? 0));
+      // Monkey-proofing: an unknown source key or a non-finite level must not
+      // pollute the meter state (NaN would stick until the next good frame).
+      if (event.source !== "microphone" && event.source !== "system") return;
+      const raw = event.peak ?? event.rms ?? 0;
+      if (!Number.isFinite(raw)) return;
+      const level = Math.min(1, Math.max(0, raw));
       set((state) => ({ levels: { ...state.levels, [event.source]: level } }));
     },
 
@@ -506,7 +511,9 @@ export const useMeetingStore = create<MeetingStoreState>()((set, get) => {
         const added = (event.segments ?? []).filter((s) => !known.has(s.id));
         if (added.length === 0) return state;
         const transcript = [...state.transcript, ...added].sort(
-          (a, b) => a.sequence - b.sequence,
+          // Sequence is the primary order; start_ms breaks ties so a hostile
+          // or duplicated sequence cannot make rows flicker between renders.
+          (a, b) => a.sequence - b.sequence || a.start_ms - b.start_ms,
         );
         return {
           transcript,

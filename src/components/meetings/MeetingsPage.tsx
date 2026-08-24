@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -45,6 +45,7 @@ export const MeetingsPage: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [setupSession, setSetupSession] = useState<MeetingSession | null>(null);
   const [creating, setCreating] = useState(false);
+  const createInFlight = useRef(false);
 
   const liveSession = useMeetingStore((state) => state.session);
   const initListeners = useMeetingStore((state) => state.initListeners);
@@ -87,7 +88,10 @@ export const MeetingsPage: React.FC = () => {
   };
 
   const createMeeting = async () => {
-    if (creating) return;
+    // Synchronous re-entry guard: `creating` state alone cannot stop a
+    // same-frame double-click from creating two draft rows.
+    if (creating || createInFlight.current) return;
+    createInFlight.current = true;
     setCreating(true);
     try {
       // Plan §6.7 line 508: title pre-filled with date and time; formatted
@@ -109,6 +113,7 @@ export const MeetingsPage: React.FC = () => {
       console.error("Failed to create meeting:", error);
       toast.error(t("meetings.createError"));
     } finally {
+      createInFlight.current = false;
       setCreating(false);
     }
   };
