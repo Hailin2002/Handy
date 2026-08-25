@@ -1,0 +1,1269 @@
+{
+  "tray": {
+    "settings": "Inställningar...",
+    "checkUpdates": "Sök efter uppdateringar...",
+    "copyLastTranscript": "Kopiera senaste transkriptionen",
+    "unloadModel": "Avlasta modell",
+    "model": "Modell",
+    "quit": "Avsluta",
+    "cancel": "Avbryt",
+    "secureInputWarning": "⚠ Kortkommandon blockeras av Secure Input"
+  },
+  "sidebar": {
+    "general": "Allmänt",
+    "models": "Modeller",
+    "advanced": "Avancerat",
+    "postProcessing": "Efterbearbetning",
+    "history": "Historik",
+    "debug": "Felsökning",
+    "about": "Om"
+  },
+  "nav": {
+    "primaryAriaLabel": "Huvudnavigation",
+    "settingsTabsAriaLabel": "Inställningsavsnitt",
+    "dictate": "Diktering",
+    "meetings": "Möten",
+    "projects": "Projekt",
+    "history": "Dikteringshistorik",
+    "settings": "Inställningar",
+    "about": "Hjälp & om",
+    "activeMeeting": "Inspelning pågår · {{duration}}",
+    "projectsEmptyBody": "Projekt samlar status, uppgifter, möten och importerade källor."
+  },
+  "meetings": {
+    "emptyBenefit": "Spela in dina möten och få transkriptioner och sammanfattningar utan att lämna appen.",
+    "newMeeting": "Nytt möte",
+    "importAudio": "Importera ljudfil",
+    "privacyLocal": "Standard: lokalt på den här enheten",
+    "searchPlaceholder": "Sök möten",
+    "search": "Sök",
+    "backToList": "Tillbaka till möten",
+    "saveTitle": "Spara titel",
+    "saveError": "Kunde inte spara titeln. Försök igen.",
+    "createError": "Kunde inte skapa mötet. Försök igen.",
+    "deleteError": "Kunde inte ta bort mötet. Försök igen.",
+    "deleteConfirmTitle": "Ta bort det här mötet?",
+    "deleteConfirmBody": "Detta tar bort mötet med transkript och sammanfattning permanent.",
+    "titleInputLabel": "Mötets titel",
+    "statusLabel": "Status",
+    "createdLabel": "Skapad",
+    "notFound": "Mötet hittades inte.",
+    "loadError": "Möten kunde inte läsas in.",
+    "stateDraft": "Utkast",
+    "stateRecording": "Spelar in",
+    "stateCompleted": "Slutfört",
+    "stateOther": "Bearbetning",
+    "badgeRecording": "Recording",
+    "badgeStopping": "Stopping",
+    "badgeInterrupted": "Interrupted",
+    "badgeAttention": "Attention needed",
+    "badgeComplete": "Completed",
+    "badgeProcessing": "Processing",
+    "badgePaused": "Paused"
+  },
+  "meeting": {
+    "actions": {
+      "startMeeting": "Start meeting",
+      "pause": "Pause",
+      "resume": "Resume",
+      "endMeeting": "End meeting",
+      "keepRecording": "Keep recording",
+      "cancel": "Cancel",
+      "close": "Close",
+      "tryAgain": "Try again",
+      "switchDevice": "Switch device",
+      "openSettings": "Open settings",
+      "openSystemSettings": "Open system settings",
+      "reconnect": "Reconnect",
+      "recordMicOnly": "Record microphone only",
+      "continueWithoutSystemAudio": "Continue without system audio",
+      "workInBackground": "Continue in background",
+      "retryFailedSegments": "Retry failed segments",
+      "openMeeting": "Open meeting",
+      "deleteRecording": "Delete recording",
+      "recover": "Recover and process",
+      "decideLater": "Decide later",
+      "testSystemAudio": "Test system audio",
+      "jumpToLatest": "Jump to current text",
+      "cancelMeetingStart": "Cancel meeting start",
+      "useLocal": "Process locally",
+      "finishDictation": "Finish dictation",
+      "resumeWithDevices": "Continue with these devices",
+      "confirmDelete": "I understand — delete permanently"
+    },
+    "session": {
+      "draft": {
+        "hint": "Nothing is being recorded yet."
+      },
+      "starting": {
+        "title": "Starting meeting…",
+        "body": "Checking microphone and system audio…"
+      },
+      "recording": {
+        "title": "Recording",
+        "saved": "Audio saved",
+        "provider": {
+          "local": "Local",
+          "cloud": "Cloud ({{provider}})"
+        }
+      },
+      "paused": {
+        "title": "Paused",
+        "body": "No audio is being saved or uploaded while paused."
+      },
+      "stopping": {
+        "title": "Finishing recording…",
+        "body": "Finalising the audio files. This takes only a moment.",
+        "done": "Recording ended — audio saved."
+      },
+      "completed": {
+        "title": "Meeting completed",
+        "saved": "Transcript and summary are stored on this device."
+      },
+      "cancelled": {
+        "title": "Recording cancelled",
+        "body": "The audio captured so far has been kept. Nothing was deleted."
+      },
+      "micOnly": {
+        "badge": "Microphone only — system audio is not being recorded"
+      },
+      "durationLabel": "Recording duration {{duration}}"
+    },
+    "consent": {
+      "beforeStart": {
+        "title": "Before you record",
+        "body": "Recording a conversation requires the consent of everyone involved. Speak shows a recording indicator for the whole meeting and is not designed as a stealth recorder.",
+        "acknowledge": "Everyone involved has consented"
+      },
+      "indicator": {
+        "label": "This meeting is being recorded."
+      }
+    },
+    "cloud": {
+      "notice": {
+        "azure": {
+          "title": "Cloud transcription selected",
+          "body": "Audio from your microphone and system audio will be uploaded to Microsoft Azure and transcribed there. With local processing, nothing leaves this device."
+        }
+      },
+      "active": {
+        "azure": "Audio is being uploaded to Azure.",
+        "azureProcessing": "Audio segments are being uploaded to Azure for transcription.",
+        "llm": "Transcript text is being sent to {{provider}} to create the summary."
+      }
+    },
+    "preflight": {
+      "title": "Start checks",
+      "description": "Speak checks devices, storage and transcription before recording starts.",
+      "recheck": "Check again",
+      "blocked": "Fix the checks marked below before starting.",
+      "unavailable": "Speak cannot run the start checks right now, so recording is unavailable.",
+      "pending": "Running start checks…",
+      "status": {
+        "ok": "Works",
+        "warning": "Needs attention",
+        "error": "Not ready",
+        "checking": "Checking…"
+      },
+      "row": {
+        "microphone": "Microphone",
+        "systemAudio": "System audio",
+        "transcription": "Transcription",
+        "language": "Language",
+        "disk": "Storage",
+        "permission": "Permissions"
+      }
+    },
+    "setup": {
+      "title": "Start meeting",
+      "description": "Give the meeting a name and start when the checks below look right.",
+      "summaryToggle": "Summarise after the meeting",
+      "summaryHint": "The summary is created once the transcript is complete.",
+      "storageHint": "About 0.25 GB of storage is used per hour of microphone and system audio.",
+      "moreSettings": "More settings",
+      "providerLabel": "Transcription provider for this meeting",
+      "providerHint": "Cloud providers need their endpoint and key configured in settings. The choice only applies to this meeting.",
+      "providerLocal": "On-device",
+      "providerAzure": "Azure Speech (cloud)",
+      "providerCustom": "Custom endpoint (cloud)"
+    },
+    "live": {
+      "heading": "Live transcript",
+      "transcriptEmpty": "Finished transcript sections appear here while the meeting runs.",
+      "backlog": "{{count}} sections waiting",
+      "status": {
+        "listening": "Listening",
+        "transcribing": "Section is being transcribed",
+        "behind": "Processing is behind"
+      },
+      "levels": {
+        "microphone": "Microphone level",
+        "system": "System audio level",
+        "value": "{{label}}: {{percent}}%"
+      },
+      "stopConfirm": {
+        "title": "End meeting?",
+        "body": "The recording is finalised and processing starts. Nothing recorded so far is deleted."
+      }
+    },
+    "processing": {
+      "title": "Processing meeting",
+      "closeOk": "You can close this window.",
+      "done": "Meeting ready",
+      "summarizing": "Creating summary…",
+      "backlog": "{{count}} segments waiting",
+      "step": {
+        "saved": "Recording saved safely",
+        "prepared": "{{done}} of {{total}} audio segments prepared",
+        "transcribed": "{{done}} of {{total}} segments transcribed",
+        "summary": "Summary",
+        "summarySkipped": "Summary is switched off for this meeting"
+      },
+      "state": {
+        "pending": "Waiting",
+        "running": "In progress",
+        "done": "Done"
+      },
+      "failed": "{{count}} segments failed and can be retried."
+    },
+    "recovery": {
+      "heading": "Interrupted meetings",
+      "title": "Recover meeting recording?",
+      "body": "Speak was closed unexpectedly during “{{title}}”. The audio captured up to that point was saved and can be processed.",
+      "counts": "{{recovered}} sections recovered, {{damaged}} damaged.",
+      "causeCrash": "Interrupted by an unexpected close",
+      "causeSleepWake": "Interrupted because this PC went to sleep",
+      "causeUnknown": "The reason for the interruption is unknown"
+    },
+    "errors": {
+      "generic": {
+        "title": "Something needs your attention",
+        "body": "The meeting could not continue. Try again or open the settings."
+      },
+      "backendUnavailable": {
+        "title": "Meeting recording is not available yet",
+        "body": "This build cannot record meetings because the recording service is missing. Everything already saved is untouched."
+      },
+      "recoverable": {
+        "title": "Something needs your attention"
+      },
+      "micLost": {
+        "title": "Microphone disconnected",
+        "body": "Your microphone stopped working. System audio is still being recorded."
+      },
+      "systemLost": {
+        "title": "System audio stopped",
+        "body": "The output device stopped delivering audio. Your microphone is still being recorded."
+      },
+      "noLoopback": {
+        "title": "System audio can’t be captured",
+        "body": "Speak can’t listen to this output device. You can record the microphone only."
+      },
+      "exclusiveMode": {
+        "title": "Output device is busy",
+        "body": "The output device is running in exclusive mode, so system audio can’t be captured."
+      },
+      "diskFull": {
+        "title": "Recording stopped — storage full",
+        "body": "Speak stopped the recording to protect your data. Everything captured so far is saved."
+      },
+      "cloudUnreachable": {
+        "title": "Cloud transcription is unreachable",
+        "body": "Recording continues on this device. Sections will be transcribed as soon as the service responds again."
+      },
+      "cloudConfig": {
+        "title": "Cloud transcription is not configured",
+        "body": "The stored credentials were rejected. Recording continues locally."
+      },
+      "micPermission": {
+        "title": "Microphone access required",
+        "body": "Speak needs microphone access to record meetings. Grant access in the system privacy settings."
+      },
+      "missingKey": {
+        "title": "Setup incomplete",
+        "body": "Transcription is not configured yet. Open the settings to finish the setup."
+      },
+      "slept": {
+        "title": "Recording was interrupted",
+        "body": "This PC went to sleep. The recording stopped safely and can be continued."
+      },
+      "startFailed": {
+        "title": "The meeting could not be started",
+        "body": "Nothing was recorded. Check the devices and try again."
+      },
+      "pauseFailed": {
+        "title": "The meeting could not be paused",
+        "body": "Recording continues. Try again."
+      },
+      "resumeFailed": {
+        "title": "The meeting could not be resumed",
+        "body": "The meeting stays paused. Check the devices and try again."
+      },
+      "stopFailed": {
+        "title": "The meeting could not be ended",
+        "body": "The recording is still running and nothing was lost. Try again."
+      },
+      "cancelFailed": {
+        "title": "The meeting could not be cancelled",
+        "body": "Try again or end the meeting instead."
+      },
+      "retryFailed": {
+        "title": "The segments could not be queued again",
+        "body": "The audio is still saved. Try again."
+      },
+      "recoveryFailed": {
+        "title": "The recording could not be recovered",
+        "body": "The saved audio is untouched. Try again or open the meeting."
+      },
+      "preflightFailed": {
+        "title": "The start checks could not be completed",
+        "body": "Run the checks again before starting the meeting."
+      }
+    },
+    "warnings": {
+      "diskLow": {
+        "title": "Storage almost full",
+        "body": "A one-hour meeting with microphone and system audio needs roughly 0.25 GB."
+      },
+      "silence": {
+        "title": "No system sound detected",
+        "body": "The selected output device is silent. If you hear sound through another device, the wrong one may be selected."
+      },
+      "backlog": {
+        "title": "Processing is behind",
+        "body": "Sections are queued on disk and will be transcribed after the meeting. Nothing is lost."
+      },
+      "devicesChanged": {
+        "title": "Devices changed while paused",
+        "body": "A new source section will be started in the transcript."
+      }
+    },
+    "detail": {
+      "summaryHeading": "Summary",
+      "transcriptHeading": "Transcript",
+      "decisions": "Decisions",
+      "actionItems": "Action items",
+      "openQuestions": "Open questions",
+      "summaryFailed": "The summary could not be created.",
+      "resummarize": "Summarise again",
+      "resummarizeDone": "Summary updated",
+      "resummarizeFailed": "Re-summarising failed",
+      "searchLabel": "Search the transcript",
+      "searchPlaceholder": "Search in transcript�",
+      "searchMatches_one": "{{count}} match",
+      "searchMatches_other": "{{count}} matches"
+    }
+  },
+  "onboarding": {
+    "subtitle": "För att komma igång, välj en transkriptionsmodell",
+    "existingModelsTitle": "Kompatibla modeller",
+    "downloadModelsTitle": "Tillgängliga för nedladdning",
+    "showAllModels": "Visa alla {{total}} modeller",
+    "showFewerModels": "Visa färre modeller",
+    "recommended": "Rekommenderat",
+    "customModelDescription": "Stöds inte officiellt",
+    "modelCard": {
+      "accuracy": "noggrannhet",
+      "speed": "hastighet"
+    },
+    "models": {
+      "small": {
+        "name": "Whisper Small",
+        "description": "Snabb och ganska noggrann."
+      },
+      "medium": {
+        "name": "Whisper Medium",
+        "description": "Bra noggrannhet, medelhög hastighet"
+      },
+      "turbo": {
+        "name": "Whisper Turbo",
+        "description": "Balanserad noggrannhet och hastighet."
+      },
+      "large": {
+        "name": "Whisper Large",
+        "description": "Bra noggrannhet, men långsam."
+      },
+      "parakeet-tdt-0.6b-v2": {
+        "name": "Parakeet V2",
+        "description": "Endast engelska. Den bästa modellen för engelsktalande."
+      },
+      "parakeet-tdt-0.6b-v3": {
+        "name": "Parakeet V3",
+        "description": "Snabb och noggrann"
+      },
+      "moonshine-base": {
+        "name": "Moonshine Base",
+        "description": "Mycket snabb, endast engelska. Hanterar accenter bra."
+      },
+      "moonshine-tiny-streaming-en": {
+        "name": "Moonshine V2 Tiny",
+        "description": "Blixtsnabb, endast engelska"
+      },
+      "moonshine-small-streaming-en": {
+        "name": "Moonshine V2 Small",
+        "description": "Snabb, endast engelska. Bra balans mellan hastighet och noggrannhet."
+      },
+      "moonshine-medium-streaming-en": {
+        "name": "Moonshine V2 Medium",
+        "description": "Endast engelska. Hög kvalitet."
+      },
+      "breeze-asr": {
+        "name": "Breeze ASR",
+        "description": "Optimerad för taiwanesisk mandarin. Stöd för kodväxling."
+      },
+      "sense-voice-int8": {
+        "name": "SenseVoice",
+        "description": "Mycket snabb. Kinesiska, engelska, japanska, koreanska, kantonesiska."
+      },
+      "gigaam-v3-e2e-ctc": {
+        "name": "GigaAM v3",
+        "description": "Rysk taligenkänning. Snabb och noggrann."
+      },
+      "canary-180m-flash": {
+        "name": "Canary 180M Flash",
+        "description": "Mycket snabb. Engelska, tyska, spanska, franska. Stöder översättning."
+      },
+      "canary-1b-v2": {
+        "name": "Canary 1B v2",
+        "description": "Noggrann flerspråkig. 25 europeiska språk. Stöder översättning."
+      },
+      "cohere-int8": {
+        "name": "Cohere",
+        "description": "En stor, långsammare, men mycket noggrann flerspråkig modell."
+      }
+    },
+    "errors": {
+      "selectModel": "Det gick inte att välja modell"
+    },
+    "permissions": {
+      "title": "Behörigheter krävs",
+      "description": "Handy behöver ett par behörigheter för att fungera korrekt.",
+      "microphone": {
+        "title": "Mikrofonåtkomst",
+        "description": "Krävs för att höra din röst för transkription."
+      },
+      "accessibility": {
+        "title": "Hjälpmedelsåtkomst",
+        "description": "Krävs för att skriva transkriberad text i dina program."
+      },
+      "grant": "Bevilja behörighet",
+      "granted": "Beviljad",
+      "waiting": "Väntar...",
+      "allGranted": "Allt klart!",
+      "errors": {
+        "checkFailed": "Misslyckades med att kontrollera behörigheter. Försök igen.",
+        "requestFailed": "Misslyckades med att begära behörighet. Försök igen."
+      }
+    }
+  },
+  "modelSelector": {
+    "custom": "Anpassad",
+    "streaming": "Streaming",
+    "active": "Aktiv",
+    "switching": "Byter...",
+    "noModelsAvailable": "Inga modeller tillgängliga",
+    "verifying": "Verifierar {{modelName}}...",
+    "verifyingGeneric": "Verifierar...",
+    "extracting": "Extraherar {{modelName}}...",
+    "extractingMultiple": "Extraherar {{count}} modeller...",
+    "extractingGeneric": "Extraherar...",
+    "downloading": "Laddar ner {{percentage}}%",
+    "downloadingMultiple": "Laddar ner {{count}} modeller...",
+    "modelReady": "Modell klar",
+    "loading": "Laddar {{modelName}}...",
+    "loadingGeneric": "Laddar...",
+    "modelError": "Modellfel",
+    "modelUnloaded": "Modell avlastad",
+    "noModelDownloadRequired": "Ingen modell - Nedladdning krävs",
+    "deleteModel": "Ta bort {{modelName}}",
+    "downloadSpeed": "{{speed}} MB/s",
+    "cancel": "Avbryt",
+    "cancelDownload": "Avbryt nedladdning",
+    "capabilities": {
+      "languageSelection": "Stöder flera indataspråk",
+      "singleLanguage": "Stöder endast detta språk",
+      "languageCount": "{{total}} språk",
+      "languageOnly": "Endast {{language}}",
+      "translation": "Kan översätta till engelska",
+      "translate": "Översätt till engelska",
+      "streaming": "Visar transkription i realtid medan du talar"
+    },
+    "legacy": "Äldre",
+    "downloadingGeneric": "Laddar ner..."
+  },
+  "settings": {
+    "speechPipeline": {
+      "title": "Speech pipeline",
+      "description": "Choose how audio becomes text and optionally translate the result before it is pasted.",
+      "preview": {
+        "terminology": "Terminology",
+        "translation": "DeepL",
+        "paste": "Paste"
+      },
+      "provider": {
+        "title": "Speech-to-text provider",
+        "description": "Use an on-device model, Azure Speech, or your own HTTP endpoint.",
+        "local": "Local model",
+        "azure": "Azure Speech",
+        "custom": "Custom STT endpoint"
+      },
+      "azure": {
+        "endpoint": {
+          "title": "Azure endpoint",
+          "description": "The complete short-audio REST endpoint of your Azure Speech resource.",
+          "placeholder": "https://…/stt/speech/recognition/conversation/cognitiveservices/v1"
+        },
+        "language": {
+          "title": "Recognition locale",
+          "description": "Azure locale used for speech recognition, for example de-DE.",
+          "placeholder": "de-DE"
+        },
+        "apiKey": {
+          "title": "Azure API key",
+          "description": "Subscription key for the configured Azure Speech resource.",
+          "placeholder": "Enter Azure Speech key"
+        }
+      },
+      "azureValidation": {
+        "title": "Save and test Azure",
+        "description": "Saves the Azure fields and verifies the exact configuration with a short connection test.",
+        "button": "Save & test connection",
+        "testing": "Saving and testing…",
+        "success": "Azure Speech is configured correctly.",
+        "failed": "Azure test failed: {{error}}"
+      },
+      "custom": {
+        "endpoint": {
+          "title": "Custom endpoint",
+          "description": "Receives 16 kHz mono WAV audio and returns plain text or a supported JSON transcript.",
+          "placeholder": "https://your-service.example/transcribe"
+        },
+        "token": {
+          "title": "Bearer token",
+          "description": "Optional authorization token sent to your endpoint.",
+          "placeholder": "Optional token"
+        }
+      },
+      "deepl": {
+        "enabled": {
+          "title": "Translate with DeepL",
+          "description": "Translate the transcript before optional AI post-processing and pasting."
+        },
+        "apiKey": {
+          "title": "DeepL API key",
+          "description": "Works with both DeepL API Free and Pro keys.",
+          "placeholder": "Enter DeepL API key"
+        },
+        "target": {
+          "title": "Translation target",
+          "description": "Language produced by DeepL before the text enters the remaining pipeline."
+        },
+        "targetEnglish": "English",
+        "targetEnglishBritish": "English (British)",
+        "targetEnglishAmerican": "English (American)",
+        "targetGerman": "German"
+      },
+      "advanced": {
+        "title": "Advanced live pipeline",
+        "description": "Sentence stability, endpointing and translation timing",
+        "stability": {
+          "title": "Live text stability",
+          "description": "Number of matching Azure partial results required before words are treated as stable. The conference pipeline used 3."
+        },
+        "phraseSilence": {
+          "title": "Sentence-final silence",
+          "description": "How long Azure waits through silence before finalizing the current phrase. Longer values preserve sentence context; shorter values react faster."
+        },
+        "translationDelay": {
+          "title": "DeepL sentence delay",
+          "description": "Wait after an Azure-final sentence and combine any additional final segments before sending the text once to DeepL. Interim text is never billed."
+        }
+      }
+    },
+    "modelSettings": {
+      "title": "{{model}}-inställningar"
+    },
+    "general": {
+      "title": "Allmänt",
+      "shortcut": {
+        "title": "Handy-kortkommandon",
+        "description": "Konfigurera kortkommandon för att starta tal-till-text-inspelning",
+        "loading": "Laddar kortkommandon...",
+        "none": "Inga kortkommandon konfigurerade",
+        "notFound": "Kortkommando hittades inte",
+        "pressKeys": "Tryck på tangenter...",
+        "bindings": {
+          "transcribe": {
+            "name": "Kortkommando för transkribering",
+            "description": "Kortkommandot för att spela in och transkribera din röst."
+          },
+          "cancel": {
+            "name": "Kortkommando för att avbryta",
+            "description": "Kortkommandot för att avbryta den aktuella inspelningen."
+          },
+          "transcribe_with_post_process": {
+            "name": "Snabbkommando för efterbearbetning",
+            "description": "Valfritt: En dedikerad snabbknapp som alltid tillämpar AI-efterbearbetning på din transkription."
+          }
+        },
+        "errors": {
+          "restore": "Misslyckades med att återställa ursprungligt kortkommando",
+          "set": "Misslyckades med att ställa in kortkommando: {{error}}",
+          "reset": "Misslyckades med att återställa kortkommando till ursprungsvärdet"
+        },
+        "recordButtonAria": "Ändra genväg för {{name}}, för närvarande {{shortcut}}",
+        "escapeHint": "Spelar in genväg. Tryck på Escape för att avbryta."
+      },
+      "language": {
+        "title": "Språk",
+        "description": "Välj språk för taligenkänning. Auto kommer automatiskt att bestämma språket, medan val av ett specifikt språk kan förbättra noggrannheten för det språket.",
+        "searchPlaceholder": "Sök språk...",
+        "noResults": "Inga språk hittades",
+        "auto": "Automatiskt"
+      },
+      "pushToTalk": {
+        "label": "Tryck för att tala",
+        "description": "Håll ned för att spela in, släpp för att stoppa"
+      }
+    },
+    "models": {
+      "title": "Transkriptionsmodeller",
+      "description": "Välj en transkriptionsmodell eller ladda ner ytterligare modeller. Olika modeller erbjuder varierande nivåer av noggrannhet och hastighet.",
+      "yourModels": "Nedladdade modeller",
+      "availableModels": "Tillgängliga att ladda ner",
+      "deleteConfirm": "Är du säker på att du vill ta bort {{modelName}}? Du måste ladda ner den igen för att använda den.",
+      "deleteActiveConfirm": "{{modelName}} är din aktiva modell. Om du tar bort den avbryts transkriptioner tills du väljer en ny modell. Är du säker?",
+      "deleteTitle": "Ta bort modell",
+      "filters": {
+        "allLanguages": "Alla språk",
+        "streaming": "Filtrera modeller som stöder transkription i realtid",
+        "translation": "Filtrera modeller som stöder översättning till engelska"
+      },
+      "noModelsMatch": "Inga modeller matchar detta filter.",
+      "searchPlaceholder": "Sök modeller efter namn…",
+      "rescan": {
+        "label": "Skanna om",
+        "tooltip": "Skanna om efter modeller som lagts till i modellmappen eller Hugging Face-cachen utanför Handy"
+      }
+    },
+    "sound": {
+      "title": "Ljud",
+      "microphone": {
+        "title": "Mikrofon",
+        "description": "Välj din föredragna mikrofonenhet",
+        "placeholder": "Välj mikrofon...",
+        "loading": "Laddar..."
+      },
+      "channel": {
+        "title": "Ingångskanal",
+        "description": "Välj vilken ingångskanal du vill spela in från. Använd detta om ditt ljudgränssnitt har flera ingångar.",
+        "average": "Medelvärde av alla kanaler",
+        "channel": "Kanal {{n}}"
+      },
+      "audioFeedback": {
+        "label": "Ljudåterkoppling",
+        "description": "Spela upp ljud när inspelningen startar och stoppar"
+      },
+      "outputDevice": {
+        "title": "Utmatningsenhet",
+        "description": "Välj din föredragna ljudutmatningsenhet för återkopplingsljud",
+        "placeholder": "Välj utmatningsenhet...",
+        "loading": "Laddar..."
+      },
+      "volume": {
+        "title": "Volym",
+        "description": "Justera volymen för ljudåterkopplingsljud"
+      }
+    },
+    "advanced": {
+      "groups": {
+        "app": "App",
+        "output": "Utmatning",
+        "transcription": "Transkription",
+        "history": "Historik",
+        "experimental": "Experimentellt"
+      },
+      "experimentalToggle": {
+        "label": "Experimentella funktioner",
+        "description": "Aktivera experimentella funktioner som fortfarande är under utveckling."
+      },
+      "lazyStreamClose": {
+        "label": "Håll mikrofonen öppen mellan transkriptioner",
+        "description": "Håller mikrofonströmmen öppen i 30 sekunder efter att inspelningen avslutats, vilket minskar latensen för transkriptioner efter varandra. Kan försämra Bluetooth-ljudkvaliteten medan den är aktiv."
+      },
+      "acceleration": {
+        "transcribe": {
+          "title": "Whisper-acceleration",
+          "description": "Hårdvaruacceleration för Whisper-modeller. Auto använder GPU om tillgängligt (Metal på macOS, Vulkan på Windows/Linux)."
+        },
+        "ort": {
+          "title": "ONNX-acceleration",
+          "description": "Hårdvaruacceleration för ONNX-modeller (Parakeet, Canary, Moonshine, etc.). DirectML på Windows är experimentellt. Modeller kan misslyckas med att transkribera."
+        },
+        "gpuDevice": {
+          "auto": "Automatiskt"
+        }
+      },
+      "startHidden": {
+        "label": "Starta dold",
+        "description": "Starta i systemfältet utan att öppna fönstret."
+      },
+      "autostart": {
+        "label": "Starta vid uppstart",
+        "description": "Starta Handy automatiskt när du loggar in på din dator."
+      },
+      "showTrayIcon": {
+        "label": "Visa ikon i systemfältet",
+        "description": "Visa Handy-ikonen i systemfältet."
+      },
+      "overlay": {
+        "style": {
+          "title": "Overlay",
+          "description": "Välj inspelningsöverlägget: ”Ingen” döljer det, ”Minimal” visar en kompakt indikator, ”Live” visar transkriberingen i realtid medan du talar (endast modeller med streamingstöd — leta efter Streaming-märket i modellväljaren). På Linux rekommenderas ”Ingen”.",
+          "options": {
+            "none": "Ingen",
+            "minimal": "Minimal",
+            "live": "Live"
+          }
+        },
+        "position": {
+          "title": "Överlagringsposition",
+          "description": "Visa visuell återkoppling under inspelning och transkription. På Linux rekommenderas 'Ingen'.",
+          "options": {
+            "bottom": "Nederst",
+            "top": "Överst"
+          }
+        }
+      },
+      "pasteMethod": {
+        "title": "Klistra-in-metod",
+        "description": "Välj hur text infogas. Direkt: simulerar skrivande via systeminmatning. Ingen: hoppar över klistra in, uppdaterar endast historik/urklipp.",
+        "options": {
+          "clipboard": "Urklipp ({{modifier}}+V)",
+          "clipboardCtrlShiftV": "Urklipp (Ctrl+Shift+V)",
+          "clipboardShiftInsert": "Urklipp (Shift+Insert)",
+          "direct": "Direkt",
+          "none": "Ingen",
+          "externalScript": "Externt skript"
+        },
+        "externalScriptPlaceholder": "/sökväg/till/ditt/skript.sh"
+      },
+      "typingTool": {
+        "title": "Skrivverktyg",
+        "description": "Välj vilket Linux-skrivverktyg som ska användas för metoden Direkt klistra in. Auto kommer automatiskt att upptäcka och använda det bästa tillgängliga verktyget för ditt system.",
+        "options": {
+          "auto": "Auto (Rekommenderas)"
+        }
+      },
+      "clipboardHandling": {
+        "title": "Hantering av urklipp",
+        "description": "Ändra inte urklipp bevarar ditt nuvarande urklippsinnehåll efter transkription. Kopiera till urklipp lämnar transkriptionsresultatet i ditt urklipp efter att ha klistrat in.",
+        "options": {
+          "dontModify": "Ändra inte urklipp",
+          "copyToClipboard": "Kopiera till urklipp"
+        }
+      },
+      "autoSubmit": {
+        "title": "Skicka automatiskt",
+        "description": "Skicka automatiskt den valda tangentkombinationen efter textinsättning. Cmd+Enter gäller på macOS, medan Windows/Linux använder Super+Enter.",
+        "options": {
+          "off": "Av",
+          "enter": "Enter",
+          "cmdEnter": "Cmd+Enter",
+          "superEnter": "Super+Enter",
+          "ctrlEnter": "Ctrl+Enter"
+        }
+      },
+      "translateToEnglish": {
+        "label": "Översätt till engelska",
+        "description": "Översätt automatiskt tal från andra språk till engelska under transkription."
+      },
+      "modelUnload": {
+        "title": "Avlasta modell",
+        "description": "Frigör automatiskt GPU/CPU-minne när modellen inte har använts under den angivna tiden",
+        "options": {
+          "never": "Aldrig",
+          "immediately": "Omedelbart",
+          "min2": "Efter 2 minuter",
+          "min5": "Efter 5 minuter",
+          "min10": "Efter 10 minuter",
+          "min15": "Efter 15 minuter",
+          "hour1": "Efter 1 timme",
+          "sec15": "Efter 15 sekunder (Felsökning)"
+        }
+      },
+      "customWords": {
+        "title": "Anpassade ord",
+        "description": "Hjälp modeller som stöds att känna igen namn och specialtermer. Ungefärlig korrigering är för närvarande begränsad till ord med bokstäverna A–Z och siffror.",
+        "placeholder": "Lägg till ett ord",
+        "add": "Lägg till",
+        "remove": "Ta bort {{word}}",
+        "duplicate": "\"{{word}}\" finns redan"
+      },
+      "voiceActivityDetection": {
+        "title": "Röstaktivitetsdetektering",
+        "description": "Filtrerar bort tystnad från inspelningar. Modeller med streamingstöd använder en längre VAD-svans; om VAD inaktiveras spelas rått ljud in."
+      },
+      "fillerWordRemoval": {
+        "title": "Ta bort utfyllnadsord",
+        "description": "Tar bort vanliga tvekljud från transkriberingar. Stäng av för att behålla dem."
+      }
+    },
+    "postProcessing": {
+      "hotkey": {
+        "title": "Snabbkommando"
+      },
+      "api": {
+        "title": "API (OpenAI-kompatibelt)",
+        "provider": {
+          "title": "Leverantör",
+          "description": "Välj en OpenAI-kompatibel leverantör."
+        },
+        "appleIntelligence": {
+          "unavailable": "Apple Intelligence är inte tillgängligt på den här enheten. Kräver en Apple Silicon Mac som kör macOS Tahoe (26.0) eller senare med Apple Intelligence aktiverat i systeminställningarna."
+        },
+        "baseUrl": {
+          "title": "Bas-URL",
+          "description": "API-bas-URL för den valda leverantören. Endast den anpassade leverantören kan redigeras.",
+          "placeholder": "https://api.openai.com/v1"
+        },
+        "apiKey": {
+          "title": "API-nyckel",
+          "description": "API-nyckel för den valda leverantören.",
+          "placeholder": "sk-..."
+        },
+        "model": {
+          "title": "Modell",
+          "descriptionCustom": "Ange den modellidentifierare som förväntas av din anpassade slutpunkt.",
+          "descriptionDefault": "Välj en modell som exponeras av den valda leverantören.",
+          "placeholderWithOptions": "Sök eller välj en modell",
+          "placeholderNoOptions": "Ange ett modellnamn",
+          "refreshModels": "Uppdatera modeller"
+        }
+      },
+      "prompts": {
+        "title": "Prompt",
+        "selectedPrompt": {
+          "title": "Vald prompt",
+          "description": "Välj en mall för att förfina transkriptioner eller skapa en ny. Använd ${output} inuti prompttexten för att referera till den fångade transkriptionen."
+        },
+        "noPrompts": "Inga prompter tillgängliga",
+        "selectPrompt": "Välj en prompt",
+        "createNew": "Skapa ny prompt",
+        "promptLabel": "Prompt-etikett",
+        "promptLabelPlaceholder": "Ange namn på prompt",
+        "promptInstructions": "Prompt-instruktioner",
+        "promptInstructionsPlaceholder": "Skriv instruktionerna som ska köras efter transkription. Exempel: Förbättra grammatik och tydlighet för följande text: ${output}",
+        "promptTip": "Tips: Använd <code>${output}</code> för att infoga den transkriberade texten i din prompt.",
+        "updatePrompt": "Uppdatera prompt",
+        "deletePrompt": "Ta bort prompt",
+        "createPrompt": "Skapa prompt",
+        "cancel": "Avbryt",
+        "selectToEdit": "Välj en prompt ovan för att visa och redigera dess detaljer.",
+        "createFirst": "Klicka på 'Skapa ny prompt' ovan för att skapa din första prompt för efterbearbetning."
+      }
+    },
+    "history": {
+      "title": "Historik",
+      "openFolder": "Öppna mapp för inspelningar",
+      "loading": "Laddar historik...",
+      "empty": "Inga transkriptioner ännu. Börja spela in för att bygga upp din historik!",
+      "copyToClipboard": "Kopiera transkription till urklipp",
+      "save": "Spara transkription",
+      "unsave": "Ta bort från sparade",
+      "delete": "Ta bort post",
+      "deleteError": "Misslyckades med att ta bort post. Försök igen.",
+      "deleteConfirmTitle": "Delete this entry?",
+      "deleteConfirmWarning": "This permanently deletes:",
+      "deleteArtifactAudio": "the recording audio",
+      "deleteArtifactTranscript": "the full transcript of this dictation",
+      "deleteArtifactSummary": "any summary generated for this dictation (once summaries are available)",
+      "deleteConfirmIrreversible": "This action cannot be undone.",
+      "deleteCancel": "Cancel",
+      "deleteConfirmAction": "Delete permanently",
+      "retranscribe": "Transkribera igen",
+      "retranscribeError": "Misslyckades med att transkribera igen. Försök igen.",
+      "transcribing": "Transkriberar...",
+      "transcriptionFailed": "Transkribering misslyckades. Du kan transkribera igen med hjälp av ikonen för nytt försök."
+    },
+    "debug": {
+      "title": "Felsökning",
+      "logDirectory": {
+        "title": "Loggmapp",
+        "description": "Plats där loggfiler lagras"
+      },
+      "logLevel": {
+        "title": "Loggnivå",
+        "description": "Ställ in loggningens detaljrikedom"
+      },
+      "liveLogs": {
+        "title": "Liveloggar",
+        "description": "Strömma programmets loggar i realtid för att diagnostisera problem utan att öppna loggfilen. Endast loggar som skapas medan den här panelen är öppen visas; följer inställningen Loggnivå ovan.",
+        "live": "Live",
+        "paused": "Pausad",
+        "pause": "Pausa",
+        "resume": "Återuppta",
+        "copied": "Kopierad",
+        "lineCount": "{{count}} rader",
+        "empty": "Väntar på loggar… Poster visas här när appen skickar dem."
+      },
+      "updateChecks": {
+        "label": "Sök efter uppdateringar",
+        "description": "Sök automatiskt efter nya versioner av Handy"
+      },
+      "soundTheme": {
+        "label": "Ljudtema",
+        "description": "Välj ett ljudtema för återkoppling vid start och stopp av inspelning"
+      },
+      "wordCorrectionThreshold": {
+        "title": "Tröskelvärde för ordkorrigering",
+        "description": "Känslighet för anpassade ordkorrigeringar"
+      },
+      "historyLimit": {
+        "title": "Historikgräns",
+        "description": "Maximalt antal historikposter som ska sparas",
+        "entries": "poster"
+      },
+      "recordingRetention": {
+        "title": "Radera inspelningar automatiskt",
+        "description": "Radera gamla inspelningar automatiskt för att spara utrymme",
+        "never": "Aldrig",
+        "preserveLimit": "Behåll de senaste {{count}}",
+        "days3": "Efter 3 dagar",
+        "weeks2": "Efter 2 veckor",
+        "months3": "Efter 3 månader",
+        "placeholder": "Välj lagringsperiod..."
+      },
+      "alwaysOnMicrophone": {
+        "label": "Alltid påslagen mikrofon",
+        "description": "Håll mikrofonen aktiv för snabbare svar"
+      },
+      "clamshellMicrophone": {
+        "title": "Clamshell-mikrofon",
+        "description": "Mikrofon som ska användas när bärbara datorns lock är stängt"
+      },
+      "postProcessingToggle": {
+        "label": "Efterbearbetning",
+        "description": "Aktivera AI-driven textförfining efter transkription"
+      },
+      "muteWhileRecording": {
+        "label": "Ljudlös under inspelning",
+        "description": "Stäng av systemljudet under inspelning"
+      },
+      "appendTrailingSpace": {
+        "label": "Lägg till avslutande mellanslag",
+        "description": "Lägg till ett mellanslag efter klistrad transkription"
+      },
+      "keyboardImplementation": {
+        "title": "Tangentbordsimplementering",
+        "description": "Välj tangentbordsgenvägens implementation.",
+        "bindingsReset": "Kortkommandona var inkompatibla och återställdes till standardvärden"
+      },
+      "paths": {
+        "appData": "Appdata:",
+        "models": "Modeller:",
+        "settings": "Inställningar:"
+      },
+      "pasteDelay": {
+        "title": "Fördröjning vid klistra in (före)",
+        "description": "Fördröjning (i millisekunder) efter att text kopierats, innan tangenttryckningen för att klistra in skickas. Öka om ingenting klistras in."
+      },
+      "pasteDelayAfter": {
+        "title": "Fördröjning vid klistra in (efter)",
+        "description": "Fördröjning (i millisekunder) efter tangenttryckningen för att klistra in, innan ditt tidigare urklipp återställs. Öka om det gamla urklippsinnehållet klistras in i stället för transkriptionen."
+      },
+      "reliablePaste": {
+        "title": "Tillförlitlig inklistring (Beta)",
+        "description": "Återställ urklipp först när målappen faktiskt har läst transkriptionen, i stället för efter en fast fördröjning. Avsett att åtgärda att det gamla urklippsinnehållet klistras in när systemet är belastat. Kräver en klistra-in-metod via urklipp; endast macOS och Windows."
+      },
+      "recordingBuffer": {
+        "title": "Extra inspelningsbuffert",
+        "description": "Extra tid (i millisekunder) för att fortsätta spela in efter att du släppt tangenten, för att fånga upp avslutande ljud. 0 = ingen extra buffert."
+      },
+      "keyboardDiagnostic": {
+        "title": "Tangentbordsdiagnostik",
+        "description": "Kontrollerar om tangentbordshändelser når Handy. Endast antalet händelser registreras — aldrig vilka tangenter du trycker på.",
+        "run": "Kör 10 s diagnostik",
+        "running": "Lyssnar… tryck på ditt kortkommando några gånger (t.ex. Option+Space)",
+        "secureInputLabel": "Secure Input",
+        "enabled": "aktiverat",
+        "disabled": "inaktiverat",
+        "holder": "hålls av {{name}} (pid {{pid}})",
+        "holderUnknown": "ingen synlig innehavare",
+        "keyDown": "Tangent ned",
+        "keyUp": "Tangent upp",
+        "flagsChanged": "Modifierare",
+        "mouse": "Mus",
+        "verdictBlocked": "Secure Input blockerar tangenthändelser — kortkommandon med en vanlig tangent kan inte fungera förrän det är löst.",
+        "verdictSuspicious": "Modifierarhändelser kom fram men inga tangenthändelser — något undertrycker tangenter trots att Secure Input rapporteras som inaktiverat. Rapportera gärna detta på GitHub.",
+        "verdictOk": "Tangenthändelser når Handy som vanligt.",
+        "verdictNoEvents": "Inga händelser fångades — tryckte du på några tangenter under testet?",
+        "failed": "Diagnostiken misslyckades: {{error}}"
+      },
+      "whatsNewPreview": {
+        "title": "Förhandsvisa nyheter",
+        "description": "Öppna den senaste medföljande versionsinformationen utan att markera den som visad",
+        "button": "Förhandsvisa",
+        "noNotes": "Ingen medföljande versionsinformation hittades",
+        "error": "Det gick inte att förhandsvisa versionsinformationen"
+      }
+    },
+    "about": {
+      "title": "Om",
+      "version": {
+        "title": "Version",
+        "description": "Nuvarande version av Handy"
+      },
+      "appDataDirectory": {
+        "title": "Mapp för appdata",
+        "description": "Plats där Handy lagrar sina data"
+      },
+      "sourceCode": {
+        "title": "Källkod",
+        "description": "Visa källkod och bidra",
+        "button": "Visa på GitHub"
+      },
+      "supportDevelopment": {
+        "title": "Stöd utvecklingen",
+        "description": "Hjälp oss att fortsätta bygga Handy",
+        "button": "Donera"
+      },
+      "acknowledgments": {
+        "title": "Tack till",
+        "ggml": {
+          "title": "ggml",
+          "description": "Högpresterande inferens av OpenAI:s Whisper-modell för automatisk taligenkänning",
+          "details": "Handy använder ggml för snabb, lokal tal-till-text-behandling. Tack till det fantastiska arbete som utförts av Georgi Gerganov med medarbetare."
+        }
+      },
+      "whatsNewUpdates": {
+        "label": "Visa nyheter",
+        "description": "Visa versionsinformation efter Handy-uppdateringar"
+      }
+    },
+    "tabs": {
+      "modelsProviders": "Modeller och leverantörer",
+      "meetingsEmptyBody": "Mötesinställningar kommer med mötesläget."
+    },
+    "meetings": {
+      "shortcut": {
+        "title": "Meeting Shortcuts",
+        "description": "Keyboard shortcuts for starting, stopping and pausing meetings. Changes take effect after the current meeting ends.",
+        "unassigned": "Not configured",
+        "recordButtonAria": "Change {{name}} shortcut, currently {{shortcut}}. Click to record a new key combination.",
+        "pressKeys": "Press keys…",
+        "escapeHint": "Recording a shortcut. Press Escape to cancel.",
+        "reset": "Reset",
+        "disable": "Disable",
+        "test": "Test shortcut",
+        "testing": "Testing…",
+        "testOk": "{{shortcut}} can be registered.",
+        "testFail": "{{shortcut}} cannot be registered: {{error}}",
+        "errors": {
+          "singleKey": "Meeting shortcuts need at least one modifier key plus a regular key, e.g. Ctrl+Alt+Space.",
+          "conflict": "This shortcut is already used by:",
+          "osRejected": "The operating system cannot register this shortcut: {{error}} Nothing was saved."
+        },
+        "actions": {
+          "startStop": {
+            "name": "Start/end meeting",
+            "description": "Starts a meeting after a short countdown; pressing it again asks for confirmation before ending the meeting."
+          },
+          "pauseResume": {
+            "name": "Pause/resume meeting",
+            "description": "Pauses and resumes the current meeting recording."
+          }
+        }
+      }
+    }
+  },
+  "footer": {
+    "checkingUpdates": "Söker efter uppdateringar...",
+    "updateAvailableShort": "Uppdatering tillgänglig",
+    "upToDate": "Uppdaterad",
+    "updateCheckingDisabled": "Uppdateringskontroll inaktiverad",
+    "downloading": "Laddar ner... {{progress}}%",
+    "installing": "Installerar...",
+    "preparing": "Förbereder...",
+    "checkForUpdates": "Sök efter uppdateringar",
+    "portableUpdateTitle": "Manuell uppdatering krävs",
+    "portableUpdateMessage": "Portabla installationer kan inte uppdateras automatiskt. Ladda ner installeraren för ditt system nedan, kör den och installera i samma mapp — din Data/-mapp (inställningar, modeller, inspelningar) behålls.",
+    "portableUpdateButton": "Ladda ner installeraren",
+    "portableUpdateBrowseMessage": "Portabla installationer kan inte uppdateras automatiskt. Ladda ner den senaste versionen för ditt system från GitHub Releases och installera den i samma mapp — din Data/-mapp (inställningar, modeller, inspelningar) behålls.",
+    "portableUpdateBrowseButton": "Öppna GitHub Releases"
+  },
+  "common": {
+    "loading": "Laddar...",
+    "delete": "Ta bort",
+    "close": "Stäng",
+    "open": "Öppna",
+    "copy": "Kopiera",
+    "clear": "Rensa",
+    "moreInformation": "Mer information",
+    "reset": "Återställ",
+    "noOptionsFound": "Inga alternativ hittades"
+  },
+  "accessibility": {
+    "permissionsDescription": "Handy behöver behörighet för hjälpmedel för att kunna skriva transkriberad text.",
+    "openSettings": "Öppna systeminställningar"
+  },
+  "dictation": {
+    "title": "Diktering",
+    "subtitle": "Prata var som helst — dina ord skrivs i den aktiva appen.",
+    "config": {
+      "title": "Aktuell konfiguration"
+    },
+    "status": {
+      "title": "Status",
+      "ready": "Redo",
+      "recording": "Inspelning",
+      "transcribing": "Transkribering",
+      "error": "Fel",
+      "genericError": "Något gick fel vid inspelning eller transkribering."
+    },
+    "errorOpenSettings": "Öppna inställningar för diktering",
+    "shortcut": {
+      "description": "Den aktuella globala genvägen för att starta och stoppa diktering.",
+      "openAria": "Dikteringsgenväg {{shortcut}} — öppna inställningar för diktering för att ändra den",
+      "missing": "Inte konfigurerad"
+    },
+    "mode": {
+      "title": "Läge",
+      "hold": "Håll ned",
+      "toggle": "Tryck för att växla",
+      "holdDescription": "Håll genvägen ned medan du pratar.",
+      "toggleDescription": "Tryck på genvägen en gång för att starta och igen för att stoppa."
+    },
+    "target": {
+      "title": "Taligenkänning",
+      "description": "Var ditt tal transkriberas.",
+      "local": "Lokalt",
+      "azure": "Azure",
+      "custom": "Anpassad"
+    },
+    "language": {
+      "title": "Språk och modell",
+      "description": "Igenkänningsspråk och vid lokal igenkänning den aktiva modellen.",
+      "withModel": "{{language}} · {{model}}"
+    },
+    "test": {
+      "title": "Testa diktering",
+      "button": "Testa diktering",
+      "privacy": "Stannar i detta fönster — inget kopieras eller klistras in.",
+      "start": "Testa diktering",
+      "stop": "Stoppa testinspelningen",
+      "idleHint": "Spelar in upp till {{seconds}} s och spelar upp det bara här.",
+      "recordingHint": "Spelar in… stoppar automatiskt efter {{seconds}} s.",
+      "retry": "Försök igen",
+      "error": {
+        "unavailable": {
+          "title": "Mikrofonen är inte tillgänglig",
+          "description": "Ingen användbar mikrofon hittades. Anslut en eller välj en annan ingångsenhet i inställningarna."
+        },
+        "denied": {
+          "title": "Åtkomst till mikrofoonen nekad",
+          "description": "Detta fönster behöver mikrofonbehörighet för att köra testet."
+        },
+        "failed": {
+          "title": "Testinspelningen misslyckades",
+          "description": "Testinspelningen kunde inte spelas in. Försök igen."
+        }
+      },
+      "preview": {
+        "label": "Förhandsgranskning av testinspelningen",
+        "playbackAria": "Spela upp testinspelningen",
+        "duration": "Längd: {{duration}}",
+        "discard": "Ta bort inspelningen"
+      }
+    },
+    "settingsLink": "Inställningar för diktering"
+  },
+  "errors": {
+    "loadDirectory": "Fel vid laddning av mapp: {{error}}",
+    "micPermissionDeniedTitle": "Mikrofonåtkomst nekad",
+    "micPermissionDenied": {
+      "generic": "Mikrofonåtkomst nekades av operativsystemet. Bevilja mikrofonbehörighet i dina systeminställningar.",
+      "windows": "Aktivera mikrofonåtkomst i Inställningar → Integritet och säkerhet → Mikrofon (inklusive åtkomst till skrivbordsappar).",
+      "macos": "Bevilja mikrofonåtkomst i Systeminställningar → Integritet och säkerhet → Mikrofon.",
+      "linux": "Bevilja mikrofonåtkomst i systemets ljud- eller integritetsinställningar."
+    },
+    "recordingFailed": "Misslyckades med att starta inspelning: {{error}}",
+    "modelLoadFailed": "Misslyckades med att ladda modell: {{model}}",
+    "modelLoadFailedUnknown": "okänd modell",
+    "noInputDeviceTitle": "Ingen mikrofon hittades",
+    "noInputDevice": "Ingen ljudenhet hittades. Anslut en mikrofon eller ett headset och försök igen.",
+    "pasteFailedTitle": "Det gick inte att klistra in texten",
+    "pasteFailed": "Texten kunde inte klistras in i det aktiva programmet.",
+    "transcriptionFailedTitle": "Transkriptionen misslyckades"
+  },
+  "appLanguage": {
+    "title": "Applikationsspråk",
+    "description": "Ändra språket i Handy-gränssnittet"
+  },
+  "theme": {
+    "title": "Apptema",
+    "description": "Välj om Handy ska följa systemets tema eller förbli ljust eller mörkt",
+    "options": {
+      "system": "System",
+      "light": "Ljust",
+      "dark": "Mörkt"
+    }
+  },
+  "overlay": {
+    "transcribing": "Transkriberar...",
+    "processing": "Bearbetar...",
+    "cancel": "Avbryt"
+  },
+  "whatsNew": {
+    "title": "Nytt i Handy v{{version}}"
+  },
+  "secureInput": {
+    "blockedWithCulprit_one": "{{name}} kanske blockerar 1 kortkommando",
+    "blockedWithCulprit_other": "{{name}} kanske blockerar {{count}} kortkommandon",
+    "blockedNoCulprit_one": "macOS blockerar tillfälligt 1 kortkommando",
+    "blockedNoCulprit_other": "macOS blockerar tillfälligt {{count}} kortkommandon",
+    "recorderBlockedWithCulprit": "{{name}} kanske blockerar ändringar av kortkommandon",
+    "recorderBlockedNoCulprit": "macOS blockerar tillfälligt ändringar av kortkommandon",
+    "learnMore": "Så här löser du det",
+    "recorderBlocked": "Det går inte att spela in kortkommandon just nu — macOS Secure Input blockerar tangenthändelser. Lös varningen om Secure Input först.",
+    "dismiss": "Avfärda"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox",
+    "tasksHeading": "Tasks",
+    "noTasks": "No tasks yet",
+    "newTaskPlaceholder": "New task�",
+    "taskSuggested": "suggested by AI",
+    "taskAccept": "Accept",
+    "taskReject": "Reject",
+    "taskEditPrompt": "Edit the task title:"
+  },
+  "whatsapp": {
+    "title": "Import WhatsApp chat",
+    "titlePlaceholder": "Source title (e.g. team name)",
+    "contentPlaceholder": "Paste the exported chat text here�",
+    "dateOrderLabel": "Date order (only needed if ambiguous)",
+    "dateOrderAuto": "Detect automatically",
+    "dateOrderDayFirst": "Day first (25.12.24)",
+    "dateOrderMonthFirst": "Month first (12.25.24)",
+    "preview": "Analyse",
+    "import": "Import",
+    "previewFailed": "Could not analyse the chat text",
+    "importFailed": "Import failed",
+    "imported": "Imported {{count}} messages",
+    "alreadyImported": "This export was already imported � nothing duplicated.",
+    "previewMessages_one": "{{count}} message",
+    "previewMessages_other": "{{count}} messages",
+    "previewParticipants_one": "{{count}} participant",
+    "previewParticipants_other": "{{count}} participants",
+    "previewMedia": "{{count}} media placeholders kept as markers",
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+  }
+}

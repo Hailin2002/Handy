@@ -1,0 +1,101 @@
+# Operator-Troubleshooting: Audio-Geräte- und Capture-Fehler im Diktierpfad
+
+Status: **implemented behavior** (jede Verhaltensaussage ist mit Datei- und
+Zeilen-/Symbolbeleg gegen den Codestand unten versehen; der Diktierpfad ist der
+einzige abgedeckte Umfang — der Meeting-Modus ist hier nicht implementiert und
+wird nicht beschrieben).
+Autor-Arbeitsstand: **HEAD-Commit `74669993ca4f84dd18891c5efeb0b8aaa3e01dee`**
+(verifiziert am 22.08.2026 via `git rev-parse HEAD` in einem sauberen
+Arbeitbaum; `git status --porcelain` war vor der Erstellung dieses Dokuments
+leer).
+Umfang: Diktier-Audiopfad — Geräteaufzählung, Geräteauswahl, Stream-Öffnen,
+Hot-Unplug, Geräteberechtigungen, Resampling. Belegbasis:
+`src-tauri/src/managers/audio.rs`, `src-tauri/src/audio_toolkit/audio/`
+(`device.rs`, `recorder.rs`, `resampler.rs`), `src-tauri/src/commands/audio.rs`,
+`src-tauri/src/audio_toolkit/utils.rs`, `src-tauri/src/audio_toolkit/constants.rs`.
+Plan: [docs/meeting-mode-plan.md](../meeting-mode-plan.md)
+Index: [docs/meeting-mode-documentation-index.md](../meeting-mode-documentation-index.md)
+Aufgenommen am: 22.08.2026
+
+---
+
+## 1. Wie dieses Dokument zu lesen ist
+
+Jede Zeile der Matrix in Abschnitt 2 folgt dem Schema
+**Symptom → Wahrscheinliche Ursache → Maßnahme → Zu sammelnde Evidenz**.
+Jede Ursache ist eine Beschreibung *implementierten* Verhaltens mit Codebeleg
+(`datei.rs:Zeilen` bzw. Symbolname) gemäß Indexregel §1
+(`docs/meeting-mode-documentation-index.md`, Abschnitt 1). Zeilennummern
+beziehen sich auf den oben gepinnten HEAD-Commit.
+
+Log-Evidenz sammeln: Anwendung mit `--debug` starten (CLI-Flag, siehe
+`AGENTS.md`, Abschnitt „CLI Parameters“; Definition in
+`src-tauri/src/cli.rs`), reproduzieren und die im Abschnitt „Evidenz“ genannten
+Zeilen aus dem Log ausschneiden.
+
+## 2. Symptom-Matrix
+
+### 2.1 Keine Geräte gefunden / leere Aufzählung
+
+| # | Symptom | Wahrscheinliche Ursache (implementiertes Verhalten, belegt) | Maßnahme | Zu sammelnde Evidenz |
+|---|---------|-------------------------------------------------------------|----------|----------------------|
+| R1 | Mikrofon-Dropdown zeigt nur den Eintrag „Default“, keine realen Geräte | `get_available_microphones` baut die Liste aus `list_input_devices()` auf und stellt dem Ergebnis *immer* einen synthetischen Eintrag `{index: "default", name: "Default"}` voran (`src-tauri/src/commands/audio.rs:189-211`). „Default“ allein bedeutet: `host.input_devices()` lieferte eine leere Liste oder nur nicht-enumerierbare Geräte. | OS-Soundeinstellung prüfen (Gerät deaktiviert? Treiber geladen?); auf Linux: ALSA-Host ist fest verdrahtet (`src-tauri/src/audio_toolkit/utils.rs:3-12`, `get_cpal_host` nutzt `cpal::HostId::Alsa`) — `arecord -L` als Vergleichsaufzählung. | Log-Zeile „Using device: …“ fehlt beim nächsten Start (`recorder.rs:210-216`); Ausgabe von `arecord -L` (Linux) bzw. `Get-PnpDevice -Class AudioEndpoint` (Windows). |
+| R2 | Dropdown-Auswahl schlägt mit „Failed to list audio devices: …“ fehl | `list_input_devices()` propagiert Backend-Fehler von `host.input_devices()` unverändert (`device.rs:16`, `?`-Operator), der Befehl mappt sie auf den String „Failed to list audio devices“ (`commands/audio.rs:193`). Das ist eine Host-/Backend-Ebene (WASAPI/CoreAudio/ALSA), keine App-Logik. | Fehlertext im Log vollständig aufnehmen; Treiber-/Audiodienst neu starten. Bei ALSA: fehlende `.asoundrc`/Pulse-Pipe-Plugins prüfen. | Exakte Fehlertextzeile aus `commands/audio.rs:193`; Reproduktion nach Neustart des Audiodienstes. |
+| R3 | Geräte erscheinen in der Liste, aber mit Namen „Unknown“ | `list_input_devices()` ersetzt ein fehlgeschlagenes `device.name()` durch `"Unknown"` (`device.rs:17`, `unwrap_or_else(|_| "Unknown".into())`). Zwei solcher Geräte sind in der Auswahl nicht unterscheidbar, weil nur der Name als Schlüssel dient (`resolve_microphone_device`, `managers/audio.rs:483-486`, `find(|d| d.name == device_name)`). | Gerätetreiber/Konfiguration reparieren, damit `name()` erfolgreich ist; bis dahin „Default“ verwenden. | Log-Zeile „Using device: “ mit leerem/„Unknown“-Namen (`recorder.rs:210-216`); Anzahl der „Unknown“-Einträge im Dropdown. |
+| R4 | Aufnahme startet nicht, Fehlermeldung „No input device found“ | Wenn kein Mikrofon ausgewählt ist, öffnet der Recorder das System-Default-Gerät; liefert `host.default_input_device()` `None`, bricht `open()` mit `ErrorKind::NotFound` und genau diesem Text ab (`recorder.rs:170-175`). Der frühere Vorab-Check wurde entfernt — eine Maschine ohne Eingabegeräte scheitert bewusst erst hier (`managers/audio.rs:684-688`, Kommentar „No pre-flight enumeration here“). | Mindestens ein Eingabegerät im OS aktivieren; danach erneut versuchen — ein erneuter `open()` enumeriert frisch. | Fehlerstring „No input device found“ (`recorder.rs:174`); Klassifikation als Kein-Gerät-Fehler via `is_no_input_device_error` (`recorder.rs:560-565`, Tests `recorder.rs:910-912`). |
+
+### 2.2 Falsches/fehlendes Standard- und Auswahlgerät (Fallback)
+
+| # | Symptom | Wahrscheinliche Ursache (implementiertes Verhalten, belegt) | Maßnahme | Zu sammelnde Evidenz |
+|---|---------|-------------------------------------------------------------|----------|----------------------|
+| R5 | Ausgewähltes Mikrofon wird stillschweigend ignoriert; Aufnahme kommt vom Default-Gerät | Bei einer transienten Aufzählungsfehler-Ausnahme fällt `resolve_microphone_device` auf Default zurück und meldet das nur per `debug!` („Failed to list devices, using default“, `managers/audio.rs:489-492`). Der Nutzer sieht keinen Fehler. | Mit `--debug` starten und die `device resolve:`-Zeilen prüfen; Ursache des Aufzählungsfehlers wie R2 behandeln. | Debug-Zeile „Failed to list devices, using default: {e}“ (`managers/audio.rs:490`); nachfolgende „device resolve: enumerate=… (found=false)“-Zeile (`managers/audio.rs:494-498`). |
+| R6 | Mikrofon-Einstellung springt von selbst auf „Default“ | Wenn die Aufzählung erfolgreich war, das ausgewählte Gerät aber fehlt, öffnet der Manager den Default-Stream und löscht *nach erfolgreichem Öffnen* die Persistenz-Einstellung `selected_microphone` (`managers/audio.rs:503-512`, `persist_default_microphone_after_fallback` `managers/audio.rs:517-536`, Aufruf erst nach offenem Stream `managers/audio.rs:722-726`) und emittiert `settings-changed` mit `value: "Default"` (`managers/audio.rs:529-535`). Das ist bewusstes Fallback-Verhalten, kein Bug — aber es erklärt das „verschwindende“ Headset. | Gerät wieder anschließen und neu auswählen; die Einstellung wird absichtlich nicht für ein abwesendes Gerät festgehalten (Kommentar `managers/audio.rs:477-479`). | Log-Zeile „settings-changed“-Event-Payload `{"setting":"selected_microphone","value":"Default"}`; Debug-Zeile „device resolve: … (found=false)“ (`managers/audio.rs:494-498`). |
+| R7 | macOS: Aufnahme startet nicht, obwohl Geräte vorhanden sind; Fehler enthält „coreaudio“/„Failed to fetch preferred config“ | `is_no_input_device_error()` klassifiziert zusätzlich „Failed to fetch preferred config“ + „coreaudio“ als Kein-Gerät-Fall (`recorder.rs:560-565`, Test `recorder.rs:914-918`). Ein CoreAudio-Konfigurationsfehler (z. B. nach Standby oder bei virtuellen Geräten) wird also wie „kein Gerät“ behandelt. | Gerät einmal im OS umschalten (re-aktivieren), dann erneut versuchen — `open()` holt die Konfiguration pro Öffnung neu bzw. verwirft den Cache nach Fehlschlag (`recorder.rs:330-337`). | Exakte CoreAudio-Fehlerzeile („Failed to fetch preferred config: …“, erzeugt in `recorder.rs:202-204`); Verhalten nach Re-Aktivierung des Geräts. |
+
+### 2.3 Hot-Unplug / Gerätewechsel während oder nach der Aufnahme
+
+| # | Symptom | Wahrscheinliche Ursache (implementiertes Verhalten, belegt) | Maßnahme | Zu sammelnde Evidenz |
+|---|---------|-------------------------------------------------------------|----------|----------------------|
+| R8 | Gerät wird *während* der Aufnahme abgezogen → Ergebnis leer oder endet abrupt; kein Fehlerdialog | Während einer aktiven Aufnahme gibt es keine automatische Wiederherstellung: Der cpal-Fehler-Callback setzt nur das `stream_error`-Flag (`recorder.rs:483-486`) und `needs_reopen()` meldet den toten Stream (`recorder.rs:395-401`). Ein Neuaufbau passiert erst beim *nächsten* `start_microphone_stream()` (`managers/audio.rs:629-668`); `stop_recording()` nimmt dann, was da ist (`managers/audio.rs:952-963`, bei `stop()`-Fehler leeres `Vec`). | Aufnahme wiederholen; der nächste Start baut den Stream frisch auf. | Log-Zeile „Stream error: {err}“ (`recorder.rs:484`); danach „Capture stream failed; rebuilding microphone stream“ (`recorder.rs:159`) bzw. „Microphone stream is no longer running (device disconnected?); reopening“ (`managers/audio.rs:649`). |
+| R9 | Always-on-Modus: nach Geräteverlust bleibt der erste Tastendruck ohne Reaktion („hängt“) | In Always-on-Modus prüft `try_start_recording` den Stream per `start_microphone_stream()`; ist das `stream_error`-Flag gesetzt oder der Worker-Thread beendet, wird der Stream inline abgerissen und neu geöffnet (`managers/audio.rs:629-668`, Kommentar `managers/audio.rs:817-822`). Das kann je Gerät mehrere 100 ms dauern; liefert das (teilweise von cpal nicht als Fehler gemeldete) Gerät trotzdem keine Samples, wartet `RecordingReadiness::wait()` auf das erste Chunk (`recorder.rs:366-381`, Ready-Signal erst nach verarbeitetem Chunk `recorder.rs:813-827`) — der Start erscheint tot. | Einmal abbrechen (`--cancel`, siehe `AGENTS.md` CLI-Tabelle) und erneut starten; der zweite Durchlauf geht durch den Reopen-Pfad. Bleibt es hängen, Gerät neu stecken. | Debug-Zeilen „Cmd::Start processed … after send“ (`recorder.rs:668-676`), „first audio chunk arrived … after stream start“ (`recorder.rs:776-783`) — fehlt Letzteres, liefert der Host keine Samples. |
+| R10 | Gerät neu angesteckt: der erste Start danach schlägt fehl bzw. braucht einen zweiten Versuch | Das gefundene Gerät wird pro Name gecacht (`cached_device`, `managers/audio.rs:374-379`, Treffer `managers/audio.rs:467-475`). Ein veralteter Cache-Eintrag scheitert erst beim `open()`; dann wird der Cache verworfen, frisch enumeriert und *genau einmal* wiederholt (`managers/audio.rs:701-711`). | Erneut auslösen — der eine Retry ist implementiert. Häufige Folgefehler: Gerät im OS unter gleichem Namen mit anderer Rate wieder angemeldet (dann R12/R13). | Warnzeile „Recorder open failed ({first_err}); re-resolving device and retrying once“ (`managers/audio.rs:706`); „device resolve: cache hit …“ (`managers/audio.rs:469`). |
+
+### 2.4 Geräteberechtigungen
+
+| # | Symptom | Wahrscheinliche Ursache (implementiertes Verhalten, belegt) | Maßnahme | Zu sammelnde Evidenz |
+|---|---------|-------------------------------------------------------------|----------|----------------------|
+| R11 | Windows: Start schlägt fehl; Fehler enthält „Access is denied“/„permission denied“/„0x80070005“, Fehlerklasse `PermissionDenied` | Der Open-Fehler wird per `is_microphone_access_denied()` auf diese drei (lowercase-)Muster geprüft und in `std::io::ErrorKind::PermissionDenied` übersetzt (`recorder.rs:348-356`, Muster `recorder.rs:553-558`, Tests `recorder.rs:889-907`). Ursache ist die Windows-Datenschutzfreigabe (ConsentStore), nicht cpal selbst. | Windows-Mikrofonfreigabe prüfen: Einstellungen → Datenschutz → Mikrofon (Desktop-Apps!). Die App liest den ConsentStore-Status über `get_windows_microphone_permission_status` aus der Registrierung (`commands/audio.rs:80-136`, Auswertelogik `commands/audio.rs:94-107`) und kann die Einstellungsseite via `open_microphone_privacy_settings` öffnen (`commands/audio.rs:140-155`). | Rückgabe von `get_windows_microphone_permission_status` (`overall_access`, `desktop_app_access` — Letzteres ist der maßgebliche Scope, `commands/audio.rs:90-93`); Open-Fehlerstring aus dem Log. Hinweis macOS/Linux: dieselben String-Muster gelten plattformübergreifend (`recorder.rs:553-558`), ein dedizierter TCC-Check existiert nicht. |
+
+### 2.5 Resampler / Sample-Rate- und Format-Mismatch
+
+| # | Symptom | Wahrscheinliche Ursache (implementiertes Verhalten, belegt) | Maßnahme | Zu sammelnde Evidenz |
+|---|---------|-------------------------------------------------------------|----------|----------------------|
+| R12 | Entstellte/pitch-versetzte Transkription, „Heliumstimme“ oder Zeitlupe | Das Gerät läuft mit Nicht-16-kHz-Rate; der Pfad resampelt jede Eingangsrate per `FrameResampler` auf `WHISPER_SAMPLE_RATE` = 16000 (`constants.rs:1`; Konstruktion in `run_consumer`, `recorder.rs:578-582`; `FftFixedIn` nur bei abweichender Rate, `resampler.rs:23-26`). Bleibt die Ausgabe verstümmelt, meldet das OS eine andere Rate als tatsächlich geliefert wird (typisch nach Hot-Unplug/Standby bei Bluetooth) — der Konfigurations-Cache ist dann veraltet. | Stream neu öffnen lassen (App neu starten oder Gerät neu stecken): Ein fehlgeschlagenes `open()` verwirft den Config-Cache bewusst (`recorder.rs:330-337`), der nächste Öffnungsversuch fragt die Gerätekonfiguration frisch ab (`get_preferred_config`, `recorder.rs:497-550`: native Default-Rate als Ziel `recorder.rs:504-506`, Formatpriorität F32 > I16 > I32 `recorder.rs:524-536`). | Logblock „Using device: … / Sample rate: … / Channels: … / Format: …“ (`recorder.rs:210-216`) — Rate/Format mit den OS-Angaben vergleichen; „mic worker init: fetch_config=… (cached=…)“ (`recorder.rs:294-300`) zeigt, ob der Cache bedient wurde. |
+| R13 | Start schlägt fehl mit „Unsupported sample format: …“ oder „No supported config matched device default rate …“ | `build_stream` wird nur für U8/I8/I16/I32/F32 instantiiert; alles andere ist ein harter Fehler (`recorder.rs:233-287`, Fallback-Zweig `recorder.rs:284-286`). Findet sich kein Konfigurationsbereich, der die native Rate abdeckt, wird warnend der Geräte-Default übernommen (`recorder.rs:544-549`) — exotische/virtuelle Geräte können damit in den Unsupported-Fall laufen. | Gerätetreiber/OS-Konfiguration auf ein Standardformat (16/24/32-bit oder Float) umstellen; virtuelle Audiogeräte deaktivieren. | Warnzeile „No supported config matched device default rate …“ (`recorder.rs:545-548`); Fehlerstring „Unsupported sample format: {fmt}“ (`recorder.rs:285`) bzw. „Failed to build input stream: …“ (`recorder.rs:243` u. parallele Zweige). |
+| R14 | Aufnahme wirkt „mono-falsch“: ein Sprecher sehr leise, obwohl ein bestimmter Kanal gewählt war | Ist der gewählte Kanal außerhalb der Kanalzahl des Geräts, fällt der Recorder auf Mittelung *aller* Kanäle zurück und warnt nur (`recorder.rs:218-230`, Rückfallentscheidung `recorder.rs:431-435`). Ohne Kanalwahl wird ohnehin gemittelt (`recorder.rs:460-469`). | Kanalwahl in den Einstellungen erneut setzen (Befehl `set_selected_channel`, `commands/audio.rs:362-375`; Wechsel ist während einer Aufnahme gesperrt, `managers/audio.rs:866-899`). | Warnzeile „Selected input channel {n} is out of range for a {c}-channel device; averaging all channels instead“ (`recorder.rs:222-227`); „Using selected input channel: {n}“ bzw. „Averaging all {c} input channels“ (`recorder.rs:220`, `recorder.rs:229`). |
+| R15 | Stoppen dauert ~2 s; Log zeigt „Timed out waiting for EndOfStream“ | Beim Stop drainiert der Consumer alle Restsamples bis der cpal-Callback `EndOfStream` sendet, mit 2-s-Timeout (`recorder.rs:719-743`). Ein bereits gestorbenes Gerät (Hot-Unplug kurz vor dem Stop) sendet nie `EndOfStream` — der Timeout schützt vor Endlos-Warten, kostet aber die vollen 2 s. | Kein Handlungsbedarf für das Ergebnis (Samples wurden bereits zugestellt, `recorder.rs:756`); bei wiederholtem Auftreten Hot-Unplug-Ursache wie R8 behandeln. | Warnzeile „Timed out waiting for EndOfStream from audio callback“ (`recorder.rs:739`); zeitlich korrelierte „Stream error:“-Zeile (`recorder.rs:484`). |
+
+## 3. Diagnose-Schnellpfad (Reihenfolge)
+
+1. `--debug`-Log einschalten (CLI-Flag `--debug`, `AGENTS.md`, Abschnitt
+   „CLI Parameters“).
+2. Symptom in Abschnitt 2 lokalisieren; die dort genannten Logzeilen sind
+   jeweils die Beleganker.
+3. Geräteaufzählung unabhängig prüfen (OS-Mittel), um App- vs. OS-Ebene zu
+   trennen: R1/R2 verweisen auf Host-Ebene (`get_cpal_host`,
+   `audio_toolkit/utils.rs:3-12`), alles Übrige auf Öffnungs-/Konfigurationsebene
+   (`AudioRecorder::open`, `recorder.rs:154-364`).
+4. Nach jeder Maßnahme: erneuter Startversuch und Vergleich der
+   „mic stream breakdown“-Zeile (`managers/audio.rs:713-718`) mit dem
+   Fehlerlauf.
+
+## 4. Nicht-Ziele dieses Dokuments
+
+- Keine Beschreibung von Meeting-Modus-Pfaden (`MeetingRecorder` &c.): nicht
+  implementiert, siehe Index
+  (`docs/meeting-mode-documentation-index.md`, Abschnitt 1).
+- Keine Aussagen über zukünftiges Verhalten, Auto-Reconnect oder
+  Geräte-Events: solche Mechanismen existieren im Diktierpfad nicht
+  (Wiederherstellung ausschließlich über den Reopen-Pfad beim nächsten Start,
+  `managers/audio.rs:629-668`).
+- Keine Treiber-/OS-Fehlersuche über die hier genannten Prüfungen hinaus.

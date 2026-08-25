@@ -1,0 +1,110 @@
+/* Handy Colors */
+
+:root {
+  /* Palette source of truth. Each themed color is defined once as a
+     light/dark pair; the active tokens below and the `data-theme` overrides
+     in App.css reference these, so a hex value lives in exactly one place. */
+  --light-color-text: #0f0f0f;
+  --light-color-background: #fbfbfb;
+  /* Secondary text. Chosen for >=4.5:1 on --light-color-background (4.93) and
+     on the pink-tinted active/featured card surfaces, bg-logo-primary/10
+     (4.65). */
+  --light-color-text-muted: #6e6e6e;
+  --light-color-logo-primary: #faa2ca;
+  --light-color-logo-stroke: #382731;
+
+  --dark-color-text: #fbfbfb;
+  --dark-color-background: #2c2b29;
+  /* >=4.5:1 on --dark-color-background (6.10) and on bg-logo-primary/10 cards
+     (5.07). */
+  --dark-color-text-muted: #adaaa2;
+  --dark-color-logo-primary: #f28cbb;
+  --dark-color-logo-stroke: #fad1ed;
+
+  /* Semantic status colors. Values are tuned so the status foreground keeps
+     >=4.5:1 against its own 10%-tinted container in both themes (see
+     ui/Alert.tsx); icons need >=3:1 against the same surface. First used by
+     SecureInputWarning; intended to replace ad-hoc tailwind-palette status
+     colors so status styling is themeable from one place. */
+  --light-color-warning: #92400e;
+  --light-color-error: #b91c1c;
+  --light-color-info: #1d4ed8;
+  --light-color-success: #166534;
+  --dark-color-warning: #fbbf24;
+  --dark-color-error: #fca5a5;
+  --dark-color-info: #60a5fa;
+  --dark-color-success: #4ade80;
+
+  /* Tokens that do not change between light and dark */
+  --color-background-ui: #da5893;
+  /* Solid lighter step for primary-button hover: an alpha fade would mix the
+     pink toward the page background (darker in dark mode), dropping an
+     on-accent foreground below 4.5:1 (3.6:1 with white ink). */
+  --color-background-ui-hover: #e179a8;
+  /* Foreground ink used on top of accent fills (--color-background-ui and
+     --color-logo-primary). Near-black instead of white: white manages only
+     ~3.6:1 on those pinks, this ink is >=5.2:1 in both themes. */
+  --color-accent-foreground: #0f0f0f;
+  --color-text-stroke: #f6f6f6;
+  --color-mid-gray: #808080;
+
+  /* Active palette — defaults to light, follows the OS via the media query
+     below, or is forced by `data-theme` (see the overrides below). */
+  --color-text: var(--light-color-text);
+  --color-text-muted: var(--light-color-text-muted);
+  --color-background: var(--light-color-background);
+  --color-logo-primary: var(--light-color-logo-primary);
+  --color-logo-stroke: var(--light-color-logo-stroke);
+  --color-warning: var(--light-color-warning);
+  --color-error: var(--light-color-error);
+  --color-info: var(--light-color-info);
+  --color-success: var(--light-color-success);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text: var(--dark-color-text);
+    --color-text-muted: var(--dark-color-text-muted);
+    --color-background: var(--dark-color-background);
+    --color-logo-primary: var(--dark-color-logo-primary);
+    --color-logo-stroke: var(--dark-color-logo-stroke);
+    --color-warning: var(--dark-color-warning);
+    --color-error: var(--dark-color-error);
+    --color-info: var(--dark-color-info);
+    --color-success: var(--dark-color-success);
+  }
+}
+
+/*
+ * Explicit theme override, driven by the `theme` setting via
+ * `document.documentElement.dataset.theme`. When set, the higher-specificity
+ * attribute selectors win over the `prefers-color-scheme` media query above,
+ * so a user can keep Handy light or dark regardless of the OS setting.
+ * `system` (or no attribute) leaves the OS in charge.
+ *
+ * Lives here (not in App.css) so every window that imports the shared palette —
+ * the settings window and the recording overlay alike — honours the override.
+ */
+:root[data-theme="light"] {
+  --color-text: var(--light-color-text);
+  --color-text-muted: var(--light-color-text-muted);
+  --color-background: var(--light-color-background);
+  --color-logo-primary: var(--light-color-logo-primary);
+  --color-logo-stroke: var(--light-color-logo-stroke);
+  --color-warning: var(--light-color-warning);
+  --color-error: var(--light-color-error);
+  --color-info: var(--light-color-info);
+  --color-success: var(--light-color-success);
+}
+
+:root[data-theme="dark"] {
+  --color-text: var(--dark-color-text);
+  --color-text-muted: var(--dark-color-text-muted);
+  --color-background: var(--dark-color-background);
+  --color-logo-primary: var(--dark-color-logo-primary);
+  --color-logo-stroke: var(--dark-color-logo-stroke);
+  --color-warning: var(--dark-color-warning);
+  --color-error: var(--dark-color-error);
+  --color-info: var(--dark-color-info);
+  --color-success: var(--dark-color-success);
+}

@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speak – Meeting-Mode Prototyp</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== Primärnavigation (Plan §6.3) ===== -->
+  <nav class="sidebar" aria-label="Hauptnavigation">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">S</span>
+      <span class="brand-name">Speak</span>
+    </div>
+
+    <ul class="nav-list" role="list">
+      <li><a href="#/diktieren" class="nav-item" data-route="diktieren">Diktieren</a></li>
+      <li><a href="#/meetings" class="nav-item" data-route="meetings">Meetings</a></li>
+      <!-- Angehefteter Eintrag während einer laufenden Aufnahme (Plan §6.3) -->
+      <li id="pinned-recording" hidden>
+        <a href="#/meeting-aktiv" class="nav-item nav-pinned" data-route="meeting-aktiv"
+           aria-live="off">
+          <span class="rec-dot" aria-hidden="true"></span>
+          <span class="pinned-label">Aufnahme läuft</span>
+          <span class="pinned-time" id="pinned-time">00:00:00</span>
+        </a>
+      </li>
+      <li><a href="#/projekte" class="nav-item" data-route="projekte">
+        Projekte
+        <span class="badge" id="eingang-badge" title="Nicht zugeordnete Elemente im Eingang">2</span>
+      </a></li>
+      <li><a href="#/diktatverlauf" class="nav-item" data-route="diktatverlauf">Diktatverlauf</a></li>
+    </ul>
+
+    <div class="nav-divider" role="separator" aria-hidden="true"></div>
+
+    <ul class="nav-list nav-secondary" role="list">
+      <li><a href="#/einstellungen" class="nav-item" data-route="einstellungen">Einstellungen</a></li>
+      <li><a href="#/hilfe" class="nav-item" data-route="hilfe">Hilfe &amp; Über</a></li>
+    </ul>
+
+    <!-- Mock-Steuerung: nur im Prototyp vorhanden -->
+    <div class="mock-controls">
+      <button type="button" class="btn btn-ghost btn-small" id="mock-reset"
+              title="Prototyp-Zustand zurücksetzen">Mock zurücksetzen</button>
+    </div>
+  </nav>
+
+  <!-- ===== Inhaltsbereich ===== -->
+  <main id="main" class="main" tabindex="-1">
+
+    <!-- ========== Ansicht: Diktieren (Plan §6.4) ========== -->
+    <section class="view" id="view-diktieren" hidden>
+      <header class="view-header">
+        <h1>Diktieren</h1>
+        <p class="subtitle">Schnelles Speech-to-Text – unabhängig vom Meeting-Modus.</p>
+      </header>
+
+      <div class="card card-primary-action-col">
+        <div class="dictation-status-row">
+          <span class="status-chip status-ready" id="dict-status-chip">
+            <span aria-hidden="true">●</span> Bereit
+          </span>
+          <span class="muted" id="dict-hint">Drücke den Shortcut, um zu starten.</span>
+        </div>
+
+        <dl class="status-lines">
+          <div class="status-line">
+            <dt>Diktier-Shortcut</dt>
+            <dd><button type="button" class="keycap" id="keycap-dictate"
+                        title="Shortcut in Einstellungen ändern">Ctrl + Space</button></dd>
+          </div>
+          <div class="status-line">
+            <dt>Modus</dt><dd>Gedrückt halten</dd>
+          </div>
+          <div class="status-line">
+            <dt>STT-Ziel</dt><dd>Lokal auf diesem Gerät</dd>
+          </div>
+          <div class="status-line">
+            <dt>Sprache · Modell</dt><dd>Deutsch · Whisper Small</dd>
+          </div>
+        </dl>
+
+        <div class="row-gap">
+          <button type="button" class="btn btn-primary" id="btn-dictat-testen">Diktat testen</button>
+          <button type="button" class="btn btn-ghost"
+                  onclick="location.hash = '#/einstellungen/diktieren'">Diktier-Einstellungen</button>
+        </div>
+
+        <div class="test-preview" id="dict-preview" hidden>
+          <h2 class="small-heading">Testvorschau <span class="muted">(wird nicht eingefügt)</span></h2>
+          <p id="dict-preview-text" class="preview-text"></p>
+        </div>
+        <p class="note">Diese Seite enthält absichtlich keinen Meeting-Startbutton.</p>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Meetings (Plan §6.5) ========== -->
+    <section class="view" id="view-meetings" hidden>
+      <header class="view-header">
+        <h1>Meetings</h1>
+        <p class="subtitle">Aufnehmen, transkribieren und zusammenfassen – Standard: lokal auf diesem Gerät.</p>
+        <p class="plan-tag">Plan §6.5 · Meetings-Übersicht inkl. leerer Zustand</p>
+      </header>
+
+      <!-- Aktives Meeting immer oben, nie durch Suche/Filter wegfilterbar -->
+      <div class="card active-meeting-card" id="active-meeting-card" hidden>
+        <div class="row-between">
+          <div>
+            <span class="status-chip status-recording" id="am-status">
+              <span aria-hidden="true" id="am-status-icon">●</span>
+              <span id="am-status-text">Aufnahme läuft</span>
+            </span>
+            <strong id="am-title">Meeting</strong>
+            <span class="mono" id="am-duration">00:00:00</span>
+          </div>
+          <button type="button" class="btn btn-secondary" id="btn-open-active">Öffnen</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button type="button" class="btn btn-primary" id="btn-neues-meeting">+ Neues Meeting</button>
+        <a href="#/meeting-einrichtung" class="btn btn-ghost btn-small" id="btn-open-setup"
+           title="Meeting-Ersteinrichtung (Plan §6.6)">Ersteinrichtung</a>
+        <label class="sr-only" for="meeting-search">Meetings durchsuchen</label>
+        <input type="search" id="meeting-search" placeholder="Meetings durchsuchen …">
+        <div class="filter-group" role="group" aria-label="Meeting-Filter">
+          <button type="button" class="chip chip-selected" data-filter="alle">Alle</button>
+          <button type="button" class="chip" data-filter="verarbeitung">In Verarbeitung</button>
+          <button type="button" class="chip" data-filter="fertig">Fertig</button>
+          <button type="button" class="chip" data-filter="fehler">Fehler</button>
+        </div>
+      </div>
+
+      <ul class="meeting-list" id="meeting-list" role="list"></ul>
+
+      <!-- Leerer Zustand -->
+      <div class="empty-state" id="meetings-empty" hidden>
+        <h2>Noch keine Meetings</h2>
+        <p>Nehme Besprechungen auf und erhalte automatisch Transkript und Zusammenfassung.</p>
+        <button type="button" class="btn btn-primary btn-large" id="btn-neues-meeting-empty">Neues Meeting</button>
+        <a href="#/meeting-einrichtung" class="btn btn-ghost">Ersteinrichtung öffnen</a>
+        <button type="button" class="btn btn-ghost" disabled title="In dieser Prototyp-Version nicht freigegeben">Audiodatei importieren</button>
+        <p class="privacy-note">🔒 Datenschutzstatus: Standard lokal auf diesem Gerät.</p>
+      </div>
+
+      <fieldset class="mock-fieldset" id="meetings-sim-fieldset">
+        <legend>Prototyp-Simulation (nur im Mock)</legend>
+        <label><input type="checkbox" id="sim-no-meetings"> Leeren Zustand simulieren (Meetings ausblenden)</label>
+      </fieldset>
+    </section>
+
+    <!-- ========== Ansicht: Laufendes Meeting (Plan §6.11) ========== -->
+    <section class="view" id="view-meeting-aktiv" hidden>
+      <!-- Ebene 1: fixierte Statusleiste (§6.11) – Farbe+Icon+Text gemäß §6.8 -->
+      <div class="fixed-statusbar" role="status">
+        <span class="status-chip status-recording" id="live-status-chip">
+          <span aria-hidden="true" id="live-status-icon">●</span>
+          <span id="live-status-text">Aufnahme läuft</span>
+        </span>
+        <span class="mono" id="live-duration">00:00:00</span>
+        <span id="live-provider">Lokal</span>
+        <span class="ok">Audio gespeichert</span>
+        <span class="plan-tag statusbar-tag" title="Plan §6.11: fixierte Statusleiste, Transkriptbereich, fixierte Steuerung – im Aufnahme- und Pausen-Zustand">Plan §6.11 · Aufnahme/Pause</span>
+        <button type="button" class="btn btn-ghost btn-small tray-btn" id="btn-tray"
+                title="Fenster minimieren – die Aufnahme läuft im Tray weiter">– In den Tray</button>
+      </div>
+
+      <!-- Ebene 2: scrollendes Transkript; der Sprung-Button liegt außerhalb des
+           Scrollbereichs, damit er beim Hochscrollen nicht mitwegscrollt -->
+      <div class="transcript-wrap">
+        <div class="transcript-area" aria-label="Live-Transkript" tabindex="0">
+          <p class="listening-state" id="listening-state">Hört zu …</p>
+          <ul class="segments" id="live-segments" role="list"></ul>
+        </div>
+        <button type="button" class="btn btn-secondary jump-btn" id="btn-zum-text" hidden>↓ Zum aktuellen Text</button>
+      </div>
+
+      <!-- Ebene 3: fixierte Steuerung mit getrennten Pegeln samt Textlabel -->
+      <div class="fixed-controls">
+        <button type="button" class="btn btn-neutral" id="btn-pause">Pause</button>
+        <button type="button" class="btn btn-danger" id="btn-beenden">⏹ Meeting beenden</button>
+        <div class="levels">
+          <label>Mikrofon <meter id="mic-level" min="0" max="100" value="40"></meter></label>
+          <label>Systemaudio <meter id="sys-level" min="0" max="100" value="65"></meter></label>
+        </div>
+      </div>
+
+      <!-- Bestätigung vor Beendigung (Plan §6.9): ein Druck beendet nie direkt;
+           verschwindet nach kurzer Zeit ohne Zustandsänderung -->
+      <div class="modal-backdrop" id="stop-confirm" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="stop-confirm-title">
+          <h2 id="stop-confirm-title">Meeting wirklich beenden?</h2>
+          <p class="plan-tag">Plan §6.9 · Bestätigung vor dem Beenden</p>
+          <p>Die Aufnahme wird gestoppt und die Verarbeitung gestartet.</p>
+          <div class="row-gap row-end">
+            <button type="button" class="btn btn-neutral" id="btn-stop-abbruch">Weiter aufnehmen</button>
+            <button type="button" class="btn btn-danger" id="btn-stop-ok">⏹ Beenden</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========== Ansicht: Verarbeitung nach Stop (Plan §6.12, Teil 4/5) ==========
+         Klare Checkliste mit deterministischen Stückzahlen. Solange die
+         Gesamtmenge unbekannt ist (Vorbereitung), steht bewusst KEINE Zahl und
+         nie eine Prozentanzeige im Text (Gate G1). -->
+    <section class="view" id="view-verarbeitung" hidden>
+      <header class="view-header">
+        <h1 id="proc-title">Meeting wird verarbeitet</h1>
+        <p class="subtitle">Du kannst dieses Fenster schließen – die Arbeit läuft im Hintergrund weiter.</p>
+        <p class="plan-tag">Plan §6.12 · Verarbeitungs-Checkliste nach dem Stop</p>
+      </header>
+      <div class="card">
+        <p class="muted small" id="proc-meeting-label"></p>
+        <ul class="checklist" id="proc-checklist" role="list" aria-live="polite">
+          <li data-step="saved" class="done">✓ Aufnahme sicher gespeichert</li>
+          <!-- Gesamtmenge unbekannt → bewusst ohne Stückzahl und ohne Prozent -->
+          <li data-step="chunks">● Audioabschnitte werden vorbereitet …</li>
+          <li data-step="transcribe">○ Abschnitte transkribieren …</li>
+          <li data-step="summary">○ Zusammenfassung wartet</li>
+        </ul>
+        <div class="row-gap">
+          <button type="button" class="btn btn-secondary" id="btn-proc-bg">Im Hintergrund weiterarbeiten</button>
+          <button type="button" class="btn btn-secondary" id="btn-retry-failed" hidden>Fehlerhafte Abschnitte erneut versuchen</button>
+          <button type="button" class="btn btn-primary" id="btn-open-processing-meeting" hidden>Meeting öffnen</button>
+        </div>
+        <fieldset class="mock-fieldset">
+          <legend>Prototyp-Simulation (nur im Mock)</legend>
+          <label><input type="checkbox" id="sim-chunk-error"> Einen Abschnitt fehlschlagen lassen</label>
+        </fieldset>
+
+        <!-- KI-Projektvorschlag (Plan §6.18, Gate G2): erscheint erst nach
+             Abschluss der Verarbeitung, enthält Confidence + zwei Belege und
+             erfordert eine explizite Wahl – ohne Wahl wird nichts verschoben -->
+        <div class="suggestion-card" id="ai-suggestion" hidden>
+          <h2 class="small-heading">Projektvorschlag</h2>
+          <p id="suggestion-headline"></p>
+          <p class="muted small">Belege:</p>
+          <ul class="evidence-list" id="suggestion-evidence" role="list"></ul>
+          <!-- Drei gleichwertig erreichbare Aktionen; Standardaktion Zuordnen.
+               Keine automatische Verschiebung ohne Eingabe. -->
+          <div class="row-gap" id="suggestion-actions">
+            <button type="button" class="btn btn-primary" id="btn-suggest-zuordnen">Zuordnen</button>
+            <button type="button" class="btn btn-secondary" id="btn-suggest-other">Anderes Projekt …</button>
+            <button type="button" class="btn btn-ghost" id="btn-suggest-none">Ohne Projekt lassen</button>
+          </div>
+          <div id="suggest-other-picker" class="picker-panel" role="group" aria-label="Anderes Projekt wählen" hidden></div>
+          <p class="muted small" id="suggestion-note"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Meeting-Detail (Plan §6.13, Teil 4/5) ========== -->
+    <section class="view" id="view-meeting-detail" hidden>
+      <div class="row-between">
+        <a href="#/meetings" class="btn btn-ghost" id="btn-detail-back">← Meetings</a>
+        <!-- Optionale Geteilte Ansicht: nur auf breiten Bildschirmen angeboten,
+             nie der unerklärte Standard (§6.13) -->
+        <label class="split-toggle" for="split-toggle">
+          <input type="checkbox" id="split-toggle">
+          Geteilte Ansicht
+        </label>
+      </div>
+
+      <header class="view-header">
+        <label class="sr-only" for="detail-title">Meeting-Titel bearbeiten</label>
+        <input type="text" id="detail-title" class="detail-title-input">
+        <p class="subtitle detail-meta">
+          <span id="detail-date"></span> · <span class="mono" id="detail-duration"></span> ·
+          <span id="detail-provider-line"></span>
+          <span id="detail-status-chip"></span>
+        </p>
+      </header>
+
+      <div class="row-between detail-actions">
+        <div class="row-gap" style="margin-top:0">
+          <button type="button" class="btn btn-secondary btn-small" id="btn-detail-copy">Kopieren</button>
+          <button type="button" class="btn btn-secondary btn-small" id="btn-detail-export">Exportieren</button>
+        </div>
+        <!-- Beschriftetes Menü für weitere Aktionen inkl. immer erreichbarem
+             Löschen ohne Hover (§6.13/§6.14, Gate G2) -->
+        <details class="more-options detail-more" id="detail-more-menu">
+          <summary>Weitere Aktionen</summary>
+          <div class="menu menu-static" role="menu">
+            <button type="button" role="menuitem" id="btn-detail-reprocess">Erneut verarbeiten</button>
+            <button type="button" role="menuitem" class="menu-danger" id="btn-detail-delete">Löschen …</button>
+          </div>
+        </details>
+      </div>
+
+      <p class="plan-tag">Plan §6.13 · Meeting-Detailansicht</p>
+      <div class="tabs" role="tablist" aria-label="Meeting-Bereiche">
+        <button role="tab" class="tab" data-dtab="uebersicht" aria-selected="true">Übersicht</button>
+        <button role="tab" class="tab" data-dtab="transkript" aria-selected="false">Transkript</button>
+        <button role="tab" class="tab" data-dtab="audio" aria-selected="false">Audio</button>
+        <button role="tab" class="tab" data-dtab="verarbeitung" aria-selected="false">Verarbeitung</button>
+      </div>
+
+      <div class="detail-body">
+        <div class="tabpanel" role="tabpanel" data-dpanel="uebersicht">
+          <div class="card">
+            <h2 class="small-heading">Kurzfassung</h2>
+            <p id="detail-summary"></p>
+            <h2 class="small-heading">Entscheidungen</h2>
+            <ul id="detail-decisions" role="list"></ul>
+            <h2 class="small-heading">Aufgaben</h2>
+            <ul id="detail-tasks" role="list"></ul>
+            <h2 class="small-heading">Offene Fragen</h2>
+            <ul id="detail-questions" role="list"></ul>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" data-dpanel="transkript" hidden>
+          <div class="card">
+            <div class="toolbar" style="margin-top:0">
+              <label class="sr-only" for="detail-transcript-search">Transkript durchsuchen</label>
+              <input type="search" id="detail-transcript-search" placeholder="Transkript durchsuchen …">
+            </div>
+            <p class="test-result" id="transcript-search-status" role="status"></p>
+            <div class="transcript-area detail-transcript-area" id="detail-transcript-area" aria-label="Meeting-Transkript" tabindex="0">
+              <ul class="segments" id="detail-segments" role="list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" data-dpanel="audio" hidden>
+          <div class="card" id="detail-audio-panel"></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" data-dpanel="verarbeitung" hidden>
+          <div class="card" id="detail-processing-panel"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Projekte (Plan §6.16) ========== -->
+    <section class="view" id="view-projekte" hidden>
+      <header class="view-header">
+        <h1>Projekte</h1>
+        <p class="subtitle">Status, Aufgaben und Meetings pro Projekt – Meetings können auch ohne Projekt aufgenommen werden.</p>
+      </header>
+      <!-- Leerer Zustand (§6.16): Nutzen-Satz, genau eine Primäraktion,
+           Import bewusst sekundär -->
+      <div class="empty-state" id="projects-empty" hidden>
+        <h2>Noch keine Projekte</h2>
+        <p>Projekte bündeln Meetings, Quellen und Aufgaben – z.&nbsp;B. ein Verein, ein Kunde oder ein Thema.</p>
+        <div class="row-gap" style="justify-content:center">
+          <button type="button" class="btn btn-primary btn-large" id="btn-projekt-erstellen-empty">Projekt erstellen</button>
+          <button type="button" class="btn btn-ghost" id="btn-import-empty">WhatsApp-Export importieren</button>
+        </div>
+        <p class="muted small">Meetings können auch zunächst ohne Projekt aufgenommen werden – sie landen im Eingang „Nicht zugeordnet“.</p>
+      </div>
+
+      <div class="toolbar" id="projects-toolbar">
+        <button type="button" class="btn btn-primary" id="btn-projekt-erstellen">Projekt erstellen</button>
+        <!-- Import bleibt die einzige sekundäre Aktion (§6.16) -->
+        <button type="button" class="btn btn-ghost" id="btn-import-start">WhatsApp-Export importieren</button>
+        <label class="sr-only" for="project-search">Projekte durchsuchen</label>
+        <input type="search" id="project-search" placeholder="Projekte durchsuchen …">
+        <label class="sr-only" for="project-sort">Sortierung</label>
+        <select id="project-sort">
+          <option value="aktiv">Zuletzt aktiv</option>
+          <option value="dringend">Dringendste Aufgabe</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
+      <ul class="project-list" id="project-list" role="list"></ul>
+      <p class="note" id="projects-nosearch" hidden>Keine Projekte für diese Suche.</p>
+
+      <fieldset class="mock-fieldset">
+        <legend>Prototyp-Simulation (nur im Mock)</legend>
+        <label><input type="checkbox" id="sim-no-projects"> Leeren Zustand simulieren (Projekte ausblenden)</label>
+      </fieldset>
+    </section>
+
+    <!-- ========== Ansicht: Eingang – Nicht zugeordnet (Plan §6.16/§6.18) ========== -->
+    <section class="view" id="view-eingang" hidden>
+      <a href="#/projekte" class="btn btn-ghost">← Projekte</a>
+      <header class="view-header">
+        <h1>Eingang – Nicht zugeordnet</h1>
+        <p class="subtitle">Meetings und Importe ohne Projektzuordnung. Eine Zuordnung ändert nur die Verknüpfung – Transkript, Audio und Belege bleiben erhalten.</p>
+      </header>
+      <div class="card">
+        <ul class="inbox-list" id="eingang-list" role="list"></ul>
+        <div class="row-gap" style="margin-top:12px">
+          <label class="sr-only" for="eingang-target">Zielprojekt für Stapelzuordnung</label>
+          <select id="eingang-target"></select>
+          <button type="button" class="btn btn-primary" id="btn-eingang-assign">Ausgewählte zuweisen …</button>
+        </div>
+        <!-- §6.18: Stapelzuordnung immer mit Vorschau, nie eine
+             KI-Massenaktion ohne Bestätigung -->
+        <p class="muted small">Stapelzuordnung zeigt vorher eine Vorschau – es gibt keine automatische Massenzuordnung.</p>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Projekt-Detailansicht (Plan §6.17) ========== -->
+    <section class="view" id="view-projekt-detail" hidden>
+      <a href="#/projekte" class="btn btn-ghost" id="btn-projekt-back">← Projekte</a>
+      <header class="view-header">
+        <div class="row-between">
+          <h1 id="pd-name" style="margin:0">Projekt</h1>
+          <details class="more-options" id="pd-more-menu">
+            <summary>Weitere Aktionen</summary>
+            <div class="menu menu-static" role="menu">
+              <button type="button" role="menuitem" id="btn-pd-rename">Umbenennen …</button>
+              <button type="button" role="menuitem" class="menu-danger" id="btn-pd-delete">Projekt löschen …</button>
+            </div>
+          </details>
+        </div>
+        <!-- Belegbarer Kurzstatus + letzter KI-Lauf (§6.17); Belege als Links -->
+        <p class="subtitle" id="pd-statusline"></p>
+      </header>
+      <div class="row-gap detail-actions">
+        <button type="button" class="btn btn-secondary btn-small" id="btn-pd-add-source">Quelle hinzufügen</button>
+        <span class="muted small" id="pd-ai-last-run"></span>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Projekt-Bereiche">
+        <button role="tab" class="tab" data-ptab="uebersicht" aria-selected="true">Übersicht</button>
+        <button role="tab" class="tab" data-ptab="aufgaben" aria-selected="false">Aufgaben</button>
+        <button role="tab" class="tab" data-ptab="meetings" aria-selected="false">Meetings</button>
+        <button role="tab" class="tab" data-ptab="quellen" aria-selected="false">Quellen</button>
+      </div>
+
+      <div class="detail-body">
+        <div class="tabpanel" role="tabpanel" data-ppanel="uebersicht">
+          <div class="card" id="pd-overview"></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-ppanel="aufgaben" hidden>
+          <div id="pd-tasks"></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-ppanel="meetings" hidden>
+          <div class="card" id="pd-meetings"></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-ppanel="quellen" hidden>
+          <div class="card" id="pd-sources"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: WhatsApp-Importassistent (Plan §6.19) ==========
+         Vier Schritte; lokales Parsen/Deduplizieren immer vor jedem
+         Cloudaufruf; Schritt 3 listet exakt, was das Gerät verlässt. -->
+    <section class="view" id="view-import" hidden>
+      <a href="#/projekte" class="btn btn-ghost" id="btn-import-back">← Projekte</a>
+      <header class="view-header">
+        <h1>WhatsApp-Export importieren</h1>
+        <p class="subtitle">Lokales Parsen und Deduplizieren läuft immer vor einem möglichen Cloudaufruf. Ein Archiv wird nie blind an einen Provider gesendet.</p>
+      </header>
+
+      <ol class="wizard-steps" id="wizard-steps" aria-label="Importschritte">
+        <li data-wstep="1" class="current" aria-current="step">1 · Datei wählen</li>
+        <li data-wstep="2">2 · Erkanntes prüfen</li>
+        <li data-wstep="3">3 · Projekt &amp; Verarbeitung</li>
+        <li data-wstep="4">4 · Import bestätigen</li>
+      </ol>
+
+      <!-- Schritt 1: Datei wählen (.zip/.txt), noch keine Cloudübertragung -->
+      <div class="card" id="import-step-1">
+        <h2 class="small-heading">Schritt 1 · Datei wählen</h2>
+        <p>Export vom Handy wählen (<code>.zip</code> oder <code>.txt</code>). Der Parser erkennt Chatnamen, Teilnehmer und Zeitraum selbstständig.</p>
+        <div class="row-gap">
+          <button type="button" class="file-pick" id="pick-file-a"
+                  title="Erstimport – 48 Nachrichten, noch nicht importiert">📄 WhatsApp Export – BDNA Club.zip</button>
+          <button type="button" class="file-pick" id="pick-file-b"
+                  title="Überlappt mit dem bereits importierten Archiv – Dubletten-Demo">📄 BDNA Club Chat (Teil&nbsp;2).zip</button>
+        </div>
+        <p class="privacy-note">🔒 Es findet noch keine Cloudübertragung statt – die Datei bleibt auf diesem Gerät.</p>
+      </div>
+
+      <!-- Schritt 2: Erkanntes prüfen inkl. Dubletten-Vorschau -->
+      <div class="card" id="import-step-2" hidden>
+        <h2 class="small-heading">Schritt 2 · Erkanntes prüfen</h2>
+        <dl class="detected-grid" id="detected-grid"></dl>
+        <!-- Deduplizieren passiert lokal, bevor irgend etwas importiert wird;
+             die Vorschau zeigt genau welche Nachrichten übersprungen würden -->
+        <div class="hint-box" id="dedup-preview" hidden></div>
+        <div class="row-gap">
+          <button type="button" class="btn btn-neutral" id="btn-import-back1">← Zurück</button>
+          <button type="button" class="btn btn-primary" id="btn-to-step3">Weiter</button>
+        </div>
+      </div>
+
+      <!-- Schritt 3: Zielprojekt + Verarbeitung; exakte Cloud-Offenlegung -->
+      <div class="card" id="import-step-3" hidden>
+        <h2 class="small-heading">Schritt 3 · Projekt und Verarbeitung wählen</h2>
+        <label for="import-project">Zielprojekt</label>
+        <select id="import-project"></select>
+        <fieldset class="option-cards" style="margin-top:10px">
+          <legend class="sr-only">Verarbeitung wählen</legend>
+          <label class="option-card">
+            <input type="radio" name="import-mode" value="lokal" checked>
+            <span class="option-body">
+              <strong>Nur lokal importieren</strong>
+              <span class="status-chip status-ready rec-badge">Empfehlung · datenschutzfreundlich</span>
+              <span class="muted small">Nichts verlässt das Gerät. Parsen, Deduplizieren und Indexierung laufen lokal – der Import ist vollständig durchsuchbar.</span>
+            </span>
+          </label>
+          <label class="option-card">
+            <input type="radio" name="import-mode" value="cloud">
+            <span class="option-body">
+              <strong>Zusätzlich kompatibles Cloud-Modell nutzen</strong>
+              <span class="muted small">Modelle werden nach benötigten Eingabemodalitäten gefiltert. Sprachnachrichten werden erst nach ausdrücklicher Wahl verarbeitet; Video wird nur als Metadatum angezeigt.</span>
+            </span>
+          </label>
+        </fieldset>
+        <!-- Gate G3: exakt aufgelistet, welche Inhalte das Gerät verlassen -->
+        <div class="hint-box" id="cloud-disclosure" hidden>
+          <strong>Folgende Inhalte verlassen das Gerät:</strong>
+          <ul class="leaves-list" id="cloud-leaves-list" role="list"></ul>
+          <p class="muted small" id="cloud-cost"></p>
+        </div>
+        <div class="hint-box" id="local-disclosure">
+          <strong>Nichts verlässt das Gerät.</strong> Alle Nachrichten, Medien und Metadaten bleiben lokal gespeichert.
+        </div>
+        <div class="row-gap">
+          <button type="button" class="btn btn-neutral" id="btn-import-back2">← Zurück</button>
+          <button type="button" class="btn btn-primary" id="btn-to-step4">Weiter</button>
+        </div>
+      </div>
+
+      <!-- Schritt 4: Fortschritt pro Stufe + Ergebnis -->
+      <div class="card" id="import-step-4" hidden>
+        <h2 class="small-heading">Schritt 4 · Import bestätigen</h2>
+        <ul class="checklist" id="import-checklist" role="list" aria-live="polite"></ul>
+        <div class="hint-box" id="import-result" hidden></div>
+        <div class="row-gap">
+          <button type="button" class="btn btn-neutral" id="btn-import-back3" hidden>← Zurück</button>
+          <button type="button" class="btn btn-primary" id="btn-import-run">Import starten</button>
+          <button type="button" class="btn btn-ghost" id="btn-import-finish" hidden>Fertig – zurück zu den Projekten</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Diktatverlauf ========== -->
+    <section class="view" id="view-diktatverlauf" hidden>
+      <header class="view-header">
+        <h1>Diktatverlauf</h1>
+        <p class="subtitle">Kurzer Verlauf deiner Diktate.</p>
+      </header>
+      <ul class="history-list" role="list">
+        <li class="history-item">
+          <span class="muted">Heute, 14:32</span>
+          <p>Notiz für den Einkauf: Milch, Brot, Kaffeebohnen und ein neues USB-Kabel.</p>
+          <button type="button" class="btn btn-ghost btn-small copy-btn" data-copy="Notiz für den Einkauf: Milch, Brot, Kaffeebohnen und ein neues USB-Kabel.">Kopieren</button>
+        </li>
+        <li class="history-item">
+          <span class="muted">Gestern, 09:15</span>
+          <p>Entwurf der Antwort an Frau Berger mit Terminvorschlag für Dienstag.</p>
+          <button type="button" class="btn btn-ghost btn-small copy-btn" data-copy="Entwurf der Antwort an Frau Berger mit Terminvorschlag für Dienstag.">Kopieren</button>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ========== Ansicht: Meeting-Ersteinrichtung (Plan §6.6) ========== -->
+    <section class="view" id="view-meeting-einrichtung" hidden>
+      <header class="view-header">
+        <h1>Meeting-Ersteinrichtung</h1>
+        <p class="subtitle">Erscheint nur beim ersten Öffnen von Meetings – drei kurze Schritte. Danach direkt in den kompakten Startdialog.</p>
+        <p class="plan-tag">Plan §6.6 · Meeting-Ersteinrichtung</p>
+      </header>
+
+      <!-- Schritt 1: Verarbeitung wählen -->
+      <div class="card setup-step">
+        <h2 class="step-heading"><span class="step-num" aria-hidden="true">1</span> Verarbeitung wählen</h2>
+        <fieldset class="option-cards">
+          <legend class="sr-only">Verarbeitung wählen</legend>
+          <label class="option-card">
+            <input type="radio" name="setup-provider" value="lokal" checked>
+            <span class="option-body">
+              <strong>Lokal auf diesem Gerät</strong>
+              <span class="status-chip status-ready rec-badge">Empfehlung · datenschutzfreundlich</span>
+              <span class="muted small">Audio verlässt das Gerät nicht.</span>
+            </span>
+          </label>
+          <label class="option-card">
+            <input type="radio" name="setup-provider" value="azure">
+            <span class="option-body">
+              <strong>Azure Cloud</strong>
+              <span class="muted small">Audio wird für die Transkription hochgeladen. Benötigt einen Azure-Schlüssel.</span>
+            </span>
+          </label>
+        </fieldset>
+        <details class="more-options">
+          <summary>Weitere Optionen</summary>
+          <label class="option-card">
+            <input type="radio" name="setup-provider" value="custom">
+            <span class="option-body">
+              <strong>Custom</strong>
+              <span class="muted small">Eigener Provider mit Endpoint und Schlüssel.</span>
+            </span>
+          </label>
+        </details>
+        <p class="muted small">Die Auswahl kann später für jedes Meeting geändert werden.</p>
+      </div>
+
+      <!-- Schritt 2: Audio prüfen -->
+      <div class="card setup-step">
+        <h2 class="step-heading"><span class="step-num" aria-hidden="true">2</span> Audio prüfen</h2>
+        <div class="audio-test-row">
+          <span class="audio-test-label" id="lbl-test-mic">Mikrofon</span>
+          <meter id="setup-mic-level" min="0" max="100" value="0" aria-labelledby="lbl-test-mic"></meter>
+          <button type="button" class="btn btn-secondary btn-small" id="btn-test-mic">Mikrofon testen</button>
+          <span class="test-result" id="result-mic" role="status"></span>
+        </div>
+        <div class="audio-test-row">
+          <span class="audio-test-label" id="lbl-test-sys">Systemaudio</span>
+          <meter id="setup-sys-level" min="0" max="100" value="0" aria-labelledby="lbl-test-sys"></meter>
+          <button type="button" class="btn btn-secondary btn-small" id="btn-test-sys">Systemaudio testen</button>
+          <span class="test-result" id="result-sys" role="status"></span>
+        </div>
+        <p class="muted small">Der Systemtest spielt einen kurzen Testton über das ausgewählte Ausgabegerät und bestätigt, dass Loopback ihn empfängt.</p>
+        <div id="setup-audio-hints" class="hint-box" hidden></div>
+        <fieldset class="mock-fieldset">
+          <legend>Prototyp-Simulation (nur im Mock)</legend>
+          <label><input type="checkbox" id="sim-no-mic"> Mikrofon fehlt</label>
+          <label><input type="checkbox" id="sim-mic-denied"> Mikrofon-Berechtigung verweigert</label>
+          <label><input type="checkbox" id="sim-no-output"> Kein Ausgabegerät</label>
+        </fieldset>
+      </div>
+
+      <!-- Schritt 3: Meeting-Shortcut -->
+      <div class="card setup-step">
+        <h2 class="step-heading"><span class="step-num" aria-hidden="true">3</span> Meeting-Shortcut einrichten</h2>
+        <div class="setting-row-inline">
+          <span class="keycap" id="shortcut-cand-key">Ctrl + Alt + Space</span>
+          <span class="test-result" id="shortcut-cand-status" role="status">Wird geprüft …</span>
+          <button type="button" class="btn btn-neutral btn-small" id="btn-shortcut-check">Erneut prüfen</button>
+        </div>
+        <div id="shortcut-alternatives" hidden>
+          <p class="small">Der Kandidat ist auf diesem Gerät belegt. Konfliktfrei registrierbare Alternativen:</p>
+          <ul class="alt-shortcuts" role="list">
+            <li><button type="button" class="keycap alt-pick">Ctrl + Alt + M</button></li>
+            <li><button type="button" class="keycap alt-pick">Ctrl + Alt + 7</button></li>
+          </ul>
+        </div>
+        <p class="muted small">Kann übersprungen werden. Der Diktier-Shortcut (<span class="keycap">Ctrl + Space</span>) und AI-Diktat (<span class="keycap">Ctrl + Shift + Space</span>) bleiben unverändert.</p>
+        <label class="mock-fieldset" style="display:inline-flex">
+          <input type="checkbox" id="sim-shortcut-taken"> „Ctrl + Alt + Space“ als belegt simulieren
+        </label>
+      </div>
+
+      <div class="row-gap">
+        <button type="button" class="btn btn-primary btn-large" id="btn-setup-finish">Abschließen – zum Startdialog</button>
+        <button type="button" class="btn btn-ghost" id="btn-setup-later">Später</button>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Einstellungen (sekundäre Tabs, Plan §6.3) ========== -->
+    <section class="view" id="view-einstellungen" hidden>
+      <header class="view-header"><h1>Einstellungen</h1></header>
+      <div class="tabs" role="tablist" aria-label="Einstellungsbereiche">
+        <button role="tab" class="tab" data-tab="diktieren" aria-selected="true">Diktieren</button>
+        <button role="tab" class="tab" data-tab="meetings" aria-selected="false">Meetings</button>
+        <button role="tab" class="tab" data-tab="modelle" aria-selected="false">Modelle &amp; Provider</button>
+        <button role="tab" class="tab" data-tab="allgemein" aria-selected="false">Allgemein</button>
+        <button role="tab" class="tab" data-tab="erweitert" aria-selected="false">Erweitert</button>
+      </div>
+
+      <div class="tabpanel" role="tabpanel" data-panel="diktieren">
+        <h2>Diktieren</h2>
+        <div class="setting-row"><label for="set-mode">Aufnahmemodus</label>
+          <select id="set-mode"><option>Gedrückt halten</option><option>Drücken zum Umschalten</option></select></div>
+        <div class="setting-row"><label for="set-lang">Sprache</label>
+          <select id="set-lang"><option>Deutsch</option><option>English</option></select></div>
+      </div>
+      <div class="tabpanel" role="tabpanel" data-panel="meetings" hidden>
+        <h2>Meetings</h2>
+        <div class="setting-row"><label for="set-mprov">Standard-Verarbeitung</label>
+          <select id="set-mprov"><option>Lokal auf diesem Gerät</option><option>Azure Cloud</option><option>Custom</option></select></div>
+        <div class="setting-row"><label for="set-mshort">Meeting-Shortcut</label>
+          <button type="button" class="keycap">Ctrl + Alt + Space</button></div>
+      </div>
+      <div class="tabpanel" role="tabpanel" data-panel="modelle" hidden>
+        <h2>Modelle &amp; Provider</h2>
+        <p class="muted">Whisper Small ist heruntergeladen und aktiv. Weitere Modelle und Provider werden hier verwaltet.</p>
+      </div>
+      <div class="tabpanel" role="tabpanel" data-panel="allgemein" hidden>
+        <h2>Allgemein</h2>
+        <div class="setting-row"><label for="set-sound">Audio-Feedback</label>
+          <input type="checkbox" id="set-sound" checked></div>
+      </div>
+      <div class="tabpanel" role="tabpanel" data-panel="erweitert" hidden>
+        <h2>Erweitert</h2>
+        <p class="muted">Debug-Funktionen sind nur im aktivierten Debug-Modus sichtbar.</p>
+      </div>
+    </section>
+
+    <!-- ========== Ansicht: Hilfe & Über ========== -->
+    <section class="view" id="view-hilfe" hidden>
+      <header class="view-header"><h1>Hilfe &amp; Über</h1></header>
+      <div class="card">
+        <p>Speak Meeting-Mode – statischer Klick-Prototyp (Plan §6.3).</p>
+        <p class="muted">Version: Prototyp · Keine echte Aufnahme, alle Daten sind Mock-Daten.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Live-Region für Statusänderungen -->
+<div aria-live="polite" class="sr-only" id="live-region"></div>
+
+<!-- ========== Kompakter Startdialog (Plan §6.7) ========== -->
+<div class="modal-backdrop" id="start-dialog" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="start-title">
+    <h2 id="start-title">Meeting starten</h2>
+    <p class="plan-tag">Plan §6.7 · Kompakter Startdialog</p>
+    <!-- Vier Statuszeilen; jede komplett anklickbar und öffnet einen Mini-Picker,
+         der auf diese eine Entscheidung begrenzt ist (§6.7). -->
+    <ul class="clickable-lines" role="list">
+      <li><button type="button" class="status-line-btn" data-row="mic" id="row-mic"
+                  aria-expanded="false" title="Mikrofon wechseln">
+        <span class="line-label">Mikrofon</span>
+        <span class="line-value" id="row-mic-value"></span>
+      </button></li>
+      <li><button type="button" class="status-line-btn" data-row="sys" id="row-sys"
+                  aria-expanded="false" title="Systemaudio wechseln">
+        <span class="line-label">Systemaudio</span>
+        <span class="line-value" id="row-sys-value"></span>
+      </button></li>
+      <li><button type="button" class="status-line-btn" data-row="provider" id="row-provider"
+                  aria-expanded="false" title="Verarbeitung wechseln">
+        <span class="line-label">Transkription</span>
+        <span class="line-value" id="row-provider-value"></span>
+      </button></li>
+      <li><button type="button" class="status-line-btn" data-row="lang" id="row-lang"
+                  aria-expanded="false" title="Sprache wechseln">
+        <span class="line-label">Sprache</span>
+        <span class="line-value" id="row-lang-value"></span>
+      </button></li>
+    </ul>
+
+    <!-- Aufgeschobener Mini-Picker für Statuszeilen (behält den Dialog-Zustand) -->
+    <div id="row-picker" class="picker-panel" role="group" aria-label="Auswahl" hidden></div>
+
+    <form id="start-form">
+      <label for="meeting-title-input">Titel <span class="muted">(optional)</span></label>
+      <input type="text" id="meeting-title-input" placeholder="Meeting am …">
+      <div class="chip-line">
+        <span class="muted">Projekt:</span>
+        <button type="button" class="chip chip-none" id="project-chip"
+                aria-expanded="false">Kein Projekt</button>
+      </div>
+      <!-- Projekt-Mini-Picker -->
+      <div id="project-picker" class="picker-panel" role="group" aria-label="Projekt wählen" hidden></div>
+      <div class="setting-row-inline">
+        <input type="checkbox" id="summarize-toggle" checked>
+        <label for="summarize-toggle">Nach dem Meeting zusammenfassen</label>
+      </div>
+      <p class="privacy-note">💾 Speicherbedarf ca. 120&nbsp;MB/Stunde · Standard: lokal auf diesem Gerät.</p>
+      <!-- Grund, warum Start gerade deaktiviert ist (Gate G3) -->
+      <p class="start-blocker" id="start-blocker" role="status" hidden></p>
+      <div class="row-between">
+        <button type="button" class="btn btn-ghost" id="btn-weitere-einstellungen">Weitere Einstellungen</button>
+        <button type="submit" class="btn btn-primary btn-large" id="btn-meeting-starten">Meeting starten</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 3-Sekunden-Countdown vor dem Start (Plan §6.9); Escape bricht nur
+     den Countdown ab, es wird noch nichts aufgenommen. Liegt außerhalb der
+     Ansichten, damit er sichtbar ist, solange noch keine Ansicht aktiv ist. -->
+<div class="modal-backdrop" id="countdown-overlay" hidden>
+  <div class="modal modal-countdown" role="alertdialog" aria-modal="true"
+       aria-labelledby="countdown-title" aria-describedby="countdown-hint">
+    <h2 id="countdown-title">Meeting startet in</h2>
+    <p class="plan-tag">Plan §6.9 · Countdown vor dem Start</p>
+    <p class="countdown-number mono" id="countdown-number" aria-hidden="true">3</p>
+    <p id="countdown-hint" class="muted">
+      Die Aufnahme beginnt erst nach dem Countdown.
+      <span class="keycap">Escape</span> bricht ab.
+    </p>
+    <div class="row-gap row-end">
+      <button type="button" class="btn btn-neutral" id="btn-countdown-abbruch">✕ Abbrechen (Esc)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Projekt erstellen (§6.16): genau ein Pflichtfeld Name -->
+<div class="modal-backdrop" id="project-create-dialog" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pc-title">
+    <h2 id="pc-title">Projekt erstellen</h2>
+    <form id="project-create-form">
+      <label for="project-name-input">Name <span class="muted">(einziges Pflichtfeld)</span></label>
+      <input type="text" id="project-name-input" required placeholder="z. B. BDNA Club">
+      <p class="muted small">Beschreibung, Farbe und weitere Metadaten sind optional und können später ergänzt werden.</p>
+      <p class="start-blocker" id="project-name-blocker" role="status" hidden>Bitte einen Namen eingeben.</p>
+      <div class="row-gap row-end">
+        <button type="button" class="btn btn-neutral" id="btn-pc-cancel">Abbrechen</button>
+        <button type="submit" class="btn btn-primary" id="btn-pc-create">Erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Quellenansicht (Gate G1): jeder KI-Beleg springt hierher und hebt die
+     gemockte Quellenstelle hervor -->
+<div class="modal-backdrop" id="source-viewer" hidden>
+  <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="sv-title">
+    <h2 id="sv-title">Quelle</h2>
+    <p class="muted small" id="sv-meta"></p>
+    <ul class="source-lines" id="sv-lines" role="list"></ul>
+    <div class="row-gap row-end">
+      <button type="button" class="btn btn-neutral" id="btn-sv-close">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stapelzuordnung mit Vorschau (§6.18) -->
+<div class="modal-backdrop" id="assign-preview" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+    <h2 id="assign-title">Zuordnung bestätigen</h2>
+    <p id="assign-preview-text"></p>
+    <ul id="assign-preview-list" role="list" class="evidence-list"></ul>
+    <p class="muted small">Es wird nur die Verknüpfung geändert. Transkript, Audio und Aufgabenbelege bleiben erhalten.</p>
+    <div class="row-gap row-end">
+      <button type="button" class="btn btn-neutral" id="btn-assign-cancel">Abbrechen</button>
+      <button type="button" class="btn btn-primary" id="btn-assign-ok">Zuweisen</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

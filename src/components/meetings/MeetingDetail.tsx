@@ -1,0 +1,385 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Copy, Download, Play, RefreshCw, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import {
+  commands,
+  type ExportFormat,
+  type MeetingSession,
+  type MeetingSummaryDto,
+  type TranscriptRowDto,
+} from "@/bindings";
+import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
+import { Input } from "@/components/ui/Input";
+import { formatDateTime } from "@/utils/dateFormat";
+import { meetingStateLabelKey } from "./meetingStates";
+
+export interface MeetingDetailProps {
+  session: MeetingSession;
+  /** Navigate back to the meetings library. */
+  onBack: () => void;
+  /** Called after a successful title save with the updated session. */
+  onSaved: (session: MeetingSession) => void;
+  /** Called after a successful delete; the detail view closes. */
+  onDeleted: (id: string) => void;
+  /**
+   * Opens the compact start dialog for a draft session (plan §6.7). Omitted
+   * where the detail view is rendered outside the meetings router.
+   */
+  onStartMeeting?: (session: MeetingSession) => void;
+}
+
+/**
+ * Meeting detail view (plan §6.13, wave-1 subset): editable title, honest
+ * status/date metadata and the destructive delete behind an explicit,
+ * non-hover confirmation dialog that names what is removed.
+ */
+export const MeetingDetail: React.FC<MeetingDetailProps> = ({
+  session,
+  onBack,
+  onSaved,
+  onDeleted,
+  onStartMeeting,
+}) => {
+  const { t, i18n } = useTranslation();
+  const [titleDraft, setTitleDraft] = useState(session.title);
+  const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const lastSessionId = useRef(session.id);
+
+  // Phase 7 detail content.
+  const [summary, setSummary] = useState<MeetingSummaryDto | null>(null);
+  const [transcript, setTranscript] = useState<TranscriptRowDto[]>([]);
+  const [resummarizing, setResummarizing] = useState(false);
+  const [transcriptQuery, setTranscriptQuery] = useState("");
+
+  const visibleTranscript = transcriptQuery.trim()
+    ? transcript.filter((row) =>
+        row.text
+          .toLowerCase()
+          .includes(transcriptQuery.trim().toLowerCase()),
+      )
+    : transcript;
+
+  const loadContent = useCallback(async () => {
+    try {
+      const [summaryResult, transcriptResult] = await Promise.all([
+        commands.getMeetingSummary(session.id),
+        commands.meetingTranscript(session.id),
+      ]);
+      if (summaryResult.status === "ok" && summaryResult.data) {
+        setSummary(summaryResult.data);
+      }
+      if (transcriptResult.status === "ok" && transcriptResult.data) {
+        setTranscript(transcriptResult.data);
+      }
+    } catch (error) {
+      console.error("Failed to load meeting content:", error);
+    }
+  }, [session.id]);
+
+  useEffect(() => {
+    void loadContent();
+  }, [loadContent]);
+
+  // Re-seed the editor when a different meeting is opened; keep in-place
+  // drafts when only the same session's data refreshes after a save.
+  useEffect(() => {
+    if (lastSessionId.current !== session.id) {
+      lastSessionId.current = session.id;
+      setTitleDraft(session.title);
+    }
+  }, [session.id, session.title]);
+
+  const dirty = titleDraft !== session.title;
+
+  const handleSave = async () => {
+    if (!dirty || saving) return;
+    setSaving(true);
+    try {
+      const result = await commands.meetingRenameSession(
+        session.id,
+        titleDraft,
+      );
+      if (result.status === "ok") {
+        onSaved(result.data);
+      } else {
+        toast.error(t("meetings.saveError"), { description: result.error });
+      }
+    } catch (error) {
+      console.error("Failed to save meeting title:", error);
+      toast.error(t("meetings.saveError"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      const result = await commands.meetingDeleteSession(session.id);
+      if (result.status === "ok") {
+        onDeleted(session.id);
+      } else {
+        toast.error(t("meetings.deleteError"), { description: result.error });
+      }
+    } catch (error) {
+      console.error("Failed to delete meeting:", error);
+      toast.error(t("meetings.deleteError"));
+    } finally {
+      setDeleting(false);
+      setConfirmingDelete(false);
+    }
+  };
+
+  const handleResummarize = async () => {
+    if (resummarizing) return;
+    setResummarizing(true);
+    try {
+      const result = await commands.requestMeetingSummary(session.id);
+      if (result.status === "ok") {
+        toast.success(t("meeting.detail.resummarizeDone"));
+        await loadContent();
+      } else {
+        toast.error(t("meeting.detail.resummarizeFailed"), {
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to re-summarize meeting:", error);
+      toast.error(t("meeting.detail.resummarizeFailed"));
+    } finally {
+      setResummarizing(false);
+    }
+  };
+
+  const copyText = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(t(key));
+    } catch (error) {
+      console.error("Clipboard write failed:", error);
+      toast.error(t("meetings.copyFailed"));
+    }
+  };
+
+  const handleExport = async (format: ExportFormat) => {
+    try {
+      const result = await commands.exportMeeting(session.id, format);
+      if (result.status !== "ok" || !result.data) {
+        toast.error(t("meetings.exportError"));
+        return;
+      }
+      // Browser-style download works inside the Tauri webview for blobs.
+      const blob = new Blob([result.data.content], { type: result.data.mime });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = result.data.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error(t("meetings.exportError"));
+    }
+  };
+
+  return (
+    <section className="w-full" aria-label={t("nav.meetings")}>
+      <div className="flex items-center gap-2">
+        <IconButton onClick={onBack} aria-label={t("meetings.backToList")}>
+          <ArrowLeft className="h-4 w-4" />
+        </IconButton>
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          {t("meetings.backToList")}
+        </Button>
+      </div>
+
+      <div className="mt-4 flex w-full max-w-xl flex-col gap-3">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium">{t("meetings.titleInputLabel")}</span>
+          <Input
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            aria-label={t("meetings.titleInputLabel")}
+          />
+        </label>
+
+        {/* A draft has exactly one obvious next step (§6.2 rule 2): start it.
+            Brand colour, never red — red is reserved for a running recording
+            (§6.8). */}
+        {session.state === "draft" && onStartMeeting && (
+          <div>
+            <Button onClick={() => onStartMeeting(session)}>
+              <Play className="mr-1 h-4 w-4" aria-hidden="true" />
+              {t("meeting.actions.startMeeting")}
+            </Button>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={handleSave} disabled={!dirty || saving}>
+            {t("meetings.saveTitle")}
+          </Button>
+          <Button
+            size="sm"
+            variant="danger-ghost"
+            onClick={() => setConfirmingDelete(true)}
+          >
+            <Trash2 className="mr-1 h-4 w-4" aria-hidden="true" />
+            {t("common.delete")}
+          </Button>
+        </div>
+
+        {/* Phase 7 — summary, transcript, copy/export/re-summarize. */}
+        {summary?.state === "completed" && (
+          <div className="rounded-lg border border-mid-gray/20 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-medium">
+                {t("meeting.detail.summaryHeading")}
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void copyText(summary.summary_markdown, "meetings.copied")}
+              >
+                <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                {t("meetings.copySummary")}
+              </Button>
+            </div>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-text/80">
+              {summary.summary_markdown}
+            </p>
+            {summary.decisions.length > 0 && (
+              <p className="mt-2 text-xs text-text/60">
+                {t("meeting.detail.decisions")}: {summary.decisions.join("; ")}
+              </p>
+            )}
+            {summary.action_items.length > 0 && (
+              <p className="mt-1 text-xs text-text/60">
+                {t("meeting.detail.actionItems")}: {summary.action_items.join("; ")}
+              </p>
+            )}
+            {summary.open_questions.length > 0 && (
+              <p className="mt-1 text-xs text-text/60">
+                {t("meeting.detail.openQuestions")}: {summary.open_questions.join("; ")}
+              </p>
+            )}
+          </div>
+        )}
+
+        {transcript.length > 0 && (
+          <div className="rounded-lg border border-mid-gray/20 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-medium">
+                {t("meeting.detail.transcriptHeading")}
+              </h3>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    void copyText(
+                      transcript
+                        .map((row) => `${row.text}`)
+                        .join("\n"),
+                      "meetings.copied",
+                    )
+                  }
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                  {t("meetings.copyTranscript")}
+                </Button>
+                {(["markdown", "txt", "json"] as ExportFormat[]).map((format) => (
+                  <Button
+                    key={format}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void handleExport(format)}
+                  >
+                    <Download className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                    {format.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm text-text/80">
+              {visibleTranscript.map((row, index) => (
+                <li key={`${row.start_ms}-${index}`}>{row.text}</li>
+              ))}
+            </ul>
+            <Input
+              value={transcriptQuery}
+              onChange={(event) => setTranscriptQuery(event.target.value)}
+              placeholder={t("meeting.detail.searchPlaceholder")}
+              aria-label={t("meeting.detail.searchLabel")}
+              className="mt-2"
+            />
+            {transcriptQuery.trim() && (
+              <p className="mt-1 text-xs text-text/50">
+                {t("meeting.detail.searchMatches", {
+                  count: visibleTranscript.length,
+                })}
+              </p>
+            )}
+          </div>
+        )}
+
+        {summary?.state === "failed" && (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+            <span className="text-sm">{t("meeting.detail.summaryFailed")}</span>
+            <Button size="sm" onClick={handleResummarize} disabled={resummarizing}>
+              <RefreshCw className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              {t("meeting.detail.resummarize")}
+            </Button>
+          </div>
+        )}
+
+        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm text-text/80">
+          <dt className="text-text/50">{t("meetings.statusLabel")}</dt>
+          <dd>{t(meetingStateLabelKey(session.state))}</dd>
+          <dt className="text-text/50">{t("meetings.createdLabel")}</dt>
+          <dd>
+            {formatDateTime(
+              String(Math.floor(session.created_at / 1000)),
+              i18n.language,
+            )}
+          </dd>
+        </dl>
+      </div>
+
+      <Dialog
+        open={confirmingDelete}
+        title={t("meetings.deleteConfirmTitle")}
+        description={t("meetings.deleteConfirmBody")}
+        closeLabel={t("common.close")}
+        onOpenChange={(open) => !deleting && setConfirmingDelete(open)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setConfirmingDelete(false)}
+              disabled={deleting}
+            >
+              {t("common.close")}
+            </Button>
+            <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>
+              <Trash2 className="mr-1 h-4 w-4" aria-hidden="true" />
+              {t("common.delete")}
+            </Button>
+          </div>
+        }
+      >
+        {/* Dialog body intentionally minimal; the description carries the warning. */}
+        <span />
+      </Dialog>
+    </section>
+  );
+};
+
+export default MeetingDetail;

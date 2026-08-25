@@ -1,0 +1,1269 @@
+{
+  "tray": {
+    "settings": "Cài đặt...",
+    "checkUpdates": "Kiểm tra cập nhật...",
+    "copyLastTranscript": "Sao chép bản chép lời mới nhất",
+    "unloadModel": "Dỡ mô hình",
+    "model": "Mô hình",
+    "quit": "Thoát",
+    "cancel": "Hủy",
+    "secureInputWarning": "⚠ Phím tắt bị Secure Input chặn"
+  },
+  "sidebar": {
+    "general": "Chung",
+    "models": "Mô hình",
+    "advanced": "Nâng cao",
+    "postProcessing": "Xử lý sau",
+    "history": "Lịch sử",
+    "debug": "Gỡ lỗi",
+    "about": "Giới thiệu"
+  },
+  "nav": {
+    "primaryAriaLabel": "Điều hướng chính",
+    "settingsTabsAriaLabel": "Phần cài đặt",
+    "dictate": "Đọc chính tả",
+    "meetings": "Cuộc họp",
+    "projects": "Dự án",
+    "history": "Lịch sử đọc chính tả",
+    "settings": "Cài đặt",
+    "about": "Trợ giúp và giới thiệu",
+    "activeMeeting": "Đang ghi âm · {{duration}}",
+    "projectsEmptyBody": "Dự án sẽ kết hợp trạng thái, tác vụ, cuộc họp và nguồn đã nhập."
+  },
+  "meetings": {
+    "emptyBenefit": "Ghi âm các cuộc họp và nhận bản chép lời cùng tóm tắt mà không cần rời ứng dụng.",
+    "newMeeting": "Cuộc họp mới",
+    "importAudio": "Nhập tệp âm thanh",
+    "privacyLocal": "Mặc định: cục bộ trên thiết bị này",
+    "searchPlaceholder": "Tìm cuộc họp",
+    "search": "Tìm kiếm",
+    "backToList": "Quay lại danh sách cuộc họp",
+    "saveTitle": "Lưu tiêu đề",
+    "saveError": "Không thể lưu tiêu đề. Vui lòng thử lại.",
+    "createError": "Không thể tạo cuộc họp. Vui lòng thử lại.",
+    "deleteError": "Không thể xóa cuộc họp. Vui lòng thử lại.",
+    "deleteConfirmTitle": "Xóa cuộc họp này?",
+    "deleteConfirmBody": "Thao tác này sẽ xóa vĩnh viễn cuộc họp cùng bản ghi và bản tóm tắt.",
+    "titleInputLabel": "Tiêu đề cuộc họp",
+    "statusLabel": "Trạng thái",
+    "createdLabel": "Đã tạo",
+    "notFound": "Không tìm thấy cuộc họp này.",
+    "loadError": "Không thể tải các cuộc họp.",
+    "stateDraft": "Bản nháp",
+    "stateRecording": "Đang ghi âm",
+    "stateCompleted": "Hoàn tất",
+    "stateOther": "Đang xử lý",
+    "badgeRecording": "Recording",
+    "badgeStopping": "Stopping",
+    "badgeInterrupted": "Interrupted",
+    "badgeAttention": "Attention needed",
+    "badgeComplete": "Completed",
+    "badgeProcessing": "Processing",
+    "badgePaused": "Paused"
+  },
+  "meeting": {
+    "actions": {
+      "startMeeting": "Start meeting",
+      "pause": "Pause",
+      "resume": "Resume",
+      "endMeeting": "End meeting",
+      "keepRecording": "Keep recording",
+      "cancel": "Cancel",
+      "close": "Close",
+      "tryAgain": "Try again",
+      "switchDevice": "Switch device",
+      "openSettings": "Open settings",
+      "openSystemSettings": "Open system settings",
+      "reconnect": "Reconnect",
+      "recordMicOnly": "Record microphone only",
+      "continueWithoutSystemAudio": "Continue without system audio",
+      "workInBackground": "Continue in background",
+      "retryFailedSegments": "Retry failed segments",
+      "openMeeting": "Open meeting",
+      "deleteRecording": "Delete recording",
+      "recover": "Recover and process",
+      "decideLater": "Decide later",
+      "testSystemAudio": "Test system audio",
+      "jumpToLatest": "Jump to current text",
+      "cancelMeetingStart": "Cancel meeting start",
+      "useLocal": "Process locally",
+      "finishDictation": "Finish dictation",
+      "resumeWithDevices": "Continue with these devices",
+      "confirmDelete": "I understand — delete permanently"
+    },
+    "session": {
+      "draft": {
+        "hint": "Nothing is being recorded yet."
+      },
+      "starting": {
+        "title": "Starting meeting…",
+        "body": "Checking microphone and system audio…"
+      },
+      "recording": {
+        "title": "Recording",
+        "saved": "Audio saved",
+        "provider": {
+          "local": "Local",
+          "cloud": "Cloud ({{provider}})"
+        }
+      },
+      "paused": {
+        "title": "Paused",
+        "body": "No audio is being saved or uploaded while paused."
+      },
+      "stopping": {
+        "title": "Finishing recording…",
+        "body": "Finalising the audio files. This takes only a moment.",
+        "done": "Recording ended — audio saved."
+      },
+      "completed": {
+        "title": "Meeting completed",
+        "saved": "Transcript and summary are stored on this device."
+      },
+      "cancelled": {
+        "title": "Recording cancelled",
+        "body": "The audio captured so far has been kept. Nothing was deleted."
+      },
+      "micOnly": {
+        "badge": "Microphone only — system audio is not being recorded"
+      },
+      "durationLabel": "Recording duration {{duration}}"
+    },
+    "consent": {
+      "beforeStart": {
+        "title": "Before you record",
+        "body": "Recording a conversation requires the consent of everyone involved. Speak shows a recording indicator for the whole meeting and is not designed as a stealth recorder.",
+        "acknowledge": "Everyone involved has consented"
+      },
+      "indicator": {
+        "label": "This meeting is being recorded."
+      }
+    },
+    "cloud": {
+      "notice": {
+        "azure": {
+          "title": "Cloud transcription selected",
+          "body": "Audio from your microphone and system audio will be uploaded to Microsoft Azure and transcribed there. With local processing, nothing leaves this device."
+        }
+      },
+      "active": {
+        "azure": "Audio is being uploaded to Azure.",
+        "azureProcessing": "Audio segments are being uploaded to Azure for transcription.",
+        "llm": "Transcript text is being sent to {{provider}} to create the summary."
+      }
+    },
+    "preflight": {
+      "title": "Start checks",
+      "description": "Speak checks devices, storage and transcription before recording starts.",
+      "recheck": "Check again",
+      "blocked": "Fix the checks marked below before starting.",
+      "unavailable": "Speak cannot run the start checks right now, so recording is unavailable.",
+      "pending": "Running start checks…",
+      "status": {
+        "ok": "Works",
+        "warning": "Needs attention",
+        "error": "Not ready",
+        "checking": "Checking…"
+      },
+      "row": {
+        "microphone": "Microphone",
+        "systemAudio": "System audio",
+        "transcription": "Transcription",
+        "language": "Language",
+        "disk": "Storage",
+        "permission": "Permissions"
+      }
+    },
+    "setup": {
+      "title": "Start meeting",
+      "description": "Give the meeting a name and start when the checks below look right.",
+      "summaryToggle": "Summarise after the meeting",
+      "summaryHint": "The summary is created once the transcript is complete.",
+      "storageHint": "About 0.25 GB of storage is used per hour of microphone and system audio.",
+      "moreSettings": "More settings",
+      "providerLabel": "Transcription provider for this meeting",
+      "providerHint": "Cloud providers need their endpoint and key configured in settings. The choice only applies to this meeting.",
+      "providerLocal": "On-device",
+      "providerAzure": "Azure Speech (cloud)",
+      "providerCustom": "Custom endpoint (cloud)"
+    },
+    "live": {
+      "heading": "Live transcript",
+      "transcriptEmpty": "Finished transcript sections appear here while the meeting runs.",
+      "backlog": "{{count}} sections waiting",
+      "status": {
+        "listening": "Listening",
+        "transcribing": "Section is being transcribed",
+        "behind": "Processing is behind"
+      },
+      "levels": {
+        "microphone": "Microphone level",
+        "system": "System audio level",
+        "value": "{{label}}: {{percent}}%"
+      },
+      "stopConfirm": {
+        "title": "End meeting?",
+        "body": "The recording is finalised and processing starts. Nothing recorded so far is deleted."
+      }
+    },
+    "processing": {
+      "title": "Processing meeting",
+      "closeOk": "You can close this window.",
+      "done": "Meeting ready",
+      "summarizing": "Creating summary…",
+      "backlog": "{{count}} segments waiting",
+      "step": {
+        "saved": "Recording saved safely",
+        "prepared": "{{done}} of {{total}} audio segments prepared",
+        "transcribed": "{{done}} of {{total}} segments transcribed",
+        "summary": "Summary",
+        "summarySkipped": "Summary is switched off for this meeting"
+      },
+      "state": {
+        "pending": "Waiting",
+        "running": "In progress",
+        "done": "Done"
+      },
+      "failed": "{{count}} segments failed and can be retried."
+    },
+    "recovery": {
+      "heading": "Interrupted meetings",
+      "title": "Recover meeting recording?",
+      "body": "Speak was closed unexpectedly during “{{title}}”. The audio captured up to that point was saved and can be processed.",
+      "counts": "{{recovered}} sections recovered, {{damaged}} damaged.",
+      "causeCrash": "Interrupted by an unexpected close",
+      "causeSleepWake": "Interrupted because this PC went to sleep",
+      "causeUnknown": "The reason for the interruption is unknown"
+    },
+    "errors": {
+      "generic": {
+        "title": "Something needs your attention",
+        "body": "The meeting could not continue. Try again or open the settings."
+      },
+      "backendUnavailable": {
+        "title": "Meeting recording is not available yet",
+        "body": "This build cannot record meetings because the recording service is missing. Everything already saved is untouched."
+      },
+      "recoverable": {
+        "title": "Something needs your attention"
+      },
+      "micLost": {
+        "title": "Microphone disconnected",
+        "body": "Your microphone stopped working. System audio is still being recorded."
+      },
+      "systemLost": {
+        "title": "System audio stopped",
+        "body": "The output device stopped delivering audio. Your microphone is still being recorded."
+      },
+      "noLoopback": {
+        "title": "System audio can’t be captured",
+        "body": "Speak can’t listen to this output device. You can record the microphone only."
+      },
+      "exclusiveMode": {
+        "title": "Output device is busy",
+        "body": "The output device is running in exclusive mode, so system audio can’t be captured."
+      },
+      "diskFull": {
+        "title": "Recording stopped — storage full",
+        "body": "Speak stopped the recording to protect your data. Everything captured so far is saved."
+      },
+      "cloudUnreachable": {
+        "title": "Cloud transcription is unreachable",
+        "body": "Recording continues on this device. Sections will be transcribed as soon as the service responds again."
+      },
+      "cloudConfig": {
+        "title": "Cloud transcription is not configured",
+        "body": "The stored credentials were rejected. Recording continues locally."
+      },
+      "micPermission": {
+        "title": "Microphone access required",
+        "body": "Speak needs microphone access to record meetings. Grant access in the system privacy settings."
+      },
+      "missingKey": {
+        "title": "Setup incomplete",
+        "body": "Transcription is not configured yet. Open the settings to finish the setup."
+      },
+      "slept": {
+        "title": "Recording was interrupted",
+        "body": "This PC went to sleep. The recording stopped safely and can be continued."
+      },
+      "startFailed": {
+        "title": "The meeting could not be started",
+        "body": "Nothing was recorded. Check the devices and try again."
+      },
+      "pauseFailed": {
+        "title": "The meeting could not be paused",
+        "body": "Recording continues. Try again."
+      },
+      "resumeFailed": {
+        "title": "The meeting could not be resumed",
+        "body": "The meeting stays paused. Check the devices and try again."
+      },
+      "stopFailed": {
+        "title": "The meeting could not be ended",
+        "body": "The recording is still running and nothing was lost. Try again."
+      },
+      "cancelFailed": {
+        "title": "The meeting could not be cancelled",
+        "body": "Try again or end the meeting instead."
+      },
+      "retryFailed": {
+        "title": "The segments could not be queued again",
+        "body": "The audio is still saved. Try again."
+      },
+      "recoveryFailed": {
+        "title": "The recording could not be recovered",
+        "body": "The saved audio is untouched. Try again or open the meeting."
+      },
+      "preflightFailed": {
+        "title": "The start checks could not be completed",
+        "body": "Run the checks again before starting the meeting."
+      }
+    },
+    "warnings": {
+      "diskLow": {
+        "title": "Storage almost full",
+        "body": "A one-hour meeting with microphone and system audio needs roughly 0.25 GB."
+      },
+      "silence": {
+        "title": "No system sound detected",
+        "body": "The selected output device is silent. If you hear sound through another device, the wrong one may be selected."
+      },
+      "backlog": {
+        "title": "Processing is behind",
+        "body": "Sections are queued on disk and will be transcribed after the meeting. Nothing is lost."
+      },
+      "devicesChanged": {
+        "title": "Devices changed while paused",
+        "body": "A new source section will be started in the transcript."
+      }
+    },
+    "detail": {
+      "summaryHeading": "Summary",
+      "transcriptHeading": "Transcript",
+      "decisions": "Decisions",
+      "actionItems": "Action items",
+      "openQuestions": "Open questions",
+      "summaryFailed": "The summary could not be created.",
+      "resummarize": "Summarise again",
+      "resummarizeDone": "Summary updated",
+      "resummarizeFailed": "Re-summarising failed",
+      "searchLabel": "Search the transcript",
+      "searchPlaceholder": "Search in transcript�",
+      "searchMatches_one": "{{count}} match",
+      "searchMatches_other": "{{count}} matches"
+    }
+  },
+  "onboarding": {
+    "subtitle": "Để bắt đầu, hãy chọn một mô hình chuyển đổi giọng nói",
+    "existingModelsTitle": "Mô hình tương thích",
+    "downloadModelsTitle": "Có sẵn để tải xuống",
+    "showAllModels": "Hiển thị tất cả {{total}} mô hình",
+    "showFewerModels": "Hiển thị ít mô hình hơn",
+    "recommended": "Đề xuất",
+    "customModelDescription": "Không được hỗ trợ chính thức",
+    "modelCard": {
+      "accuracy": "độ chính xác",
+      "speed": "tốc độ"
+    },
+    "models": {
+      "small": {
+        "name": "Whisper Small",
+        "description": "Nhanh và khá chính xác."
+      },
+      "medium": {
+        "name": "Whisper Medium",
+        "description": "Độ chính xác tốt, tốc độ trung bình"
+      },
+      "turbo": {
+        "name": "Whisper Turbo",
+        "description": "Cân bằng giữa độ chính xác và tốc độ."
+      },
+      "large": {
+        "name": "Whisper Large",
+        "description": "Độ chính xác tốt, nhưng chậm."
+      },
+      "parakeet-tdt-0.6b-v2": {
+        "name": "Parakeet V2",
+        "description": "Chỉ tiếng Anh. Mô hình tốt nhất cho người nói tiếng Anh."
+      },
+      "parakeet-tdt-0.6b-v3": {
+        "name": "Parakeet V3",
+        "description": "Nhanh và chính xác"
+      },
+      "moonshine-base": {
+        "name": "Moonshine Base",
+        "description": "Rất nhanh, chỉ tiếng Anh. Xử lý tốt các giọng nói."
+      },
+      "moonshine-tiny-streaming-en": {
+        "name": "Moonshine V2 Tiny",
+        "description": "Cực nhanh, chỉ tiếng Anh"
+      },
+      "moonshine-small-streaming-en": {
+        "name": "Moonshine V2 Small",
+        "description": "Nhanh, chỉ tiếng Anh. Cân bằng tốt giữa tốc độ và độ chính xác."
+      },
+      "moonshine-medium-streaming-en": {
+        "name": "Moonshine V2 Medium",
+        "description": "Chỉ tiếng Anh. Chất lượng cao."
+      },
+      "breeze-asr": {
+        "name": "Breeze ASR",
+        "description": "Tối ưu hóa cho tiếng Quan Thoại Đài Loan. Hỗ trợ chuyển đổi ngôn ngữ."
+      },
+      "sense-voice-int8": {
+        "name": "SenseVoice",
+        "description": "Rất nhanh. Tiếng Trung, tiếng Anh, tiếng Nhật, tiếng Hàn, tiếng Quảng Đông."
+      },
+      "gigaam-v3-e2e-ctc": {
+        "name": "GigaAM v3",
+        "description": "Nhận dạng giọng nói tiếng Nga. Nhanh và chính xác."
+      },
+      "canary-180m-flash": {
+        "name": "Canary 180M Flash",
+        "description": "Rất nhanh. Tiếng Anh, tiếng Đức, tiếng Tây Ban Nha, tiếng Pháp. Hỗ trợ dịch thuật."
+      },
+      "canary-1b-v2": {
+        "name": "Canary 1B v2",
+        "description": "Đa ngôn ngữ chính xác. 25 ngôn ngữ châu Âu. Hỗ trợ dịch thuật."
+      },
+      "cohere-int8": {
+        "name": "Cohere",
+        "description": "Mô hình lớn, chậm hơn, nhưng rất chính xác và đa ngôn ngữ."
+      }
+    },
+    "errors": {
+      "selectModel": "Không thể chọn mô hình"
+    },
+    "permissions": {
+      "title": "Cần cấp quyền",
+      "description": "Handy cần một số quyền để hoạt động bình thường.",
+      "microphone": {
+        "title": "Quyền truy cập Micrô",
+        "description": "Cần thiết để nghe giọng nói của bạn để chuyển đổi."
+      },
+      "accessibility": {
+        "title": "Quyền truy cập Trợ năng",
+        "description": "Cần thiết để nhập văn bản đã chuyển đổi vào các ứng dụng của bạn."
+      },
+      "grant": "Cấp quyền",
+      "granted": "Đã cấp",
+      "waiting": "Đang chờ...",
+      "allGranted": "Hoàn tất!",
+      "errors": {
+        "checkFailed": "Không thể kiểm tra quyền. Vui lòng thử lại.",
+        "requestFailed": "Không thể yêu cầu quyền. Vui lòng thử lại."
+      }
+    }
+  },
+  "modelSelector": {
+    "custom": "Tùy chỉnh",
+    "streaming": "Truyền trực tiếp",
+    "active": "Đang hoạt động",
+    "switching": "Đang chuyển...",
+    "noModelsAvailable": "Không có mô hình nào",
+    "verifying": "Đang xác minh {{modelName}}...",
+    "verifyingGeneric": "Đang xác minh...",
+    "extracting": "Đang giải nén {{modelName}}...",
+    "extractingMultiple": "Đang giải nén {{count}} mô hình...",
+    "extractingGeneric": "Đang giải nén...",
+    "downloading": "Đang tải xuống {{percentage}}%",
+    "downloadingMultiple": "Đang tải xuống {{count}} mô hình...",
+    "modelReady": "Mô Hình Sẵn Sàng",
+    "loading": "Đang tải {{modelName}}...",
+    "loadingGeneric": "Đang tải...",
+    "modelError": "Lỗi Mô Hình",
+    "modelUnloaded": "Mô Hình Đã Gỡ",
+    "noModelDownloadRequired": "Chưa Có Mô Hình - Cần Tải Xuống",
+    "deleteModel": "Xóa {{modelName}}",
+    "downloadSpeed": "{{speed}} MB/s",
+    "capabilities": {
+      "languageSelection": "Hỗ trợ nhiều ngôn ngữ đầu vào",
+      "languageCount": "{{total}} ngôn ngữ",
+      "translation": "Có thể dịch sang tiếng Anh",
+      "translate": "Dịch sang tiếng Anh",
+      "singleLanguage": "Chỉ hỗ trợ ngôn ngữ này",
+      "languageOnly": "Chỉ {{language}}",
+      "streaming": "Hiển thị phiên âm trực tiếp khi bạn nói"
+    },
+    "cancel": "Hủy",
+    "cancelDownload": "Hủy tải xuống",
+    "legacy": "Cũ",
+    "downloadingGeneric": "Đang tải xuống..."
+  },
+  "settings": {
+    "speechPipeline": {
+      "title": "Speech pipeline",
+      "description": "Choose how audio becomes text and optionally translate the result before it is pasted.",
+      "preview": {
+        "terminology": "Terminology",
+        "translation": "DeepL",
+        "paste": "Paste"
+      },
+      "provider": {
+        "title": "Speech-to-text provider",
+        "description": "Use an on-device model, Azure Speech, or your own HTTP endpoint.",
+        "local": "Local model",
+        "azure": "Azure Speech",
+        "custom": "Custom STT endpoint"
+      },
+      "azure": {
+        "endpoint": {
+          "title": "Azure endpoint",
+          "description": "The complete short-audio REST endpoint of your Azure Speech resource.",
+          "placeholder": "https://…/stt/speech/recognition/conversation/cognitiveservices/v1"
+        },
+        "language": {
+          "title": "Recognition locale",
+          "description": "Azure locale used for speech recognition, for example de-DE.",
+          "placeholder": "de-DE"
+        },
+        "apiKey": {
+          "title": "Azure API key",
+          "description": "Subscription key for the configured Azure Speech resource.",
+          "placeholder": "Enter Azure Speech key"
+        }
+      },
+      "azureValidation": {
+        "title": "Save and test Azure",
+        "description": "Saves the Azure fields and verifies the exact configuration with a short connection test.",
+        "button": "Save & test connection",
+        "testing": "Saving and testing…",
+        "success": "Azure Speech is configured correctly.",
+        "failed": "Azure test failed: {{error}}"
+      },
+      "custom": {
+        "endpoint": {
+          "title": "Custom endpoint",
+          "description": "Receives 16 kHz mono WAV audio and returns plain text or a supported JSON transcript.",
+          "placeholder": "https://your-service.example/transcribe"
+        },
+        "token": {
+          "title": "Bearer token",
+          "description": "Optional authorization token sent to your endpoint.",
+          "placeholder": "Optional token"
+        }
+      },
+      "deepl": {
+        "enabled": {
+          "title": "Translate with DeepL",
+          "description": "Translate the transcript before optional AI post-processing and pasting."
+        },
+        "apiKey": {
+          "title": "DeepL API key",
+          "description": "Works with both DeepL API Free and Pro keys.",
+          "placeholder": "Enter DeepL API key"
+        },
+        "target": {
+          "title": "Translation target",
+          "description": "Language produced by DeepL before the text enters the remaining pipeline."
+        },
+        "targetEnglish": "English",
+        "targetEnglishBritish": "English (British)",
+        "targetEnglishAmerican": "English (American)",
+        "targetGerman": "German"
+      },
+      "advanced": {
+        "title": "Advanced live pipeline",
+        "description": "Sentence stability, endpointing and translation timing",
+        "stability": {
+          "title": "Live text stability",
+          "description": "Number of matching Azure partial results required before words are treated as stable. The conference pipeline used 3."
+        },
+        "phraseSilence": {
+          "title": "Sentence-final silence",
+          "description": "How long Azure waits through silence before finalizing the current phrase. Longer values preserve sentence context; shorter values react faster."
+        },
+        "translationDelay": {
+          "title": "DeepL sentence delay",
+          "description": "Wait after an Azure-final sentence and combine any additional final segments before sending the text once to DeepL. Interim text is never billed."
+        }
+      }
+    },
+    "modelSettings": {
+      "title": "Cài đặt {{model}}"
+    },
+    "models": {
+      "title": "Mô hình chuyển đổi",
+      "description": "Chọn mô hình chuyển đổi hoặc tải thêm mô hình. Các mô hình khác nhau có mức độ chính xác và tốc độ khác nhau.",
+      "deleteConfirm": "Bạn có chắc chắn muốn xóa {{modelName}}? Bạn sẽ cần tải lại để sử dụng.",
+      "deleteActiveConfirm": "{{modelName}} là mô hình đang hoạt động của bạn. Xóa nó sẽ dừng phiên âm cho đến khi bạn chọn một mô hình mới. Bạn có chắc không?",
+      "deleteTitle": "Xóa mô hình",
+      "filters": {
+        "allLanguages": "Tất cả ngôn ngữ",
+        "streaming": "Lọc các mô hình hỗ trợ phiên âm trực tiếp",
+        "translation": "Lọc các mô hình hỗ trợ dịch sang tiếng Anh"
+      },
+      "noModelsMatch": "Không có mô hình nào khớp với bộ lọc này.",
+      "yourModels": "Mô hình đã tải",
+      "availableModels": "Có sẵn để tải xuống",
+      "searchPlaceholder": "Tìm mô hình theo tên…",
+      "rescan": {
+        "label": "Quét lại",
+        "tooltip": "Quét lại các mô hình được thêm vào thư mục mô hình hoặc bộ nhớ đệm Hugging Face bên ngoài Handy"
+      }
+    },
+    "general": {
+      "title": "Chung",
+      "shortcut": {
+        "title": "Phím tắt Handy",
+        "description": "Cấu hình phím tắt để kích hoạt ghi âm chuyển đổi giọng nói thành văn bản",
+        "loading": "Đang tải phím tắt...",
+        "none": "Chưa cấu hình phím tắt",
+        "notFound": "Không tìm thấy phím tắt",
+        "pressKeys": "Nhấn phím...",
+        "bindings": {
+          "transcribe": {
+            "name": "Phím tắt chuyển đổi",
+            "description": "Phím tắt để ghi âm và chuyển đổi giọng nói của bạn."
+          },
+          "cancel": {
+            "name": "Phím tắt hủy",
+            "description": "Phím tắt để hủy bản ghi hiện tại."
+          },
+          "transcribe_with_post_process": {
+            "name": "Phím tắt xử lý sau",
+            "description": "Tùy chọn: Phím tắt chuyên dụng luôn áp dụng xử lý sau bằng AI cho bản chuyển đổi của bạn."
+          }
+        },
+        "errors": {
+          "restore": "Không thể khôi phục phím tắt gốc",
+          "set": "Không thể đặt phím tắt: {{error}}",
+          "reset": "Không thể đặt lại phím tắt về giá trị gốc"
+        },
+        "recordButtonAria": "Thay đổi phím tắt của {{name}}, hiện tại là {{shortcut}}",
+        "escapeHint": "Đang ghi phím tắt. Nhấn Escape để hủy."
+      },
+      "language": {
+        "title": "Ngôn ngữ",
+        "description": "Chọn ngôn ngữ để nhận dạng giọng nói. Tự động sẽ tự động xác định ngôn ngữ, trong khi chọn một ngôn ngữ cụ thể có thể cải thiện độ chính xác cho ngôn ngữ đó.",
+        "searchPlaceholder": "Tìm kiếm ngôn ngữ...",
+        "noResults": "Không tìm thấy ngôn ngữ",
+        "auto": "Tự động"
+      },
+      "pushToTalk": {
+        "label": "Nhấn để nói",
+        "description": "Giữ để ghi âm, thả để dừng"
+      }
+    },
+    "sound": {
+      "title": "Âm thanh",
+      "microphone": {
+        "title": "Micrô",
+        "description": "Chọn thiết bị micrô ưa thích của bạn",
+        "placeholder": "Chọn micrô...",
+        "loading": "Đang tải..."
+      },
+      "channel": {
+        "title": "Kênh đầu vào",
+        "description": "Chọn kênh đầu vào để ghi âm. Sử dụng tùy chọn này nếu giao diện âm thanh của bạn có nhiều đầu vào.",
+        "average": "Trung bình tất cả các kênh",
+        "channel": "Kênh {{n}}"
+      },
+      "audioFeedback": {
+        "label": "Phản hồi âm thanh",
+        "description": "Phát âm thanh khi bắt đầu và kết thúc ghi âm"
+      },
+      "outputDevice": {
+        "title": "Thiết bị đầu ra",
+        "description": "Chọn thiết bị đầu ra âm thanh ưa thích của bạn cho âm thanh phản hồi",
+        "placeholder": "Chọn thiết bị đầu ra...",
+        "loading": "Đang tải..."
+      },
+      "volume": {
+        "title": "Âm lượng",
+        "description": "Điều chỉnh âm lượng của âm thanh phản hồi"
+      }
+    },
+    "advanced": {
+      "groups": {
+        "app": "Ứng dụng",
+        "output": "Đầu ra",
+        "transcription": "Chuyển đổi",
+        "history": "Lịch sử",
+        "experimental": "Thử nghiệm"
+      },
+      "experimentalToggle": {
+        "label": "Tính năng thử nghiệm",
+        "description": "Bật các tính năng thử nghiệm đang trong quá trình phát triển."
+      },
+      "lazyStreamClose": {
+        "label": "Giữ micro mở giữa các lần phiên âm",
+        "description": "Giữ luồng micro mở trong 30 giây sau khi dừng ghi âm, giảm độ trễ khi phiên âm liên tiếp. Có thể làm giảm chất lượng âm thanh Bluetooth khi đang hoạt động."
+      },
+      "acceleration": {
+        "transcribe": {
+          "title": "Tăng tốc Whisper",
+          "description": "Tăng tốc phần cứng cho các mô hình Whisper. Chế độ tự động sử dụng GPU nếu có (Metal trên macOS, Vulkan trên Windows/Linux)."
+        },
+        "ort": {
+          "title": "Tăng tốc ONNX",
+          "description": "Tăng tốc phần cứng cho các mô hình ONNX (Parakeet, Canary, Moonshine, v.v.). DirectML trên Windows là thử nghiệm. Các mô hình có thể không chuyển đổi giọng nói được."
+        },
+        "gpuDevice": {
+          "auto": "Tự động"
+        }
+      },
+      "startHidden": {
+        "label": "Khởi động ẩn",
+        "description": "Khởi động vào khay hệ thống mà không mở cửa sổ."
+      },
+      "autostart": {
+        "label": "Khởi động cùng hệ thống",
+        "description": "Tự động khởi động Handy khi bạn đăng nhập vào máy tính."
+      },
+      "showTrayIcon": {
+        "label": "Hiển thị biểu tượng khay",
+        "description": "Hiển thị biểu tượng Handy trong khay hệ thống."
+      },
+      "overlay": {
+        "style": {
+          "title": "Lớp phủ",
+          "description": "Chọn lớp phủ khi ghi âm: 'Không có' sẽ ẩn nó, 'Tối giản' hiển thị một chỉ báo nhỏ gọn, 'Trực tiếp' hiển thị bản chép lời theo thời gian thực khi bạn nói (chỉ với các mô hình hỗ trợ truyền trực tiếp — hãy tìm huy hiệu 'Truyền trực tiếp' trong bộ chọn mô hình). Trên Linux, khuyến nghị chọn 'Không có'.",
+          "options": {
+            "none": "Không có",
+            "minimal": "Tối giản",
+            "live": "Trực tiếp"
+          }
+        },
+        "position": {
+          "title": "Vị trí lớp phủ",
+          "description": "Hiển thị lớp phủ phản hồi trực quan trong quá trình ghi âm và chuyển đổi. Trên Linux, 'Không có' được khuyến nghị.",
+          "options": {
+            "bottom": "Dưới",
+            "top": "Trên"
+          }
+        }
+      },
+      "pasteMethod": {
+        "title": "Phương thức dán",
+        "description": "Chọn cách chèn văn bản. Trực tiếp: mô phỏng gõ phím qua đầu vào hệ thống. Không có: bỏ qua dán, chỉ cập nhật lịch sử/clipboard.",
+        "options": {
+          "clipboard": "Bảng nhớ tạm ({{modifier}}+V)",
+          "clipboardCtrlShiftV": "Bảng nhớ tạm (Ctrl+Shift+V)",
+          "clipboardShiftInsert": "Bảng nhớ tạm (Shift+Insert)",
+          "direct": "Trực tiếp",
+          "none": "Không có",
+          "externalScript": "Script bên ngoài"
+        },
+        "externalScriptPlaceholder": "/duong-dan/toi/script.sh"
+      },
+      "typingTool": {
+        "title": "Công cụ gõ",
+        "description": "Chọn công cụ gõ trên Linux cho phương thức dán trực tiếp. Auto sẽ tự động phát hiện và dùng công cụ tốt nhất có sẵn cho hệ thống của bạn.",
+        "options": {
+          "auto": "Auto (Khuyến nghị)"
+        }
+      },
+      "clipboardHandling": {
+        "title": "Xử lý Clipboard",
+        "description": "Không sửa đổi Clipboard giữ nguyên nội dung clipboard hiện tại sau khi chuyển đổi. Sao chép vào Clipboard để lại kết quả chuyển đổi trong clipboard sau khi dán.",
+        "options": {
+          "dontModify": "Không sửa đổi Clipboard",
+          "copyToClipboard": "Sao chép vào Clipboard"
+        }
+      },
+      "autoSubmit": {
+        "title": "Gửi tự động",
+        "description": "Tự động gửi tổ hợp phím đã chọn sau khi chèn văn bản. Cmd+Enter áp dụng trên macOS, còn Windows/Linux dùng Super+Enter.",
+        "options": {
+          "off": "Tắt",
+          "enter": "Enter",
+          "cmdEnter": "Cmd+Enter",
+          "superEnter": "Super+Enter",
+          "ctrlEnter": "Ctrl+Enter"
+        }
+      },
+      "translateToEnglish": {
+        "label": "Dịch sang tiếng Anh",
+        "description": "Tự động dịch giọng nói từ các ngôn ngữ khác sang tiếng Anh trong quá trình chuyển đổi."
+      },
+      "modelUnload": {
+        "title": "Giải phóng mô hình",
+        "description": "Tự động giải phóng bộ nhớ GPU/CPU khi mô hình không được sử dụng trong thời gian quy định",
+        "options": {
+          "never": "Không bao giờ",
+          "immediately": "Ngay lập tức",
+          "min2": "Sau 2 phút",
+          "min5": "Sau 5 phút",
+          "min10": "Sau 10 phút",
+          "min15": "Sau 15 phút",
+          "hour1": "Sau 1 giờ",
+          "sec15": "Sau 15 giây (Gỡ lỗi)"
+        }
+      },
+      "customWords": {
+        "title": "Từ tùy chỉnh",
+        "description": "Giúp các mô hình được hỗ trợ nhận dạng tên và thuật ngữ chuyên ngành. Tính năng sửa gần đúng hiện chỉ áp dụng cho các từ sử dụng chữ cái A–Z và chữ số.",
+        "placeholder": "Thêm một từ",
+        "add": "Thêm",
+        "remove": "Xóa {{word}}",
+        "duplicate": "\"{{word}}\" đã tồn tại"
+      },
+      "voiceActivityDetection": {
+        "title": "Phát hiện hoạt động giọng nói",
+        "description": "Lọc bỏ khoảng lặng khỏi bản ghi. Các mô hình hỗ trợ truyền trực tiếp dùng đuôi VAD dài hơn; tắt VAD sẽ ghi âm thanh thô."
+      },
+      "fillerWordRemoval": {
+        "title": "Loại bỏ từ đệm",
+        "description": "Loại bỏ các từ ngập ngừng phổ biến khỏi bản chép lời. Tắt để giữ lại các từ này."
+      }
+    },
+    "postProcessing": {
+      "hotkey": {
+        "title": "Phím tắt"
+      },
+      "api": {
+        "title": "API (Tương thích OpenAI)",
+        "provider": {
+          "title": "Nhà cung cấp",
+          "description": "Chọn một nhà cung cấp tương thích OpenAI."
+        },
+        "appleIntelligence": {
+          "unavailable": "Apple Intelligence không khả dụng trên thiết bị này. Yêu cầu Mac Apple Silicon chạy macOS Tahoe (26.0) trở lên với Apple Intelligence được bật trong Cài đặt Hệ thống."
+        },
+        "baseUrl": {
+          "title": "URL cơ sở",
+          "description": "URL cơ sở API cho nhà cung cấp đã chọn. Chỉ có thể chỉnh sửa nhà cung cấp tùy chỉnh.",
+          "placeholder": "https://api.openai.com/v1"
+        },
+        "apiKey": {
+          "title": "Khóa API",
+          "description": "Khóa API cho nhà cung cấp đã chọn.",
+          "placeholder": "sk-..."
+        },
+        "model": {
+          "title": "Mô hình",
+          "descriptionCustom": "Cung cấp định danh mô hình được yêu cầu bởi điểm cuối tùy chỉnh của bạn.",
+          "descriptionDefault": "Chọn một mô hình được cung cấp bởi nhà cung cấp đã chọn.",
+          "placeholderWithOptions": "Tìm kiếm hoặc chọn một mô hình",
+          "placeholderNoOptions": "Nhập tên mô hình",
+          "refreshModels": "Làm mới mô hình"
+        }
+      },
+      "prompts": {
+        "title": "Câu lệnh",
+        "selectedPrompt": {
+          "title": "Prompt đã chọn",
+          "description": "Chọn một mẫu để tinh chỉnh bản ghi hoặc tạo mới. Sử dụng ${output} trong văn bản prompt để tham chiếu bản ghi đã chụp."
+        },
+        "noPrompts": "Không có prompt nào",
+        "selectPrompt": "Chọn một prompt",
+        "createNew": "Tạo Prompt mới",
+        "promptLabel": "Nhãn Prompt",
+        "promptLabelPlaceholder": "Nhập tên prompt",
+        "promptInstructions": "Hướng dẫn Prompt",
+        "promptInstructionsPlaceholder": "Viết hướng dẫn để chạy sau khi chuyển đổi. Ví dụ: Cải thiện ngữ pháp và độ rõ ràng cho văn bản sau: ${output}",
+        "promptTip": "Mẹo: Sử dụng <code>${output}</code> để chèn văn bản đã chuyển đổi vào prompt của bạn.",
+        "updatePrompt": "Cập nhật Prompt",
+        "deletePrompt": "Xóa Prompt",
+        "createPrompt": "Tạo Prompt",
+        "cancel": "Hủy",
+        "selectToEdit": "Chọn một prompt ở trên để xem và chỉnh sửa chi tiết.",
+        "createFirst": "Nhấn 'Tạo Prompt mới' ở trên để tạo prompt xử lý sau đầu tiên của bạn."
+      }
+    },
+    "history": {
+      "title": "Lịch sử",
+      "openFolder": "Mở thư mục ghi âm",
+      "loading": "Đang tải lịch sử...",
+      "empty": "Chưa có bản ghi nào. Bắt đầu ghi âm để xây dựng lịch sử của bạn!",
+      "copyToClipboard": "Sao chép bản ghi vào clipboard",
+      "save": "Lưu bản ghi",
+      "unsave": "Xóa khỏi đã lưu",
+      "delete": "Xóa mục",
+      "deleteError": "Không thể xóa mục. Vui lòng thử lại.",
+      "deleteConfirmTitle": "Delete this entry?",
+      "deleteConfirmWarning": "This permanently deletes:",
+      "deleteArtifactAudio": "the recording audio",
+      "deleteArtifactTranscript": "the full transcript of this dictation",
+      "deleteArtifactSummary": "any summary generated for this dictation (once summaries are available)",
+      "deleteConfirmIrreversible": "This action cannot be undone.",
+      "deleteCancel": "Cancel",
+      "deleteConfirmAction": "Delete permanently",
+      "retranscribe": "Phiên âm lại",
+      "retranscribeError": "Không thể phiên âm lại. Vui lòng thử lại.",
+      "transcribing": "Đang phiên âm...",
+      "transcriptionFailed": "Phiên âm thất bại. Bạn có thể phiên âm lại bằng biểu tượng thử lại."
+    },
+    "debug": {
+      "title": "Gỡ lỗi",
+      "logDirectory": {
+        "title": "Thư mục nhật ký",
+        "description": "Vị trí lưu trữ các tệp nhật ký"
+      },
+      "logLevel": {
+        "title": "Mức nhật ký",
+        "description": "Đặt mức độ chi tiết của nhật ký"
+      },
+      "liveLogs": {
+        "title": "Nhật ký trực tiếp",
+        "description": "Truyền nhật ký ứng dụng theo thời gian thực để chẩn đoán sự cố mà không cần mở tệp nhật ký. Chỉ hiển thị nhật ký được tạo khi bảng này đang mở; tuân theo cài đặt Mức nhật ký ở trên.",
+        "live": "Trực tiếp",
+        "paused": "Đã tạm dừng",
+        "pause": "Tạm dừng",
+        "resume": "Tiếp tục",
+        "copied": "Đã sao chép",
+        "lineCount": "{{count}} dòng",
+        "empty": "Đang chờ nhật ký… Các mục sẽ xuất hiện ở đây khi ứng dụng phát ra."
+      },
+      "updateChecks": {
+        "label": "Kiểm tra cập nhật",
+        "description": "Tự động kiểm tra phiên bản mới của Handy"
+      },
+      "soundTheme": {
+        "label": "Chủ đề âm thanh",
+        "description": "Chọn chủ đề âm thanh cho phản hồi bắt đầu và kết thúc ghi âm"
+      },
+      "wordCorrectionThreshold": {
+        "title": "Ngưỡng sửa từ",
+        "description": "Độ nhạy cho việc sửa từ tùy chỉnh"
+      },
+      "historyLimit": {
+        "title": "Giới hạn lịch sử",
+        "description": "Số lượng mục lịch sử tối đa cần giữ",
+        "entries": "mục"
+      },
+      "recordingRetention": {
+        "title": "Tự động xóa ghi âm",
+        "description": "Tự động xóa các bản ghi âm cũ để tiết kiệm dung lượng",
+        "never": "Không bao giờ",
+        "preserveLimit": "Giữ {{count}} bản mới nhất",
+        "days3": "Sau 3 ngày",
+        "weeks2": "Sau 2 tuần",
+        "months3": "Sau 3 tháng",
+        "placeholder": "Chọn thời gian lưu giữ..."
+      },
+      "alwaysOnMicrophone": {
+        "label": "Micrô luôn bật",
+        "description": "Giữ micrô hoạt động để phản hồi nhanh hơn"
+      },
+      "clamshellMicrophone": {
+        "title": "Micrô chế độ gập",
+        "description": "Micrô sử dụng khi nắp laptop được đóng"
+      },
+      "postProcessingToggle": {
+        "label": "Xử lý sau",
+        "description": "Bật tinh chỉnh văn bản bằng AI sau khi chuyển đổi"
+      },
+      "muteWhileRecording": {
+        "label": "Tắt tiếng khi ghi âm",
+        "description": "Tắt tiếng âm thanh hệ thống trong khi ghi âm"
+      },
+      "appendTrailingSpace": {
+        "label": "Thêm dấu cách cuối",
+        "description": "Thêm một dấu cách sau bản ghi đã dán"
+      },
+      "keyboardImplementation": {
+        "title": "Triển khai bàn phím",
+        "description": "Chọn hệ thống xử lý phím tắt.",
+        "bindingsReset": "Các phím tắt không tương thích và đã được đặt lại về mặc định"
+      },
+      "paths": {
+        "appData": "Dữ liệu ứng dụng:",
+        "models": "Mô hình:",
+        "settings": "Cài đặt:"
+      },
+      "pasteDelay": {
+        "title": "Độ trễ dán (trước)",
+        "description": "Độ trễ (tính bằng mili giây) sau khi sao chép văn bản, trước khi gửi phím dán. Tăng nếu không có gì được dán."
+      },
+      "pasteDelayAfter": {
+        "title": "Độ trễ dán (sau)",
+        "description": "Độ trễ (tính bằng mili giây) sau khi gửi phím dán, trước khi khôi phục bảng nhớ tạm trước đó. Tăng nếu nội dung bảng nhớ tạm cũ được dán thay vì bản chép lời."
+      },
+      "reliablePaste": {
+        "title": "Dán đáng tin cậy (Beta)",
+        "description": "Chỉ khôi phục bảng nhớ tạm sau khi ứng dụng đích thực sự đọc bản chép lời, thay vì sau một độ trễ cố định. Nhằm khắc phục việc nội dung bảng nhớ tạm cũ bị dán khi hệ thống bị tải nặng. Cần một phương thức dán qua bảng nhớ tạm; chỉ dành cho macOS và Windows."
+      },
+      "recordingBuffer": {
+        "title": "Bộ đệm ghi âm thêm",
+        "description": "Thời gian thêm (tính bằng mili giây) để tiếp tục ghi âm sau khi nhả phím, để thu âm thanh cuối. 0 = không có bộ đệm thêm."
+      },
+      "keyboardDiagnostic": {
+        "title": "Chẩn đoán bàn phím",
+        "description": "Kiểm tra xem các sự kiện bàn phím có đến được Handy hay không. Chỉ số lượng sự kiện được ghi lại — không bao giờ ghi lại bạn bấm phím nào.",
+        "run": "Chạy chẩn đoán 10 giây",
+        "running": "Đang lắng nghe… hãy bấm phím tắt của bạn vài lần (ví dụ: Option+Space)",
+        "secureInputLabel": "Secure Input",
+        "enabled": "đang bật",
+        "disabled": "đang tắt",
+        "holder": "bị {{name}} (pid {{pid}}) giữ",
+        "holderUnknown": "không thấy tiến trình nào giữ",
+        "keyDown": "Nhấn phím",
+        "keyUp": "Nhả phím",
+        "flagsChanged": "Phím bổ trợ",
+        "mouse": "Chuột",
+        "verdictBlocked": "Secure Input đang chặn các sự kiện phím — phím tắt có chứa phím thường không thể hoạt động cho đến khi vấn đề này được xử lý.",
+        "verdictSuspicious": "Có sự kiện phím bổ trợ nhưng không có sự kiện phím nào — thứ gì đó đang chặn phím dù Secure Input báo là đang tắt. Vui lòng báo cáo việc này trên GitHub.",
+        "verdictOk": "Các sự kiện phím đang đến Handy bình thường.",
+        "verdictNoEvents": "Không ghi nhận sự kiện nào — bạn có bấm phím nào trong lúc kiểm tra không?",
+        "failed": "Chẩn đoán thất bại: {{error}}"
+      },
+      "whatsNewPreview": {
+        "title": "Xem trước điểm mới",
+        "description": "Mở ghi chú phát hành mới nhất được đóng gói mà không đánh dấu là đã xem",
+        "button": "Xem trước",
+        "noNotes": "Không tìm thấy ghi chú phát hành được đóng gói",
+        "error": "Không thể xem trước ghi chú phát hành"
+      }
+    },
+    "about": {
+      "title": "Giới thiệu",
+      "version": {
+        "title": "Phiên bản",
+        "description": "Phiên bản hiện tại của Handy"
+      },
+      "appDataDirectory": {
+        "title": "Thư mục dữ liệu ứng dụng",
+        "description": "Vị trí Handy lưu trữ dữ liệu"
+      },
+      "sourceCode": {
+        "title": "Mã nguồn",
+        "description": "Xem mã nguồn và đóng góp",
+        "button": "Xem trên GitHub"
+      },
+      "supportDevelopment": {
+        "title": "Hỗ trợ phát triển",
+        "description": "Giúp chúng tôi tiếp tục xây dựng Handy",
+        "button": "Quyên góp"
+      },
+      "acknowledgments": {
+        "title": "Lời cảm ơn",
+        "ggml": {
+          "title": "ggml",
+          "description": "Suy luận hiệu suất cao của mô hình nhận dạng giọng nói tự động Whisper của OpenAI",
+          "details": "Handy sử dụng ggml để xử lý chuyển đổi giọng nói thành văn bản nhanh, cục bộ. Cảm ơn công việc tuyệt vời của Georgi Gerganov và các cộng tác viên."
+        }
+      },
+      "whatsNewUpdates": {
+        "label": "Hiển thị điểm mới",
+        "description": "Hiển thị ghi chú phát hành sau khi Handy cập nhật"
+      }
+    },
+    "tabs": {
+      "modelsProviders": "Mô hình và nhà cung cấp",
+      "meetingsEmptyBody": "Cài đặt cuộc họp sẽ ra mắt cùng với chế độ họp."
+    },
+    "meetings": {
+      "shortcut": {
+        "title": "Meeting Shortcuts",
+        "description": "Keyboard shortcuts for starting, stopping and pausing meetings. Changes take effect after the current meeting ends.",
+        "unassigned": "Not configured",
+        "recordButtonAria": "Change {{name}} shortcut, currently {{shortcut}}. Click to record a new key combination.",
+        "pressKeys": "Press keys…",
+        "escapeHint": "Recording a shortcut. Press Escape to cancel.",
+        "reset": "Reset",
+        "disable": "Disable",
+        "test": "Test shortcut",
+        "testing": "Testing…",
+        "testOk": "{{shortcut}} can be registered.",
+        "testFail": "{{shortcut}} cannot be registered: {{error}}",
+        "errors": {
+          "singleKey": "Meeting shortcuts need at least one modifier key plus a regular key, e.g. Ctrl+Alt+Space.",
+          "conflict": "This shortcut is already used by:",
+          "osRejected": "The operating system cannot register this shortcut: {{error}} Nothing was saved."
+        },
+        "actions": {
+          "startStop": {
+            "name": "Start/end meeting",
+            "description": "Starts a meeting after a short countdown; pressing it again asks for confirmation before ending the meeting."
+          },
+          "pauseResume": {
+            "name": "Pause/resume meeting",
+            "description": "Pauses and resumes the current meeting recording."
+          }
+        }
+      }
+    }
+  },
+  "footer": {
+    "checkingUpdates": "Đang kiểm tra cập nhật...",
+    "updateAvailableShort": "Có bản cập nhật",
+    "upToDate": "Đã cập nhật",
+    "updateCheckingDisabled": "Đã tắt kiểm tra cập nhật",
+    "downloading": "Đang tải... {{progress}}%",
+    "installing": "Đang cài đặt...",
+    "preparing": "Đang chuẩn bị...",
+    "checkForUpdates": "Kiểm tra cập nhật",
+    "portableUpdateTitle": "Cần cập nhật thủ công",
+    "portableUpdateMessage": "Bản cài đặt di động không thể cập nhật tự động. Hãy tải trình cài đặt phù hợp với hệ thống của bạn bên dưới, chạy nó và cài vào cùng thư mục — thư mục Data/ (cài đặt, mô hình, bản ghi) của bạn được giữ nguyên.",
+    "portableUpdateButton": "Tải trình cài đặt",
+    "portableUpdateBrowseMessage": "Bản cài đặt di động không thể cập nhật tự động. Hãy tải phiên bản mới nhất phù hợp với hệ thống của bạn từ GitHub Releases và cài vào cùng thư mục — thư mục Data/ (cài đặt, mô hình, bản ghi) của bạn được giữ nguyên.",
+    "portableUpdateBrowseButton": "Mở GitHub Releases"
+  },
+  "common": {
+    "loading": "Đang tải...",
+    "delete": "Xóa",
+    "close": "Đóng",
+    "open": "Mở",
+    "copy": "Sao chép",
+    "clear": "Xóa",
+    "moreInformation": "Thông tin thêm",
+    "reset": "Đặt lại",
+    "noOptionsFound": "Không tìm thấy tùy chọn"
+  },
+  "accessibility": {
+    "permissionsDescription": "Handy cần quyền truy cập để gõ văn bản đã chuyển đổi.",
+    "openSettings": "Mở Cài đặt Hệ thống"
+  },
+  "dictation": {
+    "title": "Nhập giọng nói",
+    "subtitle": "Nói ở bất kỳ đâu — lời nói của bạn được gõ vào ứng dụng đang hoạt động.",
+    "config": {
+      "title": "Cấu hình hiện tại"
+    },
+    "status": {
+      "title": "Trạng thái",
+      "ready": "Sẵn sàng",
+      "recording": "Đang ghi âm",
+      "transcribing": "Đang chuyển thành văn bản",
+      "error": "Lỗi",
+      "genericError": "Đã xảy ra lỗi khi ghi âm hoặc chuyển đổi."
+    },
+    "errorOpenSettings": "Mở cài đặt nhập giọng nói",
+    "shortcut": {
+      "description": "Phím tắt toàn cục hiện tại để bắt đầu và dừng nhập giọng nói.",
+      "openAria": "Phím tắt nhập giọng nói {{shortcut}} — mở cài đặt nhập giọng nói để thay đổi",
+      "missing": "Chưa cấu hình"
+    },
+    "mode": {
+      "title": "Chế độ",
+      "hold": "Giữ",
+      "toggle": "Nhấn để bật/tắt",
+      "holdDescription": "Giữ phím tắt trong khi nói.",
+      "toggleDescription": "Nhấn phím tắt một lần để bắt đầu và nhấn lần nữa để dừng."
+    },
+    "target": {
+      "title": "Nhận dạng giọng nói",
+      "description": "Nơi giọng nói của bạn được chuyển thành văn bản.",
+      "local": "Cục bộ",
+      "azure": "Azure",
+      "custom": "Tùy chỉnh"
+    },
+    "language": {
+      "title": "Ngôn ngữ và mô hình",
+      "description": "Ngôn ngữ nhận dạng và mô hình đang dùng (đối với nhận dạng cục bộ).",
+      "withModel": "{{language}} · {{model}}"
+    },
+    "test": {
+      "title": "Thử nhập giọng nói",
+      "button": "Thử nhập giọng nói",
+      "privacy": "Chỉ ở trong cửa sổ này — không có gì được sao chép hay dán.",
+      "start": "Thử nhập giọng nói",
+      "stop": "Dừng ghi âm thử",
+      "idleHint": "Ghi âm tối đa {{seconds}} giây và chỉ phát lại ở đây.",
+      "recordingHint": "Đang ghi âm… sẽ tự động dừng sau {{seconds}} giây.",
+      "retry": "Thử lại",
+      "error": {
+        "unavailable": {
+          "title": "Không có micrô",
+          "description": "Không tìm thấy micrô khả dụng. Hãy kết nối một micrô hoặc chọn thiết bị vào khác trong cài đặt."
+        },
+        "denied": {
+          "title": "Quyền truy cập micrô bị từ chối",
+          "description": "Cửa sổ này cần quyền micrô để chạy kiểm tra."
+        },
+        "failed": {
+          "title": "Ghi âm thử thất bại",
+          "description": "Không thể ghi bản thu thử. Vui lòng thử lại."
+        }
+      },
+      "preview": {
+        "label": "Xem trước bản ghi thử",
+        "playbackAria": "Phát bản ghi thử",
+        "duration": "Thời lượng: {{duration}}",
+        "discard": "Xóa bản ghi"
+      }
+    },
+    "settingsLink": "Cài đặt nhập giọng nói"
+  },
+  "errors": {
+    "loadDirectory": "Lỗi khi tải thư mục: {{error}}",
+    "micPermissionDeniedTitle": "Quyền truy cập micrô bị từ chối",
+    "micPermissionDenied": {
+      "generic": "Quyền truy cập micrô đã bị hệ điều hành từ chối. Vui lòng cấp quyền micrô trong cài đặt hệ thống.",
+      "windows": "Bật quyền truy cập micrô trong Cài đặt → Quyền riêng tư & bảo mật → Micrô (bao gồm quyền truy cập ứng dụng máy tính).",
+      "macos": "Cấp quyền truy cập micrô trong Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Micrô.",
+      "linux": "Cấp quyền truy cập micrô trong cài đặt âm thanh hoặc quyền riêng tư của hệ thống."
+    },
+    "noInputDeviceTitle": "Không tìm thấy micrô",
+    "noInputDevice": "Không phát hiện thiết bị đầu vào âm thanh nào. Vui lòng kết nối micrô hoặc tai nghe và thử lại.",
+    "recordingFailed": "Không thể bắt đầu ghi âm: {{error}}",
+    "modelLoadFailed": "Không thể tải mô hình: {{model}}",
+    "modelLoadFailedUnknown": "mô hình không xác định",
+    "pasteFailedTitle": "Không thể dán văn bản",
+    "pasteFailed": "Không thể dán văn bản vào ứng dụng đang hoạt động.",
+    "transcriptionFailedTitle": "Phiên âm thất bại"
+  },
+  "appLanguage": {
+    "title": "Ngôn ngữ ứng dụng",
+    "description": "Thay đổi ngôn ngữ giao diện của Handy"
+  },
+  "theme": {
+    "title": "Giao diện ứng dụng",
+    "description": "Chọn xem Handy theo chủ đề hệ thống hay giữ ở chế độ sáng hoặc tối",
+    "options": {
+      "system": "Hệ thống",
+      "light": "Sáng",
+      "dark": "Tối"
+    }
+  },
+  "overlay": {
+    "transcribing": "Đang chuyển đổi...",
+    "processing": "Đang xử lý...",
+    "cancel": "Hủy"
+  },
+  "whatsNew": {
+    "title": "Điểm mới trong Handy v{{version}}"
+  },
+  "secureInput": {
+    "blockedWithCulprit_one": "{{name}} có thể đang chặn 1 phím tắt",
+    "blockedWithCulprit_other": "{{name}} có thể đang chặn {{count}} phím tắt",
+    "blockedNoCulprit_one": "macOS đang tạm thời chặn 1 phím tắt",
+    "blockedNoCulprit_other": "macOS đang tạm thời chặn {{count}} phím tắt",
+    "recorderBlockedWithCulprit": "{{name}} có thể đang chặn việc thay đổi phím tắt",
+    "recorderBlockedNoCulprit": "macOS đang tạm thời chặn việc thay đổi phím tắt",
+    "learnMore": "Cách khắc phục",
+    "recorderBlocked": "Hiện không thể ghi phím tắt — Secure Input của macOS đang chặn các sự kiện phím. Hãy xử lý cảnh báo Secure Input trước.",
+    "dismiss": "Bỏ qua"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox",
+    "tasksHeading": "Tasks",
+    "noTasks": "No tasks yet",
+    "newTaskPlaceholder": "New task�",
+    "taskSuggested": "suggested by AI",
+    "taskAccept": "Accept",
+    "taskReject": "Reject",
+    "taskEditPrompt": "Edit the task title:"
+  },
+  "whatsapp": {
+    "title": "Import WhatsApp chat",
+    "titlePlaceholder": "Source title (e.g. team name)",
+    "contentPlaceholder": "Paste the exported chat text here�",
+    "dateOrderLabel": "Date order (only needed if ambiguous)",
+    "dateOrderAuto": "Detect automatically",
+    "dateOrderDayFirst": "Day first (25.12.24)",
+    "dateOrderMonthFirst": "Month first (12.25.24)",
+    "preview": "Analyse",
+    "import": "Import",
+    "previewFailed": "Could not analyse the chat text",
+    "importFailed": "Import failed",
+    "imported": "Imported {{count}} messages",
+    "alreadyImported": "This export was already imported � nothing duplicated.",
+    "previewMessages_one": "{{count}} message",
+    "previewMessages_other": "{{count}} messages",
+    "previewParticipants_one": "{{count}} participant",
+    "previewParticipants_other": "{{count}} participants",
+    "previewMedia": "{{count}} media placeholders kept as markers",
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+  }
+}

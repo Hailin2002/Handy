@@ -1,0 +1,111 @@
+# Tauri Attack Surface Audit — CSP, Asset Protocol Scope, Capability Grants vs. Meeting-Mode Data-at-Rest
+
+Role: Security Engineering (read-only audit)
+Scope honored: `src-tauri/tauri.conf.json`, `src-tauri/capabilities/`, `src-tauri/src/portable.rs`, `docs/reviews` (this file). No code or config changes were made.
+Baseline: branch state of worktree `task-0068-attempt-1`, app version 0.9.5 (`src-tauri/tauri.conf.json:4`), Tauri 2.11.5 with `protocol-asset` feature (`src-tauri/Cargo.toml:33-38`).
+
+## 1. Verified current posture
+
+### 1.1 `tauri.conf.json` security block
+
+Verified verbatim (`src-tauri/tauri.conf.json`):
+
+| Line | Content | Finding |
+|---|---|---|
+| 16 | `"csp": null` | No Content-Security-Policy is delivered to any webview. |
+| 18 | `"enable": true` (assetProtocol) | Asset protocol active. |
+| 20 | `"allow": ["**"]` | Asset protocol serves **every path on every drive the process can read**, including dotfiles. |
+| 21 | `"requireLiteralLeadingDot": false` | Hidden/dot-prefixed files (`~/.ssh/id_rsa`, `.aws/credentials`) are explicitly reachable. |
+
+Also relevant: `"windows": []` (`tauri.conf.json:14`) — both windows are created programmatically and are matched to capabilities purely by their labels (`main`: `src-tauri/src/lib.rs:494`; `recording_overlay`: `src-tauri/src/overlay.rs:397-400` and macOS panel variant `overlay.rs:445-450`). Updater plugin is configured with empty `pubkey`/`endpoints` (`tauri.conf.json:79-82`), i.e. registered but inert — acceptable, but it must be populated before any release build ships updates.
+
+### 1.2 Capability enumeration, per window
+
+`src-tauri/capabilities/default.json` — `"windows": ["main", "recording_overlay"]` (line 5), so **every** permission below (lines 7-23) is granted to both windows:
+
+| Permission | Line | Granted to |
+|---|---|---|
+| `core:default` | 7 | main, recording_overlay |
+| `opener:default` | 8 | main, recording_overlay |
+| `store:default` | 9 | main, recording_overlay |
+| `updater:default` | 10 | main, recording_overlay |
+| `process:default` | 11 | main, recording_overlay |
+| `dialog:default` | 12 | main, recording_overlay |
+| `global-shortcut:allow-is-registered` | 13 | main, recording_overlay |
+| `global-shortcut:allow-register` | 14 | main, recording_overlay |
+| `global-shortcut:allow-unregister` | 15 | main, recording_overlay |
+| `global-shortcut:allow-unregister-all` | 16 | main, recording_overlay |
+| `macos-permissions:default` | 17 | main, recording_overlay |
+| `fs:read-files` | 18 | main, recording_overlay |
+| `fs:allow-resource-read-recursive` | 19 | main, recording_overlay |
+| `fs:scope` `$APPDATA`, `$APPDATA/**/*` | 20-23 | main, recording_overlay |
+
+Flagged: **`recording_overlay` receives the identical grant set as `main`.** A minimal always-on-top, transparent, non-focusable level indicator (`overlay.rs:397-416`) has no legitimate need for filesystem reads, the opener, the store, the updater, dialogs, or global-shortcut registration.
+
+`src-tauri/capabilities/desktop.json` — `"windows": ["main"]` (line 4):
+
+| Permission | Line |
+|---|---|
+| `autostart:default` | 5, duplicated at 8, 9 |
+| `global-shortcut:default` | 6 |
+| `updater:default` | 10 |
+
+Findings: triple-duplicated `autostart:default` (cosmetic, lines 5/8/9); `global-shortcut:default` duplicates the four explicit grants already in `default.json`; `updater:default` is granted twice across files.
+
+**The webview does not use global shortcuts at all.** Grep over `src/` finds zero imports of `@tauri-apps/plugin-global-shortcut`; all shortcut handling is Rust-side (`src-tauri/src/shortcut/tauri_impl.rs:8`). Capability grants only gate webview→plugin IPC; Rust-side registration works without any capability. All six `global-shortcut:*` entries in both files are dead privilege for the webview and can be deleted outright.
+
+### 1.3 What the frontend actually reaches today
+
+- `fs:read-files` + `$APPDATA/**/*` scope exist solely for one call site: `readFile(result.data)` in the Linux playback fallback of the dictation-history audio player (`src/components/settings/history/HistorySettings.tsx:189`, import at line 3).
+- On Windows/macOS the same player uses `convertFileSrc(result.data, "asset")` (`HistorySettings.tsx:193`) — served by the asset protocol whose scope is `**`.
+- Dictation WAVs live under `<app data>/recordings` (`src-tauri/src/managers/history.rs:77-83`); `history.db` sits beside them (`history.rs:79`). Meeting-mode storage per plan §7 will add `meetings/<id>/audio/*.wav`, manifests, transcripts, and summaries in the same resolved directory (plan section 9 tables `meeting_audio_chunks.path`, `assets` storage keys; §7 persistence layout).
+- No `dangerouslySetInnerHTML`/`innerHTML`/`eval` in `src/` (grep verified). Markdown rendering uses `react-markdown` v10 (`package.json:43`), which escapes raw HTML by default. External links go through `opener:openUrl` (`src/components/whats-new/MarkdownContent.tsx:41` and four other components).
+- Both windows load only bundled content: `WebviewUrl::App("/".into())` (`lib.rs:494`) and `WebviewUrl::App("src/overlay/index.html".into())` (`overlay.rs:400, 450`). Dev mode loads `http://localhost:1420` (`tauri.conf.json:8`). **No remote/external URL is ever loaded into a webview.**
+
+### 1.4 Portable mode interaction (`src-tauri/src/portable.rs`)
+
+- When a valid `portable` marker sits next to the exe, all data moves to `<exe dir>\Data` (`portable.rs:15-49`); WebView2 cache follows (`lib.rs:502-504`, `overlay.rs:418-420`).
+- Consequences for this audit:
+  1. **Scope/data mismatch:** the `fs:scope` variable `$APPDATA` is resolved by the fs plugin against Tauri's own path resolver, which is *not* portable-aware (Rust code routes through `portable::app_data_dir`, `portable.rs:69-75`, but the capability scope does not). In portable mode, meeting WAVs land in `<exe dir>\Data\meetings\...` while the webview's fs scope still whitelists only `%APPDATA%\Speak\...`. Today this turns the Linux `readFile` fallback into a guaranteed permission denial for portable users (`HistorySettings.tsx:189`); tomorrow it means the capability file silently stops describing reality.
+  2. **Weaker at-rest boundary:** `Data` next to the exe inherits the ACLs of wherever the user put the app (Desktop, `Downloads`, a synced cloud folder, a USB stick). Any process running as the same user — or any sync client — can read, tamper, or exfiltrate hours of confidential meeting audio with no keyring-style protection. The plan's promise "sicher auf die Festplatte geschrieben" (§1) is currently confidentiality-equivalent to a plain file in the user profile.
+  3. **Marker spoofing:** anyone who can write next to the exe can drop a `Handy Portable Mode` marker plus empty `Data/` and redirect all future meeting data into a chosen writable folder (`portable.rs:20-34`). Low severity (requires local write access to the install dir) but worth documenting as accepted risk for portable builds.
+
+## 2. Threat assessment
+
+Precondition baseline: both windows load only first-party bundles, and there is no known XSS sink today. Every scenario below therefore starts from a *future* injection vector — which is exactly why CSP-null is a defense-in-depth failure rather than an open door right now. The meeting-mode plan itself declares transcripts, chat imports, and file metadata as untrusted input (§10, §12), guaranteeing a stream of attacker-influenced strings flowing into these webviews.
+
+| # | Scenario | Preconditions | Impact |
+|---|---|---|---|
+| T1 | **Bulk meeting-audio theft via fs plugin.** Injected script in `main` calls `readFile()` in a loop over `$APPDATA/**/*` (or, post-meeting-mode, iterates `meetings/<uuid>/audio/*.wav` + SQLite transcripts discovered via predictable layout) and POSTs blobs to an attacker endpoint. | Script execution in the main webview (supply-chain compromise of an npm dep, a future unsafe renderer, a compromised update). CSP null removes the last net that would block exfil `connect-src`. | Complete loss of every stored dictation *and* all meeting audio/transcripts/summaries — the most sensitive corpus the product will hold. |
+| T2 | **Arbitrary local file read via asset protocol.** Injected or manipulated frontend code calls `convertFileSrc("C:/Users/victim/.ssh/id_rsa")` (or `/home/u/.aws/credentials`) and loads the resulting `asset://` / `http://asset.localhost` URL. Scope `**` (`tauri.conf.json:20`) with `requireLiteralLeadingDot: false` (line 21) permits any path including dotfiles. Combined with CSP null there is no `img-src`/`media-src` restriction preventing the fetch. | Same as T1, plus nothing else — no additional misstep required. | Exfiltration of SSH keys, cloud credentials, browser cookie stores — far beyond the app's own data; turns a webview bug into full account takeover material. |
+| T3 | **Transcript-driven injection in meeting UI (future).** Meeting transcripts embed attacker-controlled speech ("ignore instructions…", crafted markup) and imported WhatsApp/media metadata (plan §12 explicitly calls them untrusted). If any Phase 4+ component renders segments as HTML instead of through escaped markdown, script runs inside `main`. With today's grants it immediately chains to T1/T2. | Implementation slip in Phase 4/7/9 UI under CSP null (nothing forces safe-by-default; no CSP to catch it in review). | Chain to T1+T2; also silent manipulation of summaries/tasks shown to the user. |
+| T4 | **Overlay abuse.** Script execution in `recording_overlay` — a permanently resident, always-on-top window created at startup (`lib.rs:169`) — inherits `fs:$APPDATA/**/*` read, `opener`, `store`, `updater`, `process`, and all four `global-shortcut` grants (`capabilities/default.json:5-23`). It can re-register system-wide shortcuts to shadow hotkeys (keystroke interception via shortcut callbacks), read the entire app-data corpus, or open URLs/processes. | Injection in the tiny overlay bundle (`src/overlay/`), which nobody expects to be an attack target precisely because it looks trivial. | Equal blast radius to `main` despite needing ~zero privileges; persistent because the overlay is created hidden at every launch. |
+| T5 | **Portable-mode data redirection/tampering.** Attacker with write access to the app folder plants a `portable` marker + `Data/` to relocate future meeting recordings into a synced or shared location (`portable.rs:23-44`), or simply reads/modifies existing `<exe dir>\Data\meetings\*.wav` and `history.db`, which are plaintext with folder-level ACLs only. Additionally, the stale `$APPDATA` fs scope denies portable users legitimate playback (functional DoS of `HistorySettings.tsx:189` on Linux). | Local write/read access to install dir (shared machines, USB/portable distribution — the exact use case portable mode targets). | Confidentiality/integrity loss of meeting audio outside any managed location; silent breakage of scoped file access for portable users. |
+| T6 | **Dev-mode exposure.** With `csp: null`, `bun run tauri dev` serves the UI from `http://localhost:1420` (`tauri.conf.json:7-8`) with full IPC grants and no CSP; any other local process or page able to reach that origin (DNS-rebinding against a permissive local setup) can attempt IPC during development sessions where real meeting recordings already exist in app data. | Developer machine running dev build against production-shaped data. | Leakage of real meeting data during routine development; classic Tauri dev-target pitfall. |
+
+**Is `csp: null` exploitable today?** Not directly: no external content is loaded into either webview (both use `WebviewUrl::App`, see §1.3), no HTML-injection sink exists in `src/` today, and `react-markdown` escapes raw HTML by default. It is nonetheless rated **high-priority remediation, not optional**: the meeting-mode roadmap deliberately pumps untrusted third-party text (transcripts, WhatsApp imports, LLM output, §10/§12) into exactly this webview, and T1–T4 all assume only one implementation mistake — which CSP exists to survive. Defense-in-depth here protects the most sensitive data class the product will have.
+
+## 3. Recommendations (phase-gated)
+
+Each item names the exact change and the plan phase gate before which it must land.
+
+| ID | Exact change | Must land before |
+|----|--------------|------------------|
+| R1 | Set `"csp"` in `src-tauri/tauri.conf.json:16` to a concrete policy: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost blob:; connect-src 'self' ipc: http://ipc.localhost; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'`. Keep dev working via a dev-only override (`devCsp`-style conditional config or env-gated builder) permitting `http://localhost:1420` — do not relax the production value. `'unsafe-inline'` for styles covers Tailwind runtime injection; scripts stay locked to `'self'`. Verify `convertFileSrc` audio playback still passes (`HistorySettings.tsx:193`) via the `asset:` / `http://asset.localhost` entries (Windows WebView2 uses the http form). | **Phase 3** (new App Shell renders the first untrusted-content views; mandatory no later than Phase 4 when meeting transcripts first appear). |
+| R2 | Replace `"allow": ["**"]` in `tauri.conf.json:20` with the narrowest serving set: `["$APPDATA/recordings/**"]` now, extended to `"$APPDATA/meetings/**"` when Phase 2/3 introduces that layout. Flip `"requireLiteralLeadingDot": false` → `true` (line 21). Update the single consumer (`convertFileSrc` in `HistorySettings.tsx:193`) accordingly. | **Phase 3** (AssetStore defines final storage keys; the `**` scope must not survive the introduction of meeting audio). |
+| R3 | Split capabilities: remove `"recording_overlay"` from `capabilities/default.json:5`; create `capabilities/recording-overlay.json` containing only `core:default` for window `recording_overlay` (add specific grants later only with a documented reason). This kills T4's fs/opener/store/updater/process/dialog reach in one move. | **Phase 4** (before meeting recording makes the overlay a permanent fixture holding session state); trivially safe to do immediately. |
+| R4 | Delete all six `global-shortcut:*` grants from `capabilities/default.json:13-16` and `global-shortcut:default` from `desktop.json:6` — grep-proven unused by any webview code; Rust-side shortcuts need no capability. Also deduplicate `autostart:default` (desktop.json:5/8/9) and the double `updater:default` (default.json:10, desktop.json:10). | Immediately / **Phase 0** checkpoint (zero-risk cleanup, shrinks the audited surface before any meeting code lands). |
+| R5 | Narrow `fs:scope` (`default.json:20-23`) to `"$APPDATA/recordings/**"` (later `+ "$APPDATA/meetings/**"`), and preferably retire webview file reads entirely: replace the Linux-only `readFile` fallback (`HistorySettings.tsx:189`) with a Rust command returning bytes, consistent with the plan's rule "Die React-Oberfläche liest weder SQLite noch lokale Dateien direkt" (§5). Then `fs:read-files` can be dropped too. | **Phase 3** (service/storage boundary phase — doing it here avoids retrofitting). |
+| R6 | Make scopes portable-consistent: either generate the fs/asset scope at runtime to include the portable `Data` dir (Tauri 2 supports runtime capability/scopes via `Builder`), or accept-and-document that portable installs have no direct webview file access and route everything through commands per R5. Ensure portable `Data/` inherits restrictive ACLs and warn when placed in user-synced folders. | **Phase 3** (migration tests run on copies of user data then; portable meeting storage arrives with Phase 2/3 layouts). |
+| R7 | At-rest hardening for meeting audio (out-of-scope detail, flagged for the hardening pass): consider OS-level protection (Windows DPAPI/ACL tightening) or documented acceptance for portable mode; the plan's consent/retention rules (§12) govern lifecycle, not confidentiality against same-user processes. | **Phase 11** (Härtung und Release-Gate). |
+
+## 4. Explicit non-goals / complexity budget notes
+
+Per the mission's complexity budget: R1/R2/R3/R4 are pure config reductions with no runtime feature cost — none conflict with the plan's non-goals list (§2). R5's command-based file access aligns with an architecture the plan already mandates (§5), so it adds no new abstraction. Nothing here proposes encryption subsystems, agent sandboxing, or new UI; R7 defers at-rest crypto decisions to the existing Phase 11 hardening gate rather than inventing a new workstream.
+
+## 5. Verification performed
+
+- Read `src-tauri/tauri.conf.json` (lines cited above), `src-tauri/capabilities/default.json`, `src-tauri/capabilities/desktop.json`, `src-tauri/src/portable.rs` in full.
+- Grep confirmed: zero `@tauri-apps/plugin-global-shortcut` usage in `src/`; zero `dangerouslySetInnerHTML`/`innerHTML`/`eval` in `src/`; sole fs-plugin consumer is `HistorySettings.tsx:189`; sole `convertFileSrc` consumer is `HistorySettings.tsx:193`.
+- Window creation sites verified (`lib.rs:494`, `overlay.rs:383-450`), plugin registrations (`lib.rs:356-439`), Cargo features (`Cargo.toml:33-47`), recording storage path (`managers/history.rs:76-89`).
+- No files modified except this report (verified via `git status` after writing; see task result).

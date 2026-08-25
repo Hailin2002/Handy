@@ -1,0 +1,61 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+package-lock.json
+
+node_modules
+dist
+dist-ssr
+*.local
+*.local.*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.claude/
+
+/target/
+recording_*
+.crush/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
+.direnv
+.envrc
+
+# Nix build output
+result
+
+# Python bytecode (scripts/)
+__pycache__/
+
+# Harness scratch directories (automation npm caches; break `git add --all`)
+.tmp-npm/
+.npm-cache/
+# Any future harness temp dirs following the same naming scheme
+.tmp-*/
+
+# Local build/debug scratch logs (never committed)
+debug.log
+msbuild.log
+.diagbuild.log
+.vitepreview.log
+
+.playwright-browsers/

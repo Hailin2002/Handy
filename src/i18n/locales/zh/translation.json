@@ -1,0 +1,1269 @@
+{
+  "tray": {
+    "settings": "设置...",
+    "checkUpdates": "检查更新...",
+    "copyLastTranscript": "复制最新转录",
+    "unloadModel": "卸载模型",
+    "model": "模型",
+    "quit": "退出",
+    "cancel": "取消",
+    "secureInputWarning": "⚠ 快捷键被 Secure Input 阻止"
+  },
+  "sidebar": {
+    "general": "通用",
+    "models": "模型",
+    "advanced": "高级",
+    "postProcessing": "后处理",
+    "history": "历史记录",
+    "debug": "调试",
+    "about": "关于"
+  },
+  "nav": {
+    "primaryAriaLabel": "主导航",
+    "settingsTabsAriaLabel": "设置分区",
+    "dictate": "听写",
+    "meetings": "会议",
+    "projects": "项目",
+    "history": "听写历史",
+    "settings": "设置",
+    "about": "帮助与关于",
+    "activeMeeting": "录音中 · {{duration}}",
+    "projectsEmptyBody": "项目将汇总状态、任务、会议和导入的来源。"
+  },
+  "meetings": {
+    "emptyBenefit": "录制会议并获得转录和摘要，无需离开应用。",
+    "newMeeting": "新建会议",
+    "importAudio": "导入音频文件",
+    "privacyLocal": "默认：在本设备上本地处理",
+    "searchPlaceholder": "搜索会议",
+    "search": "搜索",
+    "backToList": "返回会议列表",
+    "saveTitle": "保存标题",
+    "saveError": "保存标题失败，请重试。",
+    "createError": "创建会议失败，请重试。",
+    "deleteError": "删除会议失败，请重试。",
+    "deleteConfirmTitle": "删除此会议？",
+    "deleteConfirmBody": "这将永久删除该会议及其转录和摘要。",
+    "titleInputLabel": "会议标题",
+    "statusLabel": "状态",
+    "createdLabel": "创建时间",
+    "notFound": "找不到该会议。",
+    "loadError": "无法加载会议。",
+    "stateDraft": "草稿",
+    "stateRecording": "录音中",
+    "stateCompleted": "已完成",
+    "stateOther": "处理中",
+    "badgeRecording": "Recording",
+    "badgeStopping": "Stopping",
+    "badgeInterrupted": "Interrupted",
+    "badgeAttention": "Attention needed",
+    "badgeComplete": "Completed",
+    "badgeProcessing": "Processing",
+    "badgePaused": "Paused"
+  },
+  "meeting": {
+    "actions": {
+      "startMeeting": "Start meeting",
+      "pause": "Pause",
+      "resume": "Resume",
+      "endMeeting": "End meeting",
+      "keepRecording": "Keep recording",
+      "cancel": "Cancel",
+      "close": "Close",
+      "tryAgain": "Try again",
+      "switchDevice": "Switch device",
+      "openSettings": "Open settings",
+      "openSystemSettings": "Open system settings",
+      "reconnect": "Reconnect",
+      "recordMicOnly": "Record microphone only",
+      "continueWithoutSystemAudio": "Continue without system audio",
+      "workInBackground": "Continue in background",
+      "retryFailedSegments": "Retry failed segments",
+      "openMeeting": "Open meeting",
+      "deleteRecording": "Delete recording",
+      "recover": "Recover and process",
+      "decideLater": "Decide later",
+      "testSystemAudio": "Test system audio",
+      "jumpToLatest": "Jump to current text",
+      "cancelMeetingStart": "Cancel meeting start",
+      "useLocal": "Process locally",
+      "finishDictation": "Finish dictation",
+      "resumeWithDevices": "Continue with these devices",
+      "confirmDelete": "I understand — delete permanently"
+    },
+    "session": {
+      "draft": {
+        "hint": "Nothing is being recorded yet."
+      },
+      "starting": {
+        "title": "Starting meeting…",
+        "body": "Checking microphone and system audio…"
+      },
+      "recording": {
+        "title": "Recording",
+        "saved": "Audio saved",
+        "provider": {
+          "local": "Local",
+          "cloud": "Cloud ({{provider}})"
+        }
+      },
+      "paused": {
+        "title": "Paused",
+        "body": "No audio is being saved or uploaded while paused."
+      },
+      "stopping": {
+        "title": "Finishing recording…",
+        "body": "Finalising the audio files. This takes only a moment.",
+        "done": "Recording ended — audio saved."
+      },
+      "completed": {
+        "title": "Meeting completed",
+        "saved": "Transcript and summary are stored on this device."
+      },
+      "cancelled": {
+        "title": "Recording cancelled",
+        "body": "The audio captured so far has been kept. Nothing was deleted."
+      },
+      "micOnly": {
+        "badge": "Microphone only — system audio is not being recorded"
+      },
+      "durationLabel": "Recording duration {{duration}}"
+    },
+    "consent": {
+      "beforeStart": {
+        "title": "Before you record",
+        "body": "Recording a conversation requires the consent of everyone involved. Speak shows a recording indicator for the whole meeting and is not designed as a stealth recorder.",
+        "acknowledge": "Everyone involved has consented"
+      },
+      "indicator": {
+        "label": "This meeting is being recorded."
+      }
+    },
+    "cloud": {
+      "notice": {
+        "azure": {
+          "title": "Cloud transcription selected",
+          "body": "Audio from your microphone and system audio will be uploaded to Microsoft Azure and transcribed there. With local processing, nothing leaves this device."
+        }
+      },
+      "active": {
+        "azure": "Audio is being uploaded to Azure.",
+        "azureProcessing": "Audio segments are being uploaded to Azure for transcription.",
+        "llm": "Transcript text is being sent to {{provider}} to create the summary."
+      }
+    },
+    "preflight": {
+      "title": "Start checks",
+      "description": "Speak checks devices, storage and transcription before recording starts.",
+      "recheck": "Check again",
+      "blocked": "Fix the checks marked below before starting.",
+      "unavailable": "Speak cannot run the start checks right now, so recording is unavailable.",
+      "pending": "Running start checks…",
+      "status": {
+        "ok": "Works",
+        "warning": "Needs attention",
+        "error": "Not ready",
+        "checking": "Checking…"
+      },
+      "row": {
+        "microphone": "Microphone",
+        "systemAudio": "System audio",
+        "transcription": "Transcription",
+        "language": "Language",
+        "disk": "Storage",
+        "permission": "Permissions"
+      }
+    },
+    "setup": {
+      "title": "Start meeting",
+      "description": "Give the meeting a name and start when the checks below look right.",
+      "summaryToggle": "Summarise after the meeting",
+      "summaryHint": "The summary is created once the transcript is complete.",
+      "storageHint": "About 0.25 GB of storage is used per hour of microphone and system audio.",
+      "moreSettings": "More settings",
+      "providerLabel": "?????????",
+      "providerHint": "??????????????????????????????",
+      "providerLocal": "????",
+      "providerAzure": "Azure Speech(??)",
+      "providerCustom": "?????(??)"
+    },
+    "live": {
+      "heading": "Live transcript",
+      "transcriptEmpty": "Finished transcript sections appear here while the meeting runs.",
+      "backlog": "{{count}} sections waiting",
+      "status": {
+        "listening": "Listening",
+        "transcribing": "Section is being transcribed",
+        "behind": "Processing is behind"
+      },
+      "levels": {
+        "microphone": "Microphone level",
+        "system": "System audio level",
+        "value": "{{label}}: {{percent}}%"
+      },
+      "stopConfirm": {
+        "title": "End meeting?",
+        "body": "The recording is finalised and processing starts. Nothing recorded so far is deleted."
+      }
+    },
+    "processing": {
+      "title": "Processing meeting",
+      "closeOk": "You can close this window.",
+      "done": "Meeting ready",
+      "summarizing": "Creating summary…",
+      "backlog": "{{count}} segments waiting",
+      "step": {
+        "saved": "Recording saved safely",
+        "prepared": "{{done}} of {{total}} audio segments prepared",
+        "transcribed": "{{done}} of {{total}} segments transcribed",
+        "summary": "Summary",
+        "summarySkipped": "Summary is switched off for this meeting"
+      },
+      "state": {
+        "pending": "Waiting",
+        "running": "In progress",
+        "done": "Done"
+      },
+      "failed": "{{count}} segments failed and can be retried."
+    },
+    "recovery": {
+      "heading": "Interrupted meetings",
+      "title": "Recover meeting recording?",
+      "body": "Speak was closed unexpectedly during “{{title}}”. The audio captured up to that point was saved and can be processed.",
+      "counts": "{{recovered}} sections recovered, {{damaged}} damaged.",
+      "causeCrash": "Interrupted by an unexpected close",
+      "causeSleepWake": "Interrupted because this PC went to sleep",
+      "causeUnknown": "The reason for the interruption is unknown"
+    },
+    "errors": {
+      "generic": {
+        "title": "Something needs your attention",
+        "body": "The meeting could not continue. Try again or open the settings."
+      },
+      "backendUnavailable": {
+        "title": "Meeting recording is not available yet",
+        "body": "This build cannot record meetings because the recording service is missing. Everything already saved is untouched."
+      },
+      "recoverable": {
+        "title": "Something needs your attention"
+      },
+      "micLost": {
+        "title": "Microphone disconnected",
+        "body": "Your microphone stopped working. System audio is still being recorded."
+      },
+      "systemLost": {
+        "title": "System audio stopped",
+        "body": "The output device stopped delivering audio. Your microphone is still being recorded."
+      },
+      "noLoopback": {
+        "title": "System audio can’t be captured",
+        "body": "Speak can’t listen to this output device. You can record the microphone only."
+      },
+      "exclusiveMode": {
+        "title": "Output device is busy",
+        "body": "The output device is running in exclusive mode, so system audio can’t be captured."
+      },
+      "diskFull": {
+        "title": "Recording stopped — storage full",
+        "body": "Speak stopped the recording to protect your data. Everything captured so far is saved."
+      },
+      "cloudUnreachable": {
+        "title": "Cloud transcription is unreachable",
+        "body": "Recording continues on this device. Sections will be transcribed as soon as the service responds again."
+      },
+      "cloudConfig": {
+        "title": "Cloud transcription is not configured",
+        "body": "The stored credentials were rejected. Recording continues locally."
+      },
+      "micPermission": {
+        "title": "Microphone access required",
+        "body": "Speak needs microphone access to record meetings. Grant access in the system privacy settings."
+      },
+      "missingKey": {
+        "title": "Setup incomplete",
+        "body": "Transcription is not configured yet. Open the settings to finish the setup."
+      },
+      "slept": {
+        "title": "Recording was interrupted",
+        "body": "This PC went to sleep. The recording stopped safely and can be continued."
+      },
+      "startFailed": {
+        "title": "The meeting could not be started",
+        "body": "Nothing was recorded. Check the devices and try again."
+      },
+      "pauseFailed": {
+        "title": "The meeting could not be paused",
+        "body": "Recording continues. Try again."
+      },
+      "resumeFailed": {
+        "title": "The meeting could not be resumed",
+        "body": "The meeting stays paused. Check the devices and try again."
+      },
+      "stopFailed": {
+        "title": "The meeting could not be ended",
+        "body": "The recording is still running and nothing was lost. Try again."
+      },
+      "cancelFailed": {
+        "title": "The meeting could not be cancelled",
+        "body": "Try again or end the meeting instead."
+      },
+      "retryFailed": {
+        "title": "The segments could not be queued again",
+        "body": "The audio is still saved. Try again."
+      },
+      "recoveryFailed": {
+        "title": "The recording could not be recovered",
+        "body": "The saved audio is untouched. Try again or open the meeting."
+      },
+      "preflightFailed": {
+        "title": "The start checks could not be completed",
+        "body": "Run the checks again before starting the meeting."
+      }
+    },
+    "warnings": {
+      "diskLow": {
+        "title": "Storage almost full",
+        "body": "A one-hour meeting with microphone and system audio needs roughly 0.25 GB."
+      },
+      "silence": {
+        "title": "No system sound detected",
+        "body": "The selected output device is silent. If you hear sound through another device, the wrong one may be selected."
+      },
+      "backlog": {
+        "title": "Processing is behind",
+        "body": "Sections are queued on disk and will be transcribed after the meeting. Nothing is lost."
+      },
+      "devicesChanged": {
+        "title": "Devices changed while paused",
+        "body": "A new source section will be started in the transcript."
+      }
+    },
+    "detail": {
+      "summaryHeading": "Summary",
+      "transcriptHeading": "Transcript",
+      "decisions": "Decisions",
+      "actionItems": "Action items",
+      "openQuestions": "Open questions",
+      "summaryFailed": "The summary could not be created.",
+      "resummarize": "Summarise again",
+      "resummarizeDone": "Summary updated",
+      "resummarizeFailed": "Re-summarising failed",
+      "searchLabel": "Search the transcript",
+      "searchPlaceholder": "Search in transcript�",
+      "searchMatches_one": "{{count}} match",
+      "searchMatches_other": "{{count}} matches"
+    }
+  },
+  "onboarding": {
+    "subtitle": "请选择一个转录模型以开始使用",
+    "existingModelsTitle": "兼容的模型",
+    "downloadModelsTitle": "可供下载",
+    "showAllModels": "显示全部 {{total}} 个模型",
+    "showFewerModels": "显示较少模型",
+    "recommended": "推荐",
+    "customModelDescription": "非官方支持",
+    "modelCard": {
+      "accuracy": "准确度",
+      "speed": "速度"
+    },
+    "models": {
+      "small": {
+        "name": "Whisper Small",
+        "description": "快速且相当准确。"
+      },
+      "medium": {
+        "name": "Whisper Medium",
+        "description": "准确度高，速度适中"
+      },
+      "turbo": {
+        "name": "Whisper Turbo",
+        "description": "准确度和速度均衡。"
+      },
+      "large": {
+        "name": "Whisper Large",
+        "description": "准确度高，但速度较慢。"
+      },
+      "parakeet-tdt-0.6b-v2": {
+        "name": "Parakeet V2",
+        "description": "仅支持英语。英语用户的最佳模型。"
+      },
+      "parakeet-tdt-0.6b-v3": {
+        "name": "Parakeet V3",
+        "description": "快速且准确"
+      },
+      "moonshine-base": {
+        "name": "Moonshine Base",
+        "description": "非常快速，仅支持英语。口音处理良好。"
+      },
+      "moonshine-tiny-streaming-en": {
+        "name": "Moonshine V2 Tiny",
+        "description": "超快速，仅支持英语"
+      },
+      "moonshine-small-streaming-en": {
+        "name": "Moonshine V2 Small",
+        "description": "快速，仅支持英语。速度与准确度的良好平衡。"
+      },
+      "moonshine-medium-streaming-en": {
+        "name": "Moonshine V2 Medium",
+        "description": "仅支持英语。高质量。"
+      },
+      "breeze-asr": {
+        "name": "Breeze ASR",
+        "description": "针对台湾国语优化。支持语码转换。"
+      },
+      "sense-voice-int8": {
+        "name": "SenseVoice",
+        "description": "非常快速。支持中文、英语、日语、韩语、粤语。"
+      },
+      "gigaam-v3-e2e-ctc": {
+        "name": "GigaAM v3",
+        "description": "俄语语音识别。快速且准确。"
+      },
+      "canary-180m-flash": {
+        "name": "Canary 180M Flash",
+        "description": "非常快速。支持英语、德语、西班牙语、法语。支持翻译。"
+      },
+      "canary-1b-v2": {
+        "name": "Canary 1B v2",
+        "description": "准确的多语言模型。25种欧洲语言。支持翻译。"
+      },
+      "cohere-int8": {
+        "name": "Cohere",
+        "description": "大型模型，速度较慢，但多语言识别非常准确。"
+      }
+    },
+    "errors": {
+      "selectModel": "选择模型失败"
+    },
+    "permissions": {
+      "title": "需要权限",
+      "description": "Handy 需要一些权限才能正常工作。",
+      "microphone": {
+        "title": "麦克风访问",
+        "description": "需要听取您的语音进行转录。"
+      },
+      "accessibility": {
+        "title": "辅助功能访问",
+        "description": "需要将转录文本输入到您的应用程序中。"
+      },
+      "grant": "授予权限",
+      "granted": "已授予",
+      "waiting": "等待中...",
+      "allGranted": "全部完成！",
+      "errors": {
+        "checkFailed": "检查权限失败。请重试。",
+        "requestFailed": "请求权限失败。请重试。"
+      }
+    }
+  },
+  "modelSelector": {
+    "custom": "自定义",
+    "streaming": "流式",
+    "active": "活跃",
+    "switching": "切换中...",
+    "noModelsAvailable": "没有可用的模型",
+    "verifying": "正在验证 {{modelName}}...",
+    "verifyingGeneric": "正在验证...",
+    "extracting": "正在解压 {{modelName}}...",
+    "extractingMultiple": "正在解压 {{count}} 个模型...",
+    "extractingGeneric": "解压中...",
+    "downloading": "下载中 {{percentage}}%",
+    "downloadingMultiple": "正在下载 {{count}} 个模型...",
+    "modelReady": "模型已就绪",
+    "loading": "正在加载 {{modelName}}...",
+    "loadingGeneric": "加载中...",
+    "modelError": "模型错误",
+    "modelUnloaded": "模型已卸载",
+    "noModelDownloadRequired": "无模型 - 需要下载",
+    "deleteModel": "删除 {{modelName}}",
+    "downloadSpeed": "{{speed}} MB/s",
+    "capabilities": {
+      "languageSelection": "支持多种输入语言",
+      "languageCount": "{{total}} 种语言",
+      "translation": "可翻译为英语",
+      "translate": "翻译为英语",
+      "singleLanguage": "仅支持此语言",
+      "languageOnly": "仅 {{language}}",
+      "streaming": "在您说话时实时显示转录"
+    },
+    "cancel": "取消",
+    "cancelDownload": "取消下载",
+    "legacy": "旧版",
+    "downloadingGeneric": "下载中..."
+  },
+  "settings": {
+    "speechPipeline": {
+      "title": "Speech pipeline",
+      "description": "Choose how audio becomes text and optionally translate the result before it is pasted.",
+      "preview": {
+        "terminology": "Terminology",
+        "translation": "DeepL",
+        "paste": "Paste"
+      },
+      "provider": {
+        "title": "Speech-to-text provider",
+        "description": "Use an on-device model, Azure Speech, or your own HTTP endpoint.",
+        "local": "Local model",
+        "azure": "Azure Speech",
+        "custom": "Custom STT endpoint"
+      },
+      "azure": {
+        "endpoint": {
+          "title": "Azure endpoint",
+          "description": "The complete short-audio REST endpoint of your Azure Speech resource.",
+          "placeholder": "https://…/stt/speech/recognition/conversation/cognitiveservices/v1"
+        },
+        "language": {
+          "title": "Recognition locale",
+          "description": "Azure locale used for speech recognition, for example de-DE.",
+          "placeholder": "de-DE"
+        },
+        "apiKey": {
+          "title": "Azure API key",
+          "description": "Subscription key for the configured Azure Speech resource.",
+          "placeholder": "Enter Azure Speech key"
+        }
+      },
+      "azureValidation": {
+        "title": "Save and test Azure",
+        "description": "Saves the Azure fields and verifies the exact configuration with a short connection test.",
+        "button": "Save & test connection",
+        "testing": "Saving and testing…",
+        "success": "Azure Speech is configured correctly.",
+        "failed": "Azure test failed: {{error}}"
+      },
+      "custom": {
+        "endpoint": {
+          "title": "Custom endpoint",
+          "description": "Receives 16 kHz mono WAV audio and returns plain text or a supported JSON transcript.",
+          "placeholder": "https://your-service.example/transcribe"
+        },
+        "token": {
+          "title": "Bearer token",
+          "description": "Optional authorization token sent to your endpoint.",
+          "placeholder": "Optional token"
+        }
+      },
+      "deepl": {
+        "enabled": {
+          "title": "Translate with DeepL",
+          "description": "Translate the transcript before optional AI post-processing and pasting."
+        },
+        "apiKey": {
+          "title": "DeepL API key",
+          "description": "Works with both DeepL API Free and Pro keys.",
+          "placeholder": "Enter DeepL API key"
+        },
+        "target": {
+          "title": "Translation target",
+          "description": "Language produced by DeepL before the text enters the remaining pipeline."
+        },
+        "targetEnglish": "English",
+        "targetEnglishBritish": "English (British)",
+        "targetEnglishAmerican": "English (American)",
+        "targetGerman": "German"
+      },
+      "advanced": {
+        "title": "Advanced live pipeline",
+        "description": "Sentence stability, endpointing and translation timing",
+        "stability": {
+          "title": "Live text stability",
+          "description": "Number of matching Azure partial results required before words are treated as stable. The conference pipeline used 3."
+        },
+        "phraseSilence": {
+          "title": "Sentence-final silence",
+          "description": "How long Azure waits through silence before finalizing the current phrase. Longer values preserve sentence context; shorter values react faster."
+        },
+        "translationDelay": {
+          "title": "DeepL sentence delay",
+          "description": "Wait after an Azure-final sentence and combine any additional final segments before sending the text once to DeepL. Interim text is never billed."
+        }
+      }
+    },
+    "modelSettings": {
+      "title": "{{model}} 设置"
+    },
+    "models": {
+      "title": "转录模型",
+      "description": "选择转录模型或下载其他模型。不同模型提供不同的准确度和速度。",
+      "deleteConfirm": "确定要删除 {{modelName}} 吗？您需要重新下载才能使用。",
+      "deleteActiveConfirm": "{{modelName}} 是您当前使用的模型。删除后将停止转录，直到您选择新的模型。确定要删除吗？",
+      "deleteTitle": "删除模型",
+      "filters": {
+        "allLanguages": "所有语言",
+        "streaming": "筛选支持实时转录的模型",
+        "translation": "筛选支持翻译为英语的模型"
+      },
+      "noModelsMatch": "没有符合此筛选条件的模型。",
+      "yourModels": "已下载的模型",
+      "availableModels": "可供下载",
+      "searchPlaceholder": "按名称搜索模型…",
+      "rescan": {
+        "label": "重新扫描",
+        "tooltip": "重新扫描在 Handy 之外添加到模型文件夹或 Hugging Face 缓存中的模型"
+      }
+    },
+    "general": {
+      "title": "通用",
+      "shortcut": {
+        "title": "Handy 快捷键",
+        "description": "配置启动语音转文字录制的键盘快捷键",
+        "loading": "加载快捷键中...",
+        "none": "未配置快捷键",
+        "notFound": "未找到快捷键",
+        "pressKeys": "请按键...",
+        "bindings": {
+          "transcribe": {
+            "name": "转录快捷键",
+            "description": "用于录制和转录语音的键盘快捷键。"
+          },
+          "cancel": {
+            "name": "取消快捷键",
+            "description": "用于取消当前录制的键盘快捷键。"
+          },
+          "transcribe_with_post_process": {
+            "name": "后处理快捷键",
+            "description": "可选：一个专用快捷键，始终对您的转录应用 AI 后处理。"
+          }
+        },
+        "errors": {
+          "restore": "无法恢复原始快捷键",
+          "set": "无法设置快捷键: {{error}}",
+          "reset": "无法将快捷键重置为原始值"
+        },
+        "recordButtonAria": "更改{{name}}快捷键，当前为{{shortcut}}",
+        "escapeHint": "正在录制快捷键。按 Esc 键取消。"
+      },
+      "language": {
+        "title": "语言",
+        "description": "选择语音识别的语言。自动将自动确定语言，选择特定语言可以提高该语言的准确度。",
+        "searchPlaceholder": "搜索语言...",
+        "noResults": "未找到语言",
+        "auto": "自动"
+      },
+      "pushToTalk": {
+        "label": "按住说话",
+        "description": "按住录制，松开停止"
+      }
+    },
+    "sound": {
+      "title": "声音",
+      "microphone": {
+        "title": "麦克风",
+        "description": "选择您偏好的麦克风设备",
+        "placeholder": "选择麦克风...",
+        "loading": "加载中..."
+      },
+      "channel": {
+        "title": "输入通道",
+        "description": "选择要录制的输入通道。如果您的音频接口有多个输入，请使用此选项。",
+        "average": "所有通道的平均值",
+        "channel": "通道 {{n}}"
+      },
+      "audioFeedback": {
+        "label": "音频反馈",
+        "description": "录制开始和停止时播放声音"
+      },
+      "outputDevice": {
+        "title": "输出设备",
+        "description": "选择用于反馈声音的音频输出设备",
+        "placeholder": "选择输出设备...",
+        "loading": "加载中..."
+      },
+      "volume": {
+        "title": "音量",
+        "description": "调整音频反馈的音量"
+      }
+    },
+    "advanced": {
+      "groups": {
+        "app": "应用",
+        "output": "输出",
+        "transcription": "转录",
+        "history": "历史",
+        "experimental": "实验性"
+      },
+      "experimentalToggle": {
+        "label": "实验性功能",
+        "description": "启用仍在开发中的实验性功能。"
+      },
+      "lazyStreamClose": {
+        "label": "在转录之间保持麦克风开启",
+        "description": "录音停止后保持麦克风流开启30秒，减少连续转录时的延迟。激活时可能会降低蓝牙音频质量。"
+      },
+      "acceleration": {
+        "transcribe": {
+          "title": "Whisper 加速",
+          "description": "Whisper 模型的硬件加速。自动模式在可用时使用 GPU（macOS 上使用 Metal，Windows/Linux 上使用 Vulkan）。"
+        },
+        "ort": {
+          "title": "ONNX 加速",
+          "description": "ONNX 模型的硬件加速（Parakeet、Canary、Moonshine 等）。Windows 上的 DirectML 为实验性功能。模型可能无法正常转录。"
+        },
+        "gpuDevice": {
+          "auto": "自动"
+        }
+      },
+      "startHidden": {
+        "label": "隐藏启动",
+        "description": "启动到系统托盘而不打开窗口。"
+      },
+      "autostart": {
+        "label": "开机启动",
+        "description": "登录计算机时自动启动 Handy。"
+      },
+      "showTrayIcon": {
+        "label": "显示托盘图标",
+        "description": "在系统托盘中显示 Handy 图标。"
+      },
+      "overlay": {
+        "style": {
+          "title": "悬浮窗",
+          "description": "选择录音悬浮窗的样式：「无」会隐藏悬浮窗，「精简」显示小巧的胶囊状指示，「实时」在您说话时实时显示转录内容（仅限支持流式的模型——请在模型选择器中查找「流式」标签）。在 Linux 上建议选择「无」。",
+          "options": {
+            "none": "无",
+            "minimal": "精简",
+            "live": "实时"
+          }
+        },
+        "position": {
+          "title": "悬浮窗位置",
+          "description": "在录制和转录期间显示可视反馈悬浮窗。在 Linux 上建议选择「无」。",
+          "options": {
+            "bottom": "底部",
+            "top": "顶部"
+          }
+        }
+      },
+      "pasteMethod": {
+        "title": "粘贴方式",
+        "description": "选择文字插入方式。直接：通过系统输入模拟打字。无：跳过粘贴，仅更新历史记录/剪贴板。",
+        "options": {
+          "clipboard": "剪贴板 ({{modifier}}+V)",
+          "clipboardCtrlShiftV": "剪贴板 (Ctrl+Shift+V)",
+          "clipboardShiftInsert": "剪贴板 (Shift+Insert)",
+          "direct": "直接",
+          "none": "无",
+          "externalScript": "外部脚本"
+        },
+        "externalScriptPlaceholder": "/path/to/your/script.sh"
+      },
+      "typingTool": {
+        "title": "输入工具",
+        "description": "选择在直接粘贴方式下使用的 Linux 输入工具。Auto 会自动检测并使用系统中可用的最佳工具。",
+        "options": {
+          "auto": "Auto（推荐）"
+        }
+      },
+      "clipboardHandling": {
+        "title": "剪贴板处理",
+        "description": "不修改剪贴板将在转录后保留当前剪贴板内容。复制到剪贴板将在粘贴后将转录结果留在剪贴板中。",
+        "options": {
+          "dontModify": "不修改剪贴板",
+          "copyToClipboard": "复制到剪贴板"
+        }
+      },
+      "autoSubmit": {
+        "title": "自动提交",
+        "description": "在文本插入后自动发送所选的按键组合。macOS 上使用 Cmd+Enter，Windows/Linux 上使用 Super+Enter。",
+        "options": {
+          "off": "关闭",
+          "enter": "回车",
+          "cmdEnter": "Cmd+回车",
+          "superEnter": "Super+回车",
+          "ctrlEnter": "Ctrl+回车"
+        }
+      },
+      "translateToEnglish": {
+        "label": "翻译为英语",
+        "description": "在转录过程中自动将其他语言的语音翻译为英语。"
+      },
+      "modelUnload": {
+        "title": "卸载模型",
+        "description": "当模型在指定时间内未使用时自动释放 GPU/CPU 内存",
+        "options": {
+          "never": "从不",
+          "immediately": "立即",
+          "min2": "2 分钟后",
+          "min5": "5 分钟后",
+          "min10": "10 分钟后",
+          "min15": "15 分钟后",
+          "hour1": "1 小时后",
+          "sec15": "15 秒后（调试）"
+        }
+      },
+      "customWords": {
+        "title": "自定义词汇",
+        "description": "帮助受支持的模型识别名称和专业术语。目前，模糊纠错仅适用于使用 A–Z 字母和数字的词语。",
+        "placeholder": "添加词汇",
+        "add": "添加",
+        "remove": "删除 {{word}}",
+        "duplicate": "\"{{word}}\" 已存在"
+      },
+      "voiceActivityDetection": {
+        "title": "语音活动检测",
+        "description": "过滤录音中的静音。支持流式的模型会使用更长的 VAD 尾段；停用 VAD 则会录制原始音频。"
+      },
+      "fillerWordRemoval": {
+        "title": "移除语气词",
+        "description": "从转录中移除常见的语气词。关闭此选项即可保留这些词。"
+      }
+    },
+    "postProcessing": {
+      "hotkey": {
+        "title": "快捷键"
+      },
+      "api": {
+        "title": "API（兼容 OpenAI）",
+        "provider": {
+          "title": "提供商",
+          "description": "选择一个兼容 OpenAI 的提供商。"
+        },
+        "appleIntelligence": {
+          "unavailable": "Apple Intelligence 在此设备上不可用。需要运行 macOS Tahoe（26.0）或更高版本的 Apple Silicon Mac，并在系统设置中启用 Apple Intelligence。"
+        },
+        "baseUrl": {
+          "title": "基础 URL",
+          "description": "所选提供商的 API 基础 URL。仅自定义提供商可编辑。",
+          "placeholder": "https://api.openai.com/v1"
+        },
+        "apiKey": {
+          "title": "API 密钥",
+          "description": "所选提供商的 API 密钥。",
+          "placeholder": "sk-..."
+        },
+        "model": {
+          "title": "模型",
+          "descriptionCustom": "提供自定义端点期望的模型标识符。",
+          "descriptionDefault": "选择所选提供商提供的模型。",
+          "placeholderWithOptions": "搜索或选择模型",
+          "placeholderNoOptions": "输入模型名称",
+          "refreshModels": "刷新模型"
+        }
+      },
+      "prompts": {
+        "title": "提示词",
+        "selectedPrompt": {
+          "title": "已选提示词",
+          "description": "选择用于优化转录的模板或创建新模板。在提示词文本中使用 ${output} 来引用捕获的转录。"
+        },
+        "noPrompts": "没有可用的提示词",
+        "selectPrompt": "选择提示词",
+        "createNew": "创建新提示词",
+        "promptLabel": "提示词名称",
+        "promptLabelPlaceholder": "输入提示词名称",
+        "promptInstructions": "提示词指令",
+        "promptInstructionsPlaceholder": "编写转录后要执行的指令。示例：改进以下文本的语法和清晰度: ${output}",
+        "promptTip": "提示：使用 <code>${output}</code> 将转录文本插入到您的提示词中。",
+        "updatePrompt": "更新提示词",
+        "deletePrompt": "删除提示词",
+        "createPrompt": "创建提示词",
+        "cancel": "取消",
+        "selectToEdit": "选择上方的提示词以查看和编辑其详细信息。",
+        "createFirst": "点击上方的「创建新提示词」来创建您的第一个后处理提示词。"
+      }
+    },
+    "history": {
+      "title": "历史记录",
+      "openFolder": "打开录音文件夹",
+      "loading": "加载历史记录中...",
+      "empty": "还没有转录记录。开始录制以建立您的历史记录！",
+      "copyToClipboard": "复制转录到剪贴板",
+      "save": "保存转录",
+      "unsave": "从已保存中移除",
+      "delete": "删除条目",
+      "deleteError": "删除条目失败，请重试。",
+      "deleteConfirmTitle": "Delete this entry?",
+      "deleteConfirmWarning": "This permanently deletes:",
+      "deleteArtifactAudio": "the recording audio",
+      "deleteArtifactTranscript": "the full transcript of this dictation",
+      "deleteArtifactSummary": "any summary generated for this dictation (once summaries are available)",
+      "deleteConfirmIrreversible": "This action cannot be undone.",
+      "deleteCancel": "Cancel",
+      "deleteConfirmAction": "Delete permanently",
+      "retranscribe": "重新转录",
+      "retranscribeError": "重新转录失败。请重试。",
+      "transcribing": "转录中...",
+      "transcriptionFailed": "转录失败。您可以使用重试图标重新转录。"
+    },
+    "debug": {
+      "title": "调试",
+      "logDirectory": {
+        "title": "日志目录",
+        "description": "日志文件的存储位置"
+      },
+      "logLevel": {
+        "title": "日志级别",
+        "description": "设置日志的详细程度"
+      },
+      "liveLogs": {
+        "title": "实时日志",
+        "description": "实时传输应用程序日志，无需打开日志文件即可诊断问题。仅显示此面板打开期间产生的日志；遵循上方的“日志级别”设置。",
+        "live": "实时",
+        "paused": "已暂停",
+        "pause": "暂停",
+        "resume": "继续",
+        "copied": "已复制",
+        "lineCount": "{{count}} 行",
+        "empty": "正在等待日志…… 应用产生日志时将显示在此处。"
+      },
+      "updateChecks": {
+        "label": "检查更新",
+        "description": "自动检查 Handy 的新版本"
+      },
+      "soundTheme": {
+        "label": "声音主题",
+        "description": "选择录制开始和停止反馈的声音主题"
+      },
+      "wordCorrectionThreshold": {
+        "title": "词汇修正阈值",
+        "description": "自定义词汇修正的灵敏度"
+      },
+      "historyLimit": {
+        "title": "历史记录上限",
+        "description": "保留的最大历史条目数",
+        "entries": "条"
+      },
+      "recordingRetention": {
+        "title": "自动删除录音",
+        "description": "自动删除旧录音以节省空间",
+        "never": "从不",
+        "preserveLimit": "保留最新 {{count}} 条",
+        "days3": "3 天后",
+        "weeks2": "2 周后",
+        "months3": "3 个月后",
+        "placeholder": "选择保留期限..."
+      },
+      "alwaysOnMicrophone": {
+        "label": "麦克风常开",
+        "description": "保持麦克风活跃以获得更快的响应"
+      },
+      "clamshellMicrophone": {
+        "title": "合盖麦克风",
+        "description": "笔记本电脑盖子关闭时使用的麦克风"
+      },
+      "postProcessingToggle": {
+        "label": "后处理",
+        "description": "启用转录后的 AI 文本优化"
+      },
+      "muteWhileRecording": {
+        "label": "录制时静音",
+        "description": "录制期间静音系统音频"
+      },
+      "appendTrailingSpace": {
+        "label": "追加尾部空格",
+        "description": "在粘贴的转录后添加空格"
+      },
+      "keyboardImplementation": {
+        "title": "键盘实现",
+        "description": "选择键盘快捷键的后端。",
+        "bindingsReset": "键盘快捷键不兼容，已重置为默认值"
+      },
+      "paths": {
+        "appData": "应用数据:",
+        "models": "模型:",
+        "settings": "设置:"
+      },
+      "pasteDelay": {
+        "title": "粘贴延迟（前）",
+        "description": "复制文本后、发送粘贴按键前的延迟（毫秒）。如果没有粘贴任何内容，请增加此值。"
+      },
+      "pasteDelayAfter": {
+        "title": "粘贴延迟（后）",
+        "description": "发送粘贴按键后、恢复先前剪贴板前的延迟（毫秒）。如果粘贴的是旧的剪贴板内容而非转录文本，请增加此值。"
+      },
+      "reliablePaste": {
+        "title": "可靠粘贴（Beta）",
+        "description": "在目标应用程序真正读取转录文本之后再恢复剪贴板，而不是等待固定延迟。用于解决系统负载较高时粘贴旧剪贴板内容的问题。需要使用剪贴板类的粘贴方式；仅支持 macOS 和 Windows。"
+      },
+      "recordingBuffer": {
+        "title": "额外录音缓冲",
+        "description": "放开按键后继续录音的额外时间（毫秒），以捕捉尾音。0 = 无额外缓冲。"
+      },
+      "keyboardDiagnostic": {
+        "title": "键盘诊断",
+        "description": "检查键盘事件是否能到达 Handy。仅记录事件数量，绝不记录您按了哪些键。",
+        "run": "运行 10 秒诊断",
+        "running": "正在监听… 请按几次您的快捷键（例如 Option+Space）",
+        "secureInputLabel": "Secure Input",
+        "enabled": "已启用",
+        "disabled": "已禁用",
+        "holder": "被 {{name}}（pid {{pid}}）占用",
+        "holderUnknown": "未发现占用方",
+        "keyDown": "按键按下",
+        "keyUp": "按键释放",
+        "flagsChanged": "修饰键",
+        "mouse": "鼠标",
+        "verdictBlocked": "Secure Input 正在阻止按键事件——在问题解决前，包含普通按键的快捷键无法工作。",
+        "verdictSuspicious": "收到了修饰键事件，但没有按键事件——尽管 Secure Input 报告为已禁用，仍有程序在抑制按键。请在 GitHub 上反馈此问题。",
+        "verdictOk": "按键事件正常到达 Handy。",
+        "verdictNoEvents": "未捕获到任何事件——测试期间您按过键吗？",
+        "failed": "诊断失败：{{error}}"
+      },
+      "whatsNewPreview": {
+        "title": "预览新功能",
+        "description": "打开最新内置发行说明，且不标记为已查看",
+        "button": "预览",
+        "noNotes": "未找到内置发行说明",
+        "error": "无法预览发行说明"
+      }
+    },
+    "about": {
+      "title": "关于",
+      "version": {
+        "title": "版本",
+        "description": "Handy 的当前版本"
+      },
+      "appDataDirectory": {
+        "title": "应用数据目录",
+        "description": "Handy 存储数据的位置"
+      },
+      "sourceCode": {
+        "title": "源代码",
+        "description": "查看源代码并贡献",
+        "button": "在 GitHub 上查看"
+      },
+      "supportDevelopment": {
+        "title": "支持开发",
+        "description": "帮助我们继续开发 Handy",
+        "button": "捐赠"
+      },
+      "acknowledgments": {
+        "title": "致谢",
+        "ggml": {
+          "title": "ggml",
+          "description": "OpenAI Whisper 自动语音识别模型的高性能推理",
+          "details": "Handy 使用 ggml 进行快速的本地语音转文字处理。感谢 Georgi Gerganov 和贡献者们的出色工作。"
+        }
+      },
+      "whatsNewUpdates": {
+        "label": "显示新功能",
+        "description": "Handy 更新后显示发行说明"
+      }
+    },
+    "tabs": {
+      "modelsProviders": "模型与提供商",
+      "meetingsEmptyBody": "会议设置将随会议模式一起推出。"
+    },
+    "meetings": {
+      "shortcut": {
+        "title": "Meeting Shortcuts",
+        "description": "Keyboard shortcuts for starting, stopping and pausing meetings. Changes take effect after the current meeting ends.",
+        "unassigned": "Not configured",
+        "recordButtonAria": "Change {{name}} shortcut, currently {{shortcut}}. Click to record a new key combination.",
+        "pressKeys": "Press keys…",
+        "escapeHint": "Recording a shortcut. Press Escape to cancel.",
+        "reset": "Reset",
+        "disable": "Disable",
+        "test": "Test shortcut",
+        "testing": "Testing…",
+        "testOk": "{{shortcut}} can be registered.",
+        "testFail": "{{shortcut}} cannot be registered: {{error}}",
+        "errors": {
+          "singleKey": "Meeting shortcuts need at least one modifier key plus a regular key, e.g. Ctrl+Alt+Space.",
+          "conflict": "This shortcut is already used by:",
+          "osRejected": "The operating system cannot register this shortcut: {{error}} Nothing was saved."
+        },
+        "actions": {
+          "startStop": {
+            "name": "Start/end meeting",
+            "description": "Starts a meeting after a short countdown; pressing it again asks for confirmation before ending the meeting."
+          },
+          "pauseResume": {
+            "name": "Pause/resume meeting",
+            "description": "Pauses and resumes the current meeting recording."
+          }
+        }
+      }
+    }
+  },
+  "footer": {
+    "checkingUpdates": "检查更新中...",
+    "updateAvailableShort": "有可用更新",
+    "upToDate": "已是最新版本",
+    "updateCheckingDisabled": "更新检查已禁用",
+    "downloading": "下载中... {{progress}}%",
+    "installing": "安装中...",
+    "preparing": "准备中...",
+    "checkForUpdates": "检查更新",
+    "portableUpdateTitle": "需要手动更新",
+    "portableUpdateMessage": "便携版无法自动更新。请通过下方按钮下载适用于你的系统的安装程序，运行后安装到同一文件夹，你的 Data/ 文件夹（设置、模型、录音）会保留在原处。",
+    "portableUpdateButton": "下载安装程序",
+    "portableUpdateBrowseMessage": "便携版无法自动更新。请从 GitHub Releases 下载适用于你的系统的最新版本，并安装到同一文件夹，你的 Data/ 文件夹（设置、模型、录音）会保留在原处。",
+    "portableUpdateBrowseButton": "打开 GitHub Releases"
+  },
+  "common": {
+    "loading": "加载中...",
+    "delete": "删除",
+    "close": "关闭",
+    "open": "打开",
+    "copy": "复制",
+    "clear": "清除",
+    "moreInformation": "更多信息",
+    "reset": "重置",
+    "noOptionsFound": "未找到选项"
+  },
+  "accessibility": {
+    "permissionsDescription": "Handy 需要辅助功能权限才能输入转录的文字。",
+    "openSettings": "打开系统设置"
+  },
+  "dictation": {
+    "title": "语音输入",
+    "subtitle": "随时随地说话——你的话会输入到当前应用中。",
+    "config": {
+      "title": "当前配置"
+    },
+    "status": {
+      "title": "状态",
+      "ready": "就绪",
+      "recording": "录音中",
+      "transcribing": "转写中",
+      "error": "错误",
+      "genericError": "录音或转写时出现问题。"
+    },
+    "errorOpenSettings": "打开语音输入设置",
+    "shortcut": {
+      "description": "用于开始和停止语音输入的当前全局快捷键。",
+      "openAria": "语音输入快捷键 {{shortcut}} —— 打开语音输入设置以更改",
+      "missing": "未配置"
+    },
+    "mode": {
+      "title": "模式",
+      "hold": "按住",
+      "toggle": "按一下切换",
+      "holdDescription": "说话时按住快捷键。",
+      "toggleDescription": "按一次快捷键开始，再按一次停止。"
+    },
+    "target": {
+      "title": "语音识别",
+      "description": "你的语音在哪里被识别。",
+      "local": "本地",
+      "azure": "Azure",
+      "custom": "自定义"
+    },
+    "language": {
+      "title": "语言和模型",
+      "description": "识别语言；本地识别时还包括所用模型。",
+      "withModel": "{{language}} · {{model}}"
+    },
+    "test": {
+      "title": "测试语音输入",
+      "button": "测试语音输入",
+      "privacy": "仅保留在此窗口内——不会复制或粘贴任何内容。",
+      "start": "测试语音输入",
+      "stop": "停止测试录音",
+      "idleHint": "最多录制 {{seconds}} 秒，并只在这里回放。",
+      "recordingHint": "录音中……{{seconds}} 秒后自动停止。",
+      "retry": "重试",
+      "error": {
+        "unavailable": {
+          "title": "麦克风不可用",
+          "description": "未找到可用的麦克风。请连接一个麦克风，或在设置中选择其他输入设备。"
+        },
+        "denied": {
+          "title": "麦克风访问被拒绝",
+          "description": "此窗口需要麦克风权限才能运行测试。"
+        },
+        "failed": {
+          "title": "测试录音失败",
+          "description": "无法录制测试音频。请重试。"
+        }
+      },
+      "preview": {
+        "label": "测试录音预览",
+        "playbackAria": "播放测试录音",
+        "duration": "时长：{{duration}}",
+        "discard": "删除录音"
+      }
+    },
+    "settingsLink": "语音输入设置"
+  },
+  "errors": {
+    "loadDirectory": "加载目录时出错: {{error}}",
+    "micPermissionDeniedTitle": "麦克风访问被拒绝",
+    "micPermissionDenied": {
+      "generic": "操作系统拒绝了麦克风访问。请在系统设置中授予麦克风权限。",
+      "windows": "在设置 → 隐私和安全性 → 麦克风（包括桌面应用访问）中启用麦克风访问。",
+      "macos": "在系统设置 → 隐私与安全性 → 麦克风中授予麦克风访问权限。",
+      "linux": "在系统的声音或隐私设置中授予麦克风访问权限。"
+    },
+    "noInputDeviceTitle": "未找到麦克风",
+    "noInputDevice": "未检测到音频输入设备。请连接麦克风或耳机后重试。",
+    "recordingFailed": "录音启动失败: {{error}}",
+    "modelLoadFailed": "加载模型失败: {{model}}",
+    "modelLoadFailedUnknown": "未知模型",
+    "pasteFailedTitle": "粘贴文本失败",
+    "pasteFailed": "无法将文本粘贴到当前活动的应用程序中。",
+    "transcriptionFailedTitle": "转录失败"
+  },
+  "appLanguage": {
+    "title": "应用语言",
+    "description": "更改 Handy 界面的语言"
+  },
+  "theme": {
+    "title": "应用主题",
+    "description": "选择 Handy 跟随系统主题，还是保持浅色或深色",
+    "options": {
+      "system": "跟随系统",
+      "light": "浅色",
+      "dark": "深色"
+    }
+  },
+  "overlay": {
+    "transcribing": "正在转录...",
+    "processing": "处理中...",
+    "cancel": "取消"
+  },
+  "whatsNew": {
+    "title": "Handy v{{version}} 新功能"
+  },
+  "secureInput": {
+    "blockedWithCulprit_one": "{{name}} 可能正在阻止 1 个快捷键",
+    "blockedWithCulprit_other": "{{name}} 可能正在阻止 {{count}} 个快捷键",
+    "blockedNoCulprit_one": "macOS 正在暂时阻止 1 个快捷键",
+    "blockedNoCulprit_other": "macOS 正在暂时阻止 {{count}} 个快捷键",
+    "recorderBlockedWithCulprit": "{{name}} 可能正在阻止快捷键更改",
+    "recorderBlockedNoCulprit": "macOS 正在暂时阻止快捷键更改",
+    "learnMore": "如何解决",
+    "recorderBlocked": "当前无法录制快捷键——macOS 的 Secure Input 正在阻止按键事件。请先解决 Secure Input 警告。",
+    "dismiss": "关闭"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox",
+    "tasksHeading": "Tasks",
+    "noTasks": "No tasks yet",
+    "newTaskPlaceholder": "New task�",
+    "taskSuggested": "suggested by AI",
+    "taskAccept": "Accept",
+    "taskReject": "Reject",
+    "taskEditPrompt": "Edit the task title:"
+  },
+  "whatsapp": {
+    "title": "Import WhatsApp chat",
+    "titlePlaceholder": "Source title (e.g. team name)",
+    "contentPlaceholder": "Paste the exported chat text here�",
+    "dateOrderLabel": "Date order (only needed if ambiguous)",
+    "dateOrderAuto": "Detect automatically",
+    "dateOrderDayFirst": "Day first (25.12.24)",
+    "dateOrderMonthFirst": "Month first (12.25.24)",
+    "preview": "Analyse",
+    "import": "Import",
+    "previewFailed": "Could not analyse the chat text",
+    "importFailed": "Import failed",
+    "imported": "Imported {{count}} messages",
+    "alreadyImported": "This export was already imported � nothing duplicated.",
+    "previewMessages_one": "{{count}} message",
+    "previewMessages_other": "{{count}} messages",
+    "previewParticipants_one": "{{count}} participant",
+    "previewParticipants_other": "{{count}} participants",
+    "previewMedia": "{{count}} media placeholders kept as markers",
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+  }
+}

@@ -1,0 +1,90 @@
+import type { ComponentType } from "react";
+import {
+  AudioLines,
+  CircleHelp,
+  FolderKanban,
+  History,
+  Mic,
+  Settings,
+} from "lucide-react";
+
+/**
+ * Product navigation model (plan §6.3).
+ *
+ * The sidebar is no longer a list of settings sections. It is a product
+ * navigation with two groups separated by a visual divider:
+ *
+ *   Diktieren / Meetings / Projekte / Diktatverlauf
+ *   ─────────────
+ *   Einstellungen / Hilfe & Über
+ */
+
+export interface NavIconProps {
+  width?: number | string;
+  height?: number | string;
+  className?: string;
+}
+
+export type ProductViewId =
+  | "dictate"
+  | "meetings"
+  | "projects"
+  | "history"
+  | "settings"
+  | "about";
+
+export interface ProductNavEntry {
+  id: ProductViewId;
+  labelKey: string;
+  icon: ComponentType<NavIconProps>;
+}
+
+/** Primary product tools, rendered above the divider. */
+export const PRIMARY_NAV: readonly ProductNavEntry[] = [
+  { id: "dictate", labelKey: "nav.dictate", icon: Mic },
+  { id: "meetings", labelKey: "nav.meetings", icon: AudioLines },
+  { id: "projects", labelKey: "nav.projects", icon: FolderKanban },
+  { id: "history", labelKey: "nav.history", icon: History },
+];
+
+/** Secondary destinations, rendered below the divider. */
+export const SECONDARY_NAV: readonly ProductNavEntry[] = [
+  { id: "settings", labelKey: "nav.settings", icon: Settings },
+  { id: "about", labelKey: "nav.about", icon: CircleHelp },
+];
+
+/**
+ * Feature flag for meeting mode.
+ *
+ * Wave-1 delivery: the real meetings journey (list, create, open, save,
+ * delete — backed by the Rust `MeetingManager` over SQLite) ships in the
+ * production app, so the flag now defaults to ON. It stays overridable to
+ * `false` via `VITE_ENABLE_MEETING_MODE` so the surface can still be hidden
+ * in an emergency rollback build; tests may also pin either branch
+ * explicitly (see ActiveMeetingNavItem.render.test).
+ */
+export const MEETING_MODE_ENABLED: boolean =
+  import.meta.env.VITE_ENABLE_MEETING_MODE !== "false";
+
+export interface ActiveMeetingInfo {
+  /** Seconds elapsed since the meeting recording started. */
+  elapsedSeconds: number;
+}
+
+/**
+ * Formats an elapsed-meeting duration as an always-padded `hh:mm:ss` status
+ * clock (formatting-contract §2 class A): the zero-padded hours field is
+ * rendered even below one hour (plan line 427: `Aufnahme läuft · 00:42:18`)
+ * and grows unbounded beyond 24 h for multi-day sessions. Negative and
+ * non-finite inputs clamp to `00:00:00`.
+ */
+export function formatMeetingDuration(totalSeconds: number): string {
+  const total = Number.isFinite(totalSeconds)
+    ? Math.max(0, Math.floor(totalSeconds))
+    : 0;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}

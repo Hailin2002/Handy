@@ -1,0 +1,11 @@
+[build]
+
+[env]
+# Enforced serial native build for transcribe-cpp-sys on this machine
+# (see docs/meeting-mode-phase0-baseline.md section 2.3): any MSBuild worker
+# parallelism (`/m`, even `/m:1`) makes the cmake-driven native build fail
+# silently here, while a serial invocation succeeds. The vendored cmake-rs
+# patch (vendor/cmake) reads this variable ahead of NUM_JOBS — which cargo
+# always overwrites for build scripts — and pins `cmake --build --parallel 1`.
+# Raise it only after re-verifying MSBuild parallelism works on this machine.
+CMAKE_BUILD_PARALLEL_LEVEL = "1"

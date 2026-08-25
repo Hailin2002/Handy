@@ -1,0 +1,1269 @@
+{
+  "tray": {
+    "settings": "Indstillinger...",
+    "checkUpdates": "Tjek for opdateringer...",
+    "copyLastTranscript": "Kopiér seneste transskription",
+    "unloadModel": "Frigør model",
+    "model": "Model",
+    "quit": "Afslut",
+    "cancel": "Annuller",
+    "secureInputWarning": "⚠ Genveje blokeret af Secure Input"
+  },
+  "sidebar": {
+    "general": "Generelt",
+    "models": "Modeller",
+    "advanced": "Avanceret",
+    "postProcessing": "Efterbehandling",
+    "history": "Historik",
+    "debug": "Fejlfinding",
+    "about": "Om"
+  },
+  "nav": {
+    "primaryAriaLabel": "Hovednavigation",
+    "settingsTabsAriaLabel": "Indstillingsafsnit",
+    "dictate": "Diktering",
+    "meetings": "Møder",
+    "projects": "Projekter",
+    "history": "Dikteringshistorik",
+    "settings": "Indstillinger",
+    "about": "Hjælp & om",
+    "activeMeeting": "Optagelse i gang · {{duration}}",
+    "projectsEmptyBody": "Projekter samler status, opgaver, møder og importerede kilder."
+  },
+  "meetings": {
+    "emptyBenefit": "Optag dine møder og få transskriptioner og resuméer uden at forlade appen.",
+    "newMeeting": "Nyt møde",
+    "importAudio": "Importér lydfil",
+    "privacyLocal": "Standard: lokalt på denne enhed",
+    "searchPlaceholder": "Søg møder",
+    "search": "Søg",
+    "backToList": "Tilbage til møder",
+    "saveTitle": "Gem titel",
+    "saveError": "Kunne ikke gemme titlen. Prøv igen.",
+    "createError": "Kunne ikke oprette mødet. Prøv igen.",
+    "deleteError": "Kunne ikke slette mødet. Prøv igen.",
+    "deleteConfirmTitle": "Slette dette møde?",
+    "deleteConfirmBody": "Dette sletter mødet med dets transskription og resumé permanent.",
+    "titleInputLabel": "Mødets titel",
+    "statusLabel": "Status",
+    "createdLabel": "Oprettet",
+    "notFound": "Mødet blev ikke fundet.",
+    "loadError": "Møder kunne ikke indlæses.",
+    "stateDraft": "Udkast",
+    "stateRecording": "Optager",
+    "stateCompleted": "Afsluttet",
+    "stateOther": "Behandler",
+    "badgeRecording": "Recording",
+    "badgeStopping": "Stopping",
+    "badgeInterrupted": "Interrupted",
+    "badgeAttention": "Attention needed",
+    "badgeComplete": "Completed",
+    "badgeProcessing": "Processing",
+    "badgePaused": "Paused"
+  },
+  "meeting": {
+    "actions": {
+      "startMeeting": "Start meeting",
+      "pause": "Pause",
+      "resume": "Resume",
+      "endMeeting": "End meeting",
+      "keepRecording": "Keep recording",
+      "cancel": "Cancel",
+      "close": "Close",
+      "tryAgain": "Try again",
+      "switchDevice": "Switch device",
+      "openSettings": "Open settings",
+      "openSystemSettings": "Open system settings",
+      "reconnect": "Reconnect",
+      "recordMicOnly": "Record microphone only",
+      "continueWithoutSystemAudio": "Continue without system audio",
+      "workInBackground": "Continue in background",
+      "retryFailedSegments": "Retry failed segments",
+      "openMeeting": "Open meeting",
+      "deleteRecording": "Delete recording",
+      "recover": "Recover and process",
+      "decideLater": "Decide later",
+      "testSystemAudio": "Test system audio",
+      "jumpToLatest": "Jump to current text",
+      "cancelMeetingStart": "Cancel meeting start",
+      "useLocal": "Process locally",
+      "finishDictation": "Finish dictation",
+      "resumeWithDevices": "Continue with these devices",
+      "confirmDelete": "I understand — delete permanently"
+    },
+    "session": {
+      "draft": {
+        "hint": "Nothing is being recorded yet."
+      },
+      "starting": {
+        "title": "Starting meeting…",
+        "body": "Checking microphone and system audio…"
+      },
+      "recording": {
+        "title": "Recording",
+        "saved": "Audio saved",
+        "provider": {
+          "local": "Local",
+          "cloud": "Cloud ({{provider}})"
+        }
+      },
+      "paused": {
+        "title": "Paused",
+        "body": "No audio is being saved or uploaded while paused."
+      },
+      "stopping": {
+        "title": "Finishing recording…",
+        "body": "Finalising the audio files. This takes only a moment.",
+        "done": "Recording ended — audio saved."
+      },
+      "completed": {
+        "title": "Meeting completed",
+        "saved": "Transcript and summary are stored on this device."
+      },
+      "cancelled": {
+        "title": "Recording cancelled",
+        "body": "The audio captured so far has been kept. Nothing was deleted."
+      },
+      "micOnly": {
+        "badge": "Microphone only — system audio is not being recorded"
+      },
+      "durationLabel": "Recording duration {{duration}}"
+    },
+    "consent": {
+      "beforeStart": {
+        "title": "Before you record",
+        "body": "Recording a conversation requires the consent of everyone involved. Speak shows a recording indicator for the whole meeting and is not designed as a stealth recorder.",
+        "acknowledge": "Everyone involved has consented"
+      },
+      "indicator": {
+        "label": "This meeting is being recorded."
+      }
+    },
+    "cloud": {
+      "notice": {
+        "azure": {
+          "title": "Cloud transcription selected",
+          "body": "Audio from your microphone and system audio will be uploaded to Microsoft Azure and transcribed there. With local processing, nothing leaves this device."
+        }
+      },
+      "active": {
+        "azure": "Audio is being uploaded to Azure.",
+        "azureProcessing": "Audio segments are being uploaded to Azure for transcription.",
+        "llm": "Transcript text is being sent to {{provider}} to create the summary."
+      }
+    },
+    "preflight": {
+      "title": "Start checks",
+      "description": "Speak checks devices, storage and transcription before recording starts.",
+      "recheck": "Check again",
+      "blocked": "Fix the checks marked below before starting.",
+      "unavailable": "Speak cannot run the start checks right now, so recording is unavailable.",
+      "pending": "Running start checks…",
+      "status": {
+        "ok": "Works",
+        "warning": "Needs attention",
+        "error": "Not ready",
+        "checking": "Checking…"
+      },
+      "row": {
+        "microphone": "Microphone",
+        "systemAudio": "System audio",
+        "transcription": "Transcription",
+        "language": "Language",
+        "disk": "Storage",
+        "permission": "Permissions"
+      }
+    },
+    "setup": {
+      "title": "Start meeting",
+      "description": "Give the meeting a name and start when the checks below look right.",
+      "summaryToggle": "Summarise after the meeting",
+      "summaryHint": "The summary is created once the transcript is complete.",
+      "storageHint": "About 0.25 GB of storage is used per hour of microphone and system audio.",
+      "moreSettings": "More settings",
+      "providerLabel": "Transcription provider for this meeting",
+      "providerHint": "Cloud providers need their endpoint and key configured in settings. The choice only applies to this meeting.",
+      "providerLocal": "On-device",
+      "providerAzure": "Azure Speech (cloud)",
+      "providerCustom": "Custom endpoint (cloud)"
+    },
+    "live": {
+      "heading": "Live transcript",
+      "transcriptEmpty": "Finished transcript sections appear here while the meeting runs.",
+      "backlog": "{{count}} sections waiting",
+      "status": {
+        "listening": "Listening",
+        "transcribing": "Section is being transcribed",
+        "behind": "Processing is behind"
+      },
+      "levels": {
+        "microphone": "Microphone level",
+        "system": "System audio level",
+        "value": "{{label}}: {{percent}}%"
+      },
+      "stopConfirm": {
+        "title": "End meeting?",
+        "body": "The recording is finalised and processing starts. Nothing recorded so far is deleted."
+      }
+    },
+    "processing": {
+      "title": "Processing meeting",
+      "closeOk": "You can close this window.",
+      "done": "Meeting ready",
+      "summarizing": "Creating summary…",
+      "backlog": "{{count}} segments waiting",
+      "step": {
+        "saved": "Recording saved safely",
+        "prepared": "{{done}} of {{total}} audio segments prepared",
+        "transcribed": "{{done}} of {{total}} segments transcribed",
+        "summary": "Summary",
+        "summarySkipped": "Summary is switched off for this meeting"
+      },
+      "state": {
+        "pending": "Waiting",
+        "running": "In progress",
+        "done": "Done"
+      },
+      "failed": "{{count}} segments failed and can be retried."
+    },
+    "recovery": {
+      "heading": "Interrupted meetings",
+      "title": "Recover meeting recording?",
+      "body": "Speak was closed unexpectedly during “{{title}}”. The audio captured up to that point was saved and can be processed.",
+      "counts": "{{recovered}} sections recovered, {{damaged}} damaged.",
+      "causeCrash": "Interrupted by an unexpected close",
+      "causeSleepWake": "Interrupted because this PC went to sleep",
+      "causeUnknown": "The reason for the interruption is unknown"
+    },
+    "errors": {
+      "generic": {
+        "title": "Something needs your attention",
+        "body": "The meeting could not continue. Try again or open the settings."
+      },
+      "backendUnavailable": {
+        "title": "Meeting recording is not available yet",
+        "body": "This build cannot record meetings because the recording service is missing. Everything already saved is untouched."
+      },
+      "recoverable": {
+        "title": "Something needs your attention"
+      },
+      "micLost": {
+        "title": "Microphone disconnected",
+        "body": "Your microphone stopped working. System audio is still being recorded."
+      },
+      "systemLost": {
+        "title": "System audio stopped",
+        "body": "The output device stopped delivering audio. Your microphone is still being recorded."
+      },
+      "noLoopback": {
+        "title": "System audio can’t be captured",
+        "body": "Speak can’t listen to this output device. You can record the microphone only."
+      },
+      "exclusiveMode": {
+        "title": "Output device is busy",
+        "body": "The output device is running in exclusive mode, so system audio can’t be captured."
+      },
+      "diskFull": {
+        "title": "Recording stopped — storage full",
+        "body": "Speak stopped the recording to protect your data. Everything captured so far is saved."
+      },
+      "cloudUnreachable": {
+        "title": "Cloud transcription is unreachable",
+        "body": "Recording continues on this device. Sections will be transcribed as soon as the service responds again."
+      },
+      "cloudConfig": {
+        "title": "Cloud transcription is not configured",
+        "body": "The stored credentials were rejected. Recording continues locally."
+      },
+      "micPermission": {
+        "title": "Microphone access required",
+        "body": "Speak needs microphone access to record meetings. Grant access in the system privacy settings."
+      },
+      "missingKey": {
+        "title": "Setup incomplete",
+        "body": "Transcription is not configured yet. Open the settings to finish the setup."
+      },
+      "slept": {
+        "title": "Recording was interrupted",
+        "body": "This PC went to sleep. The recording stopped safely and can be continued."
+      },
+      "startFailed": {
+        "title": "The meeting could not be started",
+        "body": "Nothing was recorded. Check the devices and try again."
+      },
+      "pauseFailed": {
+        "title": "The meeting could not be paused",
+        "body": "Recording continues. Try again."
+      },
+      "resumeFailed": {
+        "title": "The meeting could not be resumed",
+        "body": "The meeting stays paused. Check the devices and try again."
+      },
+      "stopFailed": {
+        "title": "The meeting could not be ended",
+        "body": "The recording is still running and nothing was lost. Try again."
+      },
+      "cancelFailed": {
+        "title": "The meeting could not be cancelled",
+        "body": "Try again or end the meeting instead."
+      },
+      "retryFailed": {
+        "title": "The segments could not be queued again",
+        "body": "The audio is still saved. Try again."
+      },
+      "recoveryFailed": {
+        "title": "The recording could not be recovered",
+        "body": "The saved audio is untouched. Try again or open the meeting."
+      },
+      "preflightFailed": {
+        "title": "The start checks could not be completed",
+        "body": "Run the checks again before starting the meeting."
+      }
+    },
+    "warnings": {
+      "diskLow": {
+        "title": "Storage almost full",
+        "body": "A one-hour meeting with microphone and system audio needs roughly 0.25 GB."
+      },
+      "silence": {
+        "title": "No system sound detected",
+        "body": "The selected output device is silent. If you hear sound through another device, the wrong one may be selected."
+      },
+      "backlog": {
+        "title": "Processing is behind",
+        "body": "Sections are queued on disk and will be transcribed after the meeting. Nothing is lost."
+      },
+      "devicesChanged": {
+        "title": "Devices changed while paused",
+        "body": "A new source section will be started in the transcript."
+      }
+    },
+    "detail": {
+      "summaryHeading": "Summary",
+      "transcriptHeading": "Transcript",
+      "decisions": "Decisions",
+      "actionItems": "Action items",
+      "openQuestions": "Open questions",
+      "summaryFailed": "The summary could not be created.",
+      "resummarize": "Summarise again",
+      "resummarizeDone": "Summary updated",
+      "resummarizeFailed": "Re-summarising failed",
+      "searchLabel": "Search the transcript",
+      "searchPlaceholder": "Search in transcript�",
+      "searchMatches_one": "{{count}} match",
+      "searchMatches_other": "{{count}} matches"
+    }
+  },
+  "onboarding": {
+    "subtitle": "For at komme i gang skal du vælge en transskriptionsmodel",
+    "existingModelsTitle": "Kompatible modeller",
+    "downloadModelsTitle": "Tilgængelig til download",
+    "showAllModels": "Vis alle {{total}} modeller",
+    "showFewerModels": "Vis færre modeller",
+    "recommended": "Anbefalet",
+    "customModelDescription": "Ikke officielt understøttet",
+    "modelCard": {
+      "accuracy": "nøjagtighed",
+      "speed": "hastighed"
+    },
+    "models": {
+      "small": {
+        "name": "Whisper Small",
+        "description": "Hurtig og ret nøjagtig."
+      },
+      "medium": {
+        "name": "Whisper Medium",
+        "description": "God nøjagtighed, middel hastighed"
+      },
+      "turbo": {
+        "name": "Whisper Turbo",
+        "description": "Afbalanceret nøjagtighed og hastighed."
+      },
+      "large": {
+        "name": "Whisper Large",
+        "description": "God nøjagtighed, men langsom."
+      },
+      "parakeet-tdt-0.6b-v2": {
+        "name": "Parakeet V2",
+        "description": "Kun engelsk. Den bedste model for engelsktalende."
+      },
+      "parakeet-tdt-0.6b-v3": {
+        "name": "Parakeet V3",
+        "description": "Hurtig og nøjagtig"
+      },
+      "moonshine-base": {
+        "name": "Moonshine Base",
+        "description": "Meget hurtig, kun engelsk. Håndterer accenter godt."
+      },
+      "moonshine-tiny-streaming-en": {
+        "name": "Moonshine V2 Tiny",
+        "description": "Ultrahurtig, kun engelsk"
+      },
+      "moonshine-small-streaming-en": {
+        "name": "Moonshine V2 Small",
+        "description": "Hurtig, kun engelsk. God balance mellem hastighed og nøjagtighed."
+      },
+      "moonshine-medium-streaming-en": {
+        "name": "Moonshine V2 Medium",
+        "description": "Kun engelsk. Høj kvalitet."
+      },
+      "breeze-asr": {
+        "name": "Breeze ASR",
+        "description": "Optimeret til taiwansk mandarin. Understøtter kodeskift."
+      },
+      "sense-voice-int8": {
+        "name": "SenseVoice",
+        "description": "Meget hurtig. Kinesisk, engelsk, japansk, koreansk, kantonesisk."
+      },
+      "gigaam-v3-e2e-ctc": {
+        "name": "GigaAM v3",
+        "description": "Russisk talegenkendelse. Hurtig og nøjagtig."
+      },
+      "canary-180m-flash": {
+        "name": "Canary 180M Flash",
+        "description": "Meget hurtig. Engelsk, tysk, spansk, fransk. Understøtter oversættelse."
+      },
+      "canary-1b-v2": {
+        "name": "Canary 1B v2",
+        "description": "Nøjagtig, flersproget. 25 europæiske sprog. Understøtter oversættelse."
+      },
+      "cohere-int8": {
+        "name": "Cohere",
+        "description": "En stor, langsommere, men meget nøjagtig flersproget model."
+      }
+    },
+    "errors": {
+      "selectModel": "Kunne ikke vælge model"
+    },
+    "permissions": {
+      "title": "Tilladelser påkrævet",
+      "description": "Handy har brug for et par tilladelser for at fungere korrekt.",
+      "microphone": {
+        "title": "Mikrofonadgang",
+        "description": "Påkrævet for at høre din stemme til transskription."
+      },
+      "accessibility": {
+        "title": "Tilgængelighedsadgang",
+        "description": "Påkrævet for at skrive den transskriberede tekst ind i dine programmer."
+      },
+      "grant": "Giv tilladelse",
+      "granted": "Givet",
+      "waiting": "Venter...",
+      "allGranted": "Alt er klar!",
+      "errors": {
+        "checkFailed": "Kunne ikke tjekke tilladelser. Prøv igen.",
+        "requestFailed": "Kunne ikke anmode om tilladelse. Prøv igen."
+      }
+    }
+  },
+  "modelSelector": {
+    "custom": "Brugerdefineret",
+    "legacy": "Forældet",
+    "streaming": "Streaming",
+    "active": "Aktiv",
+    "switching": "Skifter...",
+    "noModelsAvailable": "Ingen modeller tilgængelige",
+    "verifying": "Verificerer {{modelName}}...",
+    "verifyingGeneric": "Verificerer...",
+    "extracting": "Udpakker {{modelName}}...",
+    "extractingMultiple": "Udpakker {{count}} modeller...",
+    "extractingGeneric": "Udpakker...",
+    "downloading": "Downloader {{percentage}}%",
+    "downloadingMultiple": "Downloader {{count}} modeller...",
+    "modelReady": "Model klar",
+    "loading": "Indlæser {{modelName}}...",
+    "loadingGeneric": "Indlæser...",
+    "modelError": "Modelfejl",
+    "modelUnloaded": "Model frigjort",
+    "noModelDownloadRequired": "Ingen model - download påkrævet",
+    "deleteModel": "Slet {{modelName}}",
+    "downloadSpeed": "{{speed}} MB/s",
+    "cancel": "Annuller",
+    "cancelDownload": "Annuller download",
+    "capabilities": {
+      "languageSelection": "Understøtter flere inputsprog",
+      "singleLanguage": "Understøtter kun dette sprog",
+      "languageCount": "{{total}} sprog",
+      "languageOnly": "Kun {{language}}",
+      "translation": "Kan oversætte til engelsk",
+      "translate": "Oversæt",
+      "streaming": "Viser live transskription, mens du taler"
+    },
+    "downloadingGeneric": "Downloader..."
+  },
+  "settings": {
+    "speechPipeline": {
+      "title": "Speech pipeline",
+      "description": "Choose how audio becomes text and optionally translate the result before it is pasted.",
+      "preview": {
+        "terminology": "Terminology",
+        "translation": "DeepL",
+        "paste": "Paste"
+      },
+      "provider": {
+        "title": "Speech-to-text provider",
+        "description": "Use an on-device model, Azure Speech, or your own HTTP endpoint.",
+        "local": "Local model",
+        "azure": "Azure Speech",
+        "custom": "Custom STT endpoint"
+      },
+      "azure": {
+        "endpoint": {
+          "title": "Azure endpoint",
+          "description": "The complete short-audio REST endpoint of your Azure Speech resource.",
+          "placeholder": "https://…/stt/speech/recognition/conversation/cognitiveservices/v1"
+        },
+        "language": {
+          "title": "Recognition locale",
+          "description": "Azure locale used for speech recognition, for example de-DE.",
+          "placeholder": "de-DE"
+        },
+        "apiKey": {
+          "title": "Azure API key",
+          "description": "Subscription key for the configured Azure Speech resource.",
+          "placeholder": "Enter Azure Speech key"
+        }
+      },
+      "azureValidation": {
+        "title": "Save and test Azure",
+        "description": "Saves the Azure fields and verifies the exact configuration with a short connection test.",
+        "button": "Save & test connection",
+        "testing": "Saving and testing…",
+        "success": "Azure Speech is configured correctly.",
+        "failed": "Azure test failed: {{error}}"
+      },
+      "custom": {
+        "endpoint": {
+          "title": "Custom endpoint",
+          "description": "Receives 16 kHz mono WAV audio and returns plain text or a supported JSON transcript.",
+          "placeholder": "https://your-service.example/transcribe"
+        },
+        "token": {
+          "title": "Bearer token",
+          "description": "Optional authorization token sent to your endpoint.",
+          "placeholder": "Optional token"
+        }
+      },
+      "deepl": {
+        "enabled": {
+          "title": "Translate with DeepL",
+          "description": "Translate the transcript before optional AI post-processing and pasting."
+        },
+        "apiKey": {
+          "title": "DeepL API key",
+          "description": "Works with both DeepL API Free and Pro keys.",
+          "placeholder": "Enter DeepL API key"
+        },
+        "target": {
+          "title": "Translation target",
+          "description": "Language produced by DeepL before the text enters the remaining pipeline."
+        },
+        "targetEnglish": "English",
+        "targetEnglishBritish": "English (British)",
+        "targetEnglishAmerican": "English (American)",
+        "targetGerman": "German"
+      },
+      "advanced": {
+        "title": "Advanced live pipeline",
+        "description": "Sentence stability, endpointing and translation timing",
+        "stability": {
+          "title": "Live text stability",
+          "description": "Number of matching Azure partial results required before words are treated as stable. The conference pipeline used 3."
+        },
+        "phraseSilence": {
+          "title": "Sentence-final silence",
+          "description": "How long Azure waits through silence before finalizing the current phrase. Longer values preserve sentence context; shorter values react faster."
+        },
+        "translationDelay": {
+          "title": "DeepL sentence delay",
+          "description": "Wait after an Azure-final sentence and combine any additional final segments before sending the text once to DeepL. Interim text is never billed."
+        }
+      }
+    },
+    "modelSettings": {
+      "title": "{{model}}-indstillinger"
+    },
+    "general": {
+      "title": "Generelt",
+      "shortcut": {
+        "title": "Handy-genveje",
+        "description": "Konfigurer tastaturgenveje til at udløse tale-til-tekst-optagelse",
+        "loading": "Indlæser genveje...",
+        "none": "Ingen genveje konfigureret",
+        "notFound": "Genvej ikke fundet",
+        "pressKeys": "Tryk på ønskede taster...",
+        "bindings": {
+          "transcribe": {
+            "name": "Transskriptionsgenvej",
+            "description": "Tastaturgenvejen til at optage og transskribere din stemme."
+          },
+          "cancel": {
+            "name": "Annulleringsgenvej",
+            "description": "Tastaturgenvejen til at annullere den aktuelle optagelse."
+          },
+          "transcribe_with_post_process": {
+            "name": "Genvej til efterbehandling",
+            "description": "Valgfrit: En dedikeret genvej, der altid anvender AI-efterbehandling på din transskription."
+          }
+        },
+        "errors": {
+          "restore": "Kunne ikke gendanne den oprindelige genvej",
+          "set": "Kunne ikke indstille genvej: {{error}}",
+          "reset": "Kunne ikke nulstille genvej til oprindelig indstilling"
+        },
+        "recordButtonAria": "Ændr genvej for {{name}}, i øjeblikket {{shortcut}}",
+        "escapeHint": "Optager genvej. Tryk på Escape for at annullere."
+      },
+      "language": {
+        "title": "Sprog",
+        "description": "Vælg sproget til talegenkendelse. Auto tyder automatisk sproget, mens valg af et specifikt sprog kan forbedre nøjagtigheden for det pågældende sprog.",
+        "searchPlaceholder": "Søg efter sprog...",
+        "noResults": "Ingen sprog fundet",
+        "auto": "Automatisk"
+      },
+      "pushToTalk": {
+        "label": "Tryk-for-at-tale",
+        "description": "Hold nede for at optage, slip for at stoppe"
+      }
+    },
+    "models": {
+      "title": "Transskriptionsmodeller",
+      "description": "Vælg en transskriptionsmodel, eller download flere modeller. Forskellige modeller tilbyder varierende niveauer af nøjagtighed og hastighed.",
+      "searchPlaceholder": "Søg efter modeller ved navn…",
+      "yourModels": "Downloadede modeller",
+      "availableModels": "Tilgængelig til download",
+      "deleteConfirm": "Er du sikker på, at du vil slette {{modelName}}? Du skal downloade den igen for at bruge den.",
+      "deleteActiveConfirm": "{{modelName}} er din aktive model. Sletning af den vil stoppe transskriptioner, indtil du vælger en ny model. Er du sikker?",
+      "deleteTitle": "Slet model",
+      "filters": {
+        "allLanguages": "Alle sprog",
+        "streaming": "Filtrer modeller, der understøtter live transskription",
+        "translation": "Filtrer modeller, der understøtter oversættelse til engelsk"
+      },
+      "rescan": {
+        "label": "Søg igen",
+        "tooltip": "Søg igen efter modeller, der er tilføjet til modelmappen eller Hugging Face-cachen uden for Handy"
+      },
+      "noModelsMatch": "Ingen modeller matcher dette filter."
+    },
+    "sound": {
+      "title": "Lyd",
+      "microphone": {
+        "title": "Mikrofon",
+        "description": "Vælg din foretrukne mikrofonenhed",
+        "placeholder": "Vælg mikrofon...",
+        "loading": "Indlæser..."
+      },
+      "channel": {
+        "title": "Inputkanal",
+        "description": "Vælg, hvilken inputkanal der skal optages fra. Brug dette, hvis din lydgrænseflade har flere indgange.",
+        "average": "Gennemsnit af alle kanaler",
+        "channel": "Kanal {{n}}"
+      },
+      "audioFeedback": {
+        "label": "Lydfeedback",
+        "description": "Afspil lyd, når optagelse starter og stopper"
+      },
+      "outputDevice": {
+        "title": "Outputenhed",
+        "description": "Vælg din foretrukne lydoutputenhed til feedbacklyde",
+        "placeholder": "Vælg outputenhed...",
+        "loading": "Indlæser..."
+      },
+      "volume": {
+        "title": "Lydstyrke",
+        "description": "Juster lydstyrken for lydfeedback"
+      }
+    },
+    "advanced": {
+      "groups": {
+        "app": "App",
+        "output": "Output",
+        "transcription": "Transskription",
+        "history": "Historik",
+        "experimental": "Eksperimentel"
+      },
+      "experimentalToggle": {
+        "label": "Eksperimentelle funktioner",
+        "description": "Aktivér eksperimentelle funktioner, der stadig er under udvikling."
+      },
+      "lazyStreamClose": {
+        "label": "Hold mikrofon åben mellem transskriptioner",
+        "description": "Holder mikrofonstrømmen åben i 30 sekunder, efter at optagelsen stopper, hvilket reducerer ventetid ved transskriptioner lige efter hinanden. Kan forringe Bluetooth-lydkvaliteten, mens den er aktiv."
+      },
+      "acceleration": {
+        "transcribe": {
+          "title": "transcribe.cpp-acceleration",
+          "description": "Hardwareacceleration til transcribe.cpp-modeller (Whisper-familien). Auto bruger GPU, hvis tilgængelig (Metal på macOS, Vulkan på Windows/Linux)."
+        },
+        "ort": {
+          "title": "ONNX-acceleration",
+          "description": "Hardwareacceleration til ONNX-modeller (Parakeet, Canary, Moonshine osv.). DirectML på Windows er eksperimentelt. Modeller kan fejle under transskription."
+        },
+        "gpuDevice": {
+          "auto": "Automatisk"
+        }
+      },
+      "startHidden": {
+        "label": "Start skjult",
+        "description": "Vis på meddelelsesområdet uden at åbne vinduet."
+      },
+      "autostart": {
+        "label": "Start ved opstart",
+        "description": "Start Handy automatisk, når du logger ind på din computer."
+      },
+      "showTrayIcon": {
+        "label": "Vis proceslinjeikon",
+        "description": "Vis Handy-ikonet i meddelelsesområdet."
+      },
+      "overlay": {
+        "style": {
+          "title": "Overlay",
+          "description": "Vælg optagelses-overlay: Ingen skjuler det, Minimal viser en kompakt pille, Live viser transskription i realtid, mens du taler (kun modeller med streaming-understøttelse — se efter Streaming-mærket i modelvælgeren). På Linux anbefales 'Ingen'.",
+          "options": {
+            "none": "Ingen",
+            "minimal": "Minimal",
+            "live": "Live"
+          }
+        },
+        "position": {
+          "title": "Overlay-placering",
+          "description": "Hvor overlayet vises på skærmen under optagelse og transskription.",
+          "options": {
+            "bottom": "Bund",
+            "top": "Top"
+          }
+        }
+      },
+      "pasteMethod": {
+        "title": "Indsætningsmetode",
+        "description": "Vælg, hvordan tekst indsættes. Direkte: simulerer tastetryk via systeminput. Ingen: springer indsætning over, opdaterer kun historik/udklipsholder.",
+        "options": {
+          "clipboard": "Udklipsholder ({{modifier}}+V)",
+          "clipboardCtrlShiftV": "Udklipsholder (Ctrl+Shift+V)",
+          "clipboardShiftInsert": "Udklipsholder (Shift+Insert)",
+          "direct": "Direkte",
+          "none": "Ingen",
+          "externalScript": "Eksternt script"
+        },
+        "externalScriptPlaceholder": "/sti/til/dit/script.sh"
+      },
+      "typingTool": {
+        "title": "Skriveværktøj",
+        "description": "Vælg hvilket Linux-skriveværktøj der skal bruges til Direkte indsætningsmetode. Auto registrerer og bruger automatisk det bedste tilgængelige værktøj til dit system.",
+        "options": {
+          "auto": "Auto (anbefalet)"
+        }
+      },
+      "clipboardHandling": {
+        "title": "Håndtering af udklipsholder",
+        "description": "Rør ikke ved udklipsholder bevarer dit nuværende udklipsholderindhold efter transskription. Kopiér til udklipsholder efterlader transskriptionsresultatet i din udklipsholder efter indsætning.",
+        "options": {
+          "dontModify": "Rør ikke ved udklipsholder",
+          "copyToClipboard": "Kopiér til udklipsholder"
+        }
+      },
+      "autoSubmit": {
+        "title": "Automatisk indsendelse",
+        "description": "Send automatisk den valgte tastekombination efter tekstindsættelse. Cmd+Enter gælder på macOS, mens Windows/Linux bruger Super+Enter.",
+        "options": {
+          "off": "Fra",
+          "enter": "Enter",
+          "cmdEnter": "Cmd+Enter",
+          "superEnter": "Super+Enter",
+          "ctrlEnter": "Ctrl+Enter"
+        }
+      },
+      "translateToEnglish": {
+        "label": "Oversæt til engelsk",
+        "description": "Oversæt automatisk tale fra andre sprog til engelsk under transskription."
+      },
+      "modelUnload": {
+        "title": "Frigør model",
+        "description": "Frigør automatisk GPU-/CPU-hukommelse, når modellen ikke har været brugt i den angivne tid",
+        "options": {
+          "never": "Aldrig",
+          "immediately": "Med det samme",
+          "min2": "Efter 2 minutter",
+          "min5": "Efter 5 minutter",
+          "min10": "Efter 10 minutter",
+          "min15": "Efter 15 minutter",
+          "hour1": "Efter 1 time",
+          "sec15": "Efter 15 sekunder (fejlfinding)"
+        }
+      },
+      "customWords": {
+        "title": "Brugerdefinerede ord",
+        "description": "Hjælp understøttede modeller med at genkende navne og specialiserede udtryk. Fuzzy-korrektion er i øjeblikket begrænset til ord, der bruger A-Z og tal.",
+        "placeholder": "Tilføj et ord",
+        "add": "Tilføj",
+        "remove": "Fjern {{word}}",
+        "duplicate": "\"{{word}}\" findes allerede"
+      },
+      "voiceActivityDetection": {
+        "title": "Stemmeaktivitetsdetektion",
+        "description": "Filtrer stilhed fra optagelser. Streaming-modeller bruger en længere VAD-hale; deaktivering af VAD optager rå lyd."
+      },
+      "fillerWordRemoval": {
+        "title": "Fjern fyldord",
+        "description": "Fjerner almindelige tøveord fra transskriptioner. Slå fra for at beholde dem."
+      }
+    },
+    "postProcessing": {
+      "hotkey": {
+        "title": "Genvejstast"
+      },
+      "api": {
+        "title": "API (OpenAI-kompatibel)",
+        "provider": {
+          "title": "Udbyder",
+          "description": "Vælg en OpenAI-kompatibel udbyder."
+        },
+        "appleIntelligence": {
+          "unavailable": "Apple Intelligence er ikke tilgængelig på denne enhed. Kræver en Apple Silicon Mac med macOS Tahoe (26.0) eller nyere med Apple Intelligence aktiveret i Systemindstillinger."
+        },
+        "baseUrl": {
+          "title": "Basis-URL",
+          "description": "API-basis-URL for den valgte udbyder. Kun den brugerdefinerede udbyder kan redigeres.",
+          "placeholder": "https://api.openai.com/v1"
+        },
+        "apiKey": {
+          "title": "API-nøgle",
+          "description": "API-nøgle til den valgte udbyder.",
+          "placeholder": "sk-..."
+        },
+        "model": {
+          "title": "Model",
+          "descriptionCustom": "Angiv den modelidentifikator, som det brugerdefinerede endpoint forventer.",
+          "descriptionDefault": "Vælg en model, der udbydes af den valgte udbyder.",
+          "placeholderWithOptions": "Søg eller vælg en model",
+          "placeholderNoOptions": "Skriv et modelnavn",
+          "refreshModels": "Opdater modeller"
+        }
+      },
+      "prompts": {
+        "title": "Prompt",
+        "selectedPrompt": {
+          "title": "Valgt prompt",
+          "description": "Vælg en skabelon til at forfine transskriptioner, eller opret en ny. Brug ${output} i promptteksten for at referere til den fangede transskription."
+        },
+        "noPrompts": "Ingen prompts tilgængelige",
+        "selectPrompt": "Vælg en prompt",
+        "createNew": "Opret ny prompt",
+        "promptLabel": "Promptnavn",
+        "promptLabelPlaceholder": "Indtast promptnavn",
+        "promptInstructions": "Promptinstruktioner",
+        "promptInstructionsPlaceholder": "Skriv de instruktioner, der skal køres efter transskription. Eksempel: Forbedr grammatik og klarhed for følgende tekst: ${output}",
+        "promptTip": "Tip: Brug <code>${output}</code> til at indsætte den transskriberede tekst i din prompt.",
+        "updatePrompt": "Opdater prompt",
+        "deletePrompt": "Slet prompt",
+        "createPrompt": "Opret prompt",
+        "cancel": "Annuller",
+        "selectToEdit": "Vælg en prompt ovenfor for at se og redigere dens detaljer.",
+        "createFirst": "Klik på 'Opret ny prompt' ovenfor for at oprette din første efterbehandlingsprompt."
+      }
+    },
+    "history": {
+      "title": "Historik",
+      "openFolder": "Åbn optagelsesmappe",
+      "loading": "Indlæser historik...",
+      "empty": "Ingen transskriptioner endnu. Start optagelse for at opbygge din historik!",
+      "copyToClipboard": "Kopiér transskription til udklipsholder",
+      "save": "Gem transskription",
+      "unsave": "Fjern fra gemte",
+      "delete": "Slet post",
+      "deleteError": "Kunne ikke slette posten. Prøv igen.",
+      "deleteConfirmTitle": "Delete this entry?",
+      "deleteConfirmWarning": "This permanently deletes:",
+      "deleteArtifactAudio": "the recording audio",
+      "deleteArtifactTranscript": "the full transcript of this dictation",
+      "deleteArtifactSummary": "any summary generated for this dictation (once summaries are available)",
+      "deleteConfirmIrreversible": "This action cannot be undone.",
+      "deleteCancel": "Cancel",
+      "deleteConfirmAction": "Delete permanently",
+      "retranscribe": "Transskribér igen",
+      "retranscribeError": "Kunne ikke transskribere igen. Prøv igen.",
+      "transcribing": "Transskriberer...",
+      "transcriptionFailed": "Transskription mislykkedes. Du kan transskribere igen ved hjælp af genforsøgsikonet."
+    },
+    "debug": {
+      "title": "Fejlfinding",
+      "logDirectory": {
+        "title": "Logmappe",
+        "description": "Placering af logfiler"
+      },
+      "logLevel": {
+        "title": "Logniveau",
+        "description": "Detaljeringsgrad for logning"
+      },
+      "liveLogs": {
+        "title": "Live logs",
+        "description": "Stream applikationslogs i realtid for at diagnosticere problemer uden at åbne logfilen. Kun logs udsendt, mens dette panel er åbent, vises; respekterer indstillingen Logniveau ovenfor.",
+        "live": "Live",
+        "paused": "På pause",
+        "pause": "Pause",
+        "resume": "Genoptag",
+        "copied": "Kopieret",
+        "lineCount": "{{count}} linjer",
+        "empty": "Venter på logs… Poster vises her, når appen udsender dem."
+      },
+      "updateChecks": {
+        "label": "Tjek for opdateringer",
+        "description": "Tjek automatisk for nye versioner af Handy"
+      },
+      "whatsNewPreview": {
+        "title": "Forhåndsvisning af nyheder",
+        "description": "Åbn de seneste medfølgende udgivelsesnoter uden at markere dem som set",
+        "button": "Forhåndsvisning",
+        "noNotes": "Ingen medfølgende udgivelsesnoter fundet",
+        "error": "Kunne ikke forhåndsvise udgivelsesnoter"
+      },
+      "soundTheme": {
+        "label": "Lydtema",
+        "description": "Vælg et lydtema til feedback ved start og stop af optagelse"
+      },
+      "wordCorrectionThreshold": {
+        "title": "Tærskel for ordkorrektion",
+        "description": "Følsomhed for brugerdefinerede ordkorrektioner"
+      },
+      "historyLimit": {
+        "title": "Historikgrænse",
+        "description": "Maksimalt antal historikposter, der skal beholdes",
+        "entries": "poster"
+      },
+      "recordingRetention": {
+        "title": "Automatisk sletning af optagelser",
+        "description": "Slet automatisk gamle optagelser for at spare plads",
+        "never": "Aldrig",
+        "preserveLimit": "Behold de seneste {{count}}",
+        "days3": "Efter 3 dage",
+        "weeks2": "Efter 2 uger",
+        "months3": "Efter 3 måneder",
+        "placeholder": "Vælg opbevaringsperiode..."
+      },
+      "alwaysOnMicrophone": {
+        "label": "Altid aktiv mikrofon",
+        "description": "Hold mikrofonen aktiv for hurtigere reaktion"
+      },
+      "clamshellMicrophone": {
+        "title": "Clamshell-mikrofon",
+        "description": "Mikrofon, der skal bruges, når den bærbares låg er lukket"
+      },
+      "postProcessingToggle": {
+        "label": "Efterbehandling",
+        "description": "Aktivér AI-drevet tekstforbedring efter transskription"
+      },
+      "muteWhileRecording": {
+        "label": "Mute under optagelse",
+        "description": "Sluk for systemlyd under optagelse"
+      },
+      "appendTrailingSpace": {
+        "label": "Tilføj efterfølgende mellemrum",
+        "description": "Tilføj et mellemrum efter indsat transskription"
+      },
+      "keyboardImplementation": {
+        "title": "Tastaturimplementering",
+        "description": "Vælg backend til tastaturgenveje.",
+        "bindingsReset": "Tastaturgenveje var inkompatible og blev nulstillet til standard"
+      },
+      "paths": {
+        "appData": "Appdata:",
+        "models": "Modeller:",
+        "settings": "Indstillinger:"
+      },
+      "pasteDelay": {
+        "title": "Forsinkelse af indsættelse (før)",
+        "description": "Forsinkelse (i millisekunder) efter kopiering af tekst, før tastetrykket for indsætning sendes. Øg, hvis intet bliver indsat."
+      },
+      "pasteDelayAfter": {
+        "title": "Forsinkelse af indsættelse (efter)",
+        "description": "Forsinkelse (i millisekunder) efter tastetrykket for indsætning, før din tidligere udklipsholder gendannes. Øg, hvis dit gamle udklipsholderindhold bliver indsat i stedet for transskriptionen."
+      },
+      "reliablePaste": {
+        "title": "Pålidelig indsættelse (Beta)",
+        "description": "Gendan først din udklipsholder, når målappen faktisk har læst transskriptionen, i stedet for efter en fast forsinkelse. Skal afhjælpe, at gammelt udklipsholderindhold indsættes, når systemet er belastet. Kræver en indsætningsmetode via udklipsholderen; kun macOS og Windows."
+      },
+      "recordingBuffer": {
+        "title": "Ekstra optagelsesbuffer",
+        "description": "Ekstra tid (i millisekunder) til at fortsætte optagelsen, efter du slipper tasten, for at fange efterfølgende lyd. 0 = ingen ekstra buffer."
+      },
+      "keyboardDiagnostic": {
+        "title": "Tastaturdiagnostik",
+        "description": "Kontrollerer, om tastaturhændelser når frem til Handy. Kun antallet af hændelser registreres — aldrig hvilke taster du trykker på.",
+        "run": "Kør 10 s diagnostik",
+        "running": "Lytter… tryk på din genvej et par gange (f.eks. Option+Space)",
+        "secureInputLabel": "Secure Input",
+        "enabled": "aktiveret",
+        "disabled": "deaktiveret",
+        "holder": "holdes af {{name}} (pid {{pid}})",
+        "holderUnknown": "ingen synlig indehaver",
+        "keyDown": "Tast ned",
+        "keyUp": "Tast op",
+        "flagsChanged": "Modifikatorer",
+        "mouse": "Mus",
+        "verdictBlocked": "Secure Input blokerer tastehændelser — genveje med en almindelig tast kan ikke fungere, før det er løst.",
+        "verdictSuspicious": "Der kom modifikatorhændelser, men ingen tastehændelser — noget undertrykker taster, selvom Secure Input rapporteres som deaktiveret. Rapportér det gerne på GitHub.",
+        "verdictOk": "Tastehændelser når frem til Handy som normalt.",
+        "verdictNoEvents": "Ingen hændelser registreret — trykkede du på nogen taster under testen?",
+        "failed": "Diagnostik mislykkedes: {{error}}"
+      }
+    },
+    "about": {
+      "title": "Om",
+      "version": {
+        "title": "Version",
+        "description": "Nuværende version af Handy"
+      },
+      "whatsNewUpdates": {
+        "label": "Vis nyheder",
+        "description": "Vis udgivelsesnoter, efter Handy opdateres"
+      },
+      "appDataDirectory": {
+        "title": "Appdatamappe",
+        "description": "Placering, hvor Handy gemmer sine data"
+      },
+      "sourceCode": {
+        "title": "Kildekode",
+        "description": "Se kildekode og bidrag",
+        "button": "Vis på GitHub"
+      },
+      "supportDevelopment": {
+        "title": "Støt udviklingen",
+        "description": "Hjælp os med at fortsætte udviklingen af Handy",
+        "button": "Donér"
+      },
+      "acknowledgments": {
+        "title": "Anerkendelser",
+        "ggml": {
+          "title": "ggml",
+          "description": "Højtydende tensor-bibliotek til maskinlæringsinferens på enheden",
+          "details": "Handys lokale tale-til-tekst funktionalitet er bygget på transcribe.cpp og ggml. Tak for det fantastiske arbejde af Georgi Gerganov og bidragyderne."
+        }
+      }
+    },
+    "tabs": {
+      "modelsProviders": "Modeller og udbydere",
+      "meetingsEmptyBody": "Mødeindstillinger kommer med mødetilstand."
+    },
+    "meetings": {
+      "shortcut": {
+        "title": "Meeting Shortcuts",
+        "description": "Keyboard shortcuts for starting, stopping and pausing meetings. Changes take effect after the current meeting ends.",
+        "unassigned": "Not configured",
+        "recordButtonAria": "Change {{name}} shortcut, currently {{shortcut}}. Click to record a new key combination.",
+        "pressKeys": "Press keys…",
+        "escapeHint": "Recording a shortcut. Press Escape to cancel.",
+        "reset": "Reset",
+        "disable": "Disable",
+        "test": "Test shortcut",
+        "testing": "Testing…",
+        "testOk": "{{shortcut}} can be registered.",
+        "testFail": "{{shortcut}} cannot be registered: {{error}}",
+        "errors": {
+          "singleKey": "Meeting shortcuts need at least one modifier key plus a regular key, e.g. Ctrl+Alt+Space.",
+          "conflict": "This shortcut is already used by:",
+          "osRejected": "The operating system cannot register this shortcut: {{error}} Nothing was saved."
+        },
+        "actions": {
+          "startStop": {
+            "name": "Start/end meeting",
+            "description": "Starts a meeting after a short countdown; pressing it again asks for confirmation before ending the meeting."
+          },
+          "pauseResume": {
+            "name": "Pause/resume meeting",
+            "description": "Pauses and resumes the current meeting recording."
+          }
+        }
+      }
+    }
+  },
+  "footer": {
+    "checkingUpdates": "Tjekker for opdateringer...",
+    "updateAvailableShort": "Opdatering tilgængelig",
+    "upToDate": "Opdateret",
+    "updateCheckingDisabled": "Tjek for opdateringer deaktiveret",
+    "downloading": "Downloader... {{progress}}%",
+    "installing": "Installerer...",
+    "preparing": "Forbereder...",
+    "checkForUpdates": "Tjek for opdateringer",
+    "portableUpdateTitle": "Manuel opdatering påkrævet",
+    "portableUpdateMessage": "Flytbare installationer kan ikke opdateres automatisk. Download installeren til dit system nedenfor, kør den, og installer i den samme mappe — din Data/-mappe (indstillinger, modeller, optagelser) bliver bevaret.",
+    "portableUpdateButton": "Download installer",
+    "portableUpdateBrowseMessage": "Flytbare installationer kan ikke opdateres automatisk. Download den nyeste version til dit system fra GitHub Releases, og installer den i den samme mappe — din Data/-mappe (indstillinger, modeller, optagelser) bliver bevaret.",
+    "portableUpdateBrowseButton": "Åbn GitHub Releases"
+  },
+  "whatsNew": {
+    "title": "Nyt i Handy v{{version}}"
+  },
+  "common": {
+    "loading": "Indlæser...",
+    "delete": "Slet",
+    "close": "Luk",
+    "open": "Åbn",
+    "copy": "Kopiér",
+    "clear": "Ryd",
+    "moreInformation": "Mere information",
+    "reset": "Nulstil",
+    "noOptionsFound": "Ingen muligheder fundet"
+  },
+  "accessibility": {
+    "permissionsDescription": "Handy har brug for tilgængelighedstilladelser for at skrive den transskriberede tekst.",
+    "openSettings": "Åbn systemindstillinger"
+  },
+  "dictation": {
+    "title": "Diktering",
+    "subtitle": "Tal hvor som helst — dine ord skrives i den aktive app.",
+    "config": {
+      "title": "Aktuel konfiguration"
+    },
+    "status": {
+      "title": "Status",
+      "ready": "Klar",
+      "recording": "Optagelse",
+      "transcribing": "Transskription",
+      "error": "Fejl",
+      "genericError": "Noget gik galt under optagelse eller transskription."
+    },
+    "errorOpenSettings": "Åbn indstillinger for diktering",
+    "shortcut": {
+      "description": "Den aktuelle globale genvej til at starte og stoppe diktering.",
+      "openAria": "Dikteringsgenvej {{shortcut}} — åbn indstillinger for diktering for at ændre den",
+      "missing": "Ikke konfigureret"
+    },
+    "mode": {
+      "title": "Tilstand",
+      "hold": "Hold nede",
+      "toggle": "Tryk for at skifte",
+      "holdDescription": "Hold genvejen nede, mens du taler.",
+      "toggleDescription": "Tryk på genvejen én gang for at starte og igen for at stoppe."
+    },
+    "target": {
+      "title": "Talegenkendelse",
+      "description": "Hvor din tale transskriberes.",
+      "local": "Lokalt",
+      "azure": "Azure",
+      "custom": "Brugerdefineret"
+    },
+    "language": {
+      "title": "Sprog og model",
+      "description": "Genkendelsessprog og ved lokal genkendelse den aktive model.",
+      "withModel": "{{language}} · {{model}}"
+    },
+    "test": {
+      "title": "Test diktering",
+      "button": "Test diktering",
+      "privacy": "Forbliver i dette vindue — intet kopieres eller indsættes.",
+      "start": "Test diktering",
+      "stop": "Stop testoptagelsen",
+      "idleHint": "Optager op til {{seconds}} s og afspiller den kun her.",
+      "recordingHint": "Optager… stopper automatisk efter {{seconds}} s.",
+      "retry": "Prøv igen",
+      "error": {
+        "unavailable": {
+          "title": "Mikrofonen er ikke tilgængelig",
+          "description": "Der blev ikke fundet en brugbar mikrofon. Tilslut én, eller vælg en anden inputenhed i indstillingerne."
+        },
+        "denied": {
+          "title": "Adgang til mikrofonen nægtet",
+          "description": "Dette vindue kræver mikrofontilladelse for at køre testen."
+        },
+        "failed": {
+          "title": "Testoptagelsen mislykkedes",
+          "description": "Testoptagelsen kunne ikke registreres. Prøv igen."
+        }
+      },
+      "preview": {
+        "label": "Forhåndsvisning af din testoptagelse",
+        "playbackAria": "Afspil testoptagelsen",
+        "duration": "Varighed: {{duration}}",
+        "discard": "Kassér optagelsen"
+      }
+    },
+    "settingsLink": "Indstillinger for diktering"
+  },
+  "errors": {
+    "loadDirectory": "Fejl ved indlæsning af mappe: {{error}}",
+    "micPermissionDeniedTitle": "Mikrofonadgang nægtet",
+    "micPermissionDenied": {
+      "generic": "Mikrofonadgang blev nægtet af operativsystemet. Giv venligst mikrofontilladelse i dine systemindstillinger.",
+      "windows": "Aktivér mikrofonadgang under Indstillinger → Privatliv og sikkerhed → Mikrofon (inklusive adgang for skrivebordsapps).",
+      "macos": "Giv mikrofonadgang under Systemindstillinger → Privatliv og sikkerhed → Mikrofon.",
+      "linux": "Giv mikrofonadgang i dit systems lyd- eller privatlivsindstillinger."
+    },
+    "noInputDeviceTitle": "Ingen mikrofon fundet",
+    "noInputDevice": "Ingen lydinputenhed blev registreret. Tilslut en mikrofon eller et headset, og prøv igen.",
+    "recordingFailed": "Kunne ikke starte optagelse: {{error}}",
+    "modelLoadFailed": "Kunne ikke indlæse model: {{model}}",
+    "modelLoadFailedUnknown": "ukendt model",
+    "pasteFailedTitle": "Kunne ikke indsætte tekst",
+    "pasteFailed": "Teksten kunne ikke indsættes i det aktive program.",
+    "transcriptionFailedTitle": "Transskription mislykkedes"
+  },
+  "appLanguage": {
+    "title": "Applikationssprog",
+    "description": "Skift sproget for Handy-grænsefladen"
+  },
+  "theme": {
+    "title": "Applikationstema",
+    "description": "Vælg om Handy skal følge dit systemtema eller forblive lyst eller mørkt",
+    "options": {
+      "system": "System",
+      "light": "Lys",
+      "dark": "Mørk"
+    }
+  },
+  "overlay": {
+    "transcribing": "Transskriberer...",
+    "processing": "Behandler...",
+    "cancel": "Annuller"
+  },
+  "secureInput": {
+    "blockedWithCulprit_one": "{{name}} blokerer muligvis 1 genvej",
+    "blockedWithCulprit_other": "{{name}} blokerer muligvis {{count}} genveje",
+    "blockedNoCulprit_one": "macOS blokerer midlertidigt 1 genvej",
+    "blockedNoCulprit_other": "macOS blokerer midlertidigt {{count}} genveje",
+    "recorderBlockedWithCulprit": "{{name}} blokerer muligvis ændringer af genveje",
+    "recorderBlockedNoCulprit": "macOS blokerer midlertidigt ændringer af genveje",
+    "learnMore": "Sådan løser du det",
+    "recorderBlocked": "Genveje kan ikke optages lige nu — macOS Secure Input blokerer tastehændelser. Løs advarslen om Secure Input først.",
+    "dismiss": "Afvis"
+  },
+  "projects": {
+    "namePlaceholder": "New project name",
+    "create": "Create",
+    "createError": "Could not create the project",
+    "deleteError": "Could not delete the project",
+    "empty": "No projects yet",
+    "noMeetings": "No meetings assigned yet",
+    "unlink": "Unlink",
+    "assignFromInbox": "Assign a meeting from the inbox",
+    "tasksHeading": "Tasks",
+    "noTasks": "No tasks yet",
+    "newTaskPlaceholder": "New task�",
+    "taskSuggested": "suggested by AI",
+    "taskAccept": "Accept",
+    "taskReject": "Reject",
+    "taskEditPrompt": "Edit the task title:"
+  },
+  "whatsapp": {
+    "title": "Import WhatsApp chat",
+    "titlePlaceholder": "Source title (e.g. team name)",
+    "contentPlaceholder": "Paste the exported chat text here�",
+    "dateOrderLabel": "Date order (only needed if ambiguous)",
+    "dateOrderAuto": "Detect automatically",
+    "dateOrderDayFirst": "Day first (25.12.24)",
+    "dateOrderMonthFirst": "Month first (12.25.24)",
+    "preview": "Analyse",
+    "import": "Import",
+    "previewFailed": "Could not analyse the chat text",
+    "importFailed": "Import failed",
+    "imported": "Imported {{count}} messages",
+    "alreadyImported": "This export was already imported � nothing duplicated.",
+    "previewMessages_one": "{{count}} message",
+    "previewMessages_other": "{{count}} messages",
+    "previewParticipants_one": "{{count}} participant",
+    "previewParticipants_other": "{{count}} participants",
+    "previewMedia": "{{count}} media placeholders kept as markers",
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+  }
+}
