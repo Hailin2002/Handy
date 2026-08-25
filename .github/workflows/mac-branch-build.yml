@@ -1,0 +1,16 @@
+name: "Mac branch build (aarch64)"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  macos:
+    uses: ./.github/workflows/build.yml
+    with:
+      platform: "macos-26" # Arm runner (M1+)
+      target: "aarch64-apple-darwin"
+      build-args: "--target aarch64-apple-darwin"
+      upload-artifacts: true
+      sign-binaries: false
+    secrets: inherit
+# registered
