@@ -32,6 +32,40 @@ The same environment variables apply for production builds:
 ORT_LIB_LOCATION=$(brew --prefix onnxruntime)/lib ORT_PREFER_DYNAMIC_LINK=1 bun run tauri build
 ```
 
+##### Apple Silicon (M1–M4) — including the Meeting mode
+
+ONNX Runtime ships prebuilt for aarch64 Apple, so no Homebrew step is needed:
+
+```bash
+xcode-select --install            # if not present already
+rustup target add aarch64-apple-darwin
+bun install
+mkdir -p src-tauri/resources/models
+curl -o src-tauri/resources/models/silero_vad_v4.onnx \
+  https://blob.handy.computer/silero_vad_v4.onnx
+
+bun run tauri dev                 # development
+bun run tauri build               # production: src-tauri/target/release/bundle/macos/Speak.app
+```
+
+First launch asks for the usual macOS permissions (microphone, accessibility,
+key strokes) — grant them in System Settings → Privacy & Security; local
+rebuilds may need the accessibility entry re-approved (see troubleshooting
+below).
+
+**Meeting-mode parity on Apple Silicon (honest state):**
+
+- Works: microphone-only meetings, the persistent STT queue, local Whisper
+  (Metal), Azure/custom cloud STT, summaries, library/export, projects,
+  WhatsApp import, tasks.
+- Not yet: **system-audio loopback**. macOS has no WASAPI-style
+  output-as-input capture; it needs ScreenCaptureKit or a virtual device
+  (BlackHole). The manager therefore starts meetings **microphone-only** on
+  macOS by design — the preflight offers exactly that. Windows keeps full
+  dual-track capture.
+- Local Whisper uses the Metal backend automatically; the first model load
+  compiles Metal shaders and can take noticeably longer than later loads.
+
 #### Windows
 
 - Microsoft C++ Build Tools: Visual Studio 2019/2022 with C++ development
