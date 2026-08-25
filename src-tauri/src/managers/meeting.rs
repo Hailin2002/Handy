@@ -1466,11 +1466,16 @@ impl MeetingManager {
         {
             let inner = lock(&self.inner);
             if inner.capture_owner.as_deref() == Some(meeting_id)
-                || inner
-                    .sessions
-                    .get(meeting_id)
-                    .is_some_and(|r| r.state.is_active())
+                || inner.sessions.get(meeting_id).is_some_and(|r| {
+                    r.state.is_active()
+                        || matches!(
+                            r.state,
+                            MeetingState::Transcribing | MeetingState::Summarizing
+                        )
+                })
             {
+                // Deleting while jobs are mid-flight would orphan their output
+                // into a tombstoned session (zombie transcripts/summaries).
                 anyhow::bail!("meetingIsActive");
             }
         }
@@ -1615,7 +1620,12 @@ impl MeetingManager {
                 anyhow::bail!("meetingIsActive");
             }
             if let Some(runtime) = inner.sessions.get(id) {
-                if runtime.state.is_active() {
+                if runtime.state.is_active()
+                    || matches!(
+                        runtime.state,
+                        MeetingState::Transcribing | MeetingState::Summarizing
+                    )
+                {
                     anyhow::bail!("meetingIsActive");
                 }
             }
@@ -3916,6 +3926,43 @@ mod tests {
         let third = h.manager.create_draft(None).unwrap();
         h.manager.cancel(&third.meeting_id).unwrap();
 
+        // Pause→stop and resume→stop are legal exits from both states.
+        let fourth = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&fourth.meeting_id, None, false, false, true)
+            .unwrap();
+        h.manager.pause(&fourth.meeting_id).unwrap();
+        h.manager.stop(&fourth.meeting_id, false).unwrap();
+        let fifth = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&fifth.meeting_id, None, false, false, true)
+            .unwrap();
+        h.manager.pause(&fifth.meeting_id).unwrap();
+        h.manager.resume(&fifth.meeting_id).unwrap();
+        h.manager.stop(&fifth.meeting_id, false).unwrap();
+
+        // Deleting while transcription is in flight must be refused: the STT
+        // jobs would write into a tombstoned session. After settlement the
+        // meeting becomes deletable again.
+        let sixth = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&sixth.meeting_id, None, false, false, true)
+            .unwrap();
+        seed_ready_chunk(&h.manager, &sixth.meeting_id);
+        h.manager.stop(&sixth.meeting_id, false).unwrap();
+        assert_eq!(
+            h.manager.snapshot(&sixth.meeting_id).unwrap().state,
+            MeetingState::Transcribing
+        );
+        assert!(h.manager.soft_delete_session(&sixth.meeting_id).is_err());
+        assert!(h
+            .manager
+            .delete_meeting_data(&sixth.meeting_id, DeleteScope::Everything)
+            .is_err());
+        seed_segment_for_first_job(&h.manager, &sixth.meeting_id);
+        h.manager.settle_after_queue(&sixth.meeting_id);
+        assert!(h.manager.soft_delete_session(&sixth.meeting_id).unwrap());
+
         // Deleting a cancelled meeting works; deleting again is a no-op false.
         assert!(h.manager.soft_delete_session(&second.meeting_id).unwrap());
 
@@ -3937,6 +3984,9 @@ mod tests {
         seed_ready_chunk(&h.manager, &draft.meeting_id);
         h.manager.stop(&draft.meeting_id, false).unwrap();
         seed_segment_for_first_job(&h.manager, &draft.meeting_id);
+        // Settle like the real queue would — deletion during `transcribing`
+        // is refused (see hostile click matrix).
+        h.manager.settle_after_queue(&draft.meeting_id);
 
         // A raw audio directory exists for this meeting before deletion.
         let meeting_tree = h

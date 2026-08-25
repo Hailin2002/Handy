@@ -116,9 +116,12 @@ fn loopback_captures_what_the_default_output_plays() {
     recorder
         .open_source(rec::SourceKind::Microphone, rec::SourceOpenRequest::new(""))
         .expect("open microphone");
-    // System: follow the OS default output — the behaviour under test.
+    // System: follow the OS default output — the behaviour under test. A
+    // short rollover target forces several chunks from the 9 s playback,
+    // exercising the rollover path with real audio.
     let mut system_request = rec::SourceOpenRequest::new("");
     system_request.follow_default_device = true;
+    system_request.rollover_target = std::time::Duration::from_secs(2);
     recorder
         .open_source(rec::SourceKind::System, system_request)
         .expect("open system loopback");
@@ -184,4 +187,27 @@ fn loopback_captures_what_the_default_output_plays() {
         system_rms_max > 100.0,
         "system track is silent (max rms {system_rms_max:.1} over {checked} files) — loopback captured nothing audible"
     );
+
+    // Rollover proof: a 2 s target over ~9 s of capture must have produced
+    // several chunks (the last one may be shorter).
+    assert!(
+        checked >= 3,
+        "expected rollover to produce >= 3 system chunks, got {checked}"
+    );
+
+    // Keep the captured audio for manual post-transcription runs:
+    // copy the largest system wav next to the test output.
+    if let Ok(out_dir) = std::env::var("MEETING_E2E_KEEP") {
+        let _ = std::fs::create_dir_all(&out_dir);
+        for entry in std::fs::read_dir(&audio_dir).expect("audio dir") {
+            let path = entry.expect("entry").path();
+            let Some(name) = path.file_name().map(|n| n.to_string_lossy().to_string()) else {
+                continue;
+            };
+            if name.contains("system") {
+                let _ = std::fs::copy(&path, std::path::Path::new(&out_dir).join(&name));
+            }
+        }
+        eprintln!("kept system wavs in {out_dir}");
+    }
 }
