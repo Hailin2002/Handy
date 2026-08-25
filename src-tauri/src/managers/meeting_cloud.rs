@@ -345,58 +345,126 @@ where
 /// Parses a fast-transcription JSON payload into phrases.
 ///
 /// Tolerant by design: missing optional fields are skipped, unknown shapes
-/// produce a descriptive error instead of panicking.
+/// produce a descriptive error instead of panicking. Two API generations are
+/// accepted — the current `phrases`/`offsetMilliseconds` shape (verified live
+/// against `api-version=2024-11-15`, region germanywestcentral) and the older
+/// `recognizedPhrases`/ticks shape — so a regional rollout difference cannot
+/// silently empty a meeting transcript.
 pub fn parse_azure_response(body: &str) -> Result<Vec<CloudPhrase>, String> {
     let root: Value =
         serde_json::from_str(body).map_err(|e| format!("azure payload is not JSON: {e}"))?;
-    let phrases = root
-        .get("recognizedPhrases")
-        .and_then(Value::as_array)
-        .ok_or_else(|| "azure payload has no recognizedPhrases".to_string())?;
 
-    let mut out = Vec::with_capacity(phrases.len());
-    for phrase in phrases {
-        let offset_ticks = phrase.get("offsetInTicks").and_then(Value::as_i64);
-        let duration_ticks = phrase.get("durationInTicks").and_then(Value::as_i64);
-        let best = phrase
-            .get("nBest")
-            .and_then(Value::as_array)
-            .and_then(|candidates| candidates.first());
-        let text = best
-            .map(|candidate| {
-                candidate
-                    .get("display")
-                    .or_else(|| candidate.get("lexical"))
-                    .or_else(|| candidate.get("text"))
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string()
-            })
-            .unwrap_or_default();
-        if text.is_empty() || offset_ticks.is_none() {
-            continue;
+    // Current generation: phrases[] with millisecond offsets and plain text.
+    if let Some(phrases) = root.get("phrases").and_then(Value::as_array) {
+        let mut out = Vec::with_capacity(phrases.len());
+        for phrase in phrases {
+            let text = phrase
+                .get("text")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+            if text.is_empty() {
+                continue;
+            }
+            out.push(CloudPhrase {
+                channel: phrase
+                    .get("channel")
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0)
+                    .clamp(0, u16::MAX.into()) as u16,
+                offset_ms: phrase
+                    .get("offsetMilliseconds")
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0),
+                duration_ms: phrase
+                    .get("durationMilliseconds")
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0),
+                text,
+                confidence: None,
+            });
         }
-        out.push(CloudPhrase {
-            // Clamp instead of casting: a hostile or buggy payload could carry
-            // negative or oversized channel numbers that would silently wrap.
-            channel: phrase
-                .get("channel")
-                .and_then(Value::as_i64)
-                .unwrap_or(0)
-                .clamp(0, u16::MAX.into()) as u16,
-            // Azure ticks are 100 ns; 10_000 ticks per millisecond.
-            offset_ms: offset_ticks.unwrap_or(0) / 10_000,
-            duration_ms: duration_ticks.unwrap_or(0) / 10_000,
-            text,
-            confidence: best
-                .and_then(|candidate| candidate.get("confidence"))
-                .and_then(Value::as_f64)
-                .map(|value| value as f32),
-        });
+        if !out.is_empty() {
+            out.sort_by_key(|phrase| (phrase.channel, phrase.offset_ms));
+            return Ok(out);
+        }
+        // Empty phrases fall through to the legacy shape / combined fallback.
     }
-    out.sort_by_key(|phrase| (phrase.channel, phrase.offset_ms));
-    Ok(out)
+
+    // Legacy generation: recognizedPhrases[] with 100 ns ticks and nBest.
+    if let Some(phrases) = root.get("recognizedPhrases").and_then(Value::as_array) {
+        let mut out = Vec::with_capacity(phrases.len());
+        for phrase in phrases {
+            let offset_ticks = phrase.get("offsetInTicks").and_then(Value::as_i64);
+            let duration_ticks = phrase.get("durationInTicks").and_then(Value::as_i64);
+            let best = phrase
+                .get("nBest")
+                .and_then(Value::as_array)
+                .and_then(|candidates| candidates.first());
+            let text = best
+                .map(|candidate| {
+                    candidate
+                        .get("display")
+                        .or_else(|| candidate.get("lexical"))
+                        .or_else(|| candidate.get("text"))
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string()
+                })
+                .unwrap_or_default();
+            if text.is_empty() || offset_ticks.is_none() {
+                continue;
+            }
+            out.push(CloudPhrase {
+                // Clamp instead of casting: a hostile or buggy payload could carry
+                // negative or oversized channel numbers that would silently wrap.
+                channel: phrase
+                    .get("channel")
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0)
+                    .clamp(0, u16::MAX.into()) as u16,
+                // Azure ticks are 100 ns; 10_000 ticks per millisecond.
+                offset_ms: offset_ticks.unwrap_or(0) / 10_000,
+                duration_ms: duration_ticks.unwrap_or(0) / 10_000,
+                text,
+                confidence: best
+                    .and_then(|candidate| candidate.get("confidence"))
+                    .and_then(Value::as_f64)
+                    .map(|value| value as f32),
+            });
+        }
+        if !out.is_empty() {
+            out.sort_by_key(|phrase| (phrase.channel, phrase.offset_ms));
+            return Ok(out);
+        }
+    }
+
+    // Last resort: combinedPhrases[] as a single span covering the clip.
+    if let Some(combined) = root.get("combinedPhrases").and_then(Value::as_array) {
+        let text = combined
+            .iter()
+            .filter_map(|c| c.get("text").and_then(Value::as_str))
+            .collect::<Vec<_>>()
+            .join(" ")
+            .trim()
+            .to_string();
+        if !text.is_empty() {
+            return Ok(vec![CloudPhrase {
+                channel: 0,
+                offset_ms: 0,
+                duration_ms: root
+                    .get("durationMilliseconds")
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0),
+                text,
+                confidence: None,
+            }]);
+        }
+    }
+
+    Err("azure payload has no recognized phrases".to_string())
 }
 
 /// Generic custom-endpoint client: POSTs the same multipart package with a
@@ -842,6 +910,36 @@ mod tests {
         assert_eq!(ints[1], 32_767, "+inf clamps");
         assert_eq!(ints[2], -32_768, "-inf clamps");
         assert!(ints[3] > 0 && ints[3] < 32_767);
+    }
+
+    #[test]
+    fn azure_parser_handles_the_live_2024_11_15_response_shape() {
+        // Verbatim shape from a real call against germanywestcentral
+        // (api-version=2024-11-15): phrases with millisecond offsets plus a
+        // combined summary. The legacy parser rejected this payload outright.
+        let live = r##"{
+          "durationMilliseconds": 8015,
+          "combinedPhrases": [{"channel": 0, "text":
+            "Guten Tag, wir beginnen jetzt die Besprechung. Der erste Punkt ist der Projektstatus."}],
+          "phrases": [
+            {"channel": 0, "offsetMilliseconds": 160, "durationMilliseconds": 2840,
+             "text": "Guten Tag, wir beginnen jetzt die Besprechung."},
+            {"channel": 0, "offsetMilliseconds": 3000, "durationMilliseconds": 2500,
+             "text": "Der erste Punkt ist der Projektstatus."}
+          ]
+        }"##;
+        let phrases = parse_azure_response(live).expect("live shape parses");
+        assert_eq!(phrases.len(), 2);
+        assert_eq!(phrases[0].offset_ms, 160);
+        assert!(phrases[0].text.starts_with("Guten Tag"));
+
+        // Combined-only fallback (e.g. a clip too short for phrase split).
+        let combined_only = r#"{"durationMilliseconds": 900,
+            "combinedPhrases": [{"channel": 0, "text": "Ja."}]}"#;
+        let single = parse_azure_response(combined_only).expect("combined fallback");
+        assert_eq!(single.len(), 1);
+        assert_eq!(single[0].text, "Ja.");
+        assert_eq!(single[0].duration_ms, 900);
     }
 
     #[test]
