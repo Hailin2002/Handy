@@ -13,3 +13,4 @@ jobs:
       upload-artifacts: true
       sign-binaries: false
     secrets: inherit
+# registered
