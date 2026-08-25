@@ -42,7 +42,10 @@ fn main() {
             ))
         })
         .expect("map");
-    println!("{:<32} {:<20} {:>9} {:>7}", "Titel", "State", "Segmente", "Failed");
+    println!(
+        "{:<32} {:<20} {:>9} {:>7}",
+        "Titel", "State", "Segmente", "Failed"
+    );
     for row in rows.flatten() {
         println!("{:<32} {:<20} {:>9} {:>7}", row.0, row.1, row.2, row.3);
     }

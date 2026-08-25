@@ -5,12 +5,11 @@
 use speak_app_lib::managers::meeting_store::open_meeting_database;
 
 fn main() {
-    let db = std::env::var("SPEAK_MEETINGS_DB")
-        .unwrap_or_else(|_| {
-            std::env::var("APPDATA")
-                .map(|p| format!("{p}\\com.haeni.speak\\meetings.db"))
-                .unwrap()
-        });
+    let db = std::env::var("SPEAK_MEETINGS_DB").unwrap_or_else(|_| {
+        std::env::var("APPDATA")
+            .map(|p| format!("{p}\\com.haeni.speak\\meetings.db"))
+            .unwrap()
+    });
     let conn = open_meeting_database(std::path::Path::new(&db)).expect("open meetings db");
 
     let recoverable: Vec<(String, String)> = {

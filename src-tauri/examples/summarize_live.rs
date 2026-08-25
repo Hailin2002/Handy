@@ -13,8 +13,8 @@ fn main() {
             .map(|p| format!("{p}\\com.haeni.speak\\meetings.db"))
             .unwrap()
     });
-    let store = SqliteMeetingStore::open(std::path::Path::new(&db).to_path_buf())
-        .expect("open store");
+    let store =
+        SqliteMeetingStore::open(std::path::Path::new(&db).to_path_buf()).expect("open store");
 
     // The completed meeting with the most segments (the rescued one).
     let page = store
@@ -55,12 +55,16 @@ fn main() {
         models_endpoint: None,
         supports_structured_output: false,
     };
-    let llm = summarize::CloudSummarizer::new(provider, "mock-key".to_string(), "mock-model".to_string());
+    let llm =
+        summarize::CloudSummarizer::new(provider, "mock-key".to_string(), "mock-model".to_string());
     let summarizer = summarize::MeetingSummarizer::new(llm);
 
     let fingerprint = summarize::input_fingerprint(&spans);
     let summary = summarizer.summarize(spans).expect("summary");
-    println!("markdown: {}", summary.summary_markdown.replace('\n', " | "));
+    println!(
+        "markdown: {}",
+        summary.summary_markdown.replace('\n', " | ")
+    );
     println!("decisions: {:?}", summary.decisions);
 
     store

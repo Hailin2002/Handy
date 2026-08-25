@@ -844,11 +844,18 @@ impl MeetingEnvironment for AppEnvironment {
             // No choice yet: follow the OS default output instead of silently
             // recording nothing (real-world finding: YouTube played, system
             // track empty because the setting was never touched).
-            None => {
+            //
+            // Windows-only for now: WASAPI loopback is the v1 capture path
+            // (plan §2). On macOS there is no output-as-input capture without
+            // ScreenCaptureKit/virtual devices, so a default-follow request
+            // would fail the whole start — mic-only stays the honest default
+            // there until the mac capture backend lands.
+            None if cfg!(target_os = "windows") => {
                 let mut request = rec::SourceOpenRequest::new("");
                 request.follow_default_device = true;
                 Some(request)
             }
+            None => None,
         };
         rec::SourceDeviceSet { microphone, system }
     }
