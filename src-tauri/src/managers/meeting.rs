@@ -3408,7 +3408,7 @@ mod tests {
         )
         .expect("open manager");
         Harness {
-            dir: dir,
+            dir,
             manager,
             sink,
             db_path,
@@ -3866,7 +3866,66 @@ mod tests {
         );
     }
 
-    /// Controlled deletion (plan §11): AudioOnly keeps the transcript,
+    /// Dumb-user combination matrix: every wild click sequence must end in a
+    /// sane state without corrupting the store.
+    #[test]
+    fn hostile_click_matrix_stays_consistent() {
+        let h = harness();
+
+        // Double-start on the same meeting.
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, false, true)
+            .unwrap();
+        assert!(h
+            .manager
+            .start(&draft.meeting_id, None, false, false, true)
+            .is_err());
+
+        // Start a second meeting while the first records.
+        let second = h.manager.create_draft(None).unwrap();
+        assert!(h
+            .manager
+            .start(&second.meeting_id, None, false, false, true)
+            .is_err());
+
+        // Pause/pause/resume/resume spam.
+        h.manager.pause(&draft.meeting_id).unwrap();
+        assert!(h.manager.pause(&draft.meeting_id).is_err());
+        h.manager.resume(&draft.meeting_id).unwrap();
+        assert!(h.manager.resume(&draft.meeting_id).is_err());
+
+        // Cancel is illegal mid-recording (must stop first) — refused.
+        assert!(h.manager.cancel(&draft.meeting_id).is_err());
+
+        // Stop, then stop again: terminal states reject further stops.
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        assert!(h.manager.stop(&draft.meeting_id, false).is_err());
+
+        // Cancel AFTER completion is refused (terminal is terminal).
+        assert!(h.manager.cancel(&draft.meeting_id).is_err());
+
+        // The second draft is unaffected and can start after the first ended.
+        h.manager
+            .start(&second.meeting_id, None, false, false, true)
+            .unwrap();
+        h.manager.stop(&second.meeting_id, false).unwrap();
+
+        // Cancel from a terminal state is refused; from a fresh draft it works.
+        assert!(h.manager.cancel(&second.meeting_id).is_err());
+        let third = h.manager.create_draft(None).unwrap();
+        h.manager.cancel(&third.meeting_id).unwrap();
+
+        // Deleting a cancelled meeting works; deleting again is a no-op false.
+        assert!(h.manager.soft_delete_session(&second.meeting_id).unwrap());
+
+        // Rename on a deleted session is refused.
+        assert!(h
+            .manager
+            .rename_session(&second.meeting_id, "Ghost".to_string())
+            .is_err());
+    }
+
     /// Everything removes all content rows and the session itself.
     #[test]
     fn controlled_deletion_respects_the_two_scopes() {

@@ -13,7 +13,7 @@ mod helpers;
 mod input;
 mod llm_client;
 mod logging;
-mod managers;
+pub mod managers;
 mod memory;
 mod overlay;
 mod paste_tx;

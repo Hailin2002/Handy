@@ -14,6 +14,55 @@ use crate::managers::model::ModelManager;
 use crate::managers::transcription::TranscriptionManager;
 use crate::settings::get_settings;
 
+/// Decodes any PCM/float WAV into 16 kHz mono samples: mixes all channels
+/// down and resamples via the same `FrameResampler` the recorder uses.
+fn load_wav_16k_mono(path: &std::path::Path) -> anyhow::Result<Vec<f32>> {
+    let reader = hound::WavReader::open(path)?;
+    let spec = reader.spec();
+    let channels = spec.channels.max(1) as usize;
+
+    let interleaved: Vec<f32> = match spec.sample_format {
+        hound::SampleFormat::Float => reader
+            .into_samples::<f32>()
+            .collect::<Result<Vec<_>, _>>()?,
+        hound::SampleFormat::Int => match spec.bits_per_sample {
+            16 => reader
+                .into_samples::<i16>()
+                .map(|s| s.map(|v| v as f32 / i16::MAX as f32))
+                .collect::<Result<Vec<_>, _>>()?,
+            32 => reader
+                .into_samples::<i32>()
+                .map(|s| s.map(|v| v as f32 / i32::MAX as f32))
+                .collect::<Result<Vec<_>, _>>()?,
+            bits => anyhow::bail!("unsupported bit depth {bits} (use 16/32-bit PCM or float WAV)"),
+        },
+    };
+    if interleaved.is_empty() {
+        anyhow::bail!("wav contains no samples");
+    }
+
+    // Channel downmix by averaging frames.
+    let mono: Vec<f32> = interleaved
+        .chunks(channels)
+        .map(|frame| frame.iter().sum::<f32>() / channels as f32)
+        .collect();
+
+    if spec.sample_rate == 16_000 {
+        return Ok(mono);
+    }
+
+    let mut resampler = crate::audio_toolkit::audio::FrameResampler::new(
+        spec.sample_rate as usize,
+        16_000,
+        std::time::Duration::from_millis(20),
+    );
+    let mut out = Vec::with_capacity(mono.len() * 16_000 / spec.sample_rate as usize + 1);
+    let mut push = |frame: &[f32]| out.extend_from_slice(frame);
+    resampler.push(&mono, &mut push);
+    resampler.finish(&mut push);
+    Ok(out)
+}
+
 /// Convert an unexpected panic on the headless worker into a normal CLI
 /// failure. Without this guard the Tauri event loop remains alive after the
 /// worker exits, leaving `--transcribe-file` hung indefinitely.
@@ -106,34 +155,13 @@ pub fn run_headless_transcription(app: &AppHandle, args: &CliArgs) -> i32 {
         return 0;
     };
 
-    // read_wav_samples reads 16-bit int samples and does no validation; the app
-    // only ever saves 16 kHz mono 16-bit PCM, so reject anything else rather than
-    // transcribe garbage / mis-time / mis-decode.
-    match hound::WavReader::open(&wav) {
-        Ok(reader) => {
-            let spec = reader.spec();
-            if spec.sample_rate != 16_000
-                || spec.channels != 1
-                || spec.bits_per_sample != 16
-                || spec.sample_format != hound::SampleFormat::Int
-            {
-                eprintln!(
-                    "error: expected 16 kHz mono 16-bit PCM WAV, got {} Hz / {} ch / {}-bit {:?}",
-                    spec.sample_rate, spec.channels, spec.bits_per_sample, spec.sample_format
-                );
-                return 2;
-            }
-        }
-        Err(e) => {
-            eprintln!("error: cannot open {}: {}", wav.display(), e);
-            return 2;
-        }
-    }
-
-    let samples = match crate::audio_toolkit::read_wav_samples(&wav) {
+    // Accept ANY PCM/float WAV a user may throw at the CLI (48 kHz stereo
+    // phone recordings, dictation exports, ...) and normalize it to the
+    // engine's 16 kHz mono input instead of rejecting the file outright.
+    let samples = match load_wav_16k_mono(&wav) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("error: failed to read {}: {}", wav.display(), e);
+            eprintln!("error: failed to read {}: {e}", wav.display());
             return 2;
         }
     };
