@@ -207,3 +207,21 @@ pub const MAX_QUEUED_CAPTURE_BLOCKS: usize = 512;
 /// Frame duration handed to [`crate::audio_toolkit::audio::FrameResampler`];
 /// 20 ms at 16 kHz = 320 samples per emitted frame.
 pub const RESAMPLER_FRAME_MS: u64 = 20;
+
+/// How often a silent source's writer wakes up to extend its track.
+///
+/// WASAPI loopback delivers **no callbacks at all** while nothing is playing
+/// (measured: zero blocks across a 14 s capture with a silent output device).
+/// Without a tick, a meeting where nobody played audio produces no system
+/// chunk whatsoever, so the track is missing rather than silent — and the user
+/// cannot tell "nothing was playing" from "loopback never worked".
+pub const IDLE_SILENCE_TICK_MS: u64 = 500;
+
+/// How far behind the current timeline position idle silence stops.
+///
+/// A block that arrives after the writer already filled past its timestamp is
+/// appended behind the write head instead of at its own position, so the fill
+/// deliberately trails "now". One second is comfortably longer than the
+/// measured callback cadence yet short enough that the two tracks never drift
+/// apart visibly.
+pub const IDLE_SILENCE_LAG_MS: f64 = 1_000.0;

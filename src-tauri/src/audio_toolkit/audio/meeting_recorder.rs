@@ -1224,6 +1224,10 @@ struct SourceWriter {
     /// Reused resampler output buffer; capacity stays at one frame.
     out_buf: Vec<f32>,
     warned_startup_offset: bool,
+    /// Session clock, shared with the capture backend so idle silence lands on
+    /// the same timeline the blocks are stamped against.
+    origin: Instant,
+    paused_ms: Arc<Mutex<f64>>,
 }
 
 impl SourceWriter {
@@ -1233,6 +1237,8 @@ impl SourceWriter {
         fs_impl: Arc<dyn ChunkFs>,
         sink: Arc<dyn RecorderEventSink>,
         shared: Arc<Mutex<SharedState>>,
+        origin: Instant,
+        paused_ms: Arc<Mutex<f64>>,
     ) -> Self {
         let native_rate = cfg.native_rate.max(1);
         let resampler = FrameResampler::new(
@@ -1263,8 +1269,58 @@ impl SourceWriter {
             degraded_ranges: Vec::new(),
             out_buf: Vec::new(),
             warned_startup_offset: false,
+            origin,
+            paused_ms,
             cfg,
         }
+    }
+
+    /// Current session timeline position.
+    ///
+    /// A writer thread only exists while the recorder is actually recording —
+    /// `pause` tears every writer down before freezing the clock — so the
+    /// paused branch of the recorder's own clock cannot apply here.
+    fn timeline_now_ms(&self) -> f64 {
+        self.origin.elapsed().as_secs_f64() * 1000.0 - *lock_recover(&self.paused_ms)
+    }
+
+    /// Extends a silent source's track up to (nearly) now.
+    ///
+    /// WASAPI loopback stops delivering callbacks entirely while nothing plays,
+    /// so without this a meeting where no system audio was played produced *no
+    /// system chunk at all*: the track was missing rather than silent, the
+    /// session reported no system audio, and the user could not tell "nothing
+    /// was playing" from "loopback never worked". Silence is a legitimate
+    /// recording, and the plan requires missing spans to be represented as
+    /// silence instead of shortening the track.
+    ///
+    /// The fill deliberately trails `now` by [`tolerances::IDLE_SILENCE_LAG_MS`]
+    /// so a block that is merely late is still placed at its own timestamp
+    /// rather than appended behind an already-advanced write head.
+    fn fill_idle_silence(&mut self) -> Result<(), RecorderError> {
+        if matches!(self.state, SourceState::Lost | SourceState::Closed) {
+            return Ok(());
+        }
+        let target_ms = self.timeline_now_ms() - tolerances::IDLE_SILENCE_LAG_MS;
+        if target_ms <= 0.0 {
+            return Ok(());
+        }
+        let missing = ms_to_samples(target_ms).saturating_sub(self.written);
+        if missing == 0 {
+            return Ok(());
+        }
+        // A source that never delivered a block starts at timeline zero: its
+        // silence *is* the leading offset, so no separate pre-fill applies.
+        self.started = true;
+        self.write_silence(missing)?;
+        // Publish an honest zero level so a silent meter reads "nothing is
+        // playing" rather than keeping the last value from minutes ago.
+        self.emit(RecorderEvent::LevelUpdate {
+            source: self.cfg.source,
+            peak: 0.0,
+            rms: 0.0,
+        });
+        Ok(())
     }
 
     fn emit(&self, event: RecorderEvent) {
@@ -1651,7 +1707,30 @@ fn run_source_writer(
     queued: Arc<AtomicUsize>,
 ) {
     let mut error: Option<RecorderError> = None;
-    while let Ok(cmd) = rx.recv() {
+    let idle_tick = Duration::from_millis(tolerances::IDLE_SILENCE_TICK_MS);
+    loop {
+        let cmd = match rx.recv_timeout(idle_tick) {
+            Ok(cmd) => cmd,
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                // No block arrived this tick. For a healthy but silent source
+                // that is the normal loopback behaviour, not a fault.
+                if error.is_none() {
+                    if let Err(e) = writer.fill_idle_silence() {
+                        log::error!(
+                            "meeting recorder: {:?} idle fill error: {e}",
+                            writer.cfg.source
+                        );
+                        error = Some(e);
+                        let _ = writer.finish();
+                        writer.set_state(SourceState::Lost);
+                    }
+                }
+                continue;
+            }
+            // Sender dropped without an explicit Finish (recorder was dropped):
+            // still finalize so no chunk is lost.
+            Err(mpsc::RecvTimeoutError::Disconnected) => break,
+        };
         match cmd {
             WriterCmd::Block(block) => {
                 queued.fetch_sub(1, Ordering::AcqRel);
@@ -1677,6 +1756,13 @@ fn run_source_writer(
                 }
             }
             WriterCmd::Finish(reply) => {
+                // Close the timeline gap first: a source that fell silent
+                // shortly before the stop still owns that span.
+                if error.is_none() {
+                    if let Err(e) = writer.fill_idle_silence() {
+                        error = Some(e);
+                    }
+                }
                 if let Err(e) = writer.finish() {
                     if error.is_none() {
                         error = Some(e);
@@ -1688,8 +1774,6 @@ fn run_source_writer(
             }
         }
     }
-    // Sender dropped without an explicit Finish (recorder was dropped): still
-    // finalize so no chunk is lost.
     let _ = writer.finish();
 }
 
@@ -2330,6 +2414,8 @@ impl MeetingRecorderImpl {
             Arc::clone(&self.fs_impl),
             Arc::clone(&self.sink),
             Arc::clone(&self.shared),
+            self.origin,
+            Arc::clone(&self.paused_ms),
         );
         let thread_queued = Arc::clone(&queued);
         let join = std::thread::Builder::new()
@@ -3183,7 +3269,149 @@ mod tests {
             fs_impl,
             sink,
             Arc::new(Mutex::new(SharedState::default())),
+            // Tests drive `push_block` with explicit timestamps; the idle clock
+            // is only consulted by `fill_idle_silence`, which the idle tests
+            // exercise through their own writer.
+            Instant::now(),
+            Arc::new(Mutex::new(0.0)),
         )
+    }
+
+    /// Builds a writer whose session clock already started `age_ms` ago, so
+    /// `fill_idle_silence` has a definite span to close without any waiting.
+    fn idle_writer_for(
+        dir: &Path,
+        source: SourceKind,
+        store: Arc<dyn ChunkStateStore>,
+        sink: Arc<dyn RecorderEventSink>,
+        rollover_ms: u64,
+        age_ms: u64,
+    ) -> SourceWriter {
+        let audio_dir = dir.join("audio");
+        fs::create_dir_all(&audio_dir).expect("create audio dir");
+        SourceWriter::new(
+            SourceWriterConfig {
+                source,
+                session_id: "session-under-test".to_string(),
+                audio_dir,
+                segment_id: 1,
+                native_rate: 16_000,
+                rollover_samples: ms_to_samples(rollover_ms as f64),
+                initial_written: 0,
+                initial_sequence: 1,
+            },
+            store,
+            Arc::new(RealChunkFs),
+            sink,
+            Arc::new(Mutex::new(SharedState::default())),
+            Instant::now() - Duration::from_millis(age_ms),
+            Arc::new(Mutex::new(0.0)),
+        )
+    }
+
+    /// Regression: WASAPI loopback delivers no callbacks at all while nothing
+    /// plays, so a meeting where no system audio was played used to produce no
+    /// system chunk whatsoever — the track was missing rather than silent.
+    /// Every field recording in the wild showed zero `*-system.wav` files.
+    #[test]
+    fn a_silent_source_still_records_a_track() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = InMemoryStore::new();
+        let sink = Arc::new(CollectingSink::default());
+        // 5 s of session, of which the last second is held back by the lag.
+        let mut writer = idle_writer_for(
+            dir.path(),
+            SourceKind::System,
+            store.clone(),
+            sink.clone(),
+            10_000,
+            5_000,
+        );
+
+        writer.fill_idle_silence().expect("idle fill");
+        writer.finish().expect("finish");
+
+        let files = wav_files(&dir.path().join("audio"));
+        assert_eq!(
+            files.len(),
+            1,
+            "a silent source owns exactly one chunk here"
+        );
+        // 5 000 ms − 1 000 ms lag = 4 s at 16 kHz. The clock advances slightly
+        // between construction and the fill, so allow a small upward slack.
+        let samples = assert_valid_wav(&files[0]);
+        assert!(
+            (64_000..64_800).contains(&samples),
+            "expected ~4 s of silence, got {samples} samples"
+        );
+    }
+
+    /// The fill trails `now`, so a block that is merely late still lands at its
+    /// own timestamp instead of behind an already-advanced write head.
+    #[test]
+    fn idle_silence_stops_short_of_now() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = InMemoryStore::new();
+        let sink = Arc::new(CollectingSink::default());
+        let mut writer = idle_writer_for(
+            dir.path(),
+            SourceKind::System,
+            store.clone(),
+            sink.clone(),
+            60_000,
+            3_000,
+        );
+
+        writer.fill_idle_silence().expect("idle fill");
+        let written_ms = samples_to_ms(writer.written);
+        assert!(
+            written_ms <= 3_000.0 - tolerances::IDLE_SILENCE_LAG_MS + 50.0,
+            "idle fill must trail now by the lag, wrote {written_ms} ms"
+        );
+    }
+
+    /// A session younger than the lag has nothing to fill yet, so the first
+    /// ticks must not open a chunk at all.
+    #[test]
+    fn idle_silence_does_nothing_before_the_lag_elapsed() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = InMemoryStore::new();
+        let sink = Arc::new(CollectingSink::default());
+        let mut writer = idle_writer_for(
+            dir.path(),
+            SourceKind::System,
+            store.clone(),
+            sink.clone(),
+            60_000,
+            200,
+        );
+
+        writer.fill_idle_silence().expect("idle fill");
+        assert_eq!(writer.written, 0);
+        assert!(
+            wav_files(&dir.path().join("audio")).is_empty(),
+            "no chunk may be opened before there is anything to write"
+        );
+    }
+
+    /// A lost source must not keep growing a track it can no longer capture.
+    #[test]
+    fn idle_silence_stops_once_the_source_is_lost() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = InMemoryStore::new();
+        let sink = Arc::new(CollectingSink::default());
+        let mut writer = idle_writer_for(
+            dir.path(),
+            SourceKind::System,
+            store.clone(),
+            sink.clone(),
+            60_000,
+            5_000,
+        );
+
+        writer.set_state(SourceState::Lost);
+        writer.fill_idle_silence().expect("idle fill");
+        assert_eq!(writer.written, 0, "a lost source records nothing further");
     }
 
     // -- 1. timeline: gap insertion ----------------------------------------
