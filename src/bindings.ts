@@ -1350,6 +1350,39 @@ async whatsappPreviewText(content: string, dateOrder: string | null) : Promise<R
 }
 },
 /**
+ * Phase 9 wizard step 2 for `.zip`: inspect without extracting or persisting.
+ */
+async whatsappPreviewZip(path: string, dateOrder: string | null) : Promise<Result<ZipPreviewDto, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("whatsapp_preview_zip", { path, dateOrder }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Phase 9 wizard step 4 for `.zip`: import the chat plus its media.
+ */
+async whatsappImportZip(path: string, title: string, dateOrder: string | null) : Promise<Result<ZipIngestResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("whatsapp_import_zip", { path, title, dateOrder }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Media extracted from one imported archive.
+ */
+async sourceAssets(sourceId: string) : Promise<Result<SourceAsset[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("source_assets", { sourceId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Manual task creation (origin `manual`, immediately accepted).
  */
 async taskCreateManual(projectId: string, title: string, description: string | null) : Promise<Result<ProjectTask, string>> {
@@ -2157,6 +2190,14 @@ export type SoundTheme = "marimba" | "pop" | "custom"
  */
 export type Source = { id: string; source_type: string; title: string; ingestion_state: string; parser_version: string; content_hash: string; created_at: number }
 /**
+ * One media file extracted from an imported archive.
+ * 
+ * `analysis_state` is `not_analysed` until a model actually looked at it; the
+ * plan requires unsupported media to stay available and be marked plainly as
+ * "nicht analysiert" rather than being presented as understood.
+ */
+export type SourceAsset = { id: string; source_id: string; storage_key: string; original_name: string; mime: string; size_bytes: number; content_hash: string; analysis_state: string }
+/**
  * Wire-facing normalized chat/message item.
  */
 export type SourceItem = { id: string; source_id: string; author_label: string | null; occurred_at: number | null; sequence: number; text: string; is_media: boolean }
@@ -2209,6 +2250,18 @@ export type TypingTool = "auto" | "wtype" | "kwtype" | "dotool" | "ydotool" | "x
  */
 export type WhatsappImportResult = { source: Source; created: boolean; item_count: number }
 export type WindowsMicrophonePermissionStatus = { supported: boolean; overall_access: PermissionAccess; device_access: PermissionAccess; app_access: PermissionAccess; desktop_app_access: PermissionAccess }
+/**
+ * Outcome of a ZIP import.
+ */
+export type ZipIngestResult = { source: Source; created: boolean; item_count: number; media_count: number; 
+/**
+ * Entries that could not be stored, with the reason. Never silently lost.
+ */
+skipped: string[] }
+/**
+ * Archive-level preview: what the wizard shows in step 2.
+ */
+export type ZipPreviewDto = { chat_file: string; media_files: number; media_sample: string[]; chat: ChatPreviewDto }
 
 /** tauri-specta globals **/
 

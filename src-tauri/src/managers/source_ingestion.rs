@@ -9,9 +9,12 @@
 //!   or overlapping export returns the existing source with `created: false`.
 
 use super::meeting_store::{
-    MeetingRepository, NewWhatsappSource, Source, SourceItem, StoreError, Uuid,
+    MeetingRepository, NewSourceAsset, NewWhatsappSource, Source, SourceItem, StoreError, Uuid,
 };
-use super::whatsapp_importer::{self, DateOrder};
+use super::whatsapp_importer::{self, DateOrder, ZipLimits};
+use crate::storage::asset_store::{
+    AssetKind, AssetStore, ContentHash, PutRequest, PutSource, StorageKey,
+};
 use sha2::Digest;
 use std::sync::Arc;
 
@@ -20,6 +23,9 @@ pub const PARSER_VERSION: &str = "whatsapp-txt-v1";
 #[derive(Clone)]
 pub struct SourceIngestionService {
     pub(crate) store: Arc<dyn MeetingRepository>,
+    /// Where extracted media lands. `None` in contexts without a resolved app
+    /// data directory; ZIP import then refuses rather than dropping media.
+    assets: Option<Arc<dyn AssetStore>>,
 }
 
 /// Result of one import attempt.
@@ -32,7 +38,16 @@ pub struct IngestResult {
 
 impl SourceIngestionService {
     pub fn new(store: Arc<dyn MeetingRepository>) -> Self {
-        Self { store }
+        Self {
+            store,
+            assets: None,
+        }
+    }
+
+    /// Attaches the blob store used for media extracted from archives.
+    pub fn with_assets(mut self, assets: Arc<dyn AssetStore>) -> Self {
+        self.assets = Some(assets);
+        self
     }
 
     /// Imports a pasted or extracted WhatsApp chat text.
@@ -75,6 +90,137 @@ impl SourceIngestionService {
         })
     }
 
+    /// Inspects an archive without extracting or persisting anything.
+    ///
+    /// This is the wizard's step 2: the user sees participants, message and
+    /// media counts *before* any byte leaves the archive, and an unsafe or
+    /// malformed archive is refused here rather than half-imported.
+    pub fn preview_whatsapp_zip(
+        &self,
+        archive: &[u8],
+        date_order: Option<DateOrder>,
+    ) -> Result<ZipPreviewDto, String> {
+        let limits = ZipLimits::default();
+        let entries = whatsapp_importer::inspect_zip(archive, &limits)
+            .map_err(|e| format!("archiveRejected: {e}"))?;
+        let Some(chat_entry) = pick_chat_entry(&entries) else {
+            return Err("noChatFileInArchive".to_string());
+        };
+        let bytes = whatsapp_importer::extract_entry(archive, chat_entry, &limits)
+            .map_err(|e| format!("archiveRejected: {e}"))?;
+        let content = decode_chat_text(&bytes);
+        let chat = self.preview_whatsapp_text(&content, date_order)?;
+
+        let media: Vec<String> = entries
+            .iter()
+            .filter(|e| e.name != chat_entry.name && !e.name.ends_with('/'))
+            .map(|e| e.name.clone())
+            .collect();
+        Ok(ZipPreviewDto {
+            chat_file: chat_entry.name.clone(),
+            media_files: media.len() as i64,
+            // Named so the user can recognise what would be stored; the list is
+            // capped because a year of group chat can hold thousands.
+            media_sample: media.into_iter().take(20).collect(),
+            chat,
+        })
+    }
+
+    /// Imports the chat text and stores every other archive entry as media.
+    ///
+    /// Order matters: the text is parsed, deduplicated and persisted first, so
+    /// a user without any cloud account still ends up with a searchable chat
+    /// even if a media file later turns out to be unreadable. Media is stored
+    /// verbatim and marked `not_analysed` — the plan forbids presenting
+    /// unsupported files as understood.
+    pub fn ingest_whatsapp_zip(
+        &self,
+        title: &str,
+        archive: &[u8],
+        date_order: Option<DateOrder>,
+    ) -> Result<ZipIngestResult, String> {
+        let assets = self
+            .assets
+            .as_ref()
+            .ok_or_else(|| "assetStoreUnavailable".to_string())?;
+        let limits = ZipLimits::default();
+        let entries = whatsapp_importer::inspect_zip(archive, &limits)
+            .map_err(|e| format!("archiveRejected: {e}"))?;
+        let Some(chat_entry) = pick_chat_entry(&entries) else {
+            return Err("noChatFileInArchive".to_string());
+        };
+        let bytes = whatsapp_importer::extract_entry(archive, chat_entry, &limits)
+            .map_err(|e| format!("archiveRejected: {e}"))?;
+        let content = decode_chat_text(&bytes);
+
+        let imported = self
+            .ingest_whatsapp_text(title, &content, date_order)
+            .map_err(|e| {
+                let message = e.to_string();
+                if message.contains("dateOrderAmbiguous") {
+                    "dateOrderAmbiguous".to_string()
+                } else {
+                    message
+                }
+            })?;
+
+        let mut drafts = Vec::new();
+        let mut skipped = Vec::new();
+        for entry in &entries {
+            if entry.name == chat_entry.name || entry.name.ends_with('/') {
+                continue;
+            }
+            let payload = match whatsapp_importer::extract_entry(archive, entry, &limits) {
+                Ok(payload) => payload,
+                // One unreadable member must not abort an otherwise good
+                // import; it is reported instead of silently dropped.
+                Err(e) => {
+                    skipped.push(format!("{}: {e}", entry.name));
+                    continue;
+                }
+            };
+            let digest = format!("{:x}", sha2::Sha256::digest(&payload));
+            let asset_id = format!("asst_{}", uuid::Uuid::new_v4());
+            let key = match StorageKey::asset_blob(&asset_id, extension_of(&entry.name)) {
+                Ok(key) => key,
+                Err(e) => {
+                    skipped.push(format!("{}: {e}", entry.name));
+                    continue;
+                }
+            };
+            let size = payload.len() as i64;
+            let put = assets.put(PutRequest {
+                key: key.clone(),
+                kind: AssetKind::Blob,
+                expected_hash: ContentHash::from_digest_hex(&digest).ok(),
+                content: PutSource::Reader(Box::new(std::io::Cursor::new(payload))),
+            });
+            match put {
+                Ok(_) => drafts.push(NewSourceAsset {
+                    storage_key: key.as_str().to_string(),
+                    original_name: entry.name.clone(),
+                    mime: mime_of(&entry.name).to_string(),
+                    size_bytes: size,
+                    content_hash: digest,
+                }),
+                Err(e) => skipped.push(format!("{}: {e}", entry.name)),
+            }
+        }
+
+        let stored = self
+            .store
+            .attach_source_assets(Uuid(imported.source.id.clone()), drafts)
+            .map_err(|e| e.to_string())?;
+
+        Ok(ZipIngestResult {
+            item_count: imported.items.len() as i64,
+            media_count: stored.len() as i64,
+            skipped,
+            created: imported.created,
+            source: imported.source,
+        })
+    }
+
     fn invalid(&self, code: &str) -> StoreError {
         StoreError::Conflict {
             entity: "sources",
@@ -100,6 +246,76 @@ impl SourceIngestionService {
     }
 }
 
+/// Picks the chat transcript inside an archive.
+///
+/// WhatsApp names it `_chat.txt` on iOS and `<chat name>.txt` on Android, so
+/// neither a fixed name nor a fixed language is assumed (plan section 6.19).
+/// The largest `.txt` at the shallowest depth wins, which is the transcript in
+/// every observed layout.
+fn pick_chat_entry(
+    entries: &[whatsapp_importer::ZipEntryInfo],
+) -> Option<&whatsapp_importer::ZipEntryInfo> {
+    entries
+        .iter()
+        .filter(|e| e.name.to_lowercase().ends_with(".txt"))
+        .min_by_key(|e| {
+            (
+                e.name.matches('/').count(),
+                std::cmp::Reverse(e.uncompressed_size),
+            )
+        })
+}
+
+/// Decodes chat bytes, tolerating the BOM-prefixed UTF-8 and UTF-16 exports
+/// WhatsApp produces on different platforms.
+fn decode_chat_text(bytes: &[u8]) -> String {
+    if bytes.starts_with(&[0xFF, 0xFE]) {
+        let units: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        return String::from_utf16_lossy(&units);
+    }
+    if bytes.starts_with(&[0xFE, 0xFF]) {
+        let units: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|c| u16::from_be_bytes([c[0], c[1]]))
+            .collect();
+        return String::from_utf16_lossy(&units);
+    }
+    let body = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes);
+    String::from_utf8_lossy(body).into_owned()
+}
+
+/// Lower-cased extension, when it is plain enough to embed in a storage key.
+fn extension_of(name: &str) -> Option<&str> {
+    let file = name.rsplit('/').next()?;
+    let ext = file.rsplit_once('.')?.1;
+    // Storage keys stay predictable: anything exotic is stored without one.
+    (!ext.is_empty() && ext.len() <= 8 && ext.chars().all(|c| c.is_ascii_alphanumeric()))
+        .then_some(ext)
+}
+
+/// Coarse media type for display. Deliberately small: the value only drives
+/// icons and the "not analysed" wording, never a processing decision.
+fn mime_of(name: &str) -> &'static str {
+    match extension_of(name)
+        .map(|e| e.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("png") => "image/png",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
+        Some("mp4") => "video/mp4",
+        Some("opus") => "audio/opus",
+        Some("ogg") => "audio/ogg",
+        Some("m4a") => "audio/mp4",
+        Some("pdf") => "application/pdf",
+        _ => "application/octet-stream",
+    }
+}
+
 /// Serializable preview for the import wizard.
 #[derive(Debug, Clone, serde::Serialize, specta::Type)]
 pub struct ChatPreviewDto {
@@ -107,4 +323,24 @@ pub struct ChatPreviewDto {
     pub message_count: i64,
     pub media_count: i64,
     pub date_order_ambiguous: bool,
+}
+
+/// Archive-level preview: what the wizard shows in step 2.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct ZipPreviewDto {
+    pub chat_file: String,
+    pub media_files: i64,
+    pub media_sample: Vec<String>,
+    pub chat: ChatPreviewDto,
+}
+
+/// Outcome of a ZIP import.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct ZipIngestResult {
+    pub source: Source,
+    pub created: bool,
+    pub item_count: i64,
+    pub media_count: i64,
+    /// Entries that could not be stored, with the reason. Never silently lost.
+    pub skipped: Vec<String>,
 }

@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} participant",
     "previewParticipants_other": "{{count}} participants",
     "previewMedia": "{{count}} media placeholders kept as markers",
-    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing.",
+    "chooseArchive": "选择 .zip 导出文件",
+    "clearArchive": "移除文件",
+    "archiveHint": "或在下方粘贴聊天文本。",
+    "archiveChosen": "已选择：{{name}}",
+    "previewArchive": "聊天文件：{{chat}} · 找到 {{count}} 个媒体文件",
+    "mediaImported": "已保存 {{count}} 个媒体文件。它们保持原样，并标记为未分析。",
+    "mediaSkipped": "有 {{count}} 个文件无法保存。"
   }
 }

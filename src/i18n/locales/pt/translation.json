@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} participant",
     "previewParticipants_other": "{{count}} participants",
     "previewMedia": "{{count}} media placeholders kept as markers",
-    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing.",
+    "chooseArchive": "Escolher exportação .zip",
+    "clearArchive": "Remover ficheiro",
+    "archiveHint": "Ou cole o texto da conversa abaixo.",
+    "archiveChosen": "Selecionado: {{name}}",
+    "previewArchive": "Ficheiro da conversa: {{chat}} · {{count}} ficheiro(s) de multimédia encontrados",
+    "mediaImported": "{{count}} ficheiro(s) de multimédia guardados. São mantidos como estão e marcados como não analisados.",
+    "mediaSkipped": "Não foi possível guardar {{count}} ficheiro(s)."
   }
 }

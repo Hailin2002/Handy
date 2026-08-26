@@ -33,26 +33,70 @@ pub struct ZipLimits {
 
 impl Default for ZipLimits {
     fn default() -> Self {
+        // Values come from the import-security spec that generated the attack
+        // corpus (`tests/fixtures/import-security/manifest.json`), so the
+        // committed fixtures and the running validator cannot drift apart.
         Self {
-            max_files: 5_000,
-            max_entry_bytes: 512 * 1024 * 1024,
-            max_total_bytes: 1024 * 1024 * 1024,
+            max_files: 10_000,
+            max_entry_bytes: 256 * 1024 * 1024,
+            max_total_bytes: 2 * 1024 * 1024 * 1024,
             max_ratio: 200,
         }
     }
 }
 
+/// Entries below this size are exempt from the ratio check.
+///
+/// A few hundred bytes of text compress absurdly well; without the exemption
+/// every ordinary tiny file would look like a decompression bomb.
+const RATIO_EXEMPT_BELOW: u64 = 4_096;
+
+/// Longest accepted entry name and path component, in bytes.
+const MAX_NAME_BYTES: usize = 1_024;
+const MAX_COMPONENT_BYTES: usize = 255;
+
+/// Device names Windows resolves specially no matter the extension. Writing
+/// one of these can address a device instead of a file.
+const RESERVED_WINDOWS_NAMES: &[&str] = &[
+    "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
+    "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+];
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ImportError {
     NotAZip,
     Truncated,
-    TooManyFiles { limit: usize },
-    EntryTooLarge { name: String, declared: u64 },
-    TotalTooLarge { declared: u64 },
-    SuspiciousRatio { name: String },
-    UnsafePath { name: String },
-    UnsupportedCompression { name: String, method: u16 },
-    CrcMismatch { name: String },
+    TooManyFiles {
+        limit: usize,
+    },
+    EntryTooLarge {
+        name: String,
+        declared: u64,
+    },
+    TotalTooLarge {
+        declared: u64,
+    },
+    SuspiciousRatio {
+        name: String,
+    },
+    UnsafePath {
+        name: String,
+    },
+    UnsupportedCompression {
+        name: String,
+        method: u16,
+    },
+    CrcMismatch {
+        name: String,
+    },
+    /// Entry is encrypted; its contents cannot be validated before use.
+    Encrypted {
+        name: String,
+    },
+    /// Entry is a symlink or another non-regular member.
+    NotARegularFile {
+        name: String,
+    },
 }
 
 impl std::fmt::Display for ImportError {
@@ -80,6 +124,12 @@ impl std::fmt::Display for ImportError {
                 write!(f, "{name} uses unsupported compression method {method}")
             }
             Self::CrcMismatch { name } => write!(f, "{name} failed its checksum"),
+            Self::Encrypted { name } => {
+                write!(f, "{name} is encrypted and cannot be imported")
+            }
+            Self::NotARegularFile { name } => {
+                write!(f, "{name} is not a regular file")
+            }
         }
     }
 }
@@ -104,6 +154,13 @@ fn u32_at(data: &[u8], offset: usize) -> Option<u32> {
 #[derive(Debug, Clone)]
 pub struct ZipEntryInfo {
     pub name: String,
+    /// Exact central-directory name bytes.
+    ///
+    /// Legacy archivers store CP437, which lossy UTF-8 decoding turns into
+    /// replacement characters; comparing the *decoded* name against the local
+    /// header would then reject perfectly valid old exports. The raw bytes are
+    /// the only encoding-independent identity.
+    pub name_bytes: Vec<u8>,
     pub method: u16,
     pub compressed_size: u64,
     pub uncompressed_size: u64,
@@ -112,19 +169,81 @@ pub struct ZipEntryInfo {
 }
 
 /// Rejects unsafe entry paths before any inflation happens (plan §12).
+///
+/// Every rule here corresponds to an archive in the committed attack corpus:
+/// absolute and UNC paths, backslash separators, `..` traversal, NUL bytes,
+/// NTFS alternate data streams (`file:stream` — a colon anywhere, not just in
+/// a drive prefix), reserved Windows device names, and over-long names or
+/// components that could defeat downstream path handling.
 fn validate_path(name: &str) -> Result<(), ImportError> {
-    let unsafe_reason = name.starts_with('/')
+    let reject = || ImportError::UnsafePath {
+        name: name.to_string(),
+    };
+
+    if name.is_empty() || name.len() > MAX_NAME_BYTES {
+        return Err(reject());
+    }
+    if name.starts_with('/')
         || name.starts_with('\\')
         || name.contains('\\')
         || name.contains('\0')
-        || name.split('/').any(|part| part == ".." || part == ".")
-        || name.chars().take(2).collect::<String>().contains(':');
-    if unsafe_reason {
-        return Err(ImportError::UnsafePath {
-            name: name.to_string(),
-        });
+        // A colon anywhere opens an alternate data stream on NTFS, so the
+        // old "only look at a drive prefix" check was not enough.
+        || name.contains(':')
+    {
+        return Err(reject());
+    }
+
+    for part in name.split('/') {
+        if part.is_empty() {
+            // A trailing slash marks a directory entry and is legitimate;
+            // anything else empty means a doubled separator.
+            continue;
+        }
+        if part == ".." || part == "." || part.len() > MAX_COMPONENT_BYTES {
+            return Err(reject());
+        }
+        // Trailing dots and spaces are stripped by Windows, so `evil.` and
+        // `evil` can collide after extraction.
+        if part.ends_with('.') || part.ends_with(' ') {
+            return Err(reject());
+        }
+        let stem = part.split('.').next().unwrap_or(part).to_ascii_lowercase();
+        if RESERVED_WINDOWS_NAMES.contains(&stem.as_str()) {
+            return Err(reject());
+        }
     }
     Ok(())
+}
+
+/// True when the central-directory flags mark the entry as encrypted.
+///
+/// Bit 0 of the general-purpose flags covers both legacy ZipCrypto and the
+/// strong-encryption variants. An encrypted member cannot be inflated or
+/// checksum-verified, so it is refused rather than stored unchecked.
+fn is_encrypted(flags: u16) -> bool {
+    flags & 0x0001 != 0
+}
+
+/// True when the external attributes describe something other than a regular
+/// file — a symlink above all.
+///
+/// The high 16 bits carry the Unix mode when the archive was created on a
+/// Unix-like system; `S_IFLNK` there means extracting the entry would write a
+/// link that can point anywhere, including outside the AssetStore.
+fn is_non_regular(version_made_by: u16, external_attrs: u32) -> bool {
+    // The creator OS lives in the high byte; 3 is Unix.
+    if version_made_by >> 8 != 3 {
+        return false;
+    }
+    let mode = (external_attrs >> 16) as u16;
+    const S_IFMT: u16 = 0o170_000;
+    const S_IFLNK: u16 = 0o120_000;
+    const S_IFREG: u16 = 0o100_000;
+    const S_IFDIR: u16 = 0o040_000;
+    let kind = mode & S_IFMT;
+    // Mode 0 means "not recorded", which real archivers also emit.
+    kind != 0 && kind != S_IFREG && kind != S_IFDIR || kind == S_IFLNK
 }
 
 /// Locates the end-of-central-directory record by scanning backwards.
@@ -166,6 +285,8 @@ pub fn inspect_zip(data: &[u8], limits: &ZipLimits) -> Result<Vec<ZipEntryInfo>,
         if data.get(offset..offset + 4) != Some(&[0x50, 0x4b, 0x01, 0x02][..]) {
             return Err(ImportError::Truncated);
         }
+        let version_made_by = u16_at(data, offset + 4).unwrap_or(0);
+        let flags = u16_at(data, offset + 8).unwrap_or(0);
         let method = u16_at(data, offset + 10).unwrap_or(0);
         let crc32 = u32_at(data, offset + 16).unwrap_or(0);
         let compressed = u32_at(data, offset + 20).unwrap_or(0) as u64;
@@ -185,6 +306,15 @@ pub fn inspect_zip(data: &[u8], limits: &ZipLimits) -> Result<Vec<ZipEntryInfo>,
 
         validate_path(&name)?;
 
+        if is_encrypted(flags) {
+            return Err(ImportError::Encrypted { name });
+        }
+
+        let external_attrs = u32_at(data, offset + 38).unwrap_or(0);
+        if is_non_regular(version_made_by, external_attrs) {
+            return Err(ImportError::NotARegularFile { name });
+        }
+
         // Directory entries carry no payload and are skipped from ratio math.
         if !name.ends_with('/') {
             if uncompressed > limits.max_entry_bytes as u64 {
@@ -199,7 +329,10 @@ pub fn inspect_zip(data: &[u8], limits: &ZipLimits) -> Result<Vec<ZipEntryInfo>,
                     declared: total_declared,
                 });
             }
-            if compressed > 0 && uncompressed / compressed.max(1) > limits.max_ratio {
+            if uncompressed >= RATIO_EXEMPT_BELOW
+                && compressed > 0
+                && uncompressed / compressed.max(1) > limits.max_ratio
+            {
                 return Err(ImportError::SuspiciousRatio { name: name.clone() });
             }
             if method != 0 && method != 8 {
@@ -211,6 +344,7 @@ pub fn inspect_zip(data: &[u8], limits: &ZipLimits) -> Result<Vec<ZipEntryInfo>,
         }
 
         entries.push(ZipEntryInfo {
+            name_bytes: name_bytes.to_vec(),
             name,
             method,
             compressed_size: compressed,
@@ -240,8 +374,24 @@ pub fn extract_entry(
         });
     }
     let local_offset = entry.local_header_offset as usize;
+    // The central directory pointed here; if there is no local file header at
+    // that offset the archive is inconsistent and the "payload" that follows
+    // is whatever happens to sit there. Refuse rather than inflate it.
+    if data.get(local_offset..local_offset + 4) != Some(&[0x50, 0x4b, 0x03, 0x04][..]) {
+        return Err(ImportError::Truncated);
+    }
+    // The local header repeats the entry name; a mismatch means the two
+    // directories disagree about what this member is.
     let name_len = u16_at(data, local_offset + 26).unwrap_or(0) as usize;
     let extra_len = u16_at(data, local_offset + 28).unwrap_or(0) as usize;
+    let local_name = data
+        .get(local_offset + 30..local_offset + 30 + name_len)
+        .ok_or(ImportError::Truncated)?;
+    if local_name != entry.name_bytes.as_slice() {
+        return Err(ImportError::UnsafePath {
+            name: entry.name.clone(),
+        });
+    }
     let data_start = local_offset
         .checked_add(30)
         .and_then(|v| v.checked_add(name_len))

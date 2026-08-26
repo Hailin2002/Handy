@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} participant",
     "previewParticipants_other": "{{count}} participants",
     "previewMedia": "{{count}} media placeholders kept as markers",
-    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing.",
+    "chooseArchive": ".zip 내보내기 선택",
+    "clearArchive": "파일 제거",
+    "archiveHint": "또는 아래에 채팅 텍스트를 붙여넣으세요.",
+    "archiveChosen": "선택됨: {{name}}",
+    "previewArchive": "채팅 파일: {{chat}} · 미디어 파일 {{count}}개 발견",
+    "mediaImported": "미디어 파일 {{count}}개를 저장했습니다. 그대로 보관되며 분석되지 않음으로 표시됩니다.",
+    "mediaSkipped": "{{count}}개 파일을 저장하지 못했습니다."
   }
 }

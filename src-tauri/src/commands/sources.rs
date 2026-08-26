@@ -88,3 +88,58 @@ pub async fn source_items(
         .list_source_items(crate::managers::meeting_store::Uuid(source_id))
         .map_err(|e| e.to_string())
 }
+
+/// Largest archive accepted from disk.
+///
+/// The importer's own limits guard the *contents*; this bounds the read itself
+/// so a mistakenly chosen multi-gigabyte file cannot exhaust memory before any
+/// validation runs.
+const MAX_ARCHIVE_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+
+fn read_archive(path: &str) -> Result<Vec<u8>, String> {
+    let meta = std::fs::metadata(path).map_err(|e| format!("archiveUnreadable: {e}"))?;
+    if meta.len() > MAX_ARCHIVE_BYTES {
+        return Err("archiveTooLarge".to_string());
+    }
+    std::fs::read(path).map_err(|e| format!("archiveUnreadable: {e}"))
+}
+
+/// Phase 9 wizard step 2 for `.zip`: inspect without extracting or persisting.
+#[tauri::command]
+#[specta::specta]
+pub async fn whatsapp_preview_zip(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    path: String,
+    date_order: Option<String>,
+) -> Result<crate::managers::source_ingestion::ZipPreviewDto, String> {
+    let order = parse_date_order(date_order)?;
+    let bytes = read_archive(&path)?;
+    ingestion.preview_whatsapp_zip(&bytes, order)
+}
+
+/// Phase 9 wizard step 4 for `.zip`: import the chat plus its media.
+#[tauri::command]
+#[specta::specta]
+pub async fn whatsapp_import_zip(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    path: String,
+    title: String,
+    date_order: Option<String>,
+) -> Result<crate::managers::source_ingestion::ZipIngestResult, String> {
+    let order = parse_date_order(date_order)?;
+    let bytes = read_archive(&path)?;
+    ingestion.ingest_whatsapp_zip(&title, &bytes, order)
+}
+
+/// Media extracted from one imported archive.
+#[tauri::command]
+#[specta::specta]
+pub async fn source_assets(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    source_id: String,
+) -> Result<Vec<crate::managers::meeting_store::SourceAsset>, String> {
+    ingestion
+        .store
+        .list_source_assets(crate::managers::meeting_store::Uuid(source_id))
+        .map_err(|e| e.to_string())
+}

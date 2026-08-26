@@ -129,13 +129,32 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     ));
     app_handle.manage(project_manager.clone());
 
-    // Phase 9: source ingestion shares the same repository.
-    let source_ingestion = Arc::new(
-        crate::managers::source_ingestion::SourceIngestionService::new(
-            meeting_manager.store_handle(),
-        ),
+    // Durable, content-addressed asset storage (plan 5, module-placement-map
+    // B11). Managed so later leaves resolve it from Tauri state instead of
+    // constructing a second root. Built before source ingestion because
+    // archive import stores extracted media through it.
+    let asset_store = match storage::asset_store::LocalAssetStore::for_app(app_handle) {
+        Ok(store) => {
+            let store = Arc::new(store);
+            app_handle.manage(Arc::clone(&store));
+            Some(store)
+        }
+        Err(e) => {
+            log::error!("Failed to initialize asset store: {}", e);
+            None
+        }
+    };
+
+    // Phase 9: source ingestion shares the same repository. Without an asset
+    // store it still imports chat text; archive import refuses rather than
+    // dropping the media on the floor.
+    let mut ingestion = crate::managers::source_ingestion::SourceIngestionService::new(
+        meeting_manager.store_handle(),
     );
-    app_handle.manage(source_ingestion);
+    if let Some(store) = asset_store.clone() {
+        ingestion = ingestion.with_assets(store);
+    }
+    app_handle.manage(Arc::new(ingestion));
 
     // Local STT queue for meetings (plan §13 Phases 5–6). Pauses between jobs
     // while dictation recording/streaming holds the shared local model. The
@@ -226,16 +245,6 @@ fn initialize_core_logic(app_handle: &AppHandle) {
             }),
             vad_model_path,
         );
-    }
-
-    // Durable, content-addressed asset storage for meeting audio (plan 5,
-    // module-placement-map B11). Managed so later leaves resolve it from
-    // Tauri state instead of constructing a second root.
-    match storage::asset_store::LocalAssetStore::for_app(app_handle) {
-        Ok(asset_store) => {
-            app_handle.manage(Arc::new(asset_store));
-        }
-        Err(e) => log::error!("Failed to initialize meeting asset store: {}", e),
     }
 
     // Initialize the transcribe-cpp native backend (logging + backend module
@@ -522,6 +531,9 @@ pub fn run(cli_args: CliArgs) {
             commands::sources::source_list,
             commands::sources::source_items,
             commands::sources::whatsapp_preview_text,
+            commands::sources::whatsapp_preview_zip,
+            commands::sources::whatsapp_import_zip,
+            commands::sources::source_assets,
             commands::tasks::task_create_manual,
             commands::tasks::task_suggest,
             commands::tasks::task_list,

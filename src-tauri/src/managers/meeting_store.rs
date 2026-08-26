@@ -656,6 +656,14 @@ pub trait MeetingRepository: Send + Sync {
     ) -> Result<(Source, bool), StoreError>;
     fn list_sources(&self) -> Result<Vec<Source>, StoreError>;
     fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError>;
+    /// Records extracted media. Insert-only and idempotent per content hash,
+    /// so a repeated import of the same archive adds nothing.
+    fn attach_source_assets(
+        &self,
+        source_id: Uuid,
+        assets: Vec<NewSourceAsset>,
+    ) -> Result<Vec<SourceAsset>, StoreError>;
+    fn list_source_assets(&self, source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError>;
 
     // -- project tasks & snapshots (Phase 10) --------------------------------
 
@@ -1142,6 +1150,35 @@ static MIGRATIONS: &[M] = &[
      WHERE id NOT IN (SELECT job_id FROM meeting_stt_job_chunks);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_meeting_stt_job_chunks_unique
         ON meeting_stt_job_chunks (chunk_id);",
+    ),
+    // -- 11 ----------------------------------------------------------------
+    // Phase 9: media extracted from a WhatsApp archive. Bytes live in the
+    // AssetStore, this table only holds metadata and the *relative* storage
+    // key (plan §9: "keine Binärdaten als große SQLite-BLOBs", "keine
+    // absoluten Dateipfade als dauerhafte Identität").
+    //
+    // The unique (source_id, content_hash) makes re-importing an overlapping
+    // export idempotent for media exactly as the item hash does for messages,
+    // so the same photo cannot pile up on repeated imports.
+    M::up(
+        "CREATE TABLE IF NOT EXISTS source_assets (
+        id TEXT PRIMARY KEY,
+        source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+        storage_key TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        mime TEXT NOT NULL DEFAULT '',
+        size_bytes INTEGER NOT NULL DEFAULT 0,
+        content_hash TEXT NOT NULL,
+        analysis_state TEXT NOT NULL DEFAULT 'not_analysed',
+        revision INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_source_assets_dedupe
+        ON source_assets (source_id, content_hash);
+    CREATE INDEX IF NOT EXISTS idx_source_assets_source
+        ON source_assets (source_id, original_name);",
     ),
 ];
 
@@ -1720,6 +1757,33 @@ pub struct Source {
     pub parser_version: String,
     pub content_hash: String,
     pub created_at: i64,
+}
+
+/// One media file extracted from an imported archive.
+///
+/// `analysis_state` is `not_analysed` until a model actually looked at it; the
+/// plan requires unsupported media to stay available and be marked plainly as
+/// "nicht analysiert" rather than being presented as understood.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+pub struct SourceAsset {
+    pub id: String,
+    pub source_id: String,
+    pub storage_key: String,
+    pub original_name: String,
+    pub mime: String,
+    pub size_bytes: i64,
+    pub content_hash: String,
+    pub analysis_state: String,
+}
+
+/// Draft row for [`MeetingRepository::attach_source_assets`].
+#[derive(Debug, Clone)]
+pub struct NewSourceAsset {
+    pub storage_key: String,
+    pub original_name: String,
+    pub mime: String,
+    pub size_bytes: i64,
+    pub content_hash: String,
 }
 
 /// Wire-facing normalized chat/message item.
@@ -2382,6 +2446,73 @@ impl MeetingRepository for SqliteMeetingStore {
                     sequence: row.get(4)?,
                     text: row.get(5)?,
                     is_media: row.get::<_, i64>(6)? != 0,
+                })
+            })
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
+    fn attach_source_assets(
+        &self,
+        source_id: Uuid,
+        assets: Vec<NewSourceAsset>,
+    ) -> Result<Vec<SourceAsset>, StoreError> {
+        let op = "attach_source_assets";
+        let now = to_ms(self.now());
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+        for asset in &assets {
+            // `OR IGNORE` against the (source_id, content_hash) index: a
+            // repeated import of the same archive must add nothing rather
+            // than fail (plan §6.19 idempotent re-import).
+            tx.execute(
+                "INSERT OR IGNORE INTO source_assets
+                   (id, source_id, storage_key, original_name, mime, size_bytes,
+                    content_hash, analysis_state, revision, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'not_analysed', 1, ?8, ?8)",
+                params![
+                    self.uuids.new_uuid().0,
+                    source_id.0,
+                    asset.storage_key,
+                    asset.original_name,
+                    asset.mime,
+                    asset.size_bytes,
+                    asset.content_hash,
+                    now,
+                ],
+            )
+            .map_err(classify("source_assets", &source_id, op))?;
+        }
+        tx.commit().map_err(sql_err(op))?;
+        drop(conn);
+        self.list_source_assets(source_id)
+    }
+
+    fn list_source_assets(&self, source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError> {
+        let op = "list_source_assets";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, source_id, storage_key, original_name, mime, size_bytes,
+                        content_hash, analysis_state
+                 FROM source_assets
+                 WHERE source_id = ?1 AND deleted_at IS NULL
+                 ORDER BY original_name ASC",
+            )
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![source_id.0], |row| {
+                Ok(SourceAsset {
+                    id: row.get(0)?,
+                    source_id: row.get(1)?,
+                    storage_key: row.get(2)?,
+                    original_name: row.get(3)?,
+                    mime: row.get(4)?,
+                    size_bytes: row.get(5)?,
+                    content_hash: row.get(6)?,
+                    analysis_state: row.get(7)?,
                 })
             })
             .map_err(sql_err(op))?
@@ -3345,6 +3476,16 @@ mod tests {
             unimplemented!("fake")
         }
         fn list_source_items(&self, _source_id: Uuid) -> Result<Vec<SourceItem>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn attach_source_assets(
+            &self,
+            _source_id: Uuid,
+            _assets: Vec<NewSourceAsset>,
+        ) -> Result<Vec<SourceAsset>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn list_source_assets(&self, _source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError> {
             unimplemented!("fake")
         }
         fn create_manual_task(&self, _draft: NewProjectTask) -> Result<ProjectTask, StoreError> {

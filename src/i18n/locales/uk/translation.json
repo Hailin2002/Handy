@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} participant",
     "previewParticipants_other": "{{count}} participants",
     "previewMedia": "{{count}} media placeholders kept as markers",
-    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing.",
+    "chooseArchive": "Вибрати експорт .zip",
+    "clearArchive": "Прибрати файл",
+    "archiveHint": "Або вставте текст чату нижче.",
+    "archiveChosen": "Вибрано: {{name}}",
+    "previewArchive": "Файл чату: {{chat}} · знайдено медіафайлів: {{count}}",
+    "mediaImported": "Збережено медіафайлів: {{count}}. Вони зберігаються без змін і позначені як непроаналізовані.",
+    "mediaSkipped": "Не вдалося зберегти файлів: {{count}}."
   }
 }

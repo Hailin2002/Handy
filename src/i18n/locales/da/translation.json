@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} participant",
     "previewParticipants_other": "{{count}} participants",
     "previewMedia": "{{count}} media placeholders kept as markers",
-    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing.",
+    "chooseArchive": "Vælg .zip-eksport",
+    "clearArchive": "Fjern fil",
+    "archiveHint": "Eller indsæt chatteksten nedenfor.",
+    "archiveChosen": "Valgt: {{name}}",
+    "previewArchive": "Chatfil: {{chat}} · {{count}} mediefil(er) fundet",
+    "mediaImported": "{{count}} mediefil(er) gemt. De bevares uændret og markeres som ikke analyseret.",
+    "mediaSkipped": "{{count}} fil(er) kunne ikke gemmes."
   }
 }

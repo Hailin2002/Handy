@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} participant",
     "previewParticipants_other": "{{count}} participants",
     "previewMedia": "{{count}} media placeholders kept as markers",
-    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing.",
+    "chooseArchive": "Chọn tệp xuất .zip",
+    "clearArchive": "Bỏ tệp",
+    "archiveHint": "Hoặc dán văn bản cuộc trò chuyện bên dưới.",
+    "archiveChosen": "Đã chọn: {{name}}",
+    "previewArchive": "Tệp trò chuyện: {{chat}} · tìm thấy {{count}} tệp phương tiện",
+    "mediaImported": "Đã lưu {{count}} tệp phương tiện. Chúng được giữ nguyên và đánh dấu là chưa phân tích.",
+    "mediaSkipped": "Không thể lưu {{count}} tệp."
   }
 }

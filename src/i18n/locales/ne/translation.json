@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} participant",
     "previewParticipants_other": "{{count}} participants",
     "previewMedia": "{{count}} media placeholders kept as markers",
-    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing.",
+    "chooseArchive": ".zip निर्यात छान्नुहोस्",
+    "clearArchive": "फाइल हटाउनुहोस्",
+    "archiveHint": "वा तल च्याट पाठ टाँस्नुहोस्।",
+    "archiveChosen": "छानिएको: {{name}}",
+    "previewArchive": "च्याट फाइल: {{chat}} · {{count}} मिडिया फाइल भेटिए",
+    "mediaImported": "{{count}} मिडिया फाइल सुरक्षित गरियो। तिनीहरू जस्ताको तस्तै रहन्छन् र विश्लेषण नगरिएको भनी चिन्ह लगाइन्छ।",
+    "mediaSkipped": "{{count}} फाइल सुरक्षित गर्न सकिएन।"
   }
 }

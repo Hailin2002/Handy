@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} participant",
     "previewParticipants_other": "{{count}} participants",
     "previewMedia": "{{count}} media placeholders kept as markers",
-    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing."
+    "ambiguousDates": "This export uses dates where day and month cannot be told apart. Please choose the order explicitly before importing.",
+    "chooseArchive": ".zip dışa aktarımını seç",
+    "clearArchive": "Dosyayı kaldır",
+    "archiveHint": "Ya da sohbet metnini aşağıya yapıştır.",
+    "archiveChosen": "Seçildi: {{name}}",
+    "previewArchive": "Sohbet dosyası: {{chat}} · {{count}} medya dosyası bulundu",
+    "mediaImported": "{{count}} medya dosyası kaydedildi. Olduğu gibi saklanır ve analiz edilmedi olarak işaretlenir.",
+    "mediaSkipped": "{{count}} dosya kaydedilemedi."
   }
 }

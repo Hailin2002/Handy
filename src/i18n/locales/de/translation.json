@@ -1334,6 +1334,13 @@
     "previewParticipants_one": "{{count}} Teilnehmer",
     "previewParticipants_other": "{{count}} Teilnehmer",
     "previewMedia": "{{count}} Medienpl�tze als Marker erhalten",
-    "ambiguousDates": "In diesem Export lassen sich Tag und Monat nicht unterscheiden. Bitte w�hle die Reihenfolge explizit, bevor du importierst."
+    "ambiguousDates": "In diesem Export lassen sich Tag und Monat nicht unterscheiden. Bitte w�hle die Reihenfolge explizit, bevor du importierst.",
+    "chooseArchive": ".zip-Export wählen",
+    "clearArchive": "Datei entfernen",
+    "archiveHint": "Oder den Chattext unten einfügen.",
+    "archiveChosen": "Ausgewählt: {{name}}",
+    "previewArchive": "Chatdatei: {{chat}} · {{count}} Mediendatei(en) gefunden",
+    "mediaImported": "{{count}} Mediendatei(en) gespeichert. Sie bleiben unverändert und gelten als nicht analysiert.",
+    "mediaSkipped": "{{count}} Datei(en) konnten nicht gespeichert werden."
   }
 }
