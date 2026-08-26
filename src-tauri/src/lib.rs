@@ -164,64 +164,59 @@ fn initialize_core_logic(app_handle: &AppHandle) {
         // Cloud STT round-trips are bounded so a hung endpoint can never stall
         // the queue worker (and thus settlement) indefinitely.
         let cloud_timeout = std::time::Duration::from_secs(MEETING_CLOUD_TIMEOUT_SECS);
-        match settings.meeting_stt_provider {
-            crate::settings::SpeechInputProvider::Azure => {
-                match (
-                    !settings.azure_speech_endpoint.trim().is_empty(),
-                    crate::secret_store::get_secret(
-                        crate::secret_store::SPEECH_PIPELINE_SCOPE,
-                        "azure",
-                    ),
+
+        // Every *configured* cloud backend is registered, not just the one the
+        // global `meeting_stt_provider` happens to name. The provider is a
+        // per-meeting choice made in the start dialog (plan Phase 6: "Local,
+        // Azure und Custom koennen pro Meeting gewaehlt werden"), so gating
+        // registration on the global setting made those choices unroutable:
+        // the session was persisted and displayed as "Azure Speech" while the
+        // router silently fell back to the local engine.
+        if !settings.azure_speech_endpoint.trim().is_empty() {
+            if let Some(key) =
+                crate::secret_store::get_secret(crate::secret_store::SPEECH_PIPELINE_SCOPE, "azure")
+            {
+                match managers::meeting_cloud::AzureFastTranscriptionClient::new(
+                    settings.azure_speech_endpoint.clone(),
+                    key,
+                    cloud_timeout,
                 ) {
-                    (true, Some(key)) => {
-                        match managers::meeting_cloud::AzureFastTranscriptionClient::new(
-                            settings.azure_speech_endpoint.clone(),
-                            key,
-                            cloud_timeout,
-                        ) {
-                            Ok(client) => routing.register(
-                                "Azure Speech",
-                                Arc::new(managers::meeting_cloud::AzureMeetingEngine::new(
-                                    Arc::new(client),
-                                )),
-                            ),
-                            Err(e) => log::warn!(
-                                "Azure meeting STT unavailable, meetings fall back to local: {}",
-                                e.message()
-                            ),
-                        }
-                    }
-                    _ => log::warn!(
-                        "Azure meeting STT selected but endpoint/key missing; falling back to local"
+                    Ok(client) => routing.register(
+                        "Azure Speech",
+                        Arc::new(managers::meeting_cloud::AzureMeetingEngine::new(Arc::new(
+                            client,
+                        ))),
+                    ),
+                    Err(e) => log::warn!(
+                        "Azure meeting STT not registered: {}. Meetings that select Azure will fail visibly.",
+                        e.message()
                     ),
                 }
             }
-            crate::settings::SpeechInputProvider::Custom => {
-                let key = crate::secret_store::get_secret(
-                    crate::secret_store::SPEECH_PIPELINE_SCOPE,
-                    "custom",
-                )
-                .unwrap_or_default();
-                if !settings.custom_stt_endpoint.trim().is_empty() {
-                    match managers::meeting_cloud::CustomEndpointClient::new(
-                        settings.custom_stt_endpoint.clone(),
-                        key,
-                        cloud_timeout,
-                    ) {
-                        Ok(client) => routing.register(
-                            "Custom endpoint",
-                            Arc::new(managers::meeting_cloud::CustomMeetingEngine::new(Arc::new(
-                                client,
-                            ))),
-                        ),
-                        Err(e) => log::warn!(
-                            "Custom meeting STT unavailable, meetings fall back to local: {}",
-                            e.message()
-                        ),
-                    }
-                }
+        }
+
+        if !settings.custom_stt_endpoint.trim().is_empty() {
+            let key = crate::secret_store::get_secret(
+                crate::secret_store::SPEECH_PIPELINE_SCOPE,
+                "custom",
+            )
+            .unwrap_or_default();
+            match managers::meeting_cloud::CustomEndpointClient::new(
+                settings.custom_stt_endpoint.clone(),
+                key,
+                cloud_timeout,
+            ) {
+                Ok(client) => routing.register(
+                    "Custom endpoint",
+                    Arc::new(managers::meeting_cloud::CustomMeetingEngine::new(Arc::new(
+                        client,
+                    ))),
+                ),
+                Err(e) => log::warn!(
+                    "Custom meeting STT not registered: {}. Meetings that select Custom will fail visibly.",
+                    e.message()
+                ),
             }
-            crate::settings::SpeechInputProvider::Local => {}
         }
 
         meeting_manager.attach_transcription_queue(

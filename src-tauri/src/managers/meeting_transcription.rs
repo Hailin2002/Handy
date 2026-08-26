@@ -146,8 +146,15 @@ impl MeetingSttEngine for LocalMeetingSttEngine {
 }
 
 /// Dispatches to the engine registered for the job's provider name. Assembled
-/// once at startup from the configured providers; unknown names fall back to
-/// whichever engine was registered first (the local engine).
+/// once at startup from the configured providers.
+///
+/// Only the local engine is a legitimate fallback target, and only for jobs
+/// that asked for local processing in the first place. A job that names a
+/// cloud provider must never be quietly served locally: the session is
+/// persisted and displayed with that provider, so a silent substitution would
+/// make the UI lie about where the audio was processed (plan 6.2 principles 5
+/// and 6). Such a job fails permanently instead, which surfaces the missing
+/// configuration to the user rather than hiding it.
 pub struct RoutingMeetingSttEngine {
     engines: Mutex<Vec<(String, Arc<dyn MeetingSttEngine>)>>,
     fallback: Arc<dyn MeetingSttEngine>,
@@ -168,14 +175,25 @@ impl RoutingMeetingSttEngine {
             .push((provider_name.to_string(), engine));
     }
 
-    fn resolve(&self, provider_name: &str) -> Arc<dyn MeetingSttEngine> {
-        self.engines
+    /// `None` when the requested provider has no engine and substituting the
+    /// fallback would misreport the processing location.
+    fn resolve(&self, provider_name: &str) -> Option<Arc<dyn MeetingSttEngine>> {
+        if let Some(engine) = self
+            .engines
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .iter()
             .find(|(name, _)| name == provider_name)
             .map(|(_, engine)| Arc::clone(engine))
-            .unwrap_or_else(|| Arc::clone(&self.fallback))
+        {
+            return Some(engine);
+        }
+        // Legacy/blank provider labels predate the per-meeting choice and mean
+        // "whatever local processing is configured"; those may still fall back.
+        if provider_name.is_empty() || provider_name.eq_ignore_ascii_case("local") {
+            return Some(Arc::clone(&self.fallback));
+        }
+        None
     }
 }
 
@@ -185,7 +203,13 @@ impl MeetingSttEngine for RoutingMeetingSttEngine {
         ctx: &JobContext,
         audio: &[f32],
     ) -> Result<Vec<EngineSegment>, EngineError> {
-        self.resolve(&ctx.provider_name).transcribe(ctx, audio)
+        match self.resolve(&ctx.provider_name) {
+            Some(engine) => engine.transcribe(ctx, audio),
+            None => Err(EngineError::Permanent(format!(
+                "meeting STT provider '{}' is not configured on this device",
+                ctx.provider_name
+            ))),
+        }
     }
 
     fn model_label(&self) -> String {
@@ -1520,7 +1544,7 @@ mod tests {
     }
 
     #[test]
-    fn routing_dispatches_by_provider_name_with_local_fallback() {
+    fn routing_dispatches_by_provider_name_and_refuses_unknown_providers() {
         struct Named(&'static str);
         impl MeetingSttEngine for Named {
             fn transcribe(
@@ -1564,12 +1588,18 @@ mod tests {
         );
         assert_eq!(
             routing.transcribe(&local_ctx, &audio).expect("ok")[0].text,
-            "local",
-            "unregistered names fall back to the local engine"
-        );
-        assert_eq!(
-            routing.transcribe(&unknown_ctx, &audio).expect("ok")[0].text,
             "local"
+        );
+        // A job naming a provider that has no engine must fail permanently
+        // rather than be served locally: the session is displayed with that
+        // provider, so a silent substitution would misreport where the audio
+        // was processed.
+        assert!(
+            matches!(
+                routing.transcribe(&unknown_ctx, &audio),
+                Err(EngineError::Permanent(_))
+            ),
+            "an unconfigured provider must never be silently served locally"
         );
     }
 

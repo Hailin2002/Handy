@@ -1111,6 +1111,38 @@ static MIGRATIONS: &[M] = &[
     CREATE UNIQUE INDEX IF NOT EXISTS idx_project_tasks_dedupe
         ON project_tasks (project_id, content_hash);",
     ),
+    // -- 10 ----------------------------------------------------------------
+    // One audio chunk is transcribed by exactly one STT job: retries reuse the
+    // existing row (`retry_jobs` only flips `failed` back to `queued`), so a
+    // second job for the same chunk can only come from the check-then-act race
+    // between the recorder's per-chunk enqueue and the stop path's sweep. That
+    // race was observed in the field — three chunks each carried two jobs
+    // created in the same millisecond, and every one of their segments landed
+    // in the transcript twice. The unique index turns the race into a
+    // constraint violation that `enqueue_stt_job` absorbs.
+    //
+    // Existing databases may already contain such duplicates, so the older
+    // job of each pair (and its segments) is dropped before the index is
+    // built; the surviving job keeps the identical text.
+    M::up(
+        "DELETE FROM meeting_transcript_segments
+         WHERE job_id IN (
+            SELECT jc.job_id FROM meeting_stt_job_chunks jc
+            WHERE jc.job_id NOT IN (
+                SELECT MIN(inner_jc.job_id) FROM meeting_stt_job_chunks inner_jc
+                GROUP BY inner_jc.chunk_id
+            )
+         );
+    DELETE FROM meeting_stt_job_chunks
+     WHERE job_id NOT IN (
+        SELECT MIN(inner_jc.job_id) FROM meeting_stt_job_chunks inner_jc
+        GROUP BY inner_jc.chunk_id
+     );
+    DELETE FROM meeting_stt_jobs
+     WHERE id NOT IN (SELECT job_id FROM meeting_stt_job_chunks);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_meeting_stt_job_chunks_unique
+        ON meeting_stt_job_chunks (chunk_id);",
+    ),
 ];
 
 /// Resolves the portable-aware path of `meetings.db`.
@@ -2676,9 +2708,18 @@ impl MeetingRepository for SqliteMeetingStore {
         let revision = current.envelope.revision + 1;
 
         tx.execute(
+            // `timeline_end_ms` is derived here, not at insert time: a chunk is
+            // opened empty (start == end) and only its finalized sample count
+            // tells how far along the timeline it actually reaches. Leaving it
+            // at the insert value made every chunk zero-length, which in turn
+            // collapsed every STT job range and every transcript timestamp to
+            // the chunk start (regression: transcript segments all reported
+            // start_ms == end_ms).
             "UPDATE meeting_audio_chunks
              SET file_size = ?2, sample_count = ?3, checksum = ?4,
                  gap_drift_metadata = COALESCE(?5, gap_drift_metadata),
+                 timeline_end_ms = timeline_start_ms
+                     + (?3 * 1000) / MAX(sample_rate, 1),
                  state = 'ready', revision = ?6, updated_at = ?7
              WHERE id = ?1",
             params![
@@ -2692,6 +2733,28 @@ impl MeetingRepository for SqliteMeetingStore {
             ],
         )
         .map_err(classify(ENTITY_CHUNKS, &id, op))?;
+
+        // A durably finalized chunk is the only honest proof that a source
+        // actually produced audio, so the session's capability flags are
+        // raised here rather than optimistically at start. Nothing wrote them
+        // before, which left every session claiming "no microphone audio, no
+        // system audio" regardless of what had been captured — so the mic-only
+        // badge could never render correctly.
+        let source_column = match current.source.as_str() {
+            "microphone" => Some("has_microphone_audio"),
+            "system" => Some("has_system_audio"),
+            _ => None,
+        };
+        if let Some(column) = source_column {
+            tx.execute(
+                &format!(
+                    "UPDATE meeting_sessions SET {column} = 1, updated_at = ?2
+                     WHERE id = ?1 AND {column} = 0"
+                ),
+                params![current.meeting_id.0, to_ms(now)],
+            )
+            .map_err(classify(ENTITY_SESSIONS, &id, op))?;
+        }
 
         change_log::append(
             &tx,
@@ -3467,6 +3530,34 @@ impl SqliteMeetingStore {
         let mut conn = self.locked(op)?;
         let tx = conn.transaction().map_err(sql_err(op))?;
 
+        // Idempotence guard, inside the write transaction. The two callers
+        // (`enqueue_chunk_job` on recorder finalize and `enqueue_ready_chunks`
+        // on stop) both pre-check coverage on a *different* connection, so
+        // their checks can interleave; only this transaction — backed by the
+        // `idx_meeting_stt_job_chunks_unique` index — is authoritative.
+        // Returning the existing job makes the losing caller a no-op instead
+        // of duplicating the chunk's transcript.
+        for chunk_id in &draft.chunk_ids {
+            let existing: Option<String> = tx
+                .query_row(
+                    "SELECT job_id FROM meeting_stt_job_chunks WHERE chunk_id = ?1",
+                    params![chunk_id.0],
+                    |row| row.get(0),
+                )
+                .optional()
+                .map_err(sql_err(op))?;
+            if let Some(job_id) = existing {
+                let job =
+                    read_job(&tx, &job_id)
+                        .map_err(sql_err(op))?
+                        .ok_or(StoreError::NotFound {
+                            entity: "meeting_stt_jobs",
+                            id: Uuid(job_id),
+                        })?;
+                return Ok(job);
+            }
+        }
+
         tx.execute(
             "INSERT INTO meeting_stt_jobs (
                 id, meeting_id, source, timeline_start_ms, timeline_end_ms, provider,
@@ -3567,6 +3658,110 @@ mod sqlite_tests {
             config_snapshot: serde_json::json!({ "beam": 5 }),
             next_attempt_at: None,
         }
+    }
+
+    /// Regression: a chunk is inserted empty (`timeline_end_ms` ==
+    /// `timeline_start_ms`) and only its finalized sample count says how far
+    /// along the timeline it reaches. Finalisation used to leave the end at
+    /// the insert value, so every chunk stayed zero-length and every STT job
+    /// range and transcript timestamp derived from it collapsed onto the chunk
+    /// start (observed in the field: all segments reported start == end == 0).
+    #[test]
+    fn finalize_chunk_derives_the_timeline_end_from_the_sample_count() {
+        let (_dir, store) = temp_store();
+        let session = store
+            .create_session(draft_session("Timeline"))
+            .expect("session");
+        let meeting_id = session.envelope.id.clone();
+        let mut draft = draft_chunk(&meeting_id, 1);
+        draft.timeline_start_ms = 60_000;
+        draft.timeline_end_ms = 60_000;
+        let chunk = store.append_chunk(draft).expect("chunk");
+
+        // 16 kHz mono, 48 000 samples = exactly 3 s of audio.
+        let finalized = store
+            .finalize_chunk(
+                chunk.envelope.id.clone(),
+                ChunkFacts {
+                    file_size: 48_000 * 2 + 44,
+                    sample_count: 48_000,
+                    checksum: "a".repeat(64),
+                    gap_drift_metadata: None,
+                },
+            )
+            .expect("finalize");
+
+        assert_eq!(finalized.timeline_start_ms, 60_000);
+        assert_eq!(
+            finalized.timeline_end_ms, 63_000,
+            "a 3 s chunk starting at 60 s must end at 63 s, not at its start"
+        );
+    }
+
+    /// Regression: `has_microphone_audio` / `has_system_audio` were written
+    /// once at session creation and never again, so a session always claimed
+    /// it had captured nothing and the mic-only badge could not render.
+    #[test]
+    fn finalizing_a_chunk_records_which_sources_produced_audio() {
+        let (_dir, store) = temp_store();
+        let mut draft = draft_session("Sources");
+        draft.has_microphone_audio = false;
+        draft.has_system_audio = false;
+        let session = store.create_session(draft).expect("session");
+        let meeting_id = session.envelope.id.clone();
+
+        let mut system_chunk = draft_chunk(&meeting_id, 0);
+        system_chunk.source = "system".to_string();
+        let chunk = store.append_chunk(system_chunk).expect("chunk");
+        store
+            .finalize_chunk(
+                chunk.envelope.id,
+                ChunkFacts {
+                    file_size: 1_644,
+                    sample_count: 800,
+                    checksum: "b".repeat(64),
+                    gap_drift_metadata: None,
+                },
+            )
+            .expect("finalize");
+
+        let read = store.get_session(meeting_id).expect("read").expect("row");
+        assert!(
+            read.has_system_audio,
+            "a finalized system chunk proves system audio was captured"
+        );
+        assert!(
+            !read.has_microphone_audio,
+            "no microphone chunk was finalized, so the flag must stay false"
+        );
+    }
+
+    /// Regression: the recorder's per-chunk enqueue and the stop path's sweep
+    /// pre-check coverage on a different connection, so their checks can
+    /// interleave. Three chunks in a real recording ended up with two jobs
+    /// created in the same millisecond, and every one of their segments landed
+    /// in the transcript twice.
+    #[test]
+    fn enqueueing_a_covered_chunk_returns_the_existing_job() {
+        let (_dir, store) = temp_store();
+        let session = store
+            .create_session(draft_session("Race"))
+            .expect("session");
+        let meeting_id = session.envelope.id.clone();
+        let chunk = store
+            .append_chunk(draft_chunk(&meeting_id, 0))
+            .expect("chunk");
+
+        let first = store
+            .enqueue_stt_job(draft_job(&meeting_id, vec![chunk.envelope.id.clone()]))
+            .expect("first enqueue");
+        let second = store
+            .enqueue_stt_job(draft_job(&meeting_id, vec![chunk.envelope.id]))
+            .expect("second enqueue");
+
+        assert_eq!(first.id, second.id, "the losing caller must be a no-op");
+        let jobs = store.due_stt_jobs(Utc::now(), 10).expect("due jobs");
+        assert_eq!(jobs.len(), 1, "exactly one job may own a chunk");
     }
 
     /// A session plus one finalized chunk plus one claimed-ready job — the
@@ -4069,15 +4264,30 @@ mod sqlite_tests {
             .create_session(draft_session("Queue"))
             .expect("session");
         let meeting_id = session.envelope.id.clone();
-        let chunk = store
+        // Two distinct chunks: one chunk maps to exactly one job, enforced by
+        // `idx_meeting_stt_job_chunks_unique`, so a second enqueue for the same
+        // chunk returns the first job instead of creating a rival.
+        let chunk_a = store
             .append_chunk(draft_chunk(&meeting_id, 0))
-            .expect("chunk");
+            .expect("chunk a");
+        let chunk_b = store
+            .append_chunk(draft_chunk(&meeting_id, 1))
+            .expect("chunk b");
         let job_a = store
-            .enqueue_stt_job(draft_job(&meeting_id, vec![chunk.envelope.id.clone()]))
+            .enqueue_stt_job(draft_job(&meeting_id, vec![chunk_a.envelope.id.clone()]))
             .expect("job a");
         let job_b = store
-            .enqueue_stt_job(draft_job(&meeting_id, vec![chunk.envelope.id]))
+            .enqueue_stt_job(draft_job(&meeting_id, vec![chunk_b.envelope.id]))
             .expect("job b");
+
+        assert_eq!(
+            store
+                .enqueue_stt_job(draft_job(&meeting_id, vec![chunk_a.envelope.id]))
+                .expect("re-enqueue")
+                .id,
+            job_a.id,
+            "a chunk that is already covered must not spawn a second job"
+        );
 
         let now = Utc::now();
         let first = store
