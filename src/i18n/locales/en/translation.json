@@ -1133,6 +1133,17 @@
           "title": "System audio source",
           "description": "Output device whose sound is recorded as the other participants' audio. Separate from the device used for feedback sounds."
         }
+      },
+      "retention": {
+        "title": "Keep recordings",
+        "description": "Applies to the raw audio only. Transcripts and summaries are always kept, and a meeting whose transcription failed keeps its audio.",
+        "options": {
+          "ask": "Ask me later (nothing is deleted)",
+          "immediately": "Delete right after processing",
+          "days7": "Keep for 7 days",
+          "days30": "Keep for 30 days",
+          "forever": "Keep forever"
+        }
       }
     }
   },

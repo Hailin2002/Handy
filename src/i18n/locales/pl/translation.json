@@ -1133,6 +1133,17 @@
           "title": "Źródło dźwięku systemowego",
           "description": "Urządzenie wyjściowe, którego dźwięk jest nagrywany jako audio pozostałych uczestników. Odrębne od urządzenia dźwięków powiadomień."
         }
+      },
+      "retention": {
+        "title": "Przechowywanie nagrań",
+        "description": "Dotyczy tylko surowego dźwięku. Transkrypcja i podsumowanie są zawsze zachowywane, a spotkanie z nieudaną transkrypcją zachowuje swój dźwięk.",
+        "options": {
+          "ask": "Zdecyduję później (nic nie jest usuwane)",
+          "immediately": "Usuń zaraz po przetworzeniu",
+          "days7": "Przechowuj 7 dni",
+          "days30": "Przechowuj 30 dni",
+          "forever": "Przechowuj bezterminowo"
+        }
       }
     }
   },

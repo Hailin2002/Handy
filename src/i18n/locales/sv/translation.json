@@ -1133,6 +1133,17 @@
           "title": "Källa för systemljud",
           "description": "Utenhet vars ljud spelas in som de andra deltagarnas ljud. Skild från enheten för återkopplingsljud."
         }
+      },
+      "retention": {
+        "title": "Behåll inspelningar",
+        "description": "Gäller bara råljudet. Transkription och sammanfattning behålls alltid, och ett möte vars transkription misslyckades behåller sitt ljud.",
+        "options": {
+          "ask": "Bestäm senare (inget raderas)",
+          "immediately": "Radera direkt efter bearbetningen",
+          "days7": "Behåll i 7 dagar",
+          "days30": "Behåll i 30 dagar",
+          "forever": "Behåll för alltid"
+        }
       }
     }
   },

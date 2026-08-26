@@ -1133,6 +1133,17 @@
           "title": "Systemaudio-Quelle",
           "description": "Ausgabegerät, dessen Ton als Audio der anderen Teilnehmer aufgezeichnet wird. Getrennt vom Gerät für Feedback-Töne."
         }
+      },
+      "retention": {
+        "title": "Aufnahmen aufbewahren",
+        "description": "Gilt nur für das Rohaudio. Transkript und Zusammenfassung bleiben immer erhalten, und ein Meeting mit fehlgeschlagener Transkription behält sein Audio.",
+        "options": {
+          "ask": "Später entscheiden (nichts wird gelöscht)",
+          "immediately": "Direkt nach der Verarbeitung löschen",
+          "days7": "7 Tage behalten",
+          "days30": "30 Tage behalten",
+          "forever": "Dauerhaft behalten"
+        }
       }
     }
   },

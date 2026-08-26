@@ -98,6 +98,10 @@ pub struct AppSettings {
     pub meeting_summary_cloud_consent: bool,
     /// Microphone captured by meetings. `None` follows the dictation
     /// microphone, which is the sensible default for a single-mic desk.
+    /// Retention rule for meeting audio (plan §12). Defaults to
+    /// [`MeetingRetentionPolicy::Ask`], which deletes nothing.
+    #[serde(default)]
+    pub meeting_retention_policy: MeetingRetentionPolicy,
     #[serde(default)]
     pub meeting_microphone: Option<String>,
     /// Render device captured as system audio via WASAPI loopback. `None`
@@ -701,6 +705,7 @@ pub fn get_default_settings() -> AppSettings {
         speech_input_provider: SpeechInputProvider::default(),
         meeting_stt_provider: SpeechInputProvider::default(),
         meeting_summary_cloud_consent: false,
+        meeting_retention_policy: MeetingRetentionPolicy::default(),
         meeting_microphone: None,
         meeting_output_device: None,
         azure_speech_endpoint: String::new(),

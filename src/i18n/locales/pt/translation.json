@@ -1133,6 +1133,17 @@
           "title": "Fonte de áudio do sistema",
           "description": "Dispositivo de saída cujo som é gravado como áudio dos outros participantes. Separado do dispositivo de sons de feedback."
         }
+      },
+      "retention": {
+        "title": "Manter gravações",
+        "description": "Aplica-se apenas ao áudio original. A transcrição e o resumo são sempre mantidos, e uma reunião cuja transcrição falhou mantém o seu áudio.",
+        "options": {
+          "ask": "Decidir mais tarde (nada é eliminado)",
+          "immediately": "Eliminar logo após o processamento",
+          "days7": "Manter 7 dias",
+          "days30": "Manter 30 dias",
+          "forever": "Manter para sempre"
+        }
       }
     }
   },

@@ -1133,6 +1133,17 @@
           "title": "Fuente de audio del sistema",
           "description": "Dispositivo de salida cuyo sonido se graba como audio de los demás participantes. Distinto del dispositivo de sonidos de aviso."
         }
+      },
+      "retention": {
+        "title": "Conservar grabaciones",
+        "description": "Se aplica solo al audio original. La transcripción y el resumen siempre se conservan, y una reunión cuya transcripción falló mantiene su audio.",
+        "options": {
+          "ask": "Decidir más tarde (no se elimina nada)",
+          "immediately": "Eliminar justo después del procesamiento",
+          "days7": "Conservar 7 días",
+          "days30": "Conservar 30 días",
+          "forever": "Conservar siempre"
+        }
       }
     }
   },

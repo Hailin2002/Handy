@@ -1133,6 +1133,17 @@
           "title": "Zdroj systémového zvuku",
           "description": "Výstupní zařízení, jehož zvuk se nahrává jako audio ostatních účastníků. Oddělené od zařízení pro zvuky zpětné vazby."
         }
+      },
+      "retention": {
+        "title": "Uchovávání nahrávek",
+        "description": "Týká se jen surového zvuku. Přepis a shrnutí zůstávají vždy zachovány a schůzka s neúspěšným přepisem si svůj zvuk ponechá.",
+        "options": {
+          "ask": "Rozhodnout později (nic se nemaže)",
+          "immediately": "Smazat hned po zpracování",
+          "days7": "Uchovat 7 dní",
+          "days30": "Uchovat 30 dní",
+          "forever": "Uchovat trvale"
+        }
       }
     }
   },

@@ -1133,6 +1133,17 @@
           "title": "Systeemaudiobron",
           "description": "Uitvoerapparaat waarvan het geluid wordt opgenomen als audio van de andere deelnemers. Los van het apparaat voor feedbackgeluiden."
         }
+      },
+      "retention": {
+        "title": "Opnames bewaren",
+        "description": "Geldt alleen voor de ruwe audio. Transcript en samenvatting blijven altijd behouden, en een vergadering met een mislukte transcriptie houdt haar audio.",
+        "options": {
+          "ask": "Later beslissen (er wordt niets verwijderd)",
+          "immediately": "Direct na de verwerking verwijderen",
+          "days7": "7 dagen bewaren",
+          "days30": "30 dagen bewaren",
+          "forever": "Altijd bewaren"
+        }
       }
     }
   },

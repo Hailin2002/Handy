@@ -1133,6 +1133,17 @@
           "title": "Nguồn âm thanh hệ thống",
           "description": "Thiết bị đầu ra có âm thanh được ghi làm âm thanh của những người tham gia khác. Tách biệt với thiết bị phát âm báo."
         }
+      },
+      "retention": {
+        "title": "Giữ bản ghi",
+        "description": "Chỉ áp dụng cho âm thanh gốc. Bản chép lời và bản tóm tắt luôn được giữ lại, và cuộc họp có bản chép lời thất bại sẽ giữ âm thanh của nó.",
+        "options": {
+          "ask": "Quyết định sau (không xoá gì cả)",
+          "immediately": "Xoá ngay sau khi xử lý",
+          "days7": "Giữ 7 ngày",
+          "days30": "Giữ 30 ngày",
+          "forever": "Giữ mãi mãi"
+        }
       }
     }
   },

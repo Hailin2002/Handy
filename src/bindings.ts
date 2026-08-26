@@ -1538,8 +1538,10 @@ meeting_summary_cloud_consent?: boolean;
 /**
  * Microphone captured by meetings. `None` follows the dictation
  * microphone, which is the sensible default for a single-mic desk.
+ * Retention rule for meeting audio (plan §12). Defaults to
+ * [`MeetingRetentionPolicy::Ask`], which deletes nothing.
  */
-meeting_microphone?: string | null; 
+meeting_retention_policy?: MeetingRetentionPolicy; meeting_microphone?: string | null; 
 /**
  * Render device captured as system audio via WASAPI loopback. `None`
  * follows the OS default output.
@@ -1866,6 +1868,35 @@ export type MeetingRecoveryResolution =
  * Delete the session and its assets.
  */
 "delete"
+/**
+ * How long a meeting's raw audio is kept after it finished processing
+ * (plan §12).
+ * 
+ * [`MeetingRetentionPolicy::Ask`] is the default and deletes **nothing**: the
+ * plan is explicit that "ohne beantwortete Auswahl wird nichts automatisch
+ * gelöscht", so an unanswered prompt can never cost a user their recordings.
+ */
+export type MeetingRetentionPolicy = 
+/**
+ * No automatic deletion until the user actually chooses.
+ */
+"ask" | 
+/**
+ * Drop the audio as soon as processing finished successfully.
+ */
+"immediately" | 
+/**
+ * Keep the audio for seven days after the meeting ended.
+ */
+"days7" | 
+/**
+ * Keep the audio for thirty days after the meeting ended.
+ */
+"days30" | 
+/**
+ * Never delete automatically.
+ */
+"forever"
 /**
  * Frontend-facing projection of one persisted meeting session.
  */

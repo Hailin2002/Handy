@@ -182,6 +182,45 @@ pub enum RecordingRetentionPeriod {
     Months3,
 }
 
+/// How long a meeting's raw audio is kept after it finished processing
+/// (plan §12).
+///
+/// [`MeetingRetentionPolicy::Ask`] is the default and deletes **nothing**: the
+/// plan is explicit that "ohne beantwortete Auswahl wird nichts automatisch
+/// gelöscht", so an unanswered prompt can never cost a user their recordings.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum MeetingRetentionPolicy {
+    /// No automatic deletion until the user actually chooses.
+    #[default]
+    Ask,
+    /// Drop the audio as soon as processing finished successfully.
+    Immediately,
+    /// Keep the audio for seven days after the meeting ended.
+    // Renamed explicitly: `snake_case` would emit `days_7`, and the wire value
+    // doubles as the i18n key suffix, where the underscore reads as a typo.
+    #[serde(rename = "days7")]
+    Days7,
+    /// Keep the audio for thirty days after the meeting ended.
+    #[serde(rename = "days30")]
+    Days30,
+    /// Never delete automatically.
+    Forever,
+}
+
+impl MeetingRetentionPolicy {
+    /// Age after which audio may be deleted, or `None` when this policy never
+    /// deletes on its own.
+    pub fn max_age(self) -> Option<chrono::Duration> {
+        match self {
+            MeetingRetentionPolicy::Ask | MeetingRetentionPolicy::Forever => None,
+            MeetingRetentionPolicy::Immediately => Some(chrono::Duration::zero()),
+            MeetingRetentionPolicy::Days7 => Some(chrono::Duration::days(7)),
+            MeetingRetentionPolicy::Days30 => Some(chrono::Duration::days(30)),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum KeyboardImplementation {

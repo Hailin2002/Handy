@@ -1133,6 +1133,17 @@
           "title": "Source audio système",
           "description": "Périphérique de sortie dont le son est enregistré comme audio des autres participants. Distinct du périphérique des sons de retour."
         }
+      },
+      "retention": {
+        "title": "Conserver les enregistrements",
+        "description": "S'applique uniquement à l'audio brut. La transcription et le résumé sont toujours conservés, et une réunion dont la transcription a échoué garde son audio.",
+        "options": {
+          "ask": "Décider plus tard (rien n'est supprimé)",
+          "immediately": "Supprimer juste après le traitement",
+          "days7": "Conserver 7 jours",
+          "days30": "Conserver 30 jours",
+          "forever": "Conserver indéfiniment"
+        }
       }
     }
   },

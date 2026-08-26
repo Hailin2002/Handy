@@ -1133,6 +1133,17 @@
           "title": "Sistem sesi kaynağı",
           "description": "Sesi diğer katılımcıların sesi olarak kaydedilen çıkış aygıtı. Geri bildirim sesleri aygıtından ayrıdır."
         }
+      },
+      "retention": {
+        "title": "Kayıtları sakla",
+        "description": "Yalnızca ham ses için geçerlidir. Döküm ve özet her zaman korunur ve dökümü başarısız olan bir toplantı sesini korur.",
+        "options": {
+          "ask": "Sonra karar ver (hiçbir şey silinmez)",
+          "immediately": "İşlemden hemen sonra sil",
+          "days7": "7 gün sakla",
+          "days30": "30 gün sakla",
+          "forever": "Süresiz sakla"
+        }
       }
     }
   },

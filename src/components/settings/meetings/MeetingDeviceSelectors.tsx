@@ -1,6 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import type { AudioDevice } from "@/bindings";
+import type { MeetingRetentionPolicy } from "@/bindings";
 import { Dropdown } from "../../ui/Dropdown";
 import { ResetButton } from "../../ui/ResetButton";
 import { SettingContainer } from "../../ui/SettingContainer";
@@ -8,6 +9,18 @@ import { useSettings } from "../../../hooks/useSettings";
 
 /** Sentinel shown when no explicit device is pinned. */
 const FOLLOW_SYSTEM = "";
+
+/**
+ * Retention choices in the order plan §12 lists them. `ask` leads because it
+ * is the default and the only one that deletes nothing.
+ */
+const RETENTION_OPTIONS: MeetingRetentionPolicy[] = [
+  "ask",
+  "immediately",
+  "days7",
+  "days30",
+  "forever",
+];
 
 /**
  * Meeting capture devices (plan §6.6 step 2, start validation).
@@ -69,6 +82,35 @@ export const MeetingDeviceSelectors: React.FC = () => {
           <ResetButton
             onClick={() => void resetSetting("meeting_microphone")}
             disabled={isUpdating("meeting_microphone") || isLoading}
+          />
+        </div>
+      </SettingContainer>
+
+      <SettingContainer
+        title={t("settings.meetings.retention.title")}
+        description={t("settings.meetings.retention.description")}
+        descriptionMode="inline"
+        grouped
+      >
+        <div className="flex items-center space-x-1">
+          <Dropdown
+            options={RETENTION_OPTIONS.map((value) => ({
+              value,
+              label: t(`settings.meetings.retention.options.${value}`),
+            }))}
+            selectedValue={getSetting("meeting_retention_policy") ?? "ask"}
+            onSelect={(value) =>
+              void updateSetting(
+                "meeting_retention_policy",
+                value as MeetingRetentionPolicy,
+              )
+            }
+            placeholder={t("settings.meetings.retention.options.ask")}
+            disabled={isUpdating("meeting_retention_policy") || isLoading}
+          />
+          <ResetButton
+            onClick={() => void resetSetting("meeting_retention_policy")}
+            disabled={isUpdating("meeting_retention_policy") || isLoading}
           />
         </div>
       </SettingContainer>

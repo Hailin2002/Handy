@@ -1133,6 +1133,17 @@
           "title": "Kilde til systemlyd",
           "description": "Outputenhed hvis lyd optages som de andre deltageres lyd. Adskilt fra enheden til feedbacklyde."
         }
+      },
+      "retention": {
+        "title": "Behold optagelser",
+        "description": "Gælder kun den rå lyd. Transskription og resumé bevares altid, og et møde med mislykket transskription beholder sin lyd.",
+        "options": {
+          "ask": "Beslut senere (intet slettes)",
+          "immediately": "Slet lige efter behandlingen",
+          "days7": "Behold i 7 dage",
+          "days30": "Behold i 30 dage",
+          "forever": "Behold for altid"
+        }
       }
     }
   },

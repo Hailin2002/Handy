@@ -2303,6 +2303,77 @@ impl MeetingManager {
         self.snapshot(meeting_id)
     }
 
+    /// Deletes audio of finished meetings that outlived the retention rule.
+    ///
+    /// Plan §12 constrains this tightly, and each constraint is a condition
+    /// below:
+    /// - `Ask`/`Forever` delete nothing, so an unanswered prompt never costs a
+    ///   user their recordings;
+    /// - only `completed` sessions qualify — anything still processing may
+    ///   still need its audio;
+    /// - a meeting with a job that is not `succeeded` is skipped entirely
+    ///   ("fehlgeschlagene oder noch nicht bestätigte STT-Jobs verhindern
+    ///   automatische Audiolöschung"), because deleting its audio would make
+    ///   the failure permanent;
+    /// - the transcript and summary always survive: only the raw recording
+    ///   goes.
+    ///
+    /// Returns how many meetings were swept.
+    pub fn sweep_retention(
+        &self,
+        policy: crate::settings::MeetingRetentionPolicy,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<usize, String> {
+        let Some(max_age) = policy.max_age() else {
+            return Ok(0);
+        };
+        let cutoff = (now - max_age).timestamp_millis();
+
+        let candidates: Vec<String> = {
+            let conn = lock(&self.conn);
+            let mut stmt = conn
+                .prepare(
+                    "SELECT s.id FROM meeting_sessions s
+                     WHERE s.state = 'completed'
+                       AND s.deleted_at IS NULL
+                       AND COALESCE(s.ended_at, s.started_at) <= ?1
+                       -- Any unfinished or failed job keeps the audio alive.
+                       AND NOT EXISTS (
+                         SELECT 1 FROM meeting_stt_jobs j
+                         WHERE j.meeting_id = s.id AND j.state <> 'succeeded'
+                       )
+                       -- Nothing to do once the audio is already gone.
+                       AND EXISTS (
+                         SELECT 1 FROM meeting_audio_chunks c
+                         WHERE c.meeting_id = s.id AND c.deleted_at IS NULL
+                       )",
+                )
+                .map_err(|e| e.to_string())?;
+            let mapped = stmt
+                .query_map(params![cutoff], |row| row.get(0))
+                .map_err(|e| e.to_string())?;
+            mapped
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?
+        };
+
+        let mut swept = 0usize;
+        for meeting_id in candidates {
+            match self.delete_meeting_data(&meeting_id, DeleteScope::AudioOnly) {
+                Ok(()) => {
+                    info!(
+                        "Retention removed the recording of meeting {} (transcript kept)",
+                        meeting_id
+                    );
+                    swept += 1;
+                }
+                // One unlucky meeting must not stop the sweep for the rest.
+                Err(e) => warn!("Retention sweep skipped {}: {}", meeting_id, e),
+            }
+        }
+        Ok(swept)
+    }
+
     /// Audio files still on disk for one meeting, in timeline order.
     ///
     /// Returns absolute paths so the webview can play them through Tauri's
@@ -5019,6 +5090,156 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, b"RIFF").unwrap();
         path
+    }
+
+    /// Drives one meeting all the way to `completed` with a stored chunk and a
+    /// succeeded job — the only shape retention is allowed to touch.
+    fn completed_meeting_with_audio(h: &Harness) -> String {
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, false, true)
+            .unwrap();
+        seed_ready_chunk(&h.manager, &draft.meeting_id);
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        seed_segment_for_first_job(&h.manager, &draft.meeting_id);
+        h.manager.settle_after_queue(&draft.meeting_id);
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::Completed
+        );
+        draft.meeting_id
+    }
+
+    fn audio_rows(h: &Harness, meeting_id: &str) -> i64 {
+        let conn = lock(&h.manager.conn);
+        conn.query_row(
+            "SELECT COUNT(*) FROM meeting_audio_chunks
+             WHERE meeting_id = ?1 AND deleted_at IS NULL",
+            params![meeting_id],
+            |row| row.get(0),
+        )
+        .unwrap()
+    }
+
+    /// Plan §12: "ohne beantwortete Auswahl wird nichts automatisch gelöscht".
+    /// The default must never cost a user their recordings.
+    #[test]
+    fn retention_deletes_nothing_until_a_rule_was_chosen() {
+        let h = harness();
+        let id = completed_meeting_with_audio(&h);
+        for policy in [
+            crate::settings::MeetingRetentionPolicy::Ask,
+            crate::settings::MeetingRetentionPolicy::Forever,
+        ] {
+            assert_eq!(
+                h.manager
+                    .sweep_retention(policy, chrono::Utc::now() + chrono::Duration::days(365))
+                    .unwrap(),
+                0
+            );
+        }
+        assert_eq!(audio_rows(&h, &id), 1);
+    }
+
+    /// A chosen age only bites once it actually elapsed.
+    #[test]
+    fn retention_keeps_audio_until_the_chosen_age_elapsed() {
+        let h = harness();
+        let id = completed_meeting_with_audio(&h);
+        let policy = crate::settings::MeetingRetentionPolicy::Days7;
+
+        assert_eq!(
+            h.manager
+                .sweep_retention(policy, chrono::Utc::now() + chrono::Duration::days(6))
+                .unwrap(),
+            0
+        );
+        assert_eq!(audio_rows(&h, &id), 1);
+
+        assert_eq!(
+            h.manager
+                .sweep_retention(policy, chrono::Utc::now() + chrono::Duration::days(8))
+                .unwrap(),
+            1
+        );
+        assert_eq!(audio_rows(&h, &id), 0);
+    }
+
+    /// Only the raw recording goes; the transcript is what the user kept the
+    /// meeting for.
+    #[test]
+    fn retention_keeps_the_transcript_when_it_drops_the_recording() {
+        let h = harness();
+        let id = completed_meeting_with_audio(&h);
+        assert_eq!(h.manager.get_transcript(&id).unwrap().len(), 1);
+
+        h.manager
+            .sweep_retention(
+                crate::settings::MeetingRetentionPolicy::Immediately,
+                chrono::Utc::now(),
+            )
+            .unwrap();
+
+        assert_eq!(audio_rows(&h, &id), 0);
+        assert_eq!(
+            h.manager.get_transcript(&id).unwrap().len(),
+            1,
+            "retention must never take the transcript with it"
+        );
+    }
+
+    /// Deleting the audio of a meeting whose transcription failed would make
+    /// that failure permanent, so such a meeting is skipped entirely.
+    #[test]
+    fn retention_spares_a_meeting_with_an_unfinished_job() {
+        let h = harness();
+        let id = completed_meeting_with_audio(&h);
+        {
+            let conn = lock(&h.manager.conn);
+            conn.execute(
+                "UPDATE meeting_stt_jobs SET state = 'failed' WHERE meeting_id = ?1",
+                params![id],
+            )
+            .unwrap();
+        }
+
+        assert_eq!(
+            h.manager
+                .sweep_retention(
+                    crate::settings::MeetingRetentionPolicy::Immediately,
+                    chrono::Utc::now(),
+                )
+                .unwrap(),
+            0
+        );
+        assert_eq!(audio_rows(&h, &id), 1);
+    }
+
+    /// A meeting still being processed keeps its audio no matter how old it is.
+    #[test]
+    fn retention_only_touches_completed_meetings() {
+        let h = harness();
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, false, true)
+            .unwrap();
+        seed_ready_chunk(&h.manager, &draft.meeting_id);
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::Transcribing
+        );
+
+        assert_eq!(
+            h.manager
+                .sweep_retention(
+                    crate::settings::MeetingRetentionPolicy::Immediately,
+                    chrono::Utc::now() + chrono::Duration::days(365),
+                )
+                .unwrap(),
+            0
+        );
+        assert_eq!(audio_rows(&h, &draft.meeting_id), 1);
     }
 
     /// The `Audio` tab exists "solange Audio vorhanden ist" (plan §6.13), so a

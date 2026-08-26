@@ -1133,6 +1133,17 @@
           "title": "Sorgente audio di sistema",
           "description": "Dispositivo di uscita il cui suono viene registrato come audio degli altri partecipanti. Distinto dal dispositivo per i suoni di feedback."
         }
+      },
+      "retention": {
+        "title": "Conserva le registrazioni",
+        "description": "Vale solo per l'audio grezzo. Trascrizione e riepilogo vengono sempre mantenuti, e una riunione con trascrizione non riuscita mantiene il suo audio.",
+        "options": {
+          "ask": "Decidere più tardi (non viene eliminato nulla)",
+          "immediately": "Elimina subito dopo l'elaborazione",
+          "days7": "Conserva 7 giorni",
+          "days30": "Conserva 30 giorni",
+          "forever": "Conserva per sempre"
+        }
       }
     }
   },

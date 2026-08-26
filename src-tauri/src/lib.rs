@@ -265,6 +265,19 @@ fn initialize_core_logic(app_handle: &AppHandle) {
         Err(e) => log::error!("Meeting startup recovery failed: {}", e),
     }
 
+    // Retention runs after recovery, never before: a session that is still
+    // being reconciled must not have its audio swept out from under it. The
+    // default policy deletes nothing, so this is a no-op until the user picks
+    // a rule (plan §12).
+    {
+        let policy = crate::settings::get_settings(app_handle).meeting_retention_policy;
+        match meeting_manager.sweep_retention(policy, chrono::Utc::now()) {
+            Ok(0) => {}
+            Ok(count) => log::info!("Retention removed the recording of {} meeting(s)", count),
+            Err(e) => log::error!("Meeting retention sweep failed: {}", e),
+        }
+    }
+
     // Note: Shortcuts are NOT initialized here.
     // The frontend is responsible for calling the `initialize_shortcuts` command
     // after permissions are confirmed (on macOS) or after onboarding completes.
