@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "أقسام الاجتماع",
+        "overview": "نظرة عامة",
+        "transcript": "النص",
+        "audio": "الصوت",
+        "processing": "المعالجة"
+      },
+      "transcriptEmpty": "لا يوجد نص بعد.",
+      "jumpToAudio": "التشغيل من هنا",
+      "jumpToAudioAt": "تشغيل التسجيل من {{time}}",
+      "audio": {
+        "none": "لا يوجد صوت محفوظ لهذا الاجتماع.",
+        "playerLabel": "مقطع التسجيل {{span}}"
+      },
+      "processing": {
+        "provider": "المزوّد",
+        "providerUnknown": "غير مسجَّل",
+        "location": "مكان المعالجة",
+        "locationLocal": "على هذا الجهاز",
+        "locationCloud": "السحابة",
+        "backlog": "المقاطع المنتظرة",
+        "succeeded": "تم تحويلها إلى نص",
+        "failedJobs": "فشل {{count}} من المقاطع.",
+        "retry": "إعادة المحاولة",
+        "retryQueued": "أُعيدت المقاطع الفاشلة إلى قائمة الانتظار.",
+        "retryFailed": "فشلت إعادة المحاولة.",
+        "retranscribeHeading": "إعادة تحويل الصوت إلى نص",
+        "retranscribe": "إعادة تحويل الصوت إلى نص",
+        "retranscribeBody": "يعيد تحويل الصوت المحفوظ إلى نص. يتم الاحتفاظ بالتسجيل نفسه.",
+        "retranscribeWarning": "يُحذف النص الحالي ويُنشأ من جديد من الصوت المحفوظ. لا يُمسّ التسجيل.",
+        "retranscribeQueued": "أُعيد التحويل إلى قائمة الانتظار.",
+        "retranscribeFailed": "تعذّر بدء التحويل من جديد."
+      }
     }
   },
   "onboarding": {

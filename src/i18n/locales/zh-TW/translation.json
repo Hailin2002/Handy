@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "會議區塊",
+        "overview": "概覽",
+        "transcript": "逐字稿",
+        "audio": "音訊",
+        "processing": "處理"
+      },
+      "transcriptEmpty": "尚無逐字稿。",
+      "jumpToAudio": "從此處播放",
+      "jumpToAudioAt": "從 {{time}} 播放錄音",
+      "audio": {
+        "none": "此會議未儲存音訊。",
+        "playerLabel": "錄音片段 {{span}}"
+      },
+      "processing": {
+        "provider": "供應商",
+        "providerUnknown": "未記錄",
+        "location": "處理位置",
+        "locationLocal": "在本裝置上",
+        "locationCloud": "雲端",
+        "backlog": "等待中的片段",
+        "succeeded": "已轉錄",
+        "failedJobs": "{{count}} 個片段失敗。",
+        "retry": "重試",
+        "retryQueued": "失敗的片段已重新排入佇列。",
+        "retryFailed": "重試失敗。",
+        "retranscribeHeading": "重新轉錄",
+        "retranscribe": "重新轉錄",
+        "retranscribeBody": "重新轉錄已儲存的音訊。錄音本身會保留。",
+        "retranscribeWarning": "目前的逐字稿將被捨棄，並依據已儲存的音訊重新產生。錄音不受影響。",
+        "retranscribeQueued": "轉錄已重新排入佇列。",
+        "retranscribeFailed": "無法重新開始轉錄。"
+      }
     }
   },
   "onboarding": {

@@ -73,7 +73,10 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
     if (!dirty || saving) return;
     setSaving(true);
     try {
-      const result = await commands.meetingRenameSession(session.id, title.trim());
+      const result = await commands.meetingRenameSession(
+        session.id,
+        title.trim(),
+      );
       if (result.status === "ok") {
         onSaved?.(result.data);
       } else {
@@ -121,7 +124,10 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
   };
 
   return (
-    <section className="flex w-full max-w-2xl flex-col gap-4" aria-label={t("meeting.setup.title")}>
+    <section
+      className="flex w-full max-w-2xl flex-col gap-4"
+      aria-label={t("meeting.setup.title")}
+    >
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="mr-1 h-4 w-4" aria-hidden="true" />
@@ -132,7 +138,9 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
       <header className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold">{t("meeting.setup.title")}</h2>
         <p className="text-sm text-text/60">{t("meeting.setup.description")}</p>
-        <p className="text-xs text-text/50">{t("meeting.session.draft.hint")}</p>
+        <p className="text-xs text-text/50">
+          {t("meeting.session.draft.hint")}
+        </p>
       </header>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -179,9 +187,7 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
           className="rounded-md border border-mid-gray/30 bg-background px-2 py-1.5 text-sm"
           value={sttProvider}
           onChange={(event) =>
-            setSttProvider(
-              event.target.value as "local" | "azure" | "custom",
-            )
+            setSttProvider(event.target.value as "local" | "azure" | "custom")
           }
         >
           <option value="local">{t("meeting.setup.providerLocal")}</option>
@@ -203,7 +209,9 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
           onChange={(event) => setSummaryEnabled(event.target.checked)}
         />
         <span>
-          <span className="font-medium">{t("meeting.setup.summaryToggle")}</span>
+          <span className="font-medium">
+            {t("meeting.setup.summaryToggle")}
+          </span>
           <span className="block text-xs text-text/50">
             {t("meeting.setup.summaryHint")}
           </span>
@@ -243,7 +251,11 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
       {/* Exactly one obvious primary action (§6.2 rule 2), icon plus text
           (rule 3), brand colour rather than red (§6.8). */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="lg" onClick={() => void handleStart()} disabled={!canStart}>
+        <Button
+          size="lg"
+          onClick={() => void handleStart()}
+          disabled={!canStart}
+        >
           <Play className="mr-2 h-4 w-4" aria-hidden="true" />
           {t("meeting.actions.startMeeting")}
         </Button>

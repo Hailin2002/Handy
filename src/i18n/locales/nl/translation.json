@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Vergaderonderdelen",
+        "overview": "Overzicht",
+        "transcript": "Transcript",
+        "audio": "Audio",
+        "processing": "Verwerking"
+      },
+      "transcriptEmpty": "Nog geen transcript.",
+      "jumpToAudio": "Vanaf hier afspelen",
+      "jumpToAudioAt": "De opname vanaf {{time}} afspelen",
+      "audio": {
+        "none": "Er is geen audio opgeslagen voor deze vergadering.",
+        "playerLabel": "Opnamesegment {{span}}"
+      },
+      "processing": {
+        "provider": "Aanbieder",
+        "providerUnknown": "Niet vastgelegd",
+        "location": "Verwerkingslocatie",
+        "locationLocal": "Op dit apparaat",
+        "locationCloud": "Cloud",
+        "backlog": "Wachtende delen",
+        "succeeded": "Getranscribeerd",
+        "failedJobs": "{{count}} deel/delen mislukt.",
+        "retry": "Opnieuw proberen",
+        "retryQueued": "Mislukte delen opnieuw in de wachtrij.",
+        "retryFailed": "Opnieuw proberen is mislukt.",
+        "retranscribeHeading": "Opnieuw transcriberen",
+        "retranscribe": "Opnieuw transcriberen",
+        "retranscribeBody": "Transcribeert de opgeslagen audio nog een keer. De opname zelf blijft behouden.",
+        "retranscribeWarning": "Het huidige transcript wordt verwijderd en opnieuw gemaakt uit de opgeslagen audio. De opname blijft ongemoeid.",
+        "retranscribeQueued": "Transcriptie opnieuw in de wachtrij.",
+        "retranscribeFailed": "Kon de transcriptie niet opnieuw starten."
+      }
     }
   },
   "onboarding": {

@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Sezioni della riunione",
+        "overview": "Panoramica",
+        "transcript": "Trascrizione",
+        "audio": "Audio",
+        "processing": "Elaborazione"
+      },
+      "transcriptEmpty": "Nessuna trascrizione al momento.",
+      "jumpToAudio": "Riproduci da qui",
+      "jumpToAudioAt": "Riproduci la registrazione da {{time}}",
+      "audio": {
+        "none": "Nessun audio è salvato per questa riunione.",
+        "playerLabel": "Segmento di registrazione {{span}}"
+      },
+      "processing": {
+        "provider": "Fornitore",
+        "providerUnknown": "Non registrato",
+        "location": "Luogo di elaborazione",
+        "locationLocal": "Su questo dispositivo",
+        "locationCloud": "Cloud",
+        "backlog": "Sezioni in attesa",
+        "succeeded": "Trascritte",
+        "failedJobs": "{{count}} sezione/i non riuscite.",
+        "retry": "Riprova",
+        "retryQueued": "Sezioni non riuscite rimesse in coda.",
+        "retryFailed": "Il nuovo tentativo non è riuscito.",
+        "retranscribeHeading": "Trascrivi di nuovo",
+        "retranscribe": "Trascrivi di nuovo",
+        "retranscribeBody": "Ritrascrive l'audio salvato. La registrazione viene mantenuta.",
+        "retranscribeWarning": "La trascrizione attuale viene eliminata e ricreata dall'audio salvato. La registrazione non viene toccata.",
+        "retranscribeQueued": "Trascrizione rimessa in coda.",
+        "retranscribeFailed": "Impossibile riavviare la trascrizione."
+      }
     }
   },
   "onboarding": {

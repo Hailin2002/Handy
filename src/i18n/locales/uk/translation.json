@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Розділи зустрічі",
+        "overview": "Огляд",
+        "transcript": "Розшифровка",
+        "audio": "Аудіо",
+        "processing": "Обробка"
+      },
+      "transcriptEmpty": "Розшифровки ще немає.",
+      "jumpToAudio": "Відтворити звідси",
+      "jumpToAudioAt": "Відтворити запис з {{time}}",
+      "audio": {
+        "none": "Для цієї зустрічі аудіо не збережено.",
+        "playerLabel": "Фрагмент запису {{span}}"
+      },
+      "processing": {
+        "provider": "Постачальник",
+        "providerUnknown": "Не записано",
+        "location": "Місце обробки",
+        "locationLocal": "На цьому пристрої",
+        "locationCloud": "Хмара",
+        "backlog": "Фрагменти в очікуванні",
+        "succeeded": "Розшифровано",
+        "failedJobs": "Фрагментів з помилкою: {{count}}.",
+        "retry": "Повторити",
+        "retryQueued": "Невдалі фрагменти знову в черзі.",
+        "retryFailed": "Повтор не вдався.",
+        "retranscribeHeading": "Розшифрувати знову",
+        "retranscribe": "Розшифрувати знову",
+        "retranscribeBody": "Ще раз розшифровує збережене аудіо. Сам запис зберігається.",
+        "retranscribeWarning": "Поточну розшифровку буде відкинуто та створено знову зі збереженого аудіо. Запис не змінюється.",
+        "retranscribeQueued": "Розшифровку знову поставлено в чергу.",
+        "retranscribeFailed": "Не вдалося запустити розшифровку знову."
+      }
     }
   },
   "onboarding": {

@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Разделы встречи",
+        "overview": "Обзор",
+        "transcript": "Расшифровка",
+        "audio": "Аудио",
+        "processing": "Обработка"
+      },
+      "transcriptEmpty": "Расшифровки пока нет.",
+      "jumpToAudio": "Воспроизвести отсюда",
+      "jumpToAudioAt": "Воспроизвести запись с {{time}}",
+      "audio": {
+        "none": "Для этой встречи аудио не сохранено.",
+        "playerLabel": "Фрагмент записи {{span}}"
+      },
+      "processing": {
+        "provider": "Поставщик",
+        "providerUnknown": "Не записано",
+        "location": "Место обработки",
+        "locationLocal": "На этом устройстве",
+        "locationCloud": "Облако",
+        "backlog": "Ожидающие фрагменты",
+        "succeeded": "Расшифровано",
+        "failedJobs": "Фрагментов с ошибкой: {{count}}.",
+        "retry": "Повторить",
+        "retryQueued": "Неудачные фрагменты снова в очереди.",
+        "retryFailed": "Повтор не удался.",
+        "retranscribeHeading": "Расшифровать заново",
+        "retranscribe": "Расшифровать заново",
+        "retranscribeBody": "Ещё раз расшифровывает сохранённое аудио. Сама запись сохраняется.",
+        "retranscribeWarning": "Текущая расшифровка будет удалена и создана заново из сохранённого аудио. Запись не затрагивается.",
+        "retranscribeQueued": "Расшифровка снова в очереди.",
+        "retranscribeFailed": "Не удалось запустить расшифровку заново."
+      }
     }
   },
   "onboarding": {

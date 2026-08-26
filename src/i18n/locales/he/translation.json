@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "חלקי הפגישה",
+        "overview": "סקירה",
+        "transcript": "תמליל",
+        "audio": "שמע",
+        "processing": "עיבוד"
+      },
+      "transcriptEmpty": "אין עדיין תמליל.",
+      "jumpToAudio": "נגן מכאן",
+      "jumpToAudioAt": "נגן את ההקלטה מ-{{time}}",
+      "audio": {
+        "none": "לא נשמר שמע לפגישה זו.",
+        "playerLabel": "מקטע הקלטה {{span}}"
+      },
+      "processing": {
+        "provider": "ספק",
+        "providerUnknown": "לא תועד",
+        "location": "מקום העיבוד",
+        "locationLocal": "במכשיר זה",
+        "locationCloud": "ענן",
+        "backlog": "מקטעים ממתינים",
+        "succeeded": "תומללו",
+        "failedJobs": "{{count}} מקטעים נכשלו.",
+        "retry": "נסה שוב",
+        "retryQueued": "המקטעים שנכשלו הוחזרו לתור.",
+        "retryFailed": "הניסיון החוזר נכשל.",
+        "retranscribeHeading": "תמלל שוב",
+        "retranscribe": "תמלל שוב",
+        "retranscribeBody": "מתמלל שוב את השמע השמור. ההקלטה עצמה נשמרת.",
+        "retranscribeWarning": "התמליל הנוכחי יימחק וייווצר מחדש מהשמע השמור. ההקלטה אינה מושפעת.",
+        "retranscribeQueued": "התמלול הוחזר לתור.",
+        "retranscribeFailed": "לא ניתן היה להתחיל את התמלול מחדש."
+      }
     }
   },
   "onboarding": {

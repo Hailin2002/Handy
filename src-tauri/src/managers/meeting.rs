@@ -251,6 +251,10 @@ pub fn transition_allowed(from: MeetingState, to: MeetingState) -> bool {
             | (RecoverableError, Transcribing)
             | (RecoverableError, Summarizing)
             | (RecoverableError, Completed)
+            // Re-transcription of a finished meeting (plan §11): the stored
+            // audio is queued again, so the session legitimately re-enters
+            // processing from `completed`.
+            | (Completed, Transcribing)
             // T18
             | (StoppedUnprocessed, Transcribing)
             | (StoppedUnprocessed, Completed)
@@ -1181,6 +1185,21 @@ impl rec::ChunkStateStore for SqliteChunkStateStore {
 // ---------------------------------------------------------------------------
 // Wave-1 CRUD projection (unchanged shape — the shipped Meetings UI uses it)
 // ---------------------------------------------------------------------------
+
+/// One playable audio chunk of a meeting (plan §6.13 `Audio` tab).
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
+pub struct MeetingAudioFileDto {
+    /// `microphone` or `system`.
+    pub source: String,
+    /// Chunk ordinal within its source.
+    pub sequence: i64,
+    /// Timeline position of the first sample, milliseconds.
+    pub start_ms: i64,
+    /// Timeline position just past the last sample, milliseconds.
+    pub end_ms: i64,
+    /// Absolute path, resolved through Tauri's asset protocol by the webview.
+    pub path: String,
+}
 
 /// Frontend-facing projection of one persisted meeting session.
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
@@ -2281,6 +2300,144 @@ impl MeetingManager {
         };
         self.transition(&mut inner, meeting_id, MeetingState::Cancelled, ended)?;
         drop(inner);
+        self.snapshot(meeting_id)
+    }
+
+    /// Audio files still on disk for one meeting, in timeline order.
+    ///
+    /// Returns absolute paths so the webview can play them through Tauri's
+    /// asset protocol. Chunks whose file was removed by a retention or
+    /// audio-only deletion are skipped rather than reported as playable: the
+    /// `Audio` tab exists only "solange Audio vorhanden ist" (plan §6.13).
+    pub fn audio_files(&self, meeting_id: &str) -> Result<Vec<MeetingAudioFileDto>, String> {
+        let rows: Vec<(String, i64, i64, i64, String)> = {
+            let conn = lock(&self.conn);
+            let mut stmt = conn
+                .prepare(
+                    "SELECT source, sequence, timeline_start_ms, timeline_end_ms, storage_key
+                     FROM meeting_audio_chunks
+                     WHERE meeting_id = ?1 AND state = 'ready' AND deleted_at IS NULL
+                     ORDER BY timeline_start_ms, sequence",
+                )
+                .map_err(|e| e.to_string())?;
+            let mapped = stmt
+                .query_map(params![meeting_id], |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                })
+                .map_err(|e| e.to_string())?;
+            mapped
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?
+        };
+
+        let session_root = self.assets_root.join(meeting_id);
+        Ok(rows
+            .into_iter()
+            .filter_map(|(source, sequence, start_ms, end_ms, storage_key)| {
+                let path = session_root.join(&storage_key);
+                path.exists().then(|| MeetingAudioFileDto {
+                    source,
+                    sequence,
+                    start_ms,
+                    end_ms,
+                    path: path.to_string_lossy().to_string(),
+                })
+            })
+            .collect())
+    }
+
+    /// Discards a meeting's transcript and queues every stored chunk again.
+    ///
+    /// Plan §11 lists "erneute Transkription mit einem anderen Modell/Provider"
+    /// as a detail-view action. Segments and jobs are removed *before* the
+    /// re-enqueue so the run starts from a clean transcript instead of
+    /// appending a second copy next to the old one; the audio chunks
+    /// themselves are never touched, which is what makes the operation safe to
+    /// repeat.
+    pub fn retranscribe(
+        &self,
+        meeting_id: &str,
+        provider_override: Option<crate::settings::SpeechInputProvider>,
+    ) -> Result<MeetingSnapshot, String> {
+        let current = {
+            let mut inner = lock(&self.inner);
+            if inner.capture_owner.as_deref() == Some(meeting_id) {
+                return Err("meetingStillRecording".to_string());
+            }
+            self.ensure_tracked(&mut inner, meeting_id)?;
+            inner
+                .sessions
+                .get(meeting_id)
+                .map(|r| r.state)
+                .unwrap_or(MeetingState::Draft)
+        };
+        // Checked *before* anything is deleted: a meeting that never finished
+        // capturing has no transcript to replace, and discovering that only at
+        // the transition would have destroyed the old one for nothing.
+        if !matches!(
+            current,
+            MeetingState::Completed
+                | MeetingState::Transcribing
+                | MeetingState::RecoverableError
+                | MeetingState::StoppedUnprocessed
+        ) {
+            return Err("meetingNotTranscribable".to_string());
+        }
+        {
+            let mut conn = lock(&self.conn);
+            let tx = conn.transaction().map_err(|e| e.to_string())?;
+            // Segments reference jobs with ON DELETE RESTRICT, so they go first.
+            tx.execute(
+                "DELETE FROM meeting_transcript_segments WHERE meeting_id = ?1",
+                params![meeting_id],
+            )
+            .map_err(|e| e.to_string())?;
+            tx.execute(
+                "DELETE FROM meeting_stt_job_chunks WHERE job_id IN
+                    (SELECT id FROM meeting_stt_jobs WHERE meeting_id = ?1)",
+                params![meeting_id],
+            )
+            .map_err(|e| e.to_string())?;
+            tx.execute(
+                "DELETE FROM meeting_stt_jobs WHERE meeting_id = ?1",
+                params![meeting_id],
+            )
+            .map_err(|e| e.to_string())?;
+            if let Some(provider) = provider_override {
+                let snapshot = self.env.provider_for(Some(provider));
+                tx.execute(
+                    "UPDATE meeting_sessions SET stt_provider = ?2, updated_at = ?3
+                     WHERE id = ?1",
+                    params![meeting_id, snapshot.name, now_ms()],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+            tx.commit().map_err(|e| e.to_string())?;
+        }
+
+        let enqueued = self.enqueue_ready_chunks(meeting_id).map_err(|e| {
+            warn!("Could not re-enqueue chunks for {}: {}", meeting_id, e);
+            e.to_string()
+        })?;
+        if enqueued == 0 {
+            return Err("noAudioToTranscribe".to_string());
+        }
+        if current != MeetingState::Transcribing {
+            let mut inner = lock(&self.inner);
+            self.transition(
+                &mut inner,
+                meeting_id,
+                MeetingState::Transcribing,
+                SessionPatch::default(),
+            )?;
+        }
+        self.wake_queue();
         self.snapshot(meeting_id)
     }
 
@@ -4159,6 +4316,7 @@ mod tests {
             (RecoverableError, Transcribing),
             (RecoverableError, Summarizing),
             (RecoverableError, Completed),
+            (Completed, Transcribing),
             (StoppedUnprocessed, Transcribing),
             (StoppedUnprocessed, Completed),
         ];
@@ -4815,6 +4973,157 @@ mod tests {
         assert_eq!(value["recovered_chunks"], 1);
         assert_eq!(value["damaged_chunks"], 2);
         assert_eq!(value["quarantined_files"], 3);
+    }
+
+    /// Seeds one finalized chunk plus its backing file, which is what both the
+    /// `Audio` tab and re-transcription operate on.
+    fn seed_playable_chunk(
+        manager: &MeetingManager,
+        db_path: &Path,
+        assets_root: &Path,
+        session_id: &str,
+    ) -> PathBuf {
+        use rec::ChunkStateStore;
+        let store = SqliteChunkStateStore::open(manager.store.clone(), db_path).unwrap();
+        let storage_key = "audio/000001-microphone.wav";
+        let descriptor = rec::ChunkDescriptor {
+            chunk_id: 0,
+            source: rec::SourceKind::Microphone,
+            sequence: 1,
+            source_segment_id: 1,
+            state: rec::ChunkState::Writing,
+            range: rec::TimelineRange {
+                start_ms: 0.0,
+                end_ms: 0.0,
+            },
+            sample_count: 0,
+            storage_key: storage_key.into(),
+            checksum_sha256: None,
+            recovered: false,
+        };
+        let id = store.insert_writing_chunk(session_id, &descriptor).unwrap();
+        store
+            .transition(
+                id,
+                rec::ChunkState::Writing,
+                rec::ChunkState::Ready,
+                &rec::ChunkPatch {
+                    sample_count: Some(16_000),
+                    checksum_sha256: Some("a".repeat(64)),
+                    ..rec::ChunkPatch::default()
+                },
+            )
+            .unwrap();
+
+        let path = assets_root.join(session_id).join(storage_key);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, b"RIFF").unwrap();
+        path
+    }
+
+    /// The `Audio` tab exists "solange Audio vorhanden ist" (plan §6.13), so a
+    /// chunk row whose file is gone must not be offered as playable.
+    #[test]
+    fn audio_files_lists_only_chunks_whose_file_still_exists() {
+        let h = harness();
+        let assets_root = h.dir.path().join("assets");
+        let session = h.manager.create_session(Some("Audio".into())).unwrap();
+        let path = seed_playable_chunk(&h.manager, &h.db_path, &assets_root, &session.id);
+
+        let files = h.manager.audio_files(&session.id).unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].source, "microphone");
+        assert_eq!(files[0].sequence, 1);
+        // 16 000 samples at 16 kHz = exactly one second on the timeline.
+        assert_eq!(files[0].end_ms - files[0].start_ms, 1_000);
+        assert!(Path::new(&files[0].path).exists());
+
+        std::fs::remove_file(&path).unwrap();
+        assert!(
+            h.manager.audio_files(&session.id).unwrap().is_empty(),
+            "a deleted recording must not stay playable"
+        );
+    }
+
+    /// Re-transcription discards the old transcript and queues the stored audio
+    /// again (plan §11). Appending instead would leave two copies of every line.
+    #[test]
+    fn retranscribe_replaces_the_transcript_and_keeps_the_audio() {
+        let h = harness();
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, false, true)
+            .unwrap();
+        seed_ready_chunk(&h.manager, &draft.meeting_id);
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        seed_segment_for_first_job(&h.manager, &draft.meeting_id);
+        h.manager.settle_after_queue(&draft.meeting_id);
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::Completed
+        );
+        assert_eq!(
+            h.manager.get_transcript(&draft.meeting_id).unwrap().len(),
+            1
+        );
+
+        h.manager.retranscribe(&draft.meeting_id, None).unwrap();
+
+        assert!(
+            h.manager
+                .get_transcript(&draft.meeting_id)
+                .unwrap()
+                .is_empty(),
+            "the stale transcript must be gone, not appended to"
+        );
+        let queued: i64 = {
+            let conn = lock(&h.manager.conn);
+            conn.query_row(
+                "SELECT COUNT(*) FROM meeting_stt_jobs
+                 WHERE meeting_id = ?1 AND state = 'queued'",
+                params![draft.meeting_id],
+                |row| row.get(0),
+            )
+            .unwrap()
+        };
+        assert_eq!(queued, 1, "exactly one fresh job owns the chunk again");
+        assert_eq!(
+            h.manager.chunk_counts(&draft.meeting_id).unwrap().0,
+            1,
+            "re-transcription must never touch the audio"
+        );
+        assert_eq!(
+            h.manager.snapshot(&draft.meeting_id).unwrap().state,
+            MeetingState::Transcribing
+        );
+    }
+
+    /// A meeting that never finished capturing has no transcript to replace,
+    /// and the refusal must come *before* anything is deleted.
+    #[test]
+    fn retranscribe_refuses_a_meeting_that_never_finished() {
+        let h = harness();
+        let draft = h.manager.create_draft(None).unwrap();
+        assert_eq!(
+            h.manager.retranscribe(&draft.meeting_id, None).unwrap_err(),
+            "meetingNotTranscribable"
+        );
+    }
+
+    /// Without stored audio there is nothing to transcribe, and the user gets a
+    /// named reason instead of a silently empty run.
+    #[test]
+    fn retranscribe_refuses_when_no_audio_remains() {
+        let h = harness();
+        let draft = h.manager.create_draft(None).unwrap();
+        h.manager
+            .start(&draft.meeting_id, None, false, false, true)
+            .unwrap();
+        h.manager.stop(&draft.meeting_id, false).unwrap();
+        assert_eq!(
+            h.manager.retranscribe(&draft.meeting_id, None).unwrap_err(),
+            "noAudioToTranscribe"
+        );
     }
 
     /// The chunk-state seam maps recorder ids onto store UUID rows and back.

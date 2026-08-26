@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Secciones de la reunión",
+        "overview": "Resumen",
+        "transcript": "Transcripción",
+        "audio": "Audio",
+        "processing": "Procesamiento"
+      },
+      "transcriptEmpty": "Todavía no hay transcripción.",
+      "jumpToAudio": "Reproducir desde aquí",
+      "jumpToAudioAt": "Reproducir la grabación desde {{time}}",
+      "audio": {
+        "none": "No hay audio guardado para esta reunión.",
+        "playerLabel": "Segmento de grabación {{span}}"
+      },
+      "processing": {
+        "provider": "Proveedor",
+        "providerUnknown": "No registrado",
+        "location": "Lugar de procesamiento",
+        "locationLocal": "En este dispositivo",
+        "locationCloud": "Nube",
+        "backlog": "Secciones en espera",
+        "succeeded": "Transcritas",
+        "failedJobs": "{{count}} sección(es) fallaron.",
+        "retry": "Reintentar",
+        "retryQueued": "Secciones fallidas puestas en cola de nuevo.",
+        "retryFailed": "El reintento falló.",
+        "retranscribeHeading": "Transcribir de nuevo",
+        "retranscribe": "Transcribir de nuevo",
+        "retranscribeBody": "Vuelve a transcribir el audio guardado. La grabación se conserva.",
+        "retranscribeWarning": "La transcripción actual se descarta y se crea de nuevo a partir del audio guardado. La grabación no se toca.",
+        "retranscribeQueued": "Transcripción puesta en cola de nuevo.",
+        "retranscribeFailed": "No se pudo iniciar la transcripción de nuevo."
+      }
     }
   },
   "onboarding": {

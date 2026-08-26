@@ -365,7 +365,40 @@
       "searchLabel": "Transkript durchsuchen",
       "searchPlaceholder": "Im Transkript suchen�",
       "searchMatches_one": "{{count}} Treffer",
-      "searchMatches_other": "{{count}} Treffer"
+      "searchMatches_other": "{{count}} Treffer",
+      "tabs": {
+        "label": "Meeting-Bereiche",
+        "overview": "Übersicht",
+        "transcript": "Transkript",
+        "audio": "Audio",
+        "processing": "Verarbeitung"
+      },
+      "transcriptEmpty": "Noch kein Transkript vorhanden.",
+      "jumpToAudio": "Ab hier abspielen",
+      "jumpToAudioAt": "Aufnahme ab {{time}} abspielen",
+      "audio": {
+        "none": "Für dieses Meeting ist kein Audio gespeichert.",
+        "playerLabel": "Aufnahmeabschnitt {{span}}"
+      },
+      "processing": {
+        "provider": "Anbieter",
+        "providerUnknown": "Nicht erfasst",
+        "location": "Verarbeitungsort",
+        "locationLocal": "Auf diesem Gerät",
+        "locationCloud": "Cloud",
+        "backlog": "Wartende Abschnitte",
+        "succeeded": "Transkribiert",
+        "failedJobs": "{{count}} Abschnitt(e) fehlgeschlagen.",
+        "retry": "Erneut versuchen",
+        "retryQueued": "Fehlerhafte Abschnitte erneut eingereiht.",
+        "retryFailed": "Wiederholung fehlgeschlagen.",
+        "retranscribeHeading": "Erneut transkribieren",
+        "retranscribe": "Erneut transkribieren",
+        "retranscribeBody": "Lässt das gespeicherte Audio noch einmal transkribieren. Die Aufnahme selbst bleibt erhalten.",
+        "retranscribeWarning": "Das aktuelle Transkript wird verworfen und aus dem gespeicherten Audio neu erstellt. Die Aufnahme wird nicht angetastet.",
+        "retranscribeQueued": "Transkription erneut eingereiht.",
+        "retranscribeFailed": "Transkription konnte nicht erneut gestartet werden."
+      }
     }
   },
   "onboarding": {

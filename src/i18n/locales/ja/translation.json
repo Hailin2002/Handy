@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "会議のセクション",
+        "overview": "概要",
+        "transcript": "文字起こし",
+        "audio": "音声",
+        "processing": "処理"
+      },
+      "transcriptEmpty": "まだ文字起こしはありません。",
+      "jumpToAudio": "ここから再生",
+      "jumpToAudioAt": "{{time}} から録音を再生",
+      "audio": {
+        "none": "この会議の音声は保存されていません。",
+        "playerLabel": "録音区間 {{span}}"
+      },
+      "processing": {
+        "provider": "プロバイダー",
+        "providerUnknown": "未記録",
+        "location": "処理場所",
+        "locationLocal": "このデバイス上",
+        "locationCloud": "クラウド",
+        "backlog": "待機中の区間",
+        "succeeded": "文字起こし済み",
+        "failedJobs": "{{count}} 件の区間が失敗しました。",
+        "retry": "再試行",
+        "retryQueued": "失敗した区間を再度キューに入れました。",
+        "retryFailed": "再試行に失敗しました。",
+        "retranscribeHeading": "もう一度文字起こし",
+        "retranscribe": "もう一度文字起こし",
+        "retranscribeBody": "保存された音声をもう一度文字起こしします。録音そのものは保持されます。",
+        "retranscribeWarning": "現在の文字起こしを破棄し、保存された音声から作り直します。録音には手を加えません。",
+        "retranscribeQueued": "文字起こしを再度キューに入れました。",
+        "retranscribeFailed": "文字起こしを再開できませんでした。"
+      }
     }
   },
   "onboarding": {

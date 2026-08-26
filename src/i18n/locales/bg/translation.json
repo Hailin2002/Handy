@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Раздели на срещата",
+        "overview": "Преглед",
+        "transcript": "Транскрипция",
+        "audio": "Звук",
+        "processing": "Обработка"
+      },
+      "transcriptEmpty": "Все още няма транскрипция.",
+      "jumpToAudio": "Възпроизведи оттук",
+      "jumpToAudioAt": "Възпроизведи записа от {{time}}",
+      "audio": {
+        "none": "За тази среща не е запазен звук.",
+        "playerLabel": "Част от записа {{span}}"
+      },
+      "processing": {
+        "provider": "Доставчик",
+        "providerUnknown": "Не е записано",
+        "location": "Място на обработка",
+        "locationLocal": "На това устройство",
+        "locationCloud": "Облак",
+        "backlog": "Изчакващи части",
+        "succeeded": "Транскрибирани",
+        "failedJobs": "Неуспешни части: {{count}}.",
+        "retry": "Опитай отново",
+        "retryQueued": "Неуспешните части са върнати в опашката.",
+        "retryFailed": "Повторният опит е неуспешен.",
+        "retranscribeHeading": "Транскрибирай отново",
+        "retranscribe": "Транскрибирай отново",
+        "retranscribeBody": "Транскрибира запазения звук отново. Самият запис се запазва.",
+        "retranscribeWarning": "Текущата транскрипция ще бъде премахната и създадена отново от запазения звук. Записът не се променя.",
+        "retranscribeQueued": "Транскрипцията е върната в опашката.",
+        "retranscribeFailed": "Транскрипцията не можа да бъде стартирана отново."
+      }
     }
   },
   "onboarding": {

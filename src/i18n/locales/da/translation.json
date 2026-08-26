@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Mødeafsnit",
+        "overview": "Oversigt",
+        "transcript": "Transskription",
+        "audio": "Lyd",
+        "processing": "Behandling"
+      },
+      "transcriptEmpty": "Der er ingen transskription endnu.",
+      "jumpToAudio": "Afspil herfra",
+      "jumpToAudioAt": "Afspil optagelsen fra {{time}}",
+      "audio": {
+        "none": "Der er ikke gemt lyd for dette møde.",
+        "playerLabel": "Optagelsesafsnit {{span}}"
+      },
+      "processing": {
+        "provider": "Udbyder",
+        "providerUnknown": "Ikke registreret",
+        "location": "Behandlingssted",
+        "locationLocal": "På denne enhed",
+        "locationCloud": "Sky",
+        "backlog": "Ventende afsnit",
+        "succeeded": "Transskriberet",
+        "failedJobs": "{{count}} afsnit mislykkedes.",
+        "retry": "Prøv igen",
+        "retryQueued": "Mislykkede afsnit sat i kø igen.",
+        "retryFailed": "Forsøget mislykkedes.",
+        "retranscribeHeading": "Transskriber igen",
+        "retranscribe": "Transskriber igen",
+        "retranscribeBody": "Transskriberer den gemte lyd igen. Selve optagelsen bevares.",
+        "retranscribeWarning": "Den nuværende transskription kasseres og laves igen ud fra den gemte lyd. Optagelsen røres ikke.",
+        "retranscribeQueued": "Transskription sat i kø igen.",
+        "retranscribeFailed": "Kunne ikke starte transskriptionen igen."
+      }
     }
   },
   "onboarding": {

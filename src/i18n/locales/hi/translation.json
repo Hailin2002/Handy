@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "मीटिंग अनुभाग",
+        "overview": "अवलोकन",
+        "transcript": "ट्रांसक्रिप्ट",
+        "audio": "ऑडियो",
+        "processing": "प्रोसेसिंग"
+      },
+      "transcriptEmpty": "अभी कोई ट्रांसक्रिप्ट नहीं है।",
+      "jumpToAudio": "यहाँ से चलाएँ",
+      "jumpToAudioAt": "{{time}} से रिकॉर्डिंग चलाएँ",
+      "audio": {
+        "none": "इस मीटिंग के लिए कोई ऑडियो सहेजा नहीं गया है।",
+        "playerLabel": "रिकॉर्डिंग खंड {{span}}"
+      },
+      "processing": {
+        "provider": "प्रदाता",
+        "providerUnknown": "दर्ज नहीं",
+        "location": "प्रोसेसिंग स्थान",
+        "locationLocal": "इस डिवाइस पर",
+        "locationCloud": "क्लाउड",
+        "backlog": "प्रतीक्षारत खंड",
+        "succeeded": "ट्रांसक्राइब किए गए",
+        "failedJobs": "{{count}} खंड विफल रहे।",
+        "retry": "पुनः प्रयास करें",
+        "retryQueued": "विफल खंड फिर से कतार में डाले गए।",
+        "retryFailed": "पुनः प्रयास विफल रहा।",
+        "retranscribeHeading": "फिर से ट्रांसक्राइब करें",
+        "retranscribe": "फिर से ट्रांसक्राइब करें",
+        "retranscribeBody": "सहेजे गए ऑडियो को फिर से ट्रांसक्राइब करता है। रिकॉर्डिंग बनी रहती है।",
+        "retranscribeWarning": "मौजूदा ट्रांसक्रिप्ट हटा दिया जाएगा और सहेजे गए ऑडियो से फिर से बनाया जाएगा। रिकॉर्डिंग को नहीं छुआ जाता।",
+        "retranscribeQueued": "ट्रांसक्रिप्शन फिर से कतार में।",
+        "retranscribeFailed": "ट्रांसक्रिप्शन फिर से शुरू नहीं किया जा सका।"
+      }
     }
   },
   "onboarding": {

@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Sekcje spotkania",
+        "overview": "Przegląd",
+        "transcript": "Transkrypcja",
+        "audio": "Dźwięk",
+        "processing": "Przetwarzanie"
+      },
+      "transcriptEmpty": "Nie ma jeszcze transkrypcji.",
+      "jumpToAudio": "Odtwórz od tego miejsca",
+      "jumpToAudioAt": "Odtwórz nagranie od {{time}}",
+      "audio": {
+        "none": "Dla tego spotkania nie zapisano dźwięku.",
+        "playerLabel": "Fragment nagrania {{span}}"
+      },
+      "processing": {
+        "provider": "Dostawca",
+        "providerUnknown": "Nie zarejestrowano",
+        "location": "Miejsce przetwarzania",
+        "locationLocal": "Na tym urządzeniu",
+        "locationCloud": "Chmura",
+        "backlog": "Oczekujące fragmenty",
+        "succeeded": "Przetranskrybowane",
+        "failedJobs": "Nieudane fragmenty: {{count}}.",
+        "retry": "Ponów",
+        "retryQueued": "Nieudane fragmenty ponownie w kolejce.",
+        "retryFailed": "Ponowna próba nie powiodła się.",
+        "retranscribeHeading": "Transkrybuj ponownie",
+        "retranscribe": "Transkrybuj ponownie",
+        "retranscribeBody": "Ponownie transkrybuje zapisany dźwięk. Samo nagranie zostaje zachowane.",
+        "retranscribeWarning": "Bieżąca transkrypcja zostanie odrzucona i utworzona ponownie z zapisanego dźwięku. Nagranie pozostaje nienaruszone.",
+        "retranscribeQueued": "Transkrypcja ponownie w kolejce.",
+        "retranscribeFailed": "Nie udało się ponownie uruchomić transkrypcji."
+      }
     }
   },
   "onboarding": {

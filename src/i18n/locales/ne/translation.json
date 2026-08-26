@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "बैठकका खण्डहरू",
+        "overview": "सिंहावलोकन",
+        "transcript": "ट्रान्सक्रिप्ट",
+        "audio": "अडियो",
+        "processing": "प्रशोधन"
+      },
+      "transcriptEmpty": "अहिलेसम्म ट्रान्सक्रिप्ट छैन।",
+      "jumpToAudio": "यहाँबाट बजाउनुहोस्",
+      "jumpToAudioAt": "{{time}} बाट रेकर्डिङ बजाउनुहोस्",
+      "audio": {
+        "none": "यस बैठकका लागि कुनै अडियो सुरक्षित छैन।",
+        "playerLabel": "रेकर्डिङ खण्ड {{span}}"
+      },
+      "processing": {
+        "provider": "प्रदायक",
+        "providerUnknown": "अभिलेख गरिएको छैन",
+        "location": "प्रशोधन स्थान",
+        "locationLocal": "यस यन्त्रमा",
+        "locationCloud": "क्लाउड",
+        "backlog": "पर्खिरहेका खण्डहरू",
+        "succeeded": "ट्रान्सक्राइब गरिएको",
+        "failedJobs": "{{count}} खण्ड असफल भए।",
+        "retry": "पुनः प्रयास",
+        "retryQueued": "असफल खण्डहरू पुनः लाममा राखिए।",
+        "retryFailed": "पुनः प्रयास असफल भयो।",
+        "retranscribeHeading": "पुनः ट्रान्सक्राइब गर्नुहोस्",
+        "retranscribe": "पुनः ट्रान्सक्राइब गर्नुहोस्",
+        "retranscribeBody": "सुरक्षित अडियोलाई फेरि ट्रान्सक्राइब गर्छ। रेकर्डिङ आफैं रहिरहन्छ।",
+        "retranscribeWarning": "हालको ट्रान्सक्रिप्ट हटाइनेछ र सुरक्षित अडियोबाट पुनः बनाइनेछ। रेकर्डिङ छोइँदैन।",
+        "retranscribeQueued": "ट्रान्सक्रिप्शन पुनः लाममा राखियो।",
+        "retranscribeFailed": "ट्रान्सक्रिप्शन पुनः सुरु गर्न सकिएन।"
+      }
     }
   },
   "onboarding": {

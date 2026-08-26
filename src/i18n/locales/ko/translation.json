@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "회의 섹션",
+        "overview": "개요",
+        "transcript": "스크립트",
+        "audio": "오디오",
+        "processing": "처리"
+      },
+      "transcriptEmpty": "아직 스크립트가 없습니다.",
+      "jumpToAudio": "여기부터 재생",
+      "jumpToAudioAt": "{{time}}부터 녹음 재생",
+      "audio": {
+        "none": "이 회의에 저장된 오디오가 없습니다.",
+        "playerLabel": "녹음 구간 {{span}}"
+      },
+      "processing": {
+        "provider": "제공자",
+        "providerUnknown": "기록되지 않음",
+        "location": "처리 위치",
+        "locationLocal": "이 기기에서",
+        "locationCloud": "클라우드",
+        "backlog": "대기 중인 구간",
+        "succeeded": "스크립트 완료",
+        "failedJobs": "{{count}}개 구간이 실패했습니다.",
+        "retry": "다시 시도",
+        "retryQueued": "실패한 구간을 다시 대기열에 넣었습니다.",
+        "retryFailed": "다시 시도하지 못했습니다.",
+        "retranscribeHeading": "다시 스크립트 생성",
+        "retranscribe": "다시 스크립트 생성",
+        "retranscribeBody": "저장된 오디오로 스크립트를 다시 만듭니다. 녹음 자체는 유지됩니다.",
+        "retranscribeWarning": "현재 스크립트를 버리고 저장된 오디오에서 다시 만듭니다. 녹음은 건드리지 않습니다.",
+        "retranscribeQueued": "스크립트 생성을 다시 대기열에 넣었습니다.",
+        "retranscribeFailed": "스크립트 생성을 다시 시작하지 못했습니다."
+      }
     }
   },
   "onboarding": {

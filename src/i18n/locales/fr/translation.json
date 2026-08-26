@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Sections de la réunion",
+        "overview": "Aperçu",
+        "transcript": "Transcription",
+        "audio": "Audio",
+        "processing": "Traitement"
+      },
+      "transcriptEmpty": "Pas encore de transcription.",
+      "jumpToAudio": "Lire à partir d'ici",
+      "jumpToAudioAt": "Lire l'enregistrement à partir de {{time}}",
+      "audio": {
+        "none": "Aucun audio n'est enregistré pour cette réunion.",
+        "playerLabel": "Segment d'enregistrement {{span}}"
+      },
+      "processing": {
+        "provider": "Fournisseur",
+        "providerUnknown": "Non enregistré",
+        "location": "Lieu de traitement",
+        "locationLocal": "Sur cet appareil",
+        "locationCloud": "Cloud",
+        "backlog": "Sections en attente",
+        "succeeded": "Transcrites",
+        "failedJobs": "{{count}} section(s) ont échoué.",
+        "retry": "Réessayer",
+        "retryQueued": "Sections en échec remises en file.",
+        "retryFailed": "Le nouvel essai a échoué.",
+        "retranscribeHeading": "Transcrire à nouveau",
+        "retranscribe": "Transcrire à nouveau",
+        "retranscribeBody": "Retranscrit l'audio enregistré. L'enregistrement lui-même est conservé.",
+        "retranscribeWarning": "La transcription actuelle est supprimée et recréée à partir de l'audio enregistré. L'enregistrement n'est pas touché.",
+        "retranscribeQueued": "Transcription remise en file.",
+        "retranscribeFailed": "Impossible de relancer la transcription."
+      }
     }
   },
   "onboarding": {

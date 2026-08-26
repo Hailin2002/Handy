@@ -1416,6 +1416,29 @@ async snapshotList(projectId: string) : Promise<Result<ProjectSnapshot[], string
 }
 },
 /**
+ * Plan §6.13 `Audio` tab — playable chunks that still exist on disk.
+ */
+async meetingAudioFiles(meetingId: string) : Promise<Result<MeetingAudioFileDto[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("meeting_audio_files", { meetingId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Plan §11 — discards the transcript and transcribes the stored audio again,
+ * optionally with a different provider. The audio itself is never touched.
+ */
+async retranscribeMeeting(meetingId: string, provider: SpeechInputProvider | null) : Promise<Result<MeetingSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("retranscribe_meeting", { meetingId, provider }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Pending crash-recovery offers produced by the startup reconciliation.
  */
 async meetingListRecoveries() : Promise<Result<MeetingRecoveryOffer[], string>> {
@@ -1591,6 +1614,30 @@ key_down: number; key_up: number; flags_changed: number; mouse: number; duration
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
+/**
+ * One playable audio chunk of a meeting (plan §6.13 `Audio` tab).
+ */
+export type MeetingAudioFileDto = { 
+/**
+ * `microphone` or `system`.
+ */
+source: string; 
+/**
+ * Chunk ordinal within its source.
+ */
+sequence: number; 
+/**
+ * Timeline position of the first sample, milliseconds.
+ */
+start_ms: number; 
+/**
+ * Timeline position just past the last sample, milliseconds.
+ */
+end_ms: number; 
+/**
+ * Absolute path, resolved through Tauri's asset protocol by the webview.
+ */
+path: string }
 /**
  * Phase 7 — export payload: rendered content plus filename suggestion.
  */

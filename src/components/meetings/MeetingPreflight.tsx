@@ -112,7 +112,9 @@ export const MeetingPreflight: React.FC<MeetingPreflightProps> = ({
       className="flex flex-col gap-2"
       aria-label={t("meeting.preflight.title")}
     >
-      <p className="text-xs text-text/60">{t("meeting.preflight.description")}</p>
+      <p className="text-xs text-text/60">
+        {t("meeting.preflight.description")}
+      </p>
 
       <ul className="flex flex-col divide-y divide-mid-gray/15 rounded-lg border border-mid-gray/20">
         {report.checks.map((check) => (
@@ -122,7 +124,9 @@ export const MeetingPreflight: React.FC<MeetingPreflightProps> = ({
             data-preflight-row={check.id}
             data-preflight-status={check.status}
           >
-            <span className="min-w-28 font-medium">{t(ROW_LABEL[check.id])}</span>
+            <span className="min-w-28 font-medium">
+              {t(ROW_LABEL[check.id])}
+            </span>
             <span className="flex-1 truncate text-text/70">
               {check.value ?? ""}
             </span>
@@ -147,11 +151,13 @@ export const MeetingPreflight: React.FC<MeetingPreflightProps> = ({
         </Button>
         {/* Plan "Startvalidierung": the user may deliberately fall back to a
             microphone-only recording when loopback cannot be opened. */}
-        {report.microphone_only_available && !microphoneOnly && onRecordMicOnly && (
-          <Button variant="secondary" size="sm" onClick={onRecordMicOnly}>
-            {t("meeting.actions.recordMicOnly")}
-          </Button>
-        )}
+        {report.microphone_only_available &&
+          !microphoneOnly &&
+          onRecordMicOnly && (
+            <Button variant="secondary" size="sm" onClick={onRecordMicOnly}>
+              {t("meeting.actions.recordMicOnly")}
+            </Button>
+          )}
       </div>
     </section>
   );

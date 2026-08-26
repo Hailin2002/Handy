@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Toplantı bölümleri",
+        "overview": "Genel bakış",
+        "transcript": "Döküm",
+        "audio": "Ses",
+        "processing": "İşleme"
+      },
+      "transcriptEmpty": "Henüz döküm yok.",
+      "jumpToAudio": "Buradan oynat",
+      "jumpToAudioAt": "Kaydı {{time}} konumundan oynat",
+      "audio": {
+        "none": "Bu toplantı için ses kaydedilmemiş.",
+        "playerLabel": "Kayıt bölümü {{span}}"
+      },
+      "processing": {
+        "provider": "Sağlayıcı",
+        "providerUnknown": "Kaydedilmedi",
+        "location": "İşleme yeri",
+        "locationLocal": "Bu cihazda",
+        "locationCloud": "Bulut",
+        "backlog": "Bekleyen bölümler",
+        "succeeded": "Dökümü alındı",
+        "failedJobs": "{{count}} bölüm başarısız oldu.",
+        "retry": "Yeniden dene",
+        "retryQueued": "Başarısız bölümler yeniden sıraya alındı.",
+        "retryFailed": "Yeniden deneme başarısız.",
+        "retranscribeHeading": "Yeniden dökümle",
+        "retranscribe": "Yeniden dökümle",
+        "retranscribeBody": "Kaydedilen sesin dökümünü yeniden alır. Kaydın kendisi korunur.",
+        "retranscribeWarning": "Mevcut döküm atılır ve kaydedilen sesten yeniden oluşturulur. Kayda dokunulmaz.",
+        "retranscribeQueued": "Döküm yeniden sıraya alındı.",
+        "retranscribeFailed": "Döküm yeniden başlatılamadı."
+      }
     }
   },
   "onboarding": {

@@ -60,7 +60,9 @@ export const MeetingProcessingView: React.FC<MeetingProcessingViewProps> = ({
   if (!session) return null;
 
   const perSource = Object.values(jobs?.per_source ?? {});
-  const sum = (pick: (counts: NonNullable<(typeof perSource)[number]>) => number) =>
+  const sum = (
+    pick: (counts: NonNullable<(typeof perSource)[number]>) => number,
+  ) =>
     perSource.reduce((total, counts) => total + (counts ? pick(counts) : 0), 0);
 
   const succeeded = jobs?.succeeded_total ?? sum((c) => c.succeeded);
@@ -76,11 +78,8 @@ export const MeetingProcessingView: React.FC<MeetingProcessingViewProps> = ({
   const summarizing = session.state === "summarizing";
   const completed = session.state === "completed";
 
-  const transcriptionState: StepState = completed || summarizing
-    ? "done"
-    : transcribing
-      ? "running"
-      : "pending";
+  const transcriptionState: StepState =
+    completed || summarizing ? "done" : transcribing ? "running" : "pending";
   const summaryState: StepState = !session.summaryEnabled
     ? "pending"
     : completed
@@ -136,7 +135,9 @@ export const MeetingProcessingView: React.FC<MeetingProcessingViewProps> = ({
         <MeetingStateBadge state={completed ? "complete" : "processing"} />
       </header>
 
-      <p className="text-sm text-text/70">{t("meeting.session.stopping.done")}</p>
+      <p className="text-sm text-text/70">
+        {t("meeting.session.stopping.done")}
+      </p>
 
       <ol className="flex flex-col gap-2" data-processing-checklist="">
         {rows.map((row) => (
@@ -180,7 +181,9 @@ export const MeetingProcessingView: React.FC<MeetingProcessingViewProps> = ({
           {t("meeting.session.completed.saved")}
         </p>
       ) : (
-        <p className="text-sm text-text/60">{t("meeting.processing.closeOk")}</p>
+        <p className="text-sm text-text/60">
+          {t("meeting.processing.closeOk")}
+        </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">

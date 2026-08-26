@@ -515,6 +515,8 @@ pub fn run(cli_args: CliArgs) {
             commands::tasks::task_decide,
             commands::tasks::snapshot_create,
             commands::tasks::snapshot_list,
+            commands::meetings::meeting_audio_files,
+            commands::meetings::retranscribe_meeting,
             commands::meetings::meeting_list_recoveries,
             commands::meetings::meeting_resolve_recovery,
             helpers::clamshell::is_laptop,

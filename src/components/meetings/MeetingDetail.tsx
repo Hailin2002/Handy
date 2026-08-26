@@ -12,7 +12,9 @@ import { toast } from "sonner";
 import {
   commands,
   type ExportFormat,
+  type MeetingAudioFileDto,
   type MeetingSession,
+  type MeetingSnapshot,
   type MeetingSummaryDto,
   type TranscriptRowDto,
 } from "@/bindings";
@@ -21,6 +23,14 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { formatDateTime } from "@/utils/dateFormat";
+import { formatMeetingDuration } from "@/components/shell/productNav";
+import { MeetingAudioPanel } from "./MeetingAudioPanel";
+import { MeetingProcessingPanel } from "./MeetingProcessingPanel";
+import {
+  MeetingDetailPanel,
+  MeetingDetailTabs,
+  useMeetingDetailTab,
+} from "./MeetingDetailTabs";
 import { meetingStateLabelKey } from "./meetingStates";
 
 export interface MeetingDetailProps {
@@ -69,6 +79,11 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
   const [transcript, setTranscript] = useState<TranscriptRowDto[]>([]);
   const [resummarizing, setResummarizing] = useState(false);
   const [transcriptQuery, setTranscriptQuery] = useState("");
+  const [audioFiles, setAudioFiles] = useState<MeetingAudioFileDto[]>([]);
+  const [snapshot, setSnapshot] = useState<MeetingSnapshot | null>(null);
+  // Timeline position a transcript row asked the Audio tab to play from.
+  const [seekToMs, setSeekToMs] = useState<number | null>(null);
+  const [tab, setTab] = useMeetingDetailTab(session.id);
 
   const visibleTranscript = transcriptQuery.trim()
     ? transcript.filter((row) =>
@@ -78,15 +93,24 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
 
   const loadContent = useCallback(async () => {
     try {
-      const [summaryResult, transcriptResult] = await Promise.all([
-        commands.getMeetingSummary(session.id),
-        commands.meetingTranscript(session.id),
-      ]);
+      const [summaryResult, transcriptResult, audioResult, snapshotResult] =
+        await Promise.all([
+          commands.getMeetingSummary(session.id),
+          commands.meetingTranscript(session.id),
+          commands.meetingAudioFiles(session.id),
+          commands.getMeetingSnapshot(session.id),
+        ]);
       if (summaryResult.status === "ok" && summaryResult.data) {
         setSummary(summaryResult.data);
       }
       if (transcriptResult.status === "ok" && transcriptResult.data) {
         setTranscript(transcriptResult.data);
+      }
+      if (audioResult.status === "ok") {
+        setAudioFiles(audioResult.data);
+      }
+      if (snapshotResult.status === "ok") {
+        setSnapshot(snapshotResult.data);
       }
     } catch (error) {
       console.error("Failed to load meeting content:", error);
@@ -188,6 +212,12 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
     }
   };
 
+  /** Plan §6.13: a transcript row jumps to its position in the recording. */
+  const jumpToAudio = (startMs: number) => {
+    setSeekToMs(startMs);
+    setTab("audio");
+  };
+
   const handleExport = async (format: ExportFormat) => {
     try {
       const result = await commands.exportMeeting(session.id, format);
@@ -256,132 +286,191 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
           </Button>
         </div>
 
-        {/* Phase 7 — summary, transcript, copy/export/re-summarize. */}
-        {summary?.state === "completed" && (
-          <div className="rounded-lg border border-mid-gray/20 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-medium">
-                {t("meeting.detail.summaryHeading")}
-              </h3>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  void copyText(summary.summary_markdown, "meetings.copied")
-                }
-              >
-                <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                {t("meetings.copySummary")}
-              </Button>
-            </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-text/80">
-              {summary.summary_markdown}
-            </p>
-            {summary.decisions.length > 0 && (
-              <p className="mt-2 text-xs text-text/60">
-                {t("meeting.detail.decisions")}: {summary.decisions.join("; ")}
-              </p>
-            )}
-            {summary.action_items.length > 0 && (
-              <p className="mt-1 text-xs text-text/60">
-                {t("meeting.detail.actionItems")}:{" "}
-                {summary.action_items.join("; ")}
-              </p>
-            )}
-            {summary.open_questions.length > 0 && (
-              <p className="mt-1 text-xs text-text/60">
-                {t("meeting.detail.openQuestions")}:{" "}
-                {summary.open_questions.join("; ")}
-              </p>
-            )}
-          </div>
-        )}
+        <MeetingDetailTabs
+          active={tab}
+          onChange={setTab}
+          disabled={{
+            audio:
+              audioFiles.length === 0
+                ? t("meeting.detail.audio.none")
+                : undefined,
+          }}
+        />
 
-        {transcript.length > 0 && (
-          <div className="rounded-lg border border-mid-gray/20 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-medium">
-                {t("meeting.detail.transcriptHeading")}
-              </h3>
-              <div className="flex items-center gap-1">
+        <MeetingDetailPanel tab="overview" active={tab}>
+          {/* Phase 7 — summary, copy/export/re-summarize. */}
+          {summary?.state === "completed" && (
+            <div className="rounded-lg border border-mid-gray/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">
+                  {t("meeting.detail.summaryHeading")}
+                </h3>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() =>
-                    void copyText(
-                      transcript.map((row) => `${row.text}`).join("\n"),
-                      "meetings.copied",
-                    )
+                    void copyText(summary.summary_markdown, "meetings.copied")
                   }
                 >
                   <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                  {t("meetings.copyTranscript")}
+                  {t("meetings.copySummary")}
                 </Button>
-                {(["markdown", "txt", "json"] as ExportFormat[]).map(
-                  (format) => (
-                    <Button
-                      key={format}
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => void handleExport(format)}
-                    >
-                      <Download
-                        className="mr-1 h-3.5 w-3.5"
-                        aria-hidden="true"
-                      />
-                      {format.toUpperCase()}
-                    </Button>
-                  ),
-                )}
               </div>
-            </div>
-            <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm text-text/80">
-              {visibleTranscript.map((row, index) => (
-                <li key={`${row.start_ms}-${index}`}>{row.text}</li>
-              ))}
-            </ul>
-            <Input
-              value={transcriptQuery}
-              onChange={(event) => setTranscriptQuery(event.target.value)}
-              placeholder={t("meeting.detail.searchPlaceholder")}
-              aria-label={t("meeting.detail.searchLabel")}
-              className="mt-2"
-            />
-            {transcriptQuery.trim() && (
-              <p className="mt-1 text-xs text-text/50">
-                {t("meeting.detail.searchMatches", {
-                  count: visibleTranscript.length,
-                })}
+              <p className="mt-2 whitespace-pre-wrap text-sm text-text/80">
+                {summary.summary_markdown}
               </p>
-            )}
-          </div>
-        )}
+              {summary.decisions.length > 0 && (
+                <p className="mt-2 text-xs text-text/60">
+                  {t("meeting.detail.decisions")}:{" "}
+                  {summary.decisions.join("; ")}
+                </p>
+              )}
+              {summary.action_items.length > 0 && (
+                <p className="mt-1 text-xs text-text/60">
+                  {t("meeting.detail.actionItems")}:{" "}
+                  {summary.action_items.join("; ")}
+                </p>
+              )}
+              {summary.open_questions.length > 0 && (
+                <p className="mt-1 text-xs text-text/60">
+                  {t("meeting.detail.openQuestions")}:{" "}
+                  {summary.open_questions.join("; ")}
+                </p>
+              )}
+            </div>
+          )}
 
-        {summary?.state === "failed" && (
-          <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
-            <span className="text-sm">{t("meeting.detail.summaryFailed")}</span>
-            <Button
-              size="sm"
-              onClick={handleResummarize}
-              disabled={resummarizing}
-            >
-              <RefreshCw className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-              {t("meeting.detail.resummarize")}
-            </Button>
-          </div>
-        )}
+          {summary?.state === "failed" && (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+              <span className="text-sm">
+                {t("meeting.detail.summaryFailed")}
+              </span>
+              <Button
+                size="sm"
+                onClick={handleResummarize}
+                disabled={resummarizing}
+              >
+                <RefreshCw className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                {t("meeting.detail.resummarize")}
+              </Button>
+            </div>
+          )}
 
-        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm text-text/80">
-          <dt className="text-text/50">{t("meetings.statusLabel")}</dt>
-          <dd>{t(meetingStateLabelKey(session.state))}</dd>
-          <dt className="text-text/50">{t("meetings.createdLabel")}</dt>
-          <dd>
-            {formatDateTime(
-              String(Math.floor(session.created_at / 1000)),
-              i18n.language,
-            )}
-          </dd>
-        </dl>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm text-text/80">
+            <dt className="text-text/50">{t("meetings.statusLabel")}</dt>
+            <dd>{t(meetingStateLabelKey(session.state))}</dd>
+            <dt className="text-text/50">{t("meetings.createdLabel")}</dt>
+            <dd>
+              {formatDateTime(
+                String(Math.floor(session.created_at / 1000)),
+                i18n.language,
+              )}
+            </dd>
+          </dl>
+        </MeetingDetailPanel>
+
+        <MeetingDetailPanel tab="transcript" active={tab}>
+          {transcript.length === 0 && (
+            <p className="text-sm text-text/60">
+              {t("meeting.detail.transcriptEmpty")}
+            </p>
+          )}
+          {transcript.length > 0 && (
+            <div className="rounded-lg border border-mid-gray/20 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">
+                  {t("meeting.detail.transcriptHeading")}
+                </h3>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      void copyText(
+                        transcript.map((row) => `${row.text}`).join("\n"),
+                        "meetings.copied",
+                      )
+                    }
+                  >
+                    <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                    {t("meetings.copyTranscript")}
+                  </Button>
+                  {(["markdown", "txt", "json"] as ExportFormat[]).map(
+                    (format) => (
+                      <Button
+                        key={format}
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void handleExport(format)}
+                      >
+                        <Download
+                          className="mr-1 h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                        {format.toUpperCase()}
+                      </Button>
+                    ),
+                  )}
+                </div>
+              </div>
+              <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm text-text/80">
+                {visibleTranscript.map((row, index) => (
+                  <li key={`${row.start_ms}-${index}`} className="flex gap-2">
+                    {/* Timestamp doubles as the jump target, so the position is
+                      both readable and actionable without a hover-only
+                      control (§6.14). Disabled while no audio remains rather
+                      than hidden, so the row layout never shifts. */}
+                    <button
+                      type="button"
+                      onClick={() => jumpToAudio(row.start_ms)}
+                      disabled={audioFiles.length === 0}
+                      title={
+                        audioFiles.length === 0
+                          ? t("meeting.detail.audio.none")
+                          : t("meeting.detail.jumpToAudio")
+                      }
+                      aria-label={t("meeting.detail.jumpToAudioAt", {
+                        time: formatMeetingDuration(
+                          Math.floor(row.start_ms / 1000),
+                        ),
+                      })}
+                      className="shrink-0 tabular-nums text-xs text-logo-primary hover:underline disabled:cursor-not-allowed disabled:text-text/40 disabled:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-logo-primary"
+                    >
+                      {formatMeetingDuration(Math.floor(row.start_ms / 1000))}
+                    </button>
+                    <span>{row.text}</span>
+                  </li>
+                ))}
+              </ul>
+              <Input
+                value={transcriptQuery}
+                onChange={(event) => setTranscriptQuery(event.target.value)}
+                placeholder={t("meeting.detail.searchPlaceholder")}
+                aria-label={t("meeting.detail.searchLabel")}
+                className="mt-2"
+              />
+              {transcriptQuery.trim() && (
+                <p className="mt-1 text-xs text-text/50">
+                  {t("meeting.detail.searchMatches", {
+                    count: visibleTranscript.length,
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+        </MeetingDetailPanel>
+
+        <MeetingDetailPanel tab="audio" active={tab}>
+          <MeetingAudioPanel files={audioFiles} seekToMs={seekToMs} />
+        </MeetingDetailPanel>
+
+        <MeetingDetailPanel tab="processing" active={tab}>
+          <MeetingProcessingPanel
+            session={session}
+            snapshot={snapshot}
+            onChanged={() => void loadContent()}
+          />
+        </MeetingDetailPanel>
       </div>
 
       <Dialog

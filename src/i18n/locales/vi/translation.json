@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Phần của cuộc họp",
+        "overview": "Tổng quan",
+        "transcript": "Bản chép lời",
+        "audio": "Âm thanh",
+        "processing": "Xử lý"
+      },
+      "transcriptEmpty": "Chưa có bản chép lời.",
+      "jumpToAudio": "Phát từ đây",
+      "jumpToAudioAt": "Phát bản ghi từ {{time}}",
+      "audio": {
+        "none": "Không có âm thanh nào được lưu cho cuộc họp này.",
+        "playerLabel": "Đoạn ghi {{span}}"
+      },
+      "processing": {
+        "provider": "Nhà cung cấp",
+        "providerUnknown": "Không được ghi lại",
+        "location": "Nơi xử lý",
+        "locationLocal": "Trên thiết bị này",
+        "locationCloud": "Đám mây",
+        "backlog": "Đoạn đang chờ",
+        "succeeded": "Đã chép lời",
+        "failedJobs": "{{count}} đoạn thất bại.",
+        "retry": "Thử lại",
+        "retryQueued": "Các đoạn thất bại đã được xếp hàng lại.",
+        "retryFailed": "Thử lại không thành công.",
+        "retranscribeHeading": "Chép lời lại",
+        "retranscribe": "Chép lời lại",
+        "retranscribeBody": "Chép lời lại từ âm thanh đã lưu. Bản ghi vẫn được giữ nguyên.",
+        "retranscribeWarning": "Bản chép lời hiện tại sẽ bị bỏ và tạo lại từ âm thanh đã lưu. Bản ghi không bị ảnh hưởng.",
+        "retranscribeQueued": "Đã xếp hàng chép lời lại.",
+        "retranscribeFailed": "Không thể bắt đầu chép lời lại."
+      }
     }
   },
   "onboarding": {

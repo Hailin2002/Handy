@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Mötesavsnitt",
+        "overview": "Översikt",
+        "transcript": "Transkription",
+        "audio": "Ljud",
+        "processing": "Bearbetning"
+      },
+      "transcriptEmpty": "Det finns ingen transkription än.",
+      "jumpToAudio": "Spela upp härifrån",
+      "jumpToAudioAt": "Spela upp inspelningen från {{time}}",
+      "audio": {
+        "none": "Inget ljud är sparat för det här mötet.",
+        "playerLabel": "Inspelningsavsnitt {{span}}"
+      },
+      "processing": {
+        "provider": "Leverantör",
+        "providerUnknown": "Inte registrerat",
+        "location": "Bearbetningsplats",
+        "locationLocal": "På den här enheten",
+        "locationCloud": "Moln",
+        "backlog": "Väntande avsnitt",
+        "succeeded": "Transkriberade",
+        "failedJobs": "{{count}} avsnitt misslyckades.",
+        "retry": "Försök igen",
+        "retryQueued": "Misslyckade avsnitt köade igen.",
+        "retryFailed": "Försöket misslyckades.",
+        "retranscribeHeading": "Transkribera igen",
+        "retranscribe": "Transkribera igen",
+        "retranscribeBody": "Transkriberar det sparade ljudet en gång till. Själva inspelningen behålls.",
+        "retranscribeWarning": "Den nuvarande transkriptionen kastas och skapas igen från det sparade ljudet. Inspelningen rörs inte.",
+        "retranscribeQueued": "Transkription köad igen.",
+        "retranscribeFailed": "Det gick inte att starta transkriptionen igen."
+      }
     }
   },
   "onboarding": {

@@ -404,3 +404,25 @@ mod tests {
         }
     }
 }
+
+/// Plan §6.13 `Audio` tab — playable chunks that still exist on disk.
+#[tauri::command]
+#[specta::specta]
+pub async fn meeting_audio_files(
+    meeting_manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+) -> Result<Vec<crate::managers::meeting::MeetingAudioFileDto>, String> {
+    meeting_manager.audio_files(&meeting_id)
+}
+
+/// Plan §11 — discards the transcript and transcribes the stored audio again,
+/// optionally with a different provider. The audio itself is never touched.
+#[tauri::command]
+#[specta::specta]
+pub async fn retranscribe_meeting(
+    meeting_manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+    provider: Option<crate::settings::SpeechInputProvider>,
+) -> Result<MeetingSnapshot, String> {
+    meeting_manager.retranscribe(&meeting_id, provider)
+}

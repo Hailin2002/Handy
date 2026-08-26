@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Secções da reunião",
+        "overview": "Visão geral",
+        "transcript": "Transcrição",
+        "audio": "Áudio",
+        "processing": "Processamento"
+      },
+      "transcriptEmpty": "Ainda não há transcrição.",
+      "jumpToAudio": "Reproduzir a partir daqui",
+      "jumpToAudioAt": "Reproduzir a gravação a partir de {{time}}",
+      "audio": {
+        "none": "Não há áudio guardado para esta reunião.",
+        "playerLabel": "Segmento de gravação {{span}}"
+      },
+      "processing": {
+        "provider": "Fornecedor",
+        "providerUnknown": "Não registado",
+        "location": "Local de processamento",
+        "locationLocal": "Neste dispositivo",
+        "locationCloud": "Nuvem",
+        "backlog": "Secções em espera",
+        "succeeded": "Transcritas",
+        "failedJobs": "{{count}} secção(ões) falharam.",
+        "retry": "Tentar novamente",
+        "retryQueued": "Secções com falha novamente em fila.",
+        "retryFailed": "A nova tentativa falhou.",
+        "retranscribeHeading": "Transcrever novamente",
+        "retranscribe": "Transcrever novamente",
+        "retranscribeBody": "Volta a transcrever o áudio guardado. A gravação é mantida.",
+        "retranscribeWarning": "A transcrição atual é descartada e criada de novo a partir do áudio guardado. A gravação não é alterada.",
+        "retranscribeQueued": "Transcrição novamente em fila.",
+        "retranscribeFailed": "Não foi possível reiniciar a transcrição."
+      }
     }
   },
   "onboarding": {

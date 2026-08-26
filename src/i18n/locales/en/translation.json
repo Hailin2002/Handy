@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Meeting sections",
+        "overview": "Overview",
+        "transcript": "Transcript",
+        "audio": "Audio",
+        "processing": "Processing"
+      },
+      "transcriptEmpty": "No transcript yet.",
+      "jumpToAudio": "Play from here",
+      "jumpToAudioAt": "Play the recording from {{time}}",
+      "audio": {
+        "none": "No audio is stored for this meeting.",
+        "playerLabel": "Recording segment {{span}}"
+      },
+      "processing": {
+        "provider": "Provider",
+        "providerUnknown": "Not recorded",
+        "location": "Processing location",
+        "locationLocal": "On this device",
+        "locationCloud": "Cloud",
+        "backlog": "Waiting sections",
+        "succeeded": "Transcribed",
+        "failedJobs": "{{count}} section(s) failed.",
+        "retry": "Retry",
+        "retryQueued": "Failed sections queued again.",
+        "retryFailed": "Retry failed.",
+        "retranscribeHeading": "Transcribe again",
+        "retranscribe": "Transcribe again",
+        "retranscribeBody": "Runs the stored audio through transcription once more. The recording itself is kept.",
+        "retranscribeWarning": "The current transcript is discarded and created again from the stored audio. The recording is not touched.",
+        "retranscribeQueued": "Transcription queued again.",
+        "retranscribeFailed": "Could not start transcription again."
+      }
     }
   },
   "onboarding": {

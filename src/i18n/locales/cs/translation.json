@@ -365,7 +365,40 @@
       "searchLabel": "Search the transcript",
       "searchPlaceholder": "Search in transcript�",
       "searchMatches_one": "{{count}} match",
-      "searchMatches_other": "{{count}} matches"
+      "searchMatches_other": "{{count}} matches",
+      "tabs": {
+        "label": "Části schůzky",
+        "overview": "Přehled",
+        "transcript": "Přepis",
+        "audio": "Zvuk",
+        "processing": "Zpracování"
+      },
+      "transcriptEmpty": "Zatím není žádný přepis.",
+      "jumpToAudio": "Přehrát odtud",
+      "jumpToAudioAt": "Přehrát nahrávku od {{time}}",
+      "audio": {
+        "none": "Pro tuto schůzku není uložen žádný zvuk.",
+        "playerLabel": "Úsek nahrávky {{span}}"
+      },
+      "processing": {
+        "provider": "Poskytovatel",
+        "providerUnknown": "Nezaznamenáno",
+        "location": "Místo zpracování",
+        "locationLocal": "V tomto zařízení",
+        "locationCloud": "Cloud",
+        "backlog": "Čekající úseky",
+        "succeeded": "Přepsáno",
+        "failedJobs": "Neúspěšné úseky: {{count}}.",
+        "retry": "Zkusit znovu",
+        "retryQueued": "Neúspěšné úseky znovu zařazeny.",
+        "retryFailed": "Opakování se nezdařilo.",
+        "retranscribeHeading": "Přepsat znovu",
+        "retranscribe": "Přepsat znovu",
+        "retranscribeBody": "Znovu přepíše uložený zvuk. Samotná nahrávka zůstane zachována.",
+        "retranscribeWarning": "Aktuální přepis bude zahozen a vytvořen znovu z uloženého zvuku. Nahrávka se nemění.",
+        "retranscribeQueued": "Přepis znovu zařazen.",
+        "retranscribeFailed": "Přepis se nepodařilo spustit znovu."
+      }
     }
   },
   "onboarding": {

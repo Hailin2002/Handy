@@ -169,7 +169,9 @@ export const MeetingsPage: React.FC = () => {
   }
 
   const selected =
-    selectedId && sessions ? sessions.find((s) => s.id === selectedId) : undefined;
+    selectedId && sessions
+      ? sessions.find((s) => s.id === selectedId)
+      : undefined;
 
   if (selectedId && !selected) {
     // Detail open but the list cache doesn't hold the session yet (fresh
@@ -189,7 +191,9 @@ export const MeetingsPage: React.FC = () => {
         }}
         onLoaded={(loaded) => {
           setSessions((prev) =>
-            prev ? [loaded, ...prev.filter((s) => s.id !== loaded.id)] : [loaded],
+            prev
+              ? [loaded, ...prev.filter((s) => s.id !== loaded.id)]
+              : [loaded],
           );
         }}
       />
@@ -281,7 +285,10 @@ export const MeetingsPage: React.FC = () => {
       {sessions.length === 0 ? (
         <p className="text-sm text-text/60">{t("common.noOptionsFound")}</p>
       ) : (
-        <ul className="flex w-full flex-col gap-2" aria-label={t("nav.meetings")}>
+        <ul
+          className="flex w-full flex-col gap-2"
+          aria-label={t("nav.meetings")}
+        >
           {sessions.map((session) => (
             <li key={session.id}>
               <button
@@ -289,7 +296,9 @@ export const MeetingsPage: React.FC = () => {
                 onClick={() => setSelectedId(session.id)}
                 className="w-full rounded-lg border border-mid-gray/20 bg-mid-gray/5 px-4 py-3 text-start transition-colors hover:border-logo-primary hover:bg-background-ui/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-logo-primary cursor-pointer"
               >
-                <span className="block truncate font-medium">{session.title}</span>
+                <span className="block truncate font-medium">
+                  {session.title}
+                </span>
                 <span className="mt-0.5 flex items-center gap-3 text-xs text-text/60">
                   <span>
                     {formatDateTime(
