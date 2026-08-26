@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Optagelsen er slettet. Transskription og resumé blev bevaret.",
+    "deleteScope": {
+      "legend": "Hvad skal slettes?",
+      "audioOnly": {
+        "title": "Slet kun optagelsen",
+        "description": "Fjerner lydfilerne. Transskription og resumé bevares.",
+        "warning": "Lydfilerne for dette møde slettes permanent. Transskriptionen og resuméet bevares."
+      },
+      "everything": {
+        "title": "Slet hele mødet",
+        "description": "Fjerner lyd, transskription og resumé.",
+        "warning": "Lyd, transskription og resumé for dette møde slettes permanent. Det kan ikke fortrydes."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Mødelyd",
+        "followSystem": "Følg systemstandard",
+        "microphone": {
+          "title": "Mødemikrofon",
+          "description": "Mikrofon der optages under møder. Uafhængig af diktermikrofonen."
+        },
+        "systemAudio": {
+          "title": "Kilde til systemlyd",
+          "description": "Outputenhed hvis lyd optages som de andre deltageres lyd. Adskilt fra enheden til feedbacklyde."
         }
       }
     }

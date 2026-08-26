@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "रेकर्डिङ मेटियो। ट्रान्सक्रिप्ट र सारांश राखिएको छ।",
+    "deleteScope": {
+      "legend": "के मेट्ने?",
+      "audioOnly": {
+        "title": "रेकर्डिङ मात्र मेट्नुहोस्",
+        "description": "अडियो फाइलहरू हटाउँछ। ट्रान्सक्रिप्ट र सारांश रहिरहन्छन्।",
+        "warning": "यस बैठकका अडियो फाइलहरू स्थायी रूपमा मेटिन्छन्। ट्रान्सक्रिप्ट र सारांश रहिरहन्छन्।"
+      },
+      "everything": {
+        "title": "सम्पूर्ण बैठक मेट्नुहोस्",
+        "description": "अडियो, ट्रान्सक्रिप्ट र सारांश हटाउँछ।",
+        "warning": "यस बैठकको अडियो, ट्रान्सक्रिप्ट र सारांश स्थायी रूपमा मेटिन्छन्। यसलाई पूर्ववत् गर्न सकिँदैन।"
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "बैठकको अडियो",
+        "followSystem": "प्रणालीको पूर्वनिर्धारित प्रयोग गर्नुहोस्",
+        "microphone": {
+          "title": "बैठकको माइक्रोफोन",
+          "description": "बैठकको क्रममा रेकर्ड गरिने माइक्रोफोन। डिक्टेसन माइक्रोफोनबाट स्वतन्त्र।"
+        },
+        "systemAudio": {
+          "title": "प्रणाली अडियोको स्रोत",
+          "description": "त्यो आउटपुट यन्त्र जसको आवाज अन्य सहभागीहरूको अडियोका रूपमा रेकर्ड हुन्छ। फिडब्याक ध्वनिको यन्त्रभन्दा अलग।"
         }
       }
     }

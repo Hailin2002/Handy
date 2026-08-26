@@ -96,6 +96,22 @@ pub struct AppSettings {
     /// cloud path is unreachable while this is false. Default false.
     #[serde(default)]
     pub meeting_summary_cloud_consent: bool,
+    /// Microphone captured by meetings. `None` follows the dictation
+    /// microphone, which is the sensible default for a single-mic desk.
+    #[serde(default)]
+    pub meeting_microphone: Option<String>,
+    /// Render device captured as system audio via WASAPI loopback. `None`
+    /// follows the OS default output.
+    ///
+    /// Deliberately separate from `selected_output_device`, which only picks
+    /// where feedback sounds are *played*. The plan forbids reinterpreting
+    /// that setting as the meeting loopback source ("`selected_output_device`
+    /// für Feedback-Sounds bleibt unangetastet. Der Meeting-Modus erhält
+    /// eigene Einstellungen für Mikrofon und Loopback-Output"), because
+    /// otherwise changing where a beep plays silently changes what a meeting
+    /// records.
+    #[serde(default)]
+    pub meeting_output_device: Option<String>,
     #[serde(default)]
     pub azure_speech_endpoint: String,
     #[serde(default = "default_azure_speech_language")]
@@ -685,6 +701,8 @@ pub fn get_default_settings() -> AppSettings {
         speech_input_provider: SpeechInputProvider::default(),
         meeting_stt_provider: SpeechInputProvider::default(),
         meeting_summary_cloud_consent: false,
+        meeting_microphone: None,
+        meeting_output_device: None,
         azure_speech_endpoint: String::new(),
         azure_speech_language: default_azure_speech_language(),
         azure_stable_partial_threshold: default_azure_stable_partial_threshold(),

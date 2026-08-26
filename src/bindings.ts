@@ -1511,7 +1511,25 @@ meeting_stt_provider?: SpeechInputProvider;
  * Cloud summarization consent gate (plan summary-provider-contract): the
  * cloud path is unreachable while this is false. Default false.
  */
-meeting_summary_cloud_consent?: boolean; azure_speech_endpoint?: string; azure_speech_language?: string; azure_stable_partial_threshold?: number; azure_segmentation_silence_ms?: number; custom_stt_endpoint?: string; speech_pipeline_api_keys?: SecretMap; deepl_translation_enabled?: boolean; deepl_target_language?: string; deepl_sentence_delay_ms?: number; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; paste_delay_after_ms?: number; 
+meeting_summary_cloud_consent?: boolean; 
+/**
+ * Microphone captured by meetings. `None` follows the dictation
+ * microphone, which is the sensible default for a single-mic desk.
+ */
+meeting_microphone?: string | null; 
+/**
+ * Render device captured as system audio via WASAPI loopback. `None`
+ * follows the OS default output.
+ * 
+ * Deliberately separate from `selected_output_device`, which only picks
+ * where feedback sounds are *played*. The plan forbids reinterpreting
+ * that setting as the meeting loopback source ("`selected_output_device`
+ * für Feedback-Sounds bleibt unangetastet. Der Meeting-Modus erhält
+ * eigene Einstellungen für Mikrofon und Loopback-Output"), because
+ * otherwise changing where a beep plays silently changes what a meeting
+ * records.
+ */
+meeting_output_device?: string | null; azure_speech_endpoint?: string; azure_speech_language?: string; azure_stable_partial_threshold?: number; azure_segmentation_silence_ms?: number; custom_stt_endpoint?: string; speech_pipeline_api_keys?: SecretMap; deepl_translation_enabled?: boolean; deepl_target_language?: string; deepl_sentence_delay_ms?: number; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; paste_delay_after_ms?: number; 
 /**
  * Debug-gated ("beta") receipt-sequenced paste: restore the clipboard only
  * after the target app actually reads the transcript, instead of after a

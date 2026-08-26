@@ -94,6 +94,14 @@ export interface MeetingStoreState {
   preflightStatus: MeetingPreflightStatus;
   /** True while a lifecycle command is in flight (buttons disable on it). */
   busy: boolean;
+  /**
+   * Meeting the global shortcut is asking to end (plan §6.9), or `null`.
+   *
+   * The backend owns the timing; the store only mirrors the question so the
+   * window, the recorder view and the tray never disagree about whether a
+   * stop is pending.
+   */
+  stopConfirmFor: string | null;
   listenersReady: boolean;
 
   // --- listener registrar (FSC L1/L3/L4) --------------------------------
@@ -116,6 +124,8 @@ export interface MeetingStoreState {
   ) => Promise<void>;
 
   clearError: () => void;
+  /** Answers the shortcut's "really end this meeting?" with "keep recording". */
+  dismissStopConfirm: () => void;
   /** Leaves the processing/completed view without touching backend state. */
   releaseSession: () => void;
   resetForTests: () => void;
@@ -127,6 +137,7 @@ export interface MeetingStoreState {
   applyTranscriptDelta: (event: MeetingTranscriptDeltaEvent) => void;
   applyJobsUpdated: (event: MeetingJobsUpdatedEvent) => void;
   applyRecoveryReport: (event: MeetingRecoveryReportEvent) => void;
+  applyStopConfirm: (event: { meeting_id: string; armed: boolean }) => void;
   adoptSnapshot: (snapshot: MeetingSnapshot) => void;
 }
 
@@ -142,7 +153,9 @@ const EMPTY_LEVELS: Record<MeetingAudioSource, number> = {
 const listeners = new Map<string, UnlistenFn>();
 let listenerRegistration: Promise<void> | null = null;
 
-const sessionFromSnapshot = (snapshot: MeetingSnapshot): MeetingLiveSession => ({
+const sessionFromSnapshot = (
+  snapshot: MeetingSnapshot,
+): MeetingLiveSession => ({
   meetingId: snapshot.meeting_id,
   title: snapshot.title,
   state: snapshot.state,
@@ -231,6 +244,7 @@ export const useMeetingStore = create<MeetingStoreState>()((set, get) => {
     preflight: null,
     preflightStatus: "idle",
     busy: false,
+    stopConfirmFor: null,
     listenersReady: false,
 
     // ---------------------------------------------------------------- L1/L3
@@ -275,6 +289,11 @@ export const useMeetingStore = create<MeetingStoreState>()((set, get) => {
           ),
           bind(MEETING_EVENTS.sessionRecovered, (payload) =>
             get().applyRecoveryReport(payload as MeetingRecoveryReportEvent),
+          ),
+          bind(MEETING_EVENTS.stopConfirm, (payload) =>
+            get().applyStopConfirm(
+              payload as { meeting_id: string; armed: boolean },
+            ),
           ),
         ]);
         set({ listenersReady: true });
@@ -452,6 +471,7 @@ export const useMeetingStore = create<MeetingStoreState>()((set, get) => {
         preflight: null,
         preflightStatus: "idle",
         busy: false,
+        stopConfirmFor: null,
         listenersReady: false,
       });
     },
@@ -539,6 +559,21 @@ export const useMeetingStore = create<MeetingStoreState>()((set, get) => {
         const byId = new Map(state.recoveries.map((o) => [o.meeting_id, o]));
         for (const offer of offers) byId.set(offer.meeting_id, offer);
         return { recoveries: [...byId.values()] };
+      });
+    },
+
+    dismissStopConfirm: () => set({ stopConfirmFor: null }),
+
+    applyStopConfirm: (event) => {
+      const meetingId = event?.meeting_id;
+      if (typeof meetingId !== "string" || meetingId.length === 0) return;
+      set((state) => {
+        if (event.armed) return { stopConfirmFor: meetingId };
+        // Only the meeting that was asked about may clear the question, so a
+        // late "disarmed" for an older meeting cannot cancel a fresh one.
+        return state.stopConfirmFor === meetingId
+          ? { stopConfirmFor: null }
+          : {};
       });
     },
 

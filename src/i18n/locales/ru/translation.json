@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Запись удалена. Расшифровка и сводка сохранены.",
+    "deleteScope": {
+      "legend": "Что нужно удалить?",
+      "audioOnly": {
+        "title": "Удалить только запись",
+        "description": "Удаляет аудиофайлы. Расшифровка и сводка сохраняются.",
+        "warning": "Аудиофайлы этой встречи будут удалены безвозвратно. Расшифровка и сводка сохранятся."
+      },
+      "everything": {
+        "title": "Удалить всю встречу",
+        "description": "Удаляет аудио, расшифровку и сводку.",
+        "warning": "Аудио, расшифровка и сводка этой встречи будут удалены безвозвратно. Это действие нельзя отменить."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Звук встречи",
+        "followSystem": "Использовать системное значение по умолчанию",
+        "microphone": {
+          "title": "Микрофон встречи",
+          "description": "Микрофон, записываемый во время встреч. Не зависит от микрофона для диктовки."
+        },
+        "systemAudio": {
+          "title": "Источник системного звука",
+          "description": "Устройство вывода, звук которого записывается как аудио других участников. Отдельно от устройства звуков обратной связи."
         }
       }
     }

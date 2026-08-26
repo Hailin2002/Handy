@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "录音已删除。转录和摘要已保留。",
+    "deleteScope": {
+      "legend": "要删除什么？",
+      "audioOnly": {
+        "title": "仅删除录音",
+        "description": "删除音频文件。转录和摘要将保留。",
+        "warning": "此会议的音频文件将被永久删除。转录和摘要将保留。"
+      },
+      "everything": {
+        "title": "删除整个会议",
+        "description": "删除音频、转录和摘要。",
+        "warning": "此会议的音频、转录和摘要将被永久删除。此操作无法撤销。"
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "会议音频",
+        "followSystem": "跟随系统默认设置",
+        "microphone": {
+          "title": "会议麦克风",
+          "description": "会议期间录制的麦克风。与听写麦克风相互独立。"
+        },
+        "systemAudio": {
+          "title": "系统音频来源",
+          "description": "其声音被录制为其他参与者音频的输出设备。与提示音设备分开。"
         }
       }
     }

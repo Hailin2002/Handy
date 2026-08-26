@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "錄音已刪除。逐字稿與摘要已保留。",
+    "deleteScope": {
+      "legend": "要刪除什麼？",
+      "audioOnly": {
+        "title": "僅刪除錄音",
+        "description": "刪除音訊檔案。逐字稿與摘要會保留。",
+        "warning": "此會議的音訊檔案將被永久刪除。逐字稿與摘要會保留。"
+      },
+      "everything": {
+        "title": "刪除整個會議",
+        "description": "刪除音訊、逐字稿與摘要。",
+        "warning": "此會議的音訊、逐字稿與摘要將被永久刪除。此操作無法復原。"
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "會議音訊",
+        "followSystem": "跟隨系統預設值",
+        "microphone": {
+          "title": "會議麥克風",
+          "description": "會議期間錄製的麥克風。與聽寫麥克風各自獨立。"
+        },
+        "systemAudio": {
+          "title": "系統音訊來源",
+          "description": "其聲音會被錄製為其他參與者音訊的輸出裝置。與提示音裝置分開。"
         }
       }
     }

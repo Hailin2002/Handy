@@ -95,6 +95,10 @@ export const MeetingRecorderView: React.FC<MeetingRecorderViewProps> = ({
   const pauseMeeting = useMeetingStore((state) => state.pauseMeeting);
   const resumeMeeting = useMeetingStore((state) => state.resumeMeeting);
   const stopMeeting = useMeetingStore((state) => state.stopMeeting);
+  const stopConfirmFor = useMeetingStore((state) => state.stopConfirmFor);
+  const dismissStopConfirm = useMeetingStore(
+    (state) => state.dismissStopConfirm,
+  );
   const elapsedSeconds = useMeetingElapsedSeconds();
 
   const [confirmingStop, setConfirmingStop] = useState(false);
@@ -109,7 +113,10 @@ export const MeetingRecorderView: React.FC<MeetingRecorderViewProps> = ({
   // The state event is the UI's permission to leave the recording view
   // (SSC T08/T09): never a local timer, never an optimistic guess.
   useEffect(() => {
-    if (state && !["starting", "recording", "paused", "stopping"].includes(state)) {
+    if (
+      state &&
+      !["starting", "recording", "paused", "stopping"].includes(state)
+    ) {
       onStopped();
     }
   }, [state, onStopped]);
@@ -151,8 +158,20 @@ export const MeetingRecorderView: React.FC<MeetingRecorderViewProps> = ({
         })
       : t("meeting.session.recording.provider.local");
 
-  const handleStop = async () => {
+  // The global shortcut asks before it stops (plan §6.9) and announces that
+  // question on `meeting://stop-confirm`. It reuses this dialog rather than
+  // growing a second confirmation surface, so both routes to "end meeting"
+  // look and read identically.
+  const shortcutAsking = stopConfirmFor === session.meetingId;
+  const stopDialogOpen = confirmingStop || shortcutAsking;
+
+  const closeStopDialog = () => {
     setConfirmingStop(false);
+    if (shortcutAsking) dismissStopConfirm();
+  };
+
+  const handleStop = async () => {
+    closeStopDialog();
     await stopMeeting();
   };
 
@@ -198,7 +217,9 @@ export const MeetingRecorderView: React.FC<MeetingRecorderViewProps> = ({
         </Alert>
       )}
 
-      {paused && <Alert variant="info">{t("meeting.session.paused.body")}</Alert>}
+      {paused && (
+        <Alert variant="info">{t("meeting.session.paused.body")}</Alert>
+      )}
 
       {errorCopy && (
         <Alert variant={errorCopy.severity}>
@@ -300,21 +321,23 @@ export const MeetingRecorderView: React.FC<MeetingRecorderViewProps> = ({
       </footer>
 
       <Dialog
-        open={confirmingStop}
+        open={stopDialogOpen}
         title={t("meeting.live.stopConfirm.title")}
         description={t("meeting.live.stopConfirm.body")}
         closeLabel={t("meeting.actions.close")}
-        onOpenChange={(open) => setConfirmingStop(open)}
+        onOpenChange={(open) => {
+          if (!open) closeStopDialog();
+        }}
         footer={
           <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setConfirmingStop(false)}
-            >
+            <Button variant="secondary" size="sm" onClick={closeStopDialog}>
               {t("meeting.actions.keepRecording")}
             </Button>
-            <Button variant="danger" size="sm" onClick={() => void handleStop()}>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => void handleStop()}
+            >
               <Square className="mr-1 h-4 w-4" aria-hidden="true" />
               {t("meeting.actions.endMeeting")}
             </Button>

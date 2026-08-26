@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Nagranie usunięte. Transkrypcja i podsumowanie zostały zachowane.",
+    "deleteScope": {
+      "legend": "Co ma zostać usunięte?",
+      "audioOnly": {
+        "title": "Usuń tylko nagranie",
+        "description": "Usuwa pliki audio. Transkrypcja i podsumowanie zostają zachowane.",
+        "warning": "Pliki audio tego spotkania zostaną trwale usunięte. Transkrypcja i podsumowanie zostaną zachowane."
+      },
+      "everything": {
+        "title": "Usuń całe spotkanie",
+        "description": "Usuwa audio, transkrypcję i podsumowanie.",
+        "warning": "Audio, transkrypcja i podsumowanie tego spotkania zostaną trwale usunięte. Tej operacji nie można cofnąć."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Dźwięk spotkania",
+        "followSystem": "Użyj domyślnego ustawienia systemu",
+        "microphone": {
+          "title": "Mikrofon spotkania",
+          "description": "Mikrofon nagrywany podczas spotkań. Niezależny od mikrofonu dyktowania."
+        },
+        "systemAudio": {
+          "title": "Źródło dźwięku systemowego",
+          "description": "Urządzenie wyjściowe, którego dźwięk jest nagrywany jako audio pozostałych uczestników. Odrębne od urządzenia dźwięków powiadomień."
         }
       }
     }

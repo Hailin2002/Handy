@@ -110,6 +110,10 @@ pub const TOPIC_SUMMARY_AVAILABLE: &str = "meeting://summary-available";
 pub const TOPIC_SESSION_RECOVERED: &str = "meeting://session-recovered";
 /// `meeting://recovery-report` — the consolidated boot report.
 pub const TOPIC_RECOVERY_REPORT: &str = "meeting://recovery-report";
+/// `meeting://stop-confirm` — the meeting shortcut asked "really end this
+/// meeting?" (plan §6.9) or that question lapsed. Payload:
+/// `{ "meeting_id": String, "armed": bool }`.
+pub const TOPIC_STOP_CONFIRM: &str = "meeting://stop-confirm";
 
 // ---------------------------------------------------------------------------
 // State machine (SSC §2)
@@ -825,13 +829,21 @@ pub struct AppEnvironment {
 impl MeetingEnvironment for AppEnvironment {
     fn device_set(&self) -> rec::SourceDeviceSet {
         let settings = crate::settings::get_settings(&self.app);
+        // Meetings own their device choice. `meeting_microphone` falls back to
+        // the dictation microphone so a single-mic setup needs no extra
+        // configuration, but the meeting setting always wins once set.
         let microphone = settings
-            .selected_microphone
+            .meeting_microphone
             .clone()
+            .or_else(|| settings.selected_microphone.clone())
             .filter(|name| !name.is_empty())
             .map(rec::SourceOpenRequest::new);
+        // The loopback source is `meeting_output_device`, never
+        // `selected_output_device`: the latter only decides where feedback
+        // beeps are played, and treating it as the capture source made "change
+        // where a beep plays" silently change what the meeting records.
         let system = match settings
-            .selected_output_device
+            .meeting_output_device
             .clone()
             .filter(|name| !name.is_empty())
         {
@@ -1718,6 +1730,17 @@ impl MeetingManager {
             revision
         );
         Ok(revision)
+    }
+
+    /// Announces that the meeting shortcut is waiting for a second press
+    /// before it ends `meeting_id`, or that the question lapsed (`armed`
+    /// false). The shortcut layer owns the timing; the manager only owns the
+    /// event bus, so both the main window and the tray read one source.
+    pub fn publish_stop_confirmation(&self, meeting_id: &str, armed: bool) {
+        self.publish(
+            TOPIC_STOP_CONFIRM,
+            &serde_json::json!({ "meeting_id": meeting_id, "armed": armed }),
+        );
     }
 
     fn publish<T: Serialize>(&self, topic: &'static str, payload: &T) {

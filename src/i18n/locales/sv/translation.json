@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Inspelningen har raderats. Transkription och sammanfattning behölls.",
+    "deleteScope": {
+      "legend": "Vad ska raderas?",
+      "audioOnly": {
+        "title": "Radera endast inspelningen",
+        "description": "Tar bort ljudfilerna. Transkription och sammanfattning behålls.",
+        "warning": "Ljudfilerna för det här mötet raderas permanent. Transkriptionen och sammanfattningen behålls."
+      },
+      "everything": {
+        "title": "Radera hela mötet",
+        "description": "Tar bort ljud, transkription och sammanfattning.",
+        "warning": "Ljud, transkription och sammanfattning för det här mötet raderas permanent. Det går inte att ångra."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Mötesljud",
+        "followSystem": "Följ systemets standard",
+        "microphone": {
+          "title": "Mötesmikrofon",
+          "description": "Mikrofon som spelas in under möten. Oberoende av dikteringsmikrofonen."
+        },
+        "systemAudio": {
+          "title": "Källa för systemljud",
+          "description": "Utenhet vars ljud spelas in som de andra deltagarnas ljud. Skild från enheten för återkopplingsljud."
         }
       }
     }

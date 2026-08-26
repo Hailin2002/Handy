@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Recording deleted. Transcript and summary were kept.",
+    "deleteScope": {
+      "legend": "What should be deleted?",
+      "audioOnly": {
+        "title": "Delete the recording only",
+        "description": "Removes the audio files. Transcript and summary are kept.",
+        "warning": "The audio files of this meeting are deleted permanently. The transcript and the summary are kept."
+      },
+      "everything": {
+        "title": "Delete the entire meeting",
+        "description": "Removes audio, transcript and summary.",
+        "warning": "Audio, transcript and summary of this meeting are deleted permanently. This cannot be undone."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Meeting audio",
+        "followSystem": "Follow system default",
+        "microphone": {
+          "title": "Meeting microphone",
+          "description": "Microphone recorded during meetings. Independent of the dictation microphone."
+        },
+        "systemAudio": {
+          "title": "System audio source",
+          "description": "Output device whose sound is recorded as the other participants' audio. Separate from the device used for feedback sounds."
         }
       }
     }

@@ -59,7 +59,21 @@
     "badgeAttention": "Aufmerksamkeit nötig",
     "badgeComplete": "Abgeschlossen",
     "badgeProcessing": "In Verarbeitung",
-    "badgePaused": "Pausiert"
+    "badgePaused": "Pausiert",
+    "deleteAudioDone": "Aufnahme gelöscht. Transkript und Zusammenfassung wurden behalten.",
+    "deleteScope": {
+      "legend": "Was soll gelöscht werden?",
+      "audioOnly": {
+        "title": "Nur die Aufnahme löschen",
+        "description": "Entfernt die Audiodateien. Transkript und Zusammenfassung bleiben erhalten.",
+        "warning": "Die Audiodateien dieses Meetings werden endgültig gelöscht. Transkript und Zusammenfassung bleiben erhalten."
+      },
+      "everything": {
+        "title": "Gesamtes Meeting löschen",
+        "description": "Entfernt Audio, Transkript und Zusammenfassung.",
+        "warning": "Audio, Transkript und Zusammenfassung dieses Meetings werden endgültig gelöscht. Das kann nicht rückgängig gemacht werden."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Meeting pausieren/fortsetzen",
             "description": "Pausiert und setzt die aktuelle Meeting-Aufnahme fort."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Meeting-Audio",
+        "followSystem": "Systemstandard folgen",
+        "microphone": {
+          "title": "Meeting-Mikrofon",
+          "description": "Mikrofon, das während Meetings aufgezeichnet wird. Unabhängig vom Diktier-Mikrofon."
+        },
+        "systemAudio": {
+          "title": "Systemaudio-Quelle",
+          "description": "Ausgabegerät, dessen Ton als Audio der anderen Teilnehmer aufgezeichnet wird. Getrennt vom Gerät für Feedback-Töne."
         }
       }
     }

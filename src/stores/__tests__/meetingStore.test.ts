@@ -21,7 +21,9 @@ import {
   useMeetingStore,
 } from "../meetingStore";
 
-const snapshot = (overrides: Partial<MeetingSnapshot> = {}): MeetingSnapshot => ({
+const snapshot = (
+  overrides: Partial<MeetingSnapshot> = {},
+): MeetingSnapshot => ({
   meeting_id: "m-1",
   title: "Budget Review",
   state: "recording",
@@ -245,6 +247,33 @@ describe("meetingStore", () => {
     const recoveries = useMeetingStore.getState().recoveries;
     expect(recoveries).toHaveLength(1);
     expect(recoveries[0].recovered_chunks).toBe(4);
+  });
+
+  it("mirrors the shortcut's stop question and lets the user keep recording", () => {
+    const store = useMeetingStore.getState();
+    store.applyStopConfirm({ meeting_id: "m-1", armed: true });
+    expect(useMeetingStore.getState().stopConfirmFor).toBe("m-1");
+
+    store.dismissStopConfirm();
+    expect(useMeetingStore.getState().stopConfirmFor).toBeNull();
+  });
+
+  it("only lets the asked-about meeting clear its own stop question", () => {
+    const store = useMeetingStore.getState();
+    store.applyStopConfirm({ meeting_id: "m-1", armed: true });
+
+    // A late "disarmed" for an older meeting must not cancel a fresh question.
+    store.applyStopConfirm({ meeting_id: "m-0", armed: false });
+    expect(useMeetingStore.getState().stopConfirmFor).toBe("m-1");
+
+    store.applyStopConfirm({ meeting_id: "m-1", armed: false });
+    expect(useMeetingStore.getState().stopConfirmFor).toBeNull();
+  });
+
+  it("ignores a stop question without a meeting id", () => {
+    const store = useMeetingStore.getState();
+    store.applyStopConfirm({ meeting_id: "", armed: true });
+    expect(useMeetingStore.getState().stopConfirmFor).toBeNull();
   });
 
   it("treats exactly the capture states as an active meeting", () => {

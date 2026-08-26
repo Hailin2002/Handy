@@ -1,5 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Copy, Download, Play, RefreshCw, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Download,
+  Play,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -47,6 +54,13 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
   const [titleDraft, setTitleDraft] = useState(session.title);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Plan §11: deletion is not one button. The user chooses between dropping
+  // only the raw recording (transcript and summary survive) and erasing the
+  // meeting for good, and the dialog names exactly what each option removes
+  // before anything irreversible happens.
+  const [deleteScope, setDeleteScope] = useState<"audioOnly" | "everything">(
+    "everything",
+  );
   const [deleting, setDeleting] = useState(false);
   const lastSessionId = useRef(session.id);
 
@@ -58,9 +72,7 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
 
   const visibleTranscript = transcriptQuery.trim()
     ? transcript.filter((row) =>
-        row.text
-          .toLowerCase()
-          .includes(transcriptQuery.trim().toLowerCase()),
+        row.text.toLowerCase().includes(transcriptQuery.trim().toLowerCase()),
       )
     : transcript;
 
@@ -121,9 +133,18 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
     if (deleting) return;
     setDeleting(true);
     try {
-      const result = await commands.meetingDeleteSession(session.id);
+      const result =
+        deleteScope === "audioOnly"
+          ? await commands.deleteMeetingData(session.id, "audioOnly")
+          : await commands.meetingDeleteSession(session.id);
       if (result.status === "ok") {
-        onDeleted(session.id);
+        if (deleteScope === "audioOnly") {
+          // The meeting itself is still there, so the view stays open and
+          // only reports what actually happened.
+          toast.success(t("meetings.deleteAudioDone"));
+        } else {
+          onDeleted(session.id);
+        }
       } else {
         toast.error(t("meetings.deleteError"), { description: result.error });
       }
@@ -245,7 +266,9 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => void copyText(summary.summary_markdown, "meetings.copied")}
+                onClick={() =>
+                  void copyText(summary.summary_markdown, "meetings.copied")
+                }
               >
                 <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                 {t("meetings.copySummary")}
@@ -261,12 +284,14 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
             )}
             {summary.action_items.length > 0 && (
               <p className="mt-1 text-xs text-text/60">
-                {t("meeting.detail.actionItems")}: {summary.action_items.join("; ")}
+                {t("meeting.detail.actionItems")}:{" "}
+                {summary.action_items.join("; ")}
               </p>
             )}
             {summary.open_questions.length > 0 && (
               <p className="mt-1 text-xs text-text/60">
-                {t("meeting.detail.openQuestions")}: {summary.open_questions.join("; ")}
+                {t("meeting.detail.openQuestions")}:{" "}
+                {summary.open_questions.join("; ")}
               </p>
             )}
           </div>
@@ -284,9 +309,7 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                   variant="ghost"
                   onClick={() =>
                     void copyText(
-                      transcript
-                        .map((row) => `${row.text}`)
-                        .join("\n"),
+                      transcript.map((row) => `${row.text}`).join("\n"),
                       "meetings.copied",
                     )
                   }
@@ -294,17 +317,22 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                   <Copy className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                   {t("meetings.copyTranscript")}
                 </Button>
-                {(["markdown", "txt", "json"] as ExportFormat[]).map((format) => (
-                  <Button
-                    key={format}
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => void handleExport(format)}
-                  >
-                    <Download className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                    {format.toUpperCase()}
-                  </Button>
-                ))}
+                {(["markdown", "txt", "json"] as ExportFormat[]).map(
+                  (format) => (
+                    <Button
+                      key={format}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void handleExport(format)}
+                    >
+                      <Download
+                        className="mr-1 h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                      {format.toUpperCase()}
+                    </Button>
+                  ),
+                )}
               </div>
             </div>
             <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm text-text/80">
@@ -332,7 +360,11 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
         {summary?.state === "failed" && (
           <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
             <span className="text-sm">{t("meeting.detail.summaryFailed")}</span>
-            <Button size="sm" onClick={handleResummarize} disabled={resummarizing}>
+            <Button
+              size="sm"
+              onClick={handleResummarize}
+              disabled={resummarizing}
+            >
               <RefreshCw className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
               {t("meeting.detail.resummarize")}
             </Button>
@@ -355,7 +387,11 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
       <Dialog
         open={confirmingDelete}
         title={t("meetings.deleteConfirmTitle")}
-        description={t("meetings.deleteConfirmBody")}
+        description={
+          deleteScope === "audioOnly"
+            ? t("meetings.deleteScope.audioOnly.warning")
+            : t("meetings.deleteScope.everything.warning")
+        }
         closeLabel={t("common.close")}
         onOpenChange={(open) => !deleting && setConfirmingDelete(open)}
         footer={
@@ -368,15 +404,44 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
             >
               {t("common.close")}
             </Button>
-            <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
               <Trash2 className="mr-1 h-4 w-4" aria-hidden="true" />
               {t("common.delete")}
             </Button>
           </div>
         }
       >
-        {/* Dialog body intentionally minimal; the description carries the warning. */}
-        <span />
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 text-sm font-medium">
+            {t("meetings.deleteScope.legend")}
+          </legend>
+          {(["audioOnly", "everything"] as const).map((scope) => (
+            <label key={scope} className="flex items-start gap-2 text-sm">
+              <input
+                type="radio"
+                name="meeting-delete-scope"
+                className="mt-1"
+                value={scope}
+                checked={deleteScope === scope}
+                disabled={deleting}
+                onChange={() => setDeleteScope(scope)}
+              />
+              <span className="flex flex-col">
+                <span className="font-medium">
+                  {t(`meetings.deleteScope.${scope}.title`)}
+                </span>
+                <span className="text-xs text-text/60">
+                  {t(`meetings.deleteScope.${scope}.description`)}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
       </Dialog>
     </section>
   );

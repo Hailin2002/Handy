@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "녹음을 삭제했습니다. 스크립트와 요약은 유지되었습니다.",
+    "deleteScope": {
+      "legend": "무엇을 삭제할까요?",
+      "audioOnly": {
+        "title": "녹음만 삭제",
+        "description": "오디오 파일을 삭제합니다. 스크립트와 요약은 유지됩니다.",
+        "warning": "이 회의의 오디오 파일이 영구히 삭제됩니다. 스크립트와 요약은 유지됩니다."
+      },
+      "everything": {
+        "title": "회의 전체 삭제",
+        "description": "오디오, 스크립트, 요약을 모두 삭제합니다.",
+        "warning": "이 회의의 오디오, 스크립트, 요약이 영구히 삭제됩니다. 되돌릴 수 없습니다."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "회의 오디오",
+        "followSystem": "시스템 기본값 사용",
+        "microphone": {
+          "title": "회의 마이크",
+          "description": "회의 중에 녹음되는 마이크입니다. 받아쓰기 마이크와 독립적입니다."
+        },
+        "systemAudio": {
+          "title": "시스템 오디오 소스",
+          "description": "다른 참가자의 오디오로 녹음되는 출력 장치입니다. 피드백 소리 장치와는 별개입니다."
         }
       }
     }

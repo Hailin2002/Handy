@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "ההקלטה נמחקה. התמליל והסיכום נשמרו.",
+    "deleteScope": {
+      "legend": "מה למחוק?",
+      "audioOnly": {
+        "title": "מחיקת ההקלטה בלבד",
+        "description": "מסיר את קובצי השמע. התמליל והסיכום נשמרים.",
+        "warning": "קובצי השמע של פגישה זו נמחקים לצמיתות. התמליל והסיכום נשמרים."
+      },
+      "everything": {
+        "title": "מחיקת הפגישה כולה",
+        "description": "מסיר שמע, תמליל וסיכום.",
+        "warning": "השמע, התמליל והסיכום של פגישה זו נמחקים לצמיתות. לא ניתן לבטל פעולה זו."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "שמע הפגישה",
+        "followSystem": "השתמש בברירת המחדל של המערכת",
+        "microphone": {
+          "title": "מיקרופון הפגישה",
+          "description": "המיקרופון שמוקלט במהלך פגישות. בלתי תלוי במיקרופון ההכתבה."
+        },
+        "systemAudio": {
+          "title": "מקור שמע המערכת",
+          "description": "התקן הפלט שהצליל שלו מוקלט כשמע של שאר המשתתפים. נפרד מהתקן צלילי המשוב."
         }
       }
     }

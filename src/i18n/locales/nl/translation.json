@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Opname verwijderd. Transcript en samenvatting zijn bewaard.",
+    "deleteScope": {
+      "legend": "Wat moet er worden verwijderd?",
+      "audioOnly": {
+        "title": "Alleen de opname verwijderen",
+        "description": "Verwijdert de audiobestanden. Transcript en samenvatting blijven behouden.",
+        "warning": "De audiobestanden van deze vergadering worden definitief verwijderd. Het transcript en de samenvatting blijven behouden."
+      },
+      "everything": {
+        "title": "De hele vergadering verwijderen",
+        "description": "Verwijdert audio, transcript en samenvatting.",
+        "warning": "Audio, transcript en samenvatting van deze vergadering worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Vergaderaudio",
+        "followSystem": "Systeemstandaard volgen",
+        "microphone": {
+          "title": "Vergadermicrofoon",
+          "description": "Microfoon die tijdens vergaderingen wordt opgenomen. Los van de dicteermicrofoon."
+        },
+        "systemAudio": {
+          "title": "Systeemaudiobron",
+          "description": "Uitvoerapparaat waarvan het geluid wordt opgenomen als audio van de andere deelnemers. Los van het apparaat voor feedbackgeluiden."
         }
       }
     }

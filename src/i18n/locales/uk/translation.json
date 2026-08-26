@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Запис видалено. Розшифровку та підсумок збережено.",
+    "deleteScope": {
+      "legend": "Що потрібно видалити?",
+      "audioOnly": {
+        "title": "Видалити лише запис",
+        "description": "Видаляє аудіофайли. Розшифровка та підсумок зберігаються.",
+        "warning": "Аудіофайли цієї зустрічі буде видалено назавжди. Розшифровку та підсумок буде збережено."
+      },
+      "everything": {
+        "title": "Видалити всю зустріч",
+        "description": "Видаляє аудіо, розшифровку та підсумок.",
+        "warning": "Аудіо, розшифровку та підсумок цієї зустрічі буде видалено назавжди. Цю дію не можна скасувати."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Звук зустрічі",
+        "followSystem": "Використовувати системне значення за замовчуванням",
+        "microphone": {
+          "title": "Мікрофон зустрічі",
+          "description": "Мікрофон, який записується під час зустрічей. Незалежний від мікрофона для диктування."
+        },
+        "systemAudio": {
+          "title": "Джерело системного звуку",
+          "description": "Пристрій виводу, звук якого записується як аудіо інших учасників. Окремо від пристрою звуків зворотного зв’язку."
         }
       }
     }

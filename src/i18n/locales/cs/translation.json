@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Nahrávka smazána. Přepis a shrnutí byly zachovány.",
+    "deleteScope": {
+      "legend": "Co se má smazat?",
+      "audioOnly": {
+        "title": "Smazat pouze nahrávku",
+        "description": "Odstraní zvukové soubory. Přepis a shrnutí zůstanou zachovány.",
+        "warning": "Zvukové soubory této schůzky budou trvale smazány. Přepis a shrnutí zůstanou zachovány."
+      },
+      "everything": {
+        "title": "Smazat celou schůzku",
+        "description": "Odstraní zvuk, přepis i shrnutí.",
+        "warning": "Zvuk, přepis a shrnutí této schůzky budou trvale smazány. Tuto akci nelze vrátit zpět."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Zvuk schůzky",
+        "followSystem": "Použít výchozí nastavení systému",
+        "microphone": {
+          "title": "Mikrofon schůzky",
+          "description": "Mikrofon nahrávaný během schůzek. Nezávislý na mikrofonu pro diktování."
+        },
+        "systemAudio": {
+          "title": "Zdroj systémového zvuku",
+          "description": "Výstupní zařízení, jehož zvuk se nahrává jako audio ostatních účastníků. Oddělené od zařízení pro zvuky zpětné vazby."
         }
       }
     }

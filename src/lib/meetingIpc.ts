@@ -42,6 +42,7 @@ export const MEETING_EVENTS = {
   summaryAvailable: "meeting://summary-available",
   sessionRecovered: "meeting://session-recovered",
   recoveryReport: "meeting://recovery-report",
+  stopConfirm: "meeting://stop-confirm",
 } as const;
 
 /** Raised when the backend does not (yet) expose the invoked command. */

@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "Đã xoá bản ghi. Bản chép lời và bản tóm tắt được giữ lại.",
+    "deleteScope": {
+      "legend": "Bạn muốn xoá gì?",
+      "audioOnly": {
+        "title": "Chỉ xoá bản ghi",
+        "description": "Xoá các tệp âm thanh. Bản chép lời và bản tóm tắt được giữ lại.",
+        "warning": "Các tệp âm thanh của cuộc họp này sẽ bị xoá vĩnh viễn. Bản chép lời và bản tóm tắt được giữ lại."
+      },
+      "everything": {
+        "title": "Xoá toàn bộ cuộc họp",
+        "description": "Xoá âm thanh, bản chép lời và bản tóm tắt.",
+        "warning": "Âm thanh, bản chép lời và bản tóm tắt của cuộc họp này sẽ bị xoá vĩnh viễn. Không thể hoàn tác."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "Âm thanh cuộc họp",
+        "followSystem": "Theo mặc định của hệ thống",
+        "microphone": {
+          "title": "Micrô cuộc họp",
+          "description": "Micrô được ghi trong các cuộc họp. Độc lập với micrô đọc chính tả."
+        },
+        "systemAudio": {
+          "title": "Nguồn âm thanh hệ thống",
+          "description": "Thiết bị đầu ra có âm thanh được ghi làm âm thanh của những người tham gia khác. Tách biệt với thiết bị phát âm báo."
         }
       }
     }

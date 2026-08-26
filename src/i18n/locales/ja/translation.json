@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "録音を削除しました。文字起こしと要約は保持されています。",
+    "deleteScope": {
+      "legend": "何を削除しますか?",
+      "audioOnly": {
+        "title": "録音のみを削除",
+        "description": "音声ファイルを削除します。文字起こしと要約は保持されます。",
+        "warning": "この会議の音声ファイルを完全に削除します。文字起こしと要約は保持されます。"
+      },
+      "everything": {
+        "title": "会議全体を削除",
+        "description": "音声、文字起こし、要約を削除します。",
+        "warning": "この会議の音声、文字起こし、要約を完全に削除します。元に戻せません。"
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "会議の音声",
+        "followSystem": "システムの既定に従う",
+        "microphone": {
+          "title": "会議用マイク",
+          "description": "会議中に録音するマイク。ディクテーション用マイクとは独立しています。"
+        },
+        "systemAudio": {
+          "title": "システム音声の入力元",
+          "description": "他の参加者の音声として録音される出力デバイス。フィードバック音のデバイスとは別です。"
         }
       }
     }

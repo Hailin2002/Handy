@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "रिकॉर्डिंग हटा दी गई। ट्रांसक्रिप्ट और सारांश रखे गए।",
+    "deleteScope": {
+      "legend": "क्या हटाया जाए?",
+      "audioOnly": {
+        "title": "केवल रिकॉर्डिंग हटाएँ",
+        "description": "ऑडियो फ़ाइलें हटाता है। ट्रांसक्रिप्ट और सारांश बने रहते हैं।",
+        "warning": "इस मीटिंग की ऑडियो फ़ाइलें स्थायी रूप से हटा दी जाती हैं। ट्रांसक्रिप्ट और सारांश बने रहते हैं।"
+      },
+      "everything": {
+        "title": "पूरी मीटिंग हटाएँ",
+        "description": "ऑडियो, ट्रांसक्रिप्ट और सारांश हटाता है।",
+        "warning": "इस मीटिंग का ऑडियो, ट्रांसक्रिप्ट और सारांश स्थायी रूप से हटा दिए जाते हैं। इसे पूर्ववत नहीं किया जा सकता।"
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "मीटिंग ऑडियो",
+        "followSystem": "सिस्टम डिफ़ॉल्ट का पालन करें",
+        "microphone": {
+          "title": "मीटिंग माइक्रोफ़ोन",
+          "description": "मीटिंग के दौरान रिकॉर्ड किया जाने वाला माइक्रोफ़ोन। डिक्टेशन माइक्रोफ़ोन से स्वतंत्र।"
+        },
+        "systemAudio": {
+          "title": "सिस्टम ऑडियो स्रोत",
+          "description": "वह आउटपुट डिवाइस जिसकी ध्वनि अन्य प्रतिभागियों के ऑडियो के रूप में रिकॉर्ड होती है। फ़ीडबैक ध्वनि वाले डिवाइस से अलग।"
         }
       }
     }

@@ -4,7 +4,8 @@
 //! used by both the Tauri and handy-keys implementations.
 
 use log::warn;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 
 use crate::actions::ACTION_MAP;
@@ -53,6 +54,88 @@ pub fn route_binding(binding_id: &str) -> ShortcutRoute {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Stop confirmation (plan §6.9)
+// ---------------------------------------------------------------------------
+
+/// How long the "really end this meeting?" question stays answerable.
+///
+/// Plan §6.9: "Nach kurzer Zeit verschwindet die Bestätigung ohne
+/// Zustandsänderung." Long enough to read and react to, short enough that a
+/// press minutes later is unmistakably a fresh intent rather than a stale
+/// confirmation.
+pub const STOP_CONFIRM_WINDOW: Duration = Duration::from_secs(5);
+
+/// What a start/stop press should do while a meeting is running.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StopDecision {
+    /// Ask first; the recording keeps running.
+    Ask,
+    /// The question was already asked and is still answerable — end it.
+    Stop,
+}
+
+/// Two-press guard in front of `stop`.
+///
+/// Without it a single stray press of the global meeting shortcut ends a
+/// multi-hour recording instantly and irreversibly — exactly the accident
+/// plan §6.9 exists to prevent. Kept as a pure, clock-injected type so the
+/// arming, confirming and lapsing rules are unit-testable without a Tauri
+/// runtime or real waiting.
+#[derive(Debug, Default)]
+pub struct StopConfirmGate {
+    /// Which meeting was asked about, and when.
+    pending: Mutex<Option<(String, Instant)>>,
+}
+
+impl StopConfirmGate {
+    /// Records a start/stop press against a running meeting.
+    ///
+    /// A pending question for a *different* meeting is discarded rather than
+    /// honoured: confirming meeting A must never end meeting B.
+    pub fn press(&self, meeting_id: &str, now: Instant) -> StopDecision {
+        let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+        let confirmed = matches!(
+            pending.as_ref(),
+            Some((id, asked_at))
+                if id == meeting_id && now.duration_since(*asked_at) <= STOP_CONFIRM_WINDOW
+        );
+        if confirmed {
+            *pending = None;
+            StopDecision::Stop
+        } else {
+            *pending = Some((meeting_id.to_string(), now));
+            StopDecision::Ask
+        }
+    }
+
+    /// True while `meeting_id` still has an answerable question.
+    ///
+    /// Production reads the armed state from the `meeting://stop-confirm`
+    /// event instead of polling, so this is the tests' observation window on
+    /// the lapse rule.
+    #[cfg(test)]
+    pub fn is_armed(&self, meeting_id: &str, now: Instant) -> bool {
+        matches!(
+            self.pending.lock().unwrap_or_else(|e| e.into_inner()).as_ref(),
+            Some((id, asked_at))
+                if id == meeting_id && now.duration_since(*asked_at) <= STOP_CONFIRM_WINDOW
+        )
+    }
+
+    /// Drops any pending question, e.g. once the meeting ended by other means.
+    pub fn clear(&self) {
+        *self.pending.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+}
+
+/// Process-wide gate. There is at most one capturing meeting at a time, so a
+/// single instance is the whole state.
+fn stop_confirm_gate() -> &'static StopConfirmGate {
+    static GATE: OnceLock<StopConfirmGate> = OnceLock::new();
+    GATE.get_or_init(StopConfirmGate::default)
+}
+
 /// Applies a meeting shortcut press.
 ///
 /// Meeting shortcuts are always toggles on key-down; they deliberately ignore
@@ -62,8 +145,12 @@ pub fn route_binding(binding_id: &str) -> ShortcutRoute {
 /// Starting is intentionally not done silently: the consent gate of
 /// `session-state-contract.md` 7 is fail-closed until the consent audit lands,
 /// so the shortcut brings up the start dialog instead of opening capture
-/// devices without an acknowledged consent. Stopping, pausing and resuming an
-/// already-consented session are applied directly.
+/// devices without an acknowledged consent.
+///
+/// Stopping takes two presses (plan §6.9): the first only asks, the second —
+/// within [`STOP_CONFIRM_WINDOW`] — ends the meeting. Pausing and resuming an
+/// already-consented session are applied directly, because both are
+/// reversible.
 pub fn dispatch_meeting_action(app: &AppHandle, action: MeetingShortcutAction) {
     let Some(manager) = app.try_state::<Arc<MeetingManager>>() else {
         warn!("MeetingManager is not initialized");
@@ -79,14 +166,29 @@ pub fn dispatch_meeting_action(app: &AppHandle, action: MeetingShortcutAction) {
         .name("meeting-shortcut".into())
         .spawn(move || match (action, active) {
             (MeetingShortcutAction::StartStop, Some(meeting_id)) => {
-                if let Err(e) = manager.stop(&meeting_id, false) {
-                    warn!("Meeting shortcut stop failed: {}", e);
+                match stop_confirm_gate().press(&meeting_id, Instant::now()) {
+                    StopDecision::Ask => {
+                        // The recording is untouched. Surface the question
+                        // where the user is looking: the window plus the event
+                        // both windows listen on.
+                        manager.publish_stop_confirmation(&meeting_id, true);
+                        crate::utils::show_main_window(&app);
+                    }
+                    StopDecision::Stop => {
+                        manager.publish_stop_confirmation(&meeting_id, false);
+                        if let Err(e) = manager.stop(&meeting_id, false) {
+                            warn!("Meeting shortcut stop failed: {}", e);
+                        }
+                    }
                 }
             }
             (MeetingShortcutAction::StartStop, None) => {
                 crate::utils::show_main_window(&app);
             }
             (MeetingShortcutAction::PauseResume, Some(meeting_id)) => {
+                // Any other deliberate meeting action answers the pending
+                // question implicitly: the user is clearly not trying to stop.
+                stop_confirm_gate().clear();
                 let result = match manager.active_capture_state() {
                     Some(MeetingState::Recording) => manager.pause(&meeting_id).map(|_| ()),
                     Some(MeetingState::Paused) => manager.resume(&meeting_id).map(|_| ()),
@@ -232,5 +334,68 @@ mod tests {
         // The dictation defaults themselves are untouched.
         assert_eq!(defaults.bindings["cancel"].current_binding, "escape");
         assert_eq!(defaults.bindings["transcribe"].id, "transcribe");
+    }
+
+    /// A single stray press must never end a running meeting: the first press
+    /// only asks, the second confirms.
+    #[test]
+    fn stopping_by_shortcut_takes_two_presses() {
+        let gate = StopConfirmGate::default();
+        let t0 = Instant::now();
+
+        assert_eq!(gate.press("m1", t0), StopDecision::Ask);
+        assert!(gate.is_armed("m1", t0));
+        assert_eq!(
+            gate.press("m1", t0 + Duration::from_secs(1)),
+            StopDecision::Stop
+        );
+        assert!(
+            !gate.is_armed("m1", t0 + Duration::from_secs(1)),
+            "a confirmed question must not stay armed"
+        );
+    }
+
+    /// Plan §6.9: the question lapses on its own without changing state, so a
+    /// much later press starts a fresh question instead of ending the meeting.
+    #[test]
+    fn a_lapsed_stop_question_asks_again_instead_of_stopping() {
+        let gate = StopConfirmGate::default();
+        let t0 = Instant::now();
+        let too_late = t0 + STOP_CONFIRM_WINDOW + Duration::from_millis(1);
+
+        assert_eq!(gate.press("m1", t0), StopDecision::Ask);
+        assert!(!gate.is_armed("m1", too_late));
+        assert_eq!(gate.press("m1", too_late), StopDecision::Ask);
+    }
+
+    /// Confirming one meeting must never end a different one.
+    #[test]
+    fn a_pending_question_does_not_transfer_between_meetings() {
+        let gate = StopConfirmGate::default();
+        let t0 = Instant::now();
+
+        assert_eq!(gate.press("m1", t0), StopDecision::Ask);
+        assert_eq!(
+            gate.press("m2", t0 + Duration::from_secs(1)),
+            StopDecision::Ask,
+            "m2 gets its own question rather than inheriting m1's"
+        );
+        assert!(!gate.is_armed("m1", t0 + Duration::from_secs(1)));
+    }
+
+    /// Pausing answers the question implicitly — the user is not stopping.
+    #[test]
+    fn clearing_the_gate_disarms_a_pending_question() {
+        let gate = StopConfirmGate::default();
+        let t0 = Instant::now();
+
+        assert_eq!(gate.press("m1", t0), StopDecision::Ask);
+        gate.clear();
+        assert!(!gate.is_armed("m1", t0));
+        assert_eq!(
+            gate.press("m1", t0 + Duration::from_millis(10)),
+            StopDecision::Ask,
+            "after clearing, the next press must ask again"
+        );
     }
 }

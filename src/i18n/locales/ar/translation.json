@@ -59,7 +59,21 @@
     "badgeAttention": "Attention needed",
     "badgeComplete": "Completed",
     "badgeProcessing": "Processing",
-    "badgePaused": "Paused"
+    "badgePaused": "Paused",
+    "deleteAudioDone": "تم حذف التسجيل. تم الاحتفاظ بالنص والملخّص.",
+    "deleteScope": {
+      "legend": "ما الذي تريد حذفه؟",
+      "audioOnly": {
+        "title": "حذف التسجيل فقط",
+        "description": "يزيل ملفات الصوت. يتم الاحتفاظ بالنص والملخّص.",
+        "warning": "تُحذف ملفات الصوت لهذا الاجتماع نهائيًا. يتم الاحتفاظ بالنص والملخّص."
+      },
+      "everything": {
+        "title": "حذف الاجتماع بالكامل",
+        "description": "يزيل الصوت والنص والملخّص.",
+        "warning": "يُحذف الصوت والنص والملخّص لهذا الاجتماع نهائيًا. لا يمكن التراجع عن ذلك."
+      }
+    }
   },
   "meeting": {
     "actions": {
@@ -1073,6 +1087,18 @@
             "name": "Pause/resume meeting",
             "description": "Pauses and resumes the current meeting recording."
           }
+        }
+      },
+      "devices": {
+        "groupTitle": "صوت الاجتماع",
+        "followSystem": "اتّبع إعداد النظام الافتراضي",
+        "microphone": {
+          "title": "ميكروفون الاجتماع",
+          "description": "الميكروفون الذي يُسجَّل أثناء الاجتماعات. مستقل عن ميكروفون الإملاء."
+        },
+        "systemAudio": {
+          "title": "مصدر صوت النظام",
+          "description": "جهاز الإخراج الذي يُسجَّل صوته بوصفه صوت المشاركين الآخرين. منفصل عن جهاز أصوات التنبيه."
         }
       }
     }
