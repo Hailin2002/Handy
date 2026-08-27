@@ -222,3 +222,167 @@ pub async fn project_source_ids(
         .list_source_ids_for_project(crate::managers::meeting_store::Uuid(project_id))
         .map_err(|e| e.to_string())
 }
+
+// ---------------------------------------------------------------------------
+// Capability-filtered multimodal analysis (plan §6.19)
+// ---------------------------------------------------------------------------
+
+use crate::managers::multimodal::{self, ModelCapability, UploadPlan, VisionClient};
+
+/// Reads the active provider and its key, or a named reason.
+fn multimodal_provider(
+    app: &tauri::AppHandle,
+) -> Result<(crate::settings::PostProcessProvider, String), String> {
+    let settings = crate::settings::get_settings(app);
+    let provider = settings
+        .active_post_process_provider()
+        .cloned()
+        .ok_or_else(|| "noProvider".to_string())?;
+    let key =
+        crate::secret_store::get_secret(crate::secret_store::POST_PROCESS_SCOPE, &provider.id)
+            .unwrap_or_default();
+    Ok((provider, key))
+}
+
+/// Models of the active provider that accept `modality` (`image` or `file`).
+///
+/// Nothing is hard-coded: the list comes from the provider and is filtered by
+/// what the job actually needs, so a provider without a capable model simply
+/// offers none.
+#[tauri::command]
+#[specta::specta]
+pub async fn multimodal_models(
+    app: tauri::AppHandle,
+    modality: String,
+) -> Result<Vec<ModelCapability>, String> {
+    let (provider, key) = multimodal_provider(&app)?;
+    let base = provider.base_url.trim_end_matches('/');
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("clientFailed: {e}"))?;
+    let payload: serde_json::Value = client
+        .get(format!("{base}/models"))
+        .bearer_auth(&key)
+        .send()
+        .await
+        .map_err(|e| format!("modelListFailed: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("modelListUnparsable: {e}"))?;
+
+    Ok(multimodal::models_for(
+        &multimodal::parse_model_capabilities(&payload),
+        &modality,
+    ))
+}
+
+/// What a confirmed run would transmit — computed without sending anything.
+#[tauri::command]
+#[specta::specta]
+pub async fn multimodal_plan(
+    app: tauri::AppHandle,
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    source_id: String,
+    asset_ids: Vec<String>,
+    model: ModelCapability,
+) -> Result<UploadPlan, String> {
+    let (provider, _) = multimodal_provider(&app)?;
+    let assets = ingestion
+        .store
+        .list_source_assets(crate::managers::meeting_store::Uuid(source_id))
+        .map_err(|e| e.to_string())?;
+
+    // Only the assets the user actually selected: the plan forbids handing a
+    // whole archive to a provider.
+    let selected: Vec<(String, String, String, i64)> = assets
+        .into_iter()
+        .filter(|a| asset_ids.contains(&a.id))
+        .map(|a| (a.id, a.original_name, a.mime, a.size_bytes))
+        .collect();
+
+    Ok(multimodal::plan_upload(&provider.label, &model, &selected))
+}
+
+/// Result of one confirmed multimodal run.
+#[derive(Serialize, Type)]
+pub struct MultimodalRunDto {
+    pub analysed: i64,
+    /// Per-file failures, named rather than summarised away.
+    pub failed: Vec<String>,
+}
+
+/// Runs the analysis the user confirmed.
+///
+/// Takes the plan back as an argument on purpose: the files that leave the
+/// device are exactly the ones the confirmation dialog listed, not a set
+/// recomputed after the fact.
+#[tauri::command]
+#[specta::specta]
+pub async fn multimodal_analyse(
+    app: tauri::AppHandle,
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    asset_store: State<'_, Arc<crate::storage::asset_store::LocalAssetStore>>,
+    plan: UploadPlan,
+) -> Result<MultimodalRunDto, String> {
+    use crate::storage::asset_store::{AssetStore, ReadVerification, StorageKey};
+
+    let (provider, key) = multimodal_provider(&app)?;
+    let client = multimodal::HttpVisionClient::new(
+        provider.base_url.clone(),
+        key,
+        std::time::Duration::from_secs(120),
+    );
+
+    let mut analysed = 0i64;
+    let mut failed = Vec::new();
+    for item in &plan.included {
+        let outcome = (|| -> Result<(), String> {
+            let key = StorageKey::parse(&asset_storage_key(&ingestion, &item.asset_id)?)
+                .map_err(|e| e.to_string())?;
+            let mut reader = asset_store
+                .get(&key, ReadVerification::None)
+                .map_err(|e| e.to_string())?;
+            let mut bytes = Vec::new();
+            std::io::Read::read_to_end(&mut reader, &mut bytes)
+                .map_err(|e| format!("readFailed: {e}"))?;
+            let description = client.describe(&plan.model, &item.mime, &bytes)?;
+            ingestion
+                .store
+                .record_asset_analysis(
+                    crate::managers::meeting_store::Uuid(item.asset_id.clone()),
+                    &description,
+                )
+                .map_err(|e| e.to_string())
+        })();
+        match outcome {
+            Ok(()) => analysed += 1,
+            // One unreadable file must not abort the rest, and must not be
+            // silently counted as analysed.
+            Err(e) => failed.push(format!("{}: {e}", item.original_name)),
+        }
+    }
+
+    // New descriptions must be findable straight away.
+    let _ = ingestion.store.reindex_search();
+    Ok(MultimodalRunDto { analysed, failed })
+}
+
+/// Resolves an asset id back to its relative storage key.
+fn asset_storage_key(ingestion: &SourceIngestionService, asset_id: &str) -> Result<String, String> {
+    ingestion
+        .store
+        .list_sources()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .find_map(|source| {
+            ingestion
+                .store
+                .list_source_assets(crate::managers::meeting_store::Uuid(source.id))
+                .ok()?
+                .into_iter()
+                .find(|a| a.id == asset_id)
+                .map(|a| a.storage_key)
+        })
+        .ok_or_else(|| "unknownAsset".to_string())
+}

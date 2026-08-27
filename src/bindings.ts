@@ -1438,6 +1438,47 @@ async projectSourceIds(projectId: string) : Promise<Result<string[], string>> {
 }
 },
 /**
+ * Models of the active provider that accept `modality` (`image` or `file`).
+ * 
+ * Nothing is hard-coded: the list comes from the provider and is filtered by
+ * what the job actually needs, so a provider without a capable model simply
+ * offers none.
+ */
+async multimodalModels(modality: string) : Promise<Result<ModelCapability[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("multimodal_models", { modality }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * What a confirmed run would transmit — computed without sending anything.
+ */
+async multimodalPlan(sourceId: string, assetIds: string[], model: ModelCapability) : Promise<Result<UploadPlan, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("multimodal_plan", { sourceId, assetIds, model }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Runs the analysis the user confirmed.
+ * 
+ * Takes the plan back as an argument on purpose: the files that leave the
+ * device are exactly the ones the confirmation dialog listed, not a set
+ * recomputed after the fact.
+ */
+async multimodalAnalyse(plan: UploadPlan) : Promise<Result<MultimodalRunDto, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("multimodal_analyse", { plan }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Citations behind one AI task (plan §6.17 "Warum dringend?").
  */
 async taskEvidence(taskId: string) : Promise<Result<Evidence[], string>> {
@@ -1748,6 +1789,16 @@ segment_start_ms: number | null; segment_end_ms: number | null;
  * Short excerpt so the user recognises the citation without navigating.
  */
 quote: string }
+/**
+ * One file that will *not* be sent, and why.
+ */
+export type ExcludedUpload = { asset_id: string; original_name: string; 
+/**
+ * `unsupportedType` — Speak has no path for it at all.
+ * `modelCannotRead` — the chosen model does not accept this modality.
+ * `tooLarge` — above the per-request budget.
+ */
+reason: string }
 export type ExportFormat = "markdown" | "txt" | "json"
 export type GpuDeviceOption = { id: string; name: string; total_vram_mb: number }
 export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean }
@@ -2207,6 +2258,22 @@ export type MeetingState =
  * Serializable projection of `meeting_summaries` for the detail view.
  */
 export type MeetingSummaryDto = { state: string; provider: string; model: string | null; prompt_version: string; summary_markdown: string; decisions: string[]; action_items: string[]; open_questions: string[]; last_error: string | null }
+/**
+ * What a provider says one model accepts.
+ */
+export type ModelCapability = { id: string; 
+/**
+ * Human-readable name; falls back to the id.
+ */
+name: string; 
+/**
+ * Lower-cased input modalities, e.g. `text`, `image`, `file`.
+ */
+input_modalities: string[]; 
+/**
+ * USD per prompt token, when the provider publishes it.
+ */
+prompt_price: number | null }
 export type ModelInfo = { id: string; name: string; description: string; filename: string; source: ModelSource; size_mb: number; is_downloaded: boolean; is_downloading: boolean; partial_size: number; is_directory: boolean; engine_type: EngineType; accuracy_score: number; speed_score: number; supports_translation: boolean; is_recommended: boolean; supported_languages: string[]; supports_language_selection: boolean; is_custom: boolean; supports_streaming: boolean; supports_language_detection: boolean }
 export type ModelLoadStatus = { is_loaded: boolean; current_model: string | null }
 /**
@@ -2234,6 +2301,14 @@ sha256: string | null } } |
  */
 "Local"
 export type ModelUnloadTimeout = "never" | "immediately" | "min_2" | "min_5" | "min_10" | "min_15" | "hour_1" | "sec_15"
+/**
+ * Result of one confirmed multimodal run.
+ */
+export type MultimodalRunDto = { analysed: number; 
+/**
+ * Per-file failures, named rather than summarised away.
+ */
+failed: string[] }
 export type OrtAcceleratorSetting = "auto" | "cpu" | "cuda" | "directml" | "rocm"
 export type OverlayPosition = "top" | "bottom"
 /**
@@ -2246,6 +2321,10 @@ export type OverlayStyle = "none" | "minimal" | "live"
 export type PaginatedHistory = { entries: HistoryEntry[]; has_more: boolean }
 export type PasteMethod = "ctrl_v" | "direct" | "none" | "shift_insert" | "ctrl_shift_v" | "external_script"
 export type PermissionAccess = "allowed" | "denied" | "unknown"
+/**
+ * One file the user is about to send.
+ */
+export type PlannedUpload = { asset_id: string; original_name: string; mime: string; size_bytes: number }
 export type PostProcessProvider = { id: string; label: string; base_url: string; allow_base_url_edit?: boolean; models_endpoint?: string | null; supports_structured_output?: boolean }
 /**
  * Wire-facing project row (Phase 8). Kept flat so it serializes straight to
@@ -2384,6 +2463,18 @@ export type TranscribeAcceleratorSetting = "auto" | "cpu" | "gpu"
  */
 export type TranscriptRowDto = { start_ms: number; end_ms: number; source: string; text: string; confidence: number | null }
 export type TypingTool = "auto" | "wtype" | "kwtype" | "dotool" | "ydotool" | "xdotool"
+/**
+ * Exactly what a confirmed run would transmit.
+ * 
+ * Both halves matter: the plan requires the user to see what leaves *and*
+ * requires unsupported media to stay visibly unanalysed rather than vanish
+ * from the dialog.
+ */
+export type UploadPlan = { provider: string; model: string; included: PlannedUpload[]; excluded: ExcludedUpload[]; total_bytes: number; 
+/**
+ * Rough USD estimate, `None` when the provider publishes no price.
+ */
+estimated_cost_usd: number | null }
 /**
  * Import outcome: the source plus whether this call created it.
  */

@@ -664,6 +664,13 @@ pub trait MeetingRepository: Send + Sync {
         assets: Vec<NewSourceAsset>,
     ) -> Result<Vec<SourceAsset>, StoreError>;
     fn list_source_assets(&self, source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError>;
+    /// Records what a model made of one asset.
+    ///
+    /// `description` is stored as a normalised source item so the result is
+    /// searchable and citable like any other material; the asset itself moves
+    /// from `not_analysed` to `analysed`, which is the only thing allowed to
+    /// claim a file was understood.
+    fn record_asset_analysis(&self, asset_id: Uuid, description: &str) -> Result<(), StoreError>;
 
     // -- evidence, links and search (Phase 10) -------------------------------
 
@@ -2975,6 +2982,69 @@ impl MeetingRepository for SqliteMeetingStore {
         Ok(rows)
     }
 
+    fn record_asset_analysis(&self, asset_id: Uuid, description: &str) -> Result<(), StoreError> {
+        let op = "record_asset_analysis";
+        let now = to_ms(self.now());
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        let row: Option<(String, String)> = tx
+            .query_row(
+                "SELECT source_id, original_name FROM source_assets WHERE id = ?1",
+                params![asset_id.0],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()
+            .map_err(sql_err(op))?;
+        let Some((source_id, original_name)) = row else {
+            return Err(StoreError::NotFound {
+                entity: "source_assets",
+                id: asset_id,
+            });
+        };
+
+        let text = format!("{original_name}: {description}");
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(text.as_bytes());
+        let content_hash = format!("{:x}", hasher.finalize());
+        let next_sequence: i64 = tx
+            .query_row(
+                "SELECT COALESCE(MAX(sequence), 0) + 1 FROM source_items WHERE source_id = ?1",
+                params![source_id],
+                |row| row.get(0),
+            )
+            .map_err(sql_err(op))?;
+
+        // `OR IGNORE`: re-analysing the same asset with the same result must
+        // not add a second row (plan §6.19 idempotent re-processing).
+        tx.execute(
+            "INSERT OR IGNORE INTO source_items
+               (id, source_id, item_type, author_label, sequence, text, is_media,
+                content_hash, revision, created_at, updated_at)
+             VALUES (?1, ?2, 'media_description', NULL, ?3, ?4, 1, ?5, 1, ?6, ?6)",
+            params![
+                self.uuids.new_uuid().0,
+                source_id,
+                next_sequence,
+                text,
+                content_hash,
+                now,
+            ],
+        )
+        .map_err(sql_err(op))?;
+
+        tx.execute(
+            "UPDATE source_assets SET analysis_state = 'analysed', revision = revision + 1,
+                    updated_at = ?2
+             WHERE id = ?1",
+            params![asset_id.0, now],
+        )
+        .map_err(sql_err(op))?;
+
+        tx.commit().map_err(sql_err(op))?;
+        Ok(())
+    }
+
     fn purge_meeting_content(&self, meeting_id: Uuid) -> Result<(), StoreError> {
         let op = "purge_meeting_content";
         let now = chrono::Utc::now().timestamp_millis();
@@ -3942,6 +4012,13 @@ mod tests {
         fn list_source_assets(&self, _source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError> {
             unimplemented!("fake")
         }
+        fn record_asset_analysis(
+            &self,
+            _asset_id: Uuid,
+            _description: &str,
+        ) -> Result<(), StoreError> {
+            unimplemented!("fake")
+        }
         fn suggest_task_with_evidence(
             &self,
             _draft: NewProjectTask,
@@ -4308,6 +4385,101 @@ mod sqlite_tests {
             config_snapshot: serde_json::json!({ "beam": 5 }),
             next_attempt_at: None,
         }
+    }
+
+    /// Plan §6.19: a file only counts as understood once a model actually read
+    /// it, and the result must be searchable like any other material.
+    #[test]
+    fn recording_an_analysis_marks_the_asset_and_makes_it_searchable() {
+        let (_dir, store) = temp_store();
+        let (source, _) = store
+            .create_whatsapp_source(NewWhatsappSource {
+                title: "Chat".into(),
+                parser_version: "v1".into(),
+                content_hash: "hash-media".into(),
+                messages: vec![(Some("Ana".into()), "Bild folgt".into(), false)],
+            })
+            .expect("source");
+        let source_id = Uuid(source.id.clone());
+        let assets = store
+            .attach_source_assets(
+                source_id.clone(),
+                vec![NewSourceAsset {
+                    storage_key: "assets/asst-1/original.jpg".into(),
+                    original_name: "vertrag.jpg".into(),
+                    mime: "image/jpeg".into(),
+                    size_bytes: 1_024,
+                    content_hash: "media-hash".into(),
+                }],
+            )
+            .expect("attach");
+        assert_eq!(assets[0].analysis_state, "not_analysed");
+
+        store
+            .record_asset_analysis(Uuid(assets[0].id.clone()), "Ein unterschriebener Vertrag")
+            .expect("record");
+
+        let after = store.list_source_assets(source_id.clone()).expect("list");
+        assert_eq!(after[0].analysis_state, "analysed");
+
+        store.reindex_search().expect("reindex");
+        let hits = store.search("unterschriebener", None, 10).expect("search");
+        assert_eq!(hits.len(), 1, "the description must be findable");
+        assert_eq!(hits[0].entity_kind, "source_item");
+    }
+
+    /// Re-running the same analysis must not add a second description.
+    #[test]
+    fn recording_the_same_analysis_twice_adds_one_item() {
+        let (_dir, store) = temp_store();
+        let (source, _) = store
+            .create_whatsapp_source(NewWhatsappSource {
+                title: "Chat".into(),
+                parser_version: "v1".into(),
+                content_hash: "hash-media-2".into(),
+                messages: vec![(Some("Ana".into()), "Bild".into(), false)],
+            })
+            .expect("source");
+        let source_id = Uuid(source.id.clone());
+        let assets = store
+            .attach_source_assets(
+                source_id.clone(),
+                vec![NewSourceAsset {
+                    storage_key: "assets/asst-2/original.png".into(),
+                    original_name: "plan.png".into(),
+                    mime: "image/png".into(),
+                    size_bytes: 10,
+                    content_hash: "media-hash-2".into(),
+                }],
+            )
+            .expect("attach");
+        let asset_id = Uuid(assets[0].id.clone());
+
+        store
+            .record_asset_analysis(asset_id.clone(), "Ein Grundriss")
+            .expect("first");
+        store
+            .record_asset_analysis(asset_id, "Ein Grundriss")
+            .expect("second");
+
+        let items = store.list_source_items(source_id).expect("items");
+        assert_eq!(
+            items
+                .iter()
+                .filter(|i| i.text.starts_with("plan.png"))
+                .count(),
+            1
+        );
+    }
+
+    /// An unknown asset must fail loudly rather than write a description that
+    /// belongs to nothing.
+    #[test]
+    fn recording_an_analysis_for_an_unknown_asset_fails() {
+        let (_dir, store) = temp_store();
+        assert!(store
+            .record_asset_analysis(Uuid("missing".into()), "irgendwas")
+            .is_err());
     }
 
     // -- evidence and search (Phase 10) ------------------------------------
