@@ -8,8 +8,9 @@
 //! - **Idempotent re-import.** The content hash decides creation; a repeated
 //!   or overlapping export returns the existing source with `created: false`.
 
+use super::chat_import::{ChatImporter, WhatsAppImporter};
 use super::meeting_store::{
-    MeetingRepository, NewSourceAsset, NewWhatsappSource, Source, SourceItem, StoreError, Uuid,
+    MeetingRepository, NewChatSource, NewSourceAsset, Source, SourceItem, StoreError, Uuid,
 };
 use super::whatsapp_importer::{self, DateOrder, ZipLimits};
 use crate::storage::asset_store::{
@@ -18,14 +19,15 @@ use crate::storage::asset_store::{
 use sha2::Digest;
 use std::sync::Arc;
 
-pub const PARSER_VERSION: &str = "whatsapp-txt-v1";
-
 #[derive(Clone)]
 pub struct SourceIngestionService {
     pub(crate) store: Arc<dyn MeetingRepository>,
     /// Where extracted media lands. `None` in contexts without a resolved app
     /// data directory; ZIP import then refuses rather than dropping media.
     assets: Option<Arc<dyn AssetStore>>,
+    /// The export format being read. Everything else in this service — hashing,
+    /// archive walking, media storage, deduplication — is format-agnostic.
+    importer: Arc<dyn ChatImporter>,
 }
 
 /// Result of one import attempt.
@@ -37,10 +39,20 @@ pub struct IngestResult {
 }
 
 impl SourceIngestionService {
+    /// Builds a service reading WhatsApp exports.
     pub fn new(store: Arc<dyn MeetingRepository>) -> Self {
+        Self::with_importer(store, Arc::new(WhatsAppImporter))
+    }
+
+    /// Builds a service for an arbitrary export format.
+    pub fn with_importer(
+        store: Arc<dyn MeetingRepository>,
+        importer: Arc<dyn ChatImporter>,
+    ) -> Self {
         Self {
             store,
             assets: None,
+            importer,
         }
     }
 
@@ -54,14 +66,16 @@ impl SourceIngestionService {
     ///
     /// `date_order` mirrors the preview UI choice; `None` means "decide from
     /// the data" and errors with `dateOrderAmbiguous` when that is impossible.
-    pub fn ingest_whatsapp_text(
+    pub fn ingest_text(
         &self,
         title: &str,
         content: &str,
         date_order: Option<DateOrder>,
     ) -> Result<IngestResult, StoreError> {
-        let preview =
-            whatsapp_importer::parse_chat(content, date_order).map_err(|e| self.invalid(&e))?;
+        let preview = self
+            .importer
+            .parse(content, date_order)
+            .map_err(|e| self.invalid(&e))?;
         if preview.date_order_ambiguous {
             return Err(self.invalid("dateOrderAmbiguous"));
         }
@@ -76,9 +90,10 @@ impl SourceIngestionService {
             .map(|m| (m.author.clone(), m.text.clone(), m.is_media))
             .collect();
 
-        let (source, created) = self.store.create_whatsapp_source(NewWhatsappSource {
+        let (source, created) = self.store.create_chat_source(NewChatSource {
+            source_type: self.importer.source_type().to_string(),
             title: title.to_string(),
-            parser_version: PARSER_VERSION.to_string(),
+            parser_version: self.importer.parser_version().to_string(),
             content_hash,
             messages,
         })?;
@@ -95,7 +110,7 @@ impl SourceIngestionService {
     /// This is the wizard's step 2: the user sees participants, message and
     /// media counts *before* any byte leaves the archive, and an unsafe or
     /// malformed archive is refused here rather than half-imported.
-    pub fn preview_whatsapp_zip(
+    pub fn preview_zip(
         &self,
         archive: &[u8],
         date_order: Option<DateOrder>,
@@ -103,13 +118,13 @@ impl SourceIngestionService {
         let limits = ZipLimits::default();
         let entries = whatsapp_importer::inspect_zip(archive, &limits)
             .map_err(|e| format!("archiveRejected: {e}"))?;
-        let Some(chat_entry) = pick_chat_entry(&entries) else {
+        let Some(chat_entry) = self.importer.pick_chat_entry(&entries) else {
             return Err("noChatFileInArchive".to_string());
         };
         let bytes = whatsapp_importer::extract_entry(archive, chat_entry, &limits)
             .map_err(|e| format!("archiveRejected: {e}"))?;
-        let content = decode_chat_text(&bytes);
-        let chat = self.preview_whatsapp_text(&content, date_order)?;
+        let content = self.importer.decode_export(&bytes);
+        let chat = self.preview_text(&content, date_order)?;
 
         let media: Vec<String> = entries
             .iter()
@@ -133,7 +148,7 @@ impl SourceIngestionService {
     /// even if a media file later turns out to be unreadable. Media is stored
     /// verbatim and marked `not_analysed` — the plan forbids presenting
     /// unsupported files as understood.
-    pub fn ingest_whatsapp_zip(
+    pub fn ingest_zip(
         &self,
         title: &str,
         archive: &[u8],
@@ -146,23 +161,21 @@ impl SourceIngestionService {
         let limits = ZipLimits::default();
         let entries = whatsapp_importer::inspect_zip(archive, &limits)
             .map_err(|e| format!("archiveRejected: {e}"))?;
-        let Some(chat_entry) = pick_chat_entry(&entries) else {
+        let Some(chat_entry) = self.importer.pick_chat_entry(&entries) else {
             return Err("noChatFileInArchive".to_string());
         };
         let bytes = whatsapp_importer::extract_entry(archive, chat_entry, &limits)
             .map_err(|e| format!("archiveRejected: {e}"))?;
-        let content = decode_chat_text(&bytes);
+        let content = self.importer.decode_export(&bytes);
 
-        let imported = self
-            .ingest_whatsapp_text(title, &content, date_order)
-            .map_err(|e| {
-                let message = e.to_string();
-                if message.contains("dateOrderAmbiguous") {
-                    "dateOrderAmbiguous".to_string()
-                } else {
-                    message
-                }
-            })?;
+        let imported = self.ingest_text(title, &content, date_order).map_err(|e| {
+            let message = e.to_string();
+            if message.contains("dateOrderAmbiguous") {
+                "dateOrderAmbiguous".to_string()
+            } else {
+                message
+            }
+        })?;
 
         let mut drafts = Vec::new();
         let mut skipped = Vec::new();
@@ -230,12 +243,14 @@ impl SourceIngestionService {
     }
 
     /// Parses without persisting — the wizard's preview step.
-    pub fn preview_whatsapp_text(
+    pub fn preview_text(
         &self,
         content: &str,
         date_order: Option<DateOrder>,
     ) -> Result<ChatPreviewDto, String> {
-        let preview = whatsapp_importer::parse_chat(content, date_order)
+        let preview = self
+            .importer
+            .parse(content, date_order)
             .map_err(|e| format!("previewFailed: {e}"))?;
         Ok(ChatPreviewDto {
             participants: preview.participants,
@@ -246,29 +261,9 @@ impl SourceIngestionService {
     }
 }
 
-/// Picks the chat transcript inside an archive.
-///
-/// WhatsApp names it `_chat.txt` on iOS and `<chat name>.txt` on Android, so
-/// neither a fixed name nor a fixed language is assumed (plan section 6.19).
-/// The largest `.txt` at the shallowest depth wins, which is the transcript in
-/// every observed layout.
-fn pick_chat_entry(
-    entries: &[whatsapp_importer::ZipEntryInfo],
-) -> Option<&whatsapp_importer::ZipEntryInfo> {
-    entries
-        .iter()
-        .filter(|e| e.name.to_lowercase().ends_with(".txt"))
-        .min_by_key(|e| {
-            (
-                e.name.matches('/').count(),
-                std::cmp::Reverse(e.uncompressed_size),
-            )
-        })
-}
-
 /// Decodes chat bytes, tolerating the BOM-prefixed UTF-8 and UTF-16 exports
 /// WhatsApp produces on different platforms.
-fn decode_chat_text(bytes: &[u8]) -> String {
+pub(crate) fn decode_chat_text(bytes: &[u8]) -> String {
     if bytes.starts_with(&[0xFF, 0xFE]) {
         let units: Vec<u16> = bytes[2..]
             .as_chunks::<2>()

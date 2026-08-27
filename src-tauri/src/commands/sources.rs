@@ -46,7 +46,7 @@ pub async fn whatsapp_import_text(
 ) -> Result<WhatsappImportResult, String> {
     let order = parse_date_order(date_order)?;
     let result = ingestion
-        .ingest_whatsapp_text(&title, &content, order)
+        .ingest_text(&title, &content, order)
         .map_err(|e| ingestion_error(&e))?;
     Ok(WhatsappImportResult {
         item_count: result.items.len() as i64,
@@ -64,7 +64,7 @@ pub async fn whatsapp_preview_text(
     date_order: Option<String>,
 ) -> Result<crate::managers::source_ingestion::ChatPreviewDto, String> {
     let order = parse_date_order(date_order)?;
-    ingestion.preview_whatsapp_text(&content, order)
+    ingestion.preview_text(&content, order)
 }
 
 /// Lists imported sources, newest first.
@@ -114,7 +114,7 @@ pub async fn whatsapp_preview_zip(
 ) -> Result<crate::managers::source_ingestion::ZipPreviewDto, String> {
     let order = parse_date_order(date_order)?;
     let bytes = read_archive(&path)?;
-    ingestion.preview_whatsapp_zip(&bytes, order)
+    ingestion.preview_zip(&bytes, order)
 }
 
 /// Phase 9 wizard step 4 for `.zip`: import the chat plus its media.
@@ -128,7 +128,7 @@ pub async fn whatsapp_import_zip(
 ) -> Result<crate::managers::source_ingestion::ZipIngestResult, String> {
     let order = parse_date_order(date_order)?;
     let bytes = read_archive(&path)?;
-    ingestion.ingest_whatsapp_zip(&title, &bytes, order)
+    ingestion.ingest_zip(&title, &bytes, order)
 }
 
 /// Media extracted from one imported archive.

@@ -650,10 +650,7 @@ pub trait MeetingRepository: Send + Sync {
 
     /// Idempotent import: a repeated `content_hash` returns the existing
     /// source without duplicating anything (plan §13 Phase 9 acceptance).
-    fn create_whatsapp_source(
-        &self,
-        draft: NewWhatsappSource,
-    ) -> Result<(Source, bool), StoreError>;
+    fn create_chat_source(&self, draft: NewChatSource) -> Result<(Source, bool), StoreError>;
     fn list_sources(&self) -> Result<Vec<Source>, StoreError>;
     fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError>;
     /// Records extracted media. Insert-only and idempotent per content hash,
@@ -1798,7 +1795,12 @@ pub struct SourceItem {
     pub is_media: bool,
 }
 
-pub struct NewWhatsappSource {
+pub struct NewChatSource {
+    /// Value for `sources.source_type`, supplied by the
+    /// [`ChatImporter`](crate::managers::chat_import::ChatImporter) that read
+    /// the export. Was a SQL literal until a second export format became
+    /// possible.
+    pub source_type: String,
     pub title: String,
     pub parser_version: String,
     pub content_hash: String,
@@ -2201,11 +2203,8 @@ impl MeetingRepository for SqliteMeetingStore {
         Ok(())
     }
 
-    fn create_whatsapp_source(
-        &self,
-        draft: NewWhatsappSource,
-    ) -> Result<(Source, bool), StoreError> {
-        let op = "create_whatsapp_source";
+    fn create_chat_source(&self, draft: NewChatSource) -> Result<(Source, bool), StoreError> {
+        let op = "create_chat_source";
         let now = chrono::Utc::now().timestamp_millis();
 
         // Dedupe first: an identical export must be a visible no-op, not a
@@ -2225,9 +2224,10 @@ impl MeetingRepository for SqliteMeetingStore {
         tx.execute(
             "INSERT INTO sources (id, source_type, title, ingestion_state, parser_version,
              content_hash, occurred_at, created_at, updated_at)
-             VALUES (?1, 'whatsapp_export', ?2, 'imported', ?3, ?4, ?5, ?6, ?6)",
+             VALUES (?1, ?2, ?3, 'imported', ?4, ?5, ?6, ?7, ?7)",
             params![
                 id,
+                draft.source_type,
                 draft.title.trim(),
                 draft.parser_version,
                 draft.content_hash,
@@ -3466,10 +3466,7 @@ mod tests {
         fn delete_project_links_for_meeting(&self, _meeting_id: Uuid) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
-        fn create_whatsapp_source(
-            &self,
-            _draft: NewWhatsappSource,
-        ) -> Result<(Source, bool), StoreError> {
+        fn create_chat_source(&self, _draft: NewChatSource) -> Result<(Source, bool), StoreError> {
             unimplemented!("fake")
         }
         fn list_sources(&self) -> Result<Vec<Source>, StoreError> {
@@ -4576,7 +4573,8 @@ mod sqlite_tests {
     #[test]
     fn repeated_whatsapp_import_creates_no_duplicates() {
         let (_dir, store) = temp_store();
-        let draft = NewWhatsappSource {
+        let draft = NewChatSource {
+            source_type: "whatsapp_export".to_string(),
             title: "Team Chat".to_string(),
             parser_version: "wa-v1".to_string(),
             content_hash: "deadbeef".to_string(),
@@ -4590,10 +4588,11 @@ mod sqlite_tests {
             ],
         };
 
-        let (first, created) = store.create_whatsapp_source(draft).expect("import");
+        let (first, created) = store.create_chat_source(draft).expect("import");
         assert!(created);
         let (second, created_again) = store
-            .create_whatsapp_source(NewWhatsappSource {
+            .create_chat_source(NewChatSource {
+                source_type: "whatsapp_export".to_string(),
                 title: "Team Chat (1)".to_string(),
                 parser_version: "wa-v1".to_string(),
                 content_hash: "deadbeef".to_string(),
@@ -4605,7 +4604,8 @@ mod sqlite_tests {
 
         // Distinct content still imports as a new source.
         let (_other, created_other) = store
-            .create_whatsapp_source(NewWhatsappSource {
+            .create_chat_source(NewChatSource {
+                source_type: "whatsapp_export".to_string(),
                 title: "Anders".to_string(),
                 parser_version: "wa-v1".to_string(),
                 content_hash: "cafebabe".to_string(),

@@ -4080,9 +4080,9 @@ mod tests {
         let ingestion =
             crate::managers::source_ingestion::SourceIngestionService::new(store.clone());
         let chat = "31.12.24, 23:59 - Alice: Journeys end";
-        let first = ingestion.ingest_whatsapp_text("Chat", chat, None).unwrap();
+        let first = ingestion.ingest_text("Chat", chat, None).unwrap();
         assert!(first.created);
-        let second = ingestion.ingest_whatsapp_text("Chat", chat, None).unwrap();
+        let second = ingestion.ingest_text("Chat", chat, None).unwrap();
         assert!(!second.created, "same content must not duplicate");
         assert_eq!(first.source.id, second.source.id);
 

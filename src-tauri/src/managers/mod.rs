@@ -13,6 +13,8 @@ pub mod meeting_cloud;
 pub mod meeting_export;
 pub mod meeting_summary;
 pub mod project;
+// The format seam: one implementation per chat-export platform.
+pub mod chat_import;
 pub mod source_ingestion;
 pub mod whatsapp_importer;
 
