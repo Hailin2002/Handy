@@ -5,9 +5,10 @@ on:
     branches: [main]
     paths:
       - "src/**"
-      # The bindings drift guard reads src-tauri/src/lib.rs, so a backend-only
-      # commit that adds a Tauri command has to run this job too.
-      - "src-tauri/src/lib.rs"
+      # The bindings drift guard reads src-tauri/src/lib.rs and the log-hygiene
+      # guard scans all of src-tauri/src, so backend-only commits must run this
+      # job too.
+      - "src-tauri/src/**"
       - "scripts/**"
       - "package.json"
       - "bun.lock"
@@ -21,9 +22,10 @@ on:
   pull_request:
     paths:
       - "src/**"
-      # The bindings drift guard reads src-tauri/src/lib.rs, so a backend-only
-      # commit that adds a Tauri command has to run this job too.
-      - "src-tauri/src/lib.rs"
+      # The bindings drift guard reads src-tauri/src/lib.rs and the log-hygiene
+      # guard scans all of src-tauri/src, so backend-only commits must run this
+      # job too.
+      - "src-tauri/src/**"
       - "scripts/**"
       - "package.json"
       - "bun.lock"
@@ -74,3 +76,24 @@ jobs:
 
       - name: Run unit tests
         run: bun run test:unit
+
+      # The log-hygiene guard has existed since transcript/credential leaks
+      # became a concern, but it was wired into nothing: it is a PowerShell
+      # script and this job runs on ubuntu-latest, so `bun run check` was never
+      # reachable from CI. GitHub's Ubuntu images ship pwsh (PowerShell 7), and
+      # the script deliberately avoids Add-Type and Windows-only APIs — it uses
+      # only cmdlets and cross-platform .NET Core types ([regex], [char],
+      # [string], [Console]).
+      #
+      # The self-test runs FIRST and is the safety net for that portability
+      # claim: it seeds known violations into a temp directory and asserts they
+      # are flagged, that clean samples are not, and that both suppression paths
+      # work. If the guard silently misbehaves on Linux, this fails loudly
+      # instead of reporting a clean scan that checked nothing.
+      - name: Self-test the log-hygiene guard
+        shell: pwsh
+        run: ./scripts/verify/check-log-hygiene.ps1 -SelfTest
+
+      - name: Check log hygiene
+        shell: pwsh
+        run: ./scripts/verify/check-log-hygiene.ps1
