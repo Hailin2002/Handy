@@ -1,4 +1,4 @@
-import type { MeetingSession, ModelInfo } from "@/bindings";
+import type { MeetingSession, ModelInfo, Project } from "@/bindings";
 import type { MeetingRecoveryOffer } from "@/lib/types/meeting";
 import type { MockInvocation, SpeakMockConfig } from "./types";
 import {
@@ -39,6 +39,16 @@ export class MockBackend {
   recoveries: MeetingRecoveryOffer[];
 
   /**
+   * Mirror of the `projects` table.
+   *
+   * The Projects surface shipped without mock coverage, so every e2e run hit
+   * `unhandled IPC command: project_list` and the page rendered as if the user
+   * had no projects. Nothing failed, which is why it went unnoticed — the
+   * failure mode was a *plausible* screen.
+   */
+  projects: Project[];
+
+  /**
    * Bound by the runtime to its `emitEvent` so lifecycle handlers can publish
    * `meeting://*` events exactly like the Rust side would.
    */
@@ -57,6 +67,7 @@ export class MockBackend {
     this.meetings = [];
     this.lifecycles = new Map();
     this.recoveries = initialRecoveries(config.meetingRecoveries);
+    this.projects = [];
     this.invocations = [];
   }
 
@@ -102,6 +113,43 @@ export const handleCommand = (
   if (lifecycleHandler !== undefined) return lifecycleHandler;
 
   switch (command) {
+    // --- projects ---------------------------------------------------------
+    case "project_list":
+      return backend.projects.map((p) => ({ ...p }));
+
+    case "project_inbox_meeting_ids":
+      // Meetings not assigned to any project. The mock has no assignment
+      // table yet, so every alive meeting is unassigned — which is the
+      // correct answer while `projects` is empty and an honest placeholder
+      // once it is not.
+      return backend.meetings
+        .filter((m) => (m as MockMeetingRow).deleted_at === null)
+        .map((m) => m.id);
+
+    case "project_meeting_ids":
+      // No assignment table in the mock yet, so a project has no members. The
+      // page must render that as an empty membership list, not as a failure.
+      return [];
+
+    case "project_create": {
+      const name = typeof args.name === "string" ? args.name.trim() : "";
+      const now = Date.now();
+      const project: Project = {
+        id: `proj_${backend.projects.length + 1}`,
+        name,
+        created_at: now,
+        updated_at: now,
+      } as Project;
+      backend.projects.push(project);
+      return { ...project };
+    }
+
+    case "project_delete": {
+      const before = backend.projects.length;
+      backend.projects = backend.projects.filter((p) => p.id !== args.id);
+      return before !== backend.projects.length;
+    }
+
     // --- app / window plumbing -------------------------------------------
     case "initialize_enigo":
     case "initialize_shortcuts":

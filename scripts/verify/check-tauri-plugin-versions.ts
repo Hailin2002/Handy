@@ -64,14 +64,19 @@ function rustVersions(): Map<string, string> {
     found.set(name.slice(CRATE_PREFIX.length), version);
   }
   if (found.size === 0) {
-    fail("parsed zero tauri-plugin-* crates out of Cargo.lock — the guard is broken");
+    fail(
+      "parsed zero tauri-plugin-* crates out of Cargo.lock — the guard is broken",
+    );
   }
   return found;
 }
 
 /** Declared npm ranges, keyed by plugin name. */
 function npmRanges(): Map<string, string> {
-  let pkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+  let pkg: {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
   try {
     pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON, "utf8"));
   } catch (error) {
@@ -81,7 +86,8 @@ function npmRanges(): Map<string, string> {
   const all = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
   const found = new Map<string, string>();
   for (const [name, range] of Object.entries(all)) {
-    if (name.startsWith(NPM_PREFIX)) found.set(name.slice(NPM_PREFIX.length), range);
+    if (name.startsWith(NPM_PREFIX))
+      found.set(name.slice(NPM_PREFIX.length), range);
   }
   return found;
 }
@@ -110,7 +116,9 @@ function main(): void {
     const a = majorMinor(crateVersion);
     const b = majorMinor(npmRange);
     if (!a || !b) {
-      fail(`cannot parse versions for ${plugin}: crate "${crateVersion}", npm "${npmRange}"`);
+      fail(
+        `cannot parse versions for ${plugin}: crate "${crateVersion}", npm "${npmRange}"`,
+      );
     }
     if (a !== b) {
       mismatches.push(
@@ -126,12 +134,17 @@ function main(): void {
 
   if (mismatches.length === 0) {
     console.log(
-      paint(`✓ tauri plugins: ${compared} crate/npm pair(s) on matching major.minor`, "green"),
+      paint(
+        `✓ tauri plugins: ${compared} crate/npm pair(s) on matching major.minor`,
+        "green",
+      ),
     );
     process.exit(0);
   }
 
-  console.error(paint("✗ tauri plugin versions disagree between Rust and npm", "red"));
+  console.error(
+    paint("✗ tauri plugin versions disagree between Rust and npm", "red"),
+  );
   mismatches.forEach((m) => console.error(m));
   console.error(
     paint(

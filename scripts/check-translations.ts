@@ -197,6 +197,52 @@ function validateTranslations(): void {
 
   console.log("─".repeat(60));
 
+  // Two failure modes key-parity cannot see.
+  //
+  // A U+FFFD REPLACEMENT CHARACTER means a file was once decoded with the
+  // wrong encoding and re-saved, permanently destroying a character. That
+  // happened here: 112 of them across all 24 locales, turning every ellipsis
+  // into a box and German "geloescht" into "gel?scht" on screen. Key parity
+  // passed the whole time, because the keys were all present — just broken.
+  //
+  // A key used by the code but absent from `en` renders as the literal key;
+  // `common.add` was doing exactly that on the Projects page. Parity only
+  // compares locales against each other, so a key missing from *all* of them
+  // is invisible to it.
+  const contentErrors: string[] = [];
+
+  for (const lang of [REFERENCE_LANG, ...LANGUAGES]) {
+    const raw = fs.readFileSync(
+      path.join(LOCALES_DIR, lang, "translation.json"),
+      "utf8",
+    );
+    const count = (raw.match(/�/g) ?? []).length;
+    if (count > 0) {
+      contentErrors.push(
+        `${lang}: ${count} U+FFFD replacement character(s) — saved with a` +
+          ` broken encoding, the original characters are lost`,
+      );
+    }
+  }
+
+  for (const missing of keysUsedInCodeButMissing()) {
+    contentErrors.push(
+      `${missing} is used by the app but absent from ${REFERENCE_LANG} —` +
+        ` i18next renders the key itself to the user`,
+    );
+  }
+
+  if (contentErrors.length > 0) {
+    console.log(
+      colorize(
+        `
+✗ Content problems:`,
+        "red",
+      ),
+    );
+    contentErrors.forEach((e) => console.log(colorize(`  ${e}`, "red")));
+    hasErrors = true;
+  }
   // Summary
   const validCount = Object.values(results).filter((r) => r.valid).length;
   const totalCount = LANGUAGES.length;
@@ -220,5 +266,56 @@ function validateTranslations(): void {
   }
 }
 
+/**
+ * Literal `t("a.b")` keys in src/ that the reference locale does not define.
+ *
+ * Only literal single-argument calls count — a key built at runtime cannot be
+ * resolved statically, and guessing would produce false positives that turn the
+ * check into something people switch off.
+ */
+function keysUsedInCodeButMissing(): string[] {
+  const reference = JSON.parse(
+    fs.readFileSync(
+      path.join(LOCALES_DIR, REFERENCE_LANG, "translation.json"),
+      "utf8",
+    ),
+  ) as TranslationData;
+
+  const has = (dotted: string): boolean => {
+    let node: unknown = reference;
+    for (const part of dotted.split(".")) {
+      if (typeof node !== "object" || node === null || !(part in node)) {
+        return false;
+      }
+      node = (node as Record<string, unknown>)[part];
+    }
+    return typeof node === "string";
+  };
+
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (
+        /[.](ts|tsx)$/.test(entry.name) &&
+        !/[.]test[.]/.test(entry.name)
+      ) {
+        files.push(full);
+      }
+    }
+  };
+  walk(path.join(__dirname, "..", "src"));
+
+  const pattern =
+    /\bt\(\s*["'`]([A-Za-z0-9_]+(?:[.][A-Za-z0-9_]+)+)["'`]\s*\)/g;
+  const missing = new Set<string>();
+  for (const file of files) {
+    for (const m of fs.readFileSync(file, "utf8").matchAll(pattern)) {
+      if (!has(m[1])) missing.add(m[1]);
+    }
+  }
+  return [...missing].sort();
+}
 // Run validation
 validateTranslations();

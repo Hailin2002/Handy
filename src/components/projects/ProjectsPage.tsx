@@ -30,6 +30,15 @@ import { Input } from "@/components/ui/Input";
 export const ProjectsPage: React.FC = () => {
   const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
+  /**
+   * Set when the project list could not be read.
+   *
+   * Without it both failure paths — a thrown error and an `error` result —
+   * left `projects` empty, and the page rendered "no projects yet". A user
+   * cannot tell that apart from actually having none, which is the difference
+   * between "create your first project" and "your data did not load".
+   */
+  const [loadFailed, setLoadFailed] = useState(false);
   const [sessions, setSessions] = useState<MeetingSession[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
@@ -57,21 +66,36 @@ export const ProjectsPage: React.FC = () => {
   }, []);
 
   const refreshProjects = useCallback(async () => {
+    const failed = (reason: unknown) => {
+      console.error("Failed to load projects:", reason);
+      setLoadFailed(true);
+      toast.error(
+        t("projects.loadError", {
+          defaultValue: "Projects could not be loaded.",
+        }),
+      );
+    };
+
     try {
       const result = await commands.projectList();
-      if (result.status === "ok") {
-        setProjects(result.data);
-        if (
-          selectedId &&
-          !result.data.some((project) => project.id === selectedId)
-        ) {
-          setSelectedId(null);
-        }
+      if (result.status !== "ok") {
+        // An `error` result used to fall through this `if` untouched, leaving
+        // the page looking empty rather than broken.
+        failed(result.error);
+        return;
+      }
+      setLoadFailed(false);
+      setProjects(result.data);
+      if (
+        selectedId &&
+        !result.data.some((project) => project.id === selectedId)
+      ) {
+        setSelectedId(null);
       }
     } catch (error) {
-      console.error("Failed to load projects:", error);
+      failed(error);
     }
-  }, [selectedId]);
+  }, [selectedId, t]);
 
   const refreshInbox = useCallback(async () => {
     try {
@@ -288,11 +312,18 @@ export const ProjectsPage: React.FC = () => {
             </Button>
           </li>
         ))}
-        {projects.length === 0 && (
-          <li className="px-2 py-1 text-sm text-text/50">
-            {t("projects.empty")}
-          </li>
-        )}
+        {projects.length === 0 &&
+          (loadFailed ? (
+            <li className="px-2 py-1 text-sm text-red-400" role="alert">
+              {t("projects.loadError", {
+                defaultValue: "Projects could not be loaded.",
+              })}
+            </li>
+          ) : (
+            <li className="px-2 py-1 text-sm text-text/50">
+              {t("projects.empty")}
+            </li>
+          ))}
       </ul>
 
       {selected && (
