@@ -1,53 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-
-/** The four detail tabs of plan §6.13, in their fixed order. */
-export const MEETING_DETAIL_TABS = [
-  "overview",
-  "transcript",
-  "audio",
-  "processing",
-] as const;
-
-export type MeetingDetailTab = (typeof MEETING_DETAIL_TABS)[number];
-
-/** i18n key of a tab's visible label. */
-export const tabLabelKey = (tab: MeetingDetailTab): string =>
-  `meeting.detail.tabs.${tab}`;
-
-/** Tabs a user can actually reach, in display order. */
-export const selectableTabs = (
-  disabled: Partial<Record<MeetingDetailTab, string>>,
-): MeetingDetailTab[] => MEETING_DETAIL_TABS.filter((tab) => !disabled[tab]);
-
-/**
- * Roving-tabindex step: the tab `delta` positions away from `active`, wrapping
- * around and skipping unreachable tabs.
- *
- * Pure so the keyboard contract (§6.14 "vollständige Tastaturbedienung") is
- * testable without a DOM. An `active` tab that is itself unreachable — the
- * caller is about to correct that — steps relative to the first reachable one.
- */
-export const stepTab = (
-  active: MeetingDetailTab,
-  delta: number,
-  selectable: MeetingDetailTab[],
-): MeetingDetailTab | null => {
-  if (selectable.length === 0) return null;
-  const current = selectable.indexOf(active);
-  const base = current === -1 ? 0 : current;
-  const index = (base + delta) % selectable.length;
-  return selectable[index < 0 ? index + selectable.length : index];
-};
-
-/** Home/End target among the reachable tabs. */
-export const edgeTab = (
-  edge: "first" | "last",
-  selectable: MeetingDetailTab[],
-): MeetingDetailTab | null => {
-  if (selectable.length === 0) return null;
-  return edge === "first" ? selectable[0] : selectable[selectable.length - 1];
-};
+import {
+  MEETING_DETAIL_TABS,
+  edgeTab,
+  selectableTabs,
+  stepTab,
+  tabLabelKey,
+  type MeetingDetailTab,
+} from "./meetingDetailTabModel";
 
 interface MeetingDetailTabsProps {
   active: MeetingDetailTab;
@@ -187,18 +147,4 @@ export const MeetingDetailPanel: React.FC<MeetingDetailPanelProps> = ({
       {children}
     </div>
   );
-};
-
-/** Local state hook so the detail view stays declarative. */
-export const useMeetingDetailTab = (resetKey: string) => {
-  const [tab, setTab] = useState<MeetingDetailTab>("overview");
-  const lastKey = useRef(resetKey);
-  useEffect(() => {
-    if (lastKey.current !== resetKey) {
-      lastKey.current = resetKey;
-      // Opening a different meeting starts on the plain-language tab again.
-      setTab("overview");
-    }
-  }, [resetKey]);
-  return [tab, setTab] as const;
 };

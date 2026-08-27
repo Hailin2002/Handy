@@ -4,17 +4,16 @@ export { EmptyState } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export type { ErrorStateProps } from "./ErrorState";
-export { StateShell, resolveLocalizedText } from "./stateShell";
+export { StateShell } from "./stateShell";
+export { resolveLocalizedText } from "./resolveLocalizedText";
 export type {
   LocalizedText,
   StateAction,
   StateShellProps,
   StateTone,
 } from "./stateShell";
-export {
-  MeetingStateBadge,
-  meetingStateBadgeStates,
-} from "./MeetingStateBadge";
+export { MeetingStateBadge } from "./MeetingStateBadge";
+export { meetingStateBadgeStates } from "./meetingStateBadgeStates";
 export type {
   MeetingStateBadgeProps,
   MeetingStateBadgeState,

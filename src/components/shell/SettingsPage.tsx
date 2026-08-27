@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings } from "../../hooks/useSettings";
-import { navItemClassName } from "./NavItem";
+import { navItemClassName } from "./navItemClassName";
 import {
   SECTIONS_CONFIG,
   SETTINGS_TAB_ORDER,

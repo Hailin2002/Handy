@@ -8,10 +8,8 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
-import {
-  MeetingStateBadge,
-  meetingStateBadgeStates,
-} from "./MeetingStateBadge";
+import { MeetingStateBadge } from "./MeetingStateBadge";
+import { meetingStateBadgeStates } from "./meetingStateBadgeStates";
 
 // i18n fixture mirroring src/i18n/locales/en/translation.json (`meetings.*`).
 const TRANSLATION: Record<string, string> = {

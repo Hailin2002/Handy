@@ -1,5 +1,6 @@
 export { ActiveMeetingNavItem } from "./ActiveMeetingNavItem";
-export { NavItem, navItemClassName } from "./NavItem";
+export { NavItem } from "./NavItem";
+export { navItemClassName } from "./navItemClassName";
 export { ProductPlaceholder } from "./ProductPlaceholder";
 export { SettingsPage } from "./SettingsPage";
 export {

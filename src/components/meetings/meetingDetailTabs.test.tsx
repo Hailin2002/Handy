@@ -5,16 +5,15 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
+import { MeetingDetailPanel, MeetingDetailTabs } from "./MeetingDetailTabs";
 import {
   MEETING_DETAIL_TABS,
-  MeetingDetailPanel,
-  MeetingDetailTabs,
   edgeTab,
   selectableTabs,
   stepTab,
   tabLabelKey,
   type MeetingDetailTab,
-} from "./MeetingDetailTabs";
+} from "./meetingDetailTabModel";
 
 beforeAll(async () => {
   await i18next.use(initReactI18next).init({

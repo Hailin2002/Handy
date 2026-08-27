@@ -26,11 +26,8 @@ import { formatDateTime } from "@/utils/dateFormat";
 import { formatMeetingDuration } from "@/components/shell/productNav";
 import { MeetingAudioPanel } from "./MeetingAudioPanel";
 import { MeetingProcessingPanel } from "./MeetingProcessingPanel";
-import {
-  MeetingDetailPanel,
-  MeetingDetailTabs,
-  useMeetingDetailTab,
-} from "./MeetingDetailTabs";
+import { MeetingDetailPanel, MeetingDetailTabs } from "./MeetingDetailTabs";
+import { useMeetingDetailTab } from "./useMeetingDetailTab";
 import { meetingStateLabelKey } from "./meetingStates";
 
 export interface MeetingDetailProps {

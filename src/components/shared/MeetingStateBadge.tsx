@@ -9,7 +9,8 @@ import {
   Square,
   TriangleAlert,
 } from "lucide-react";
-import { resolveLocalizedText, type LocalizedText } from "./stateShell";
+import { type LocalizedText } from "./stateShell";
+import { resolveLocalizedText } from "./resolveLocalizedText";
 
 /**
  * MeetingStateBadge primitive (plan §6.8).
@@ -37,17 +38,6 @@ export type MeetingStateBadgeState =
   | "complete" // green — fully and safely completed
   | "processing" // blue — processing / information
   | "paused"; // neutral — pause is neutral and clearly labeled
-
-/** Closed, ordered list of all §6.8 badge states. */
-export const meetingStateBadgeStates = [
-  "recording",
-  "stopping",
-  "interrupted",
-  "attention",
-  "complete",
-  "processing",
-  "paused",
-] as const satisfies readonly MeetingStateBadgeState[];
 
 interface BadgeVisual {
   /** Distinct decorative glyph; always rendered `aria-hidden` next to text. */

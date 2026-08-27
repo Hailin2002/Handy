@@ -1,5 +1,5 @@
 import React from "react";
-import type { TFunction } from "i18next";
+import { resolveLocalizedText } from "./resolveLocalizedText";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/Button";
 
@@ -67,16 +67,6 @@ const toneClasses: Record<StateTone, { iconWrap: string }> = {
   warning: { iconWrap: "text-warning" },
   danger: { iconWrap: "text-red-400" },
 };
-
-export function resolveLocalizedText(
-  t: TFunction,
-  text: LocalizedText,
-): string {
-  if (typeof text === "string") {
-    return text;
-  }
-  return String(t(text.key, text.values));
-}
 
 export const StateShell: React.FC<
   StateShellProps & { role: "status" | "alert" }
