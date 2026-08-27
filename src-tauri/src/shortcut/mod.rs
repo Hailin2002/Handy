@@ -600,7 +600,7 @@ pub fn change_theme_setting(app: AppHandle, theme: String) -> Result<(), String>
     apply_window_theme(&app, parsed);
     // Notify other webviews (the recording overlay) so they re-apply the palette
     // live — they set `data-theme` on their own document and can't see this one.
-    let _ = app.emit("theme-changed", parsed);
+    let _ = app.emit(crate::events::THEME_CHANGED, parsed);
     Ok(())
 }
 

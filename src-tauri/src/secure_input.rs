@@ -287,7 +287,7 @@ mod imp {
 
     fn emit_status(app: &AppHandle) {
         let payload = status(app);
-        if let Err(e) = app.emit("secure-input-changed", &payload) {
+        if let Err(e) = app.emit(crate::events::SECURE_INPUT_CHANGED, &payload) {
             error!("Failed to emit secure-input-changed: {e}");
         }
     }

@@ -462,7 +462,7 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
             let settings = settings::get_settings(app);
             if settings.update_checks_enabled {
                 crate::utils::show_main_window(app);
-                let _ = app.emit("check-for-updates", ());
+                let _ = app.emit(crate::events::CHECK_FOR_UPDATES, ());
             }
         }
         "copy_last_transcript" => {

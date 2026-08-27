@@ -35,7 +35,9 @@ impl ModelManager {
             || self.models_dir.join(&filename).exists()
         {
             self.update_download_status()?;
-            let _ = self.app_handle.emit("model-download-complete", &model_id);
+            let _ = self
+                .app_handle
+                .emit(crate::events::MODEL_DOWNLOAD_COMPLETE, &model_id);
             return Ok(());
         }
 
@@ -274,7 +276,9 @@ impl ModelManager {
         cleanup.disarmed = true;
         self.update_download_status()?;
         self.cancel_flags.lock_recover().remove(&model_id);
-        let _ = self.app_handle.emit("model-download-complete", &model_id);
+        let _ = self
+            .app_handle
+            .emit(crate::events::MODEL_DOWNLOAD_COMPLETE, &model_id);
         info!("HF model {} downloaded", model_id);
         Ok(())
     }
@@ -410,7 +414,9 @@ impl ModelManager {
             }
 
             // Emit extraction started event
-            let _ = self.app_handle.emit("model-extraction-started", model_id);
+            let _ = self
+                .app_handle
+                .emit(crate::events::MODEL_EXTRACTION_STARTED, model_id);
             info!("Extracting archive for directory-based model: {}", model_id);
 
             // Use a temporary extraction directory to ensure atomic operations
@@ -485,7 +491,9 @@ impl ModelManager {
                 extracting.remove(model_id);
             }
             // Emit extraction completed event
-            let _ = self.app_handle.emit("model-extraction-completed", model_id);
+            let _ = self
+                .app_handle
+                .emit(crate::events::MODEL_EXTRACTION_COMPLETED, model_id);
 
             // Remove the downloaded tar.gz file
             let _ = fs::remove_file(&partial_path);
@@ -508,7 +516,9 @@ impl ModelManager {
         self.cancel_flags.lock_recover().remove(model_id);
 
         // Emit completion event
-        let _ = self.app_handle.emit("model-download-complete", model_id);
+        let _ = self
+            .app_handle
+            .emit(crate::events::MODEL_DOWNLOAD_COMPLETE, model_id);
 
         info!(
             "Successfully downloaded model {} to {:?}",
@@ -579,7 +589,7 @@ impl ModelManager {
                 self.available_models.lock_recover().remove(model_id);
             }
             self.update_download_status()?;
-            let _ = self.app_handle.emit("model-deleted", model_id);
+            let _ = self.app_handle.emit(crate::events::MODEL_DELETED, model_id);
             return Ok(());
         }
 
@@ -635,7 +645,7 @@ impl ModelManager {
         }
 
         // Emit event to notify UI
-        let _ = self.app_handle.emit("model-deleted", model_id);
+        let _ = self.app_handle.emit(crate::events::MODEL_DELETED, model_id);
 
         Ok(())
     }
@@ -737,7 +747,9 @@ impl ModelManager {
         self.update_download_status()?;
 
         // Emit cancellation event so all UI components can clear their state
-        let _ = self.app_handle.emit("model-download-cancelled", model_id);
+        let _ = self
+            .app_handle
+            .emit(crate::events::MODEL_DOWNLOAD_CANCELLED, model_id);
 
         info!("Download cancellation initiated for: {}", model_id);
         Ok(())

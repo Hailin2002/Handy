@@ -123,7 +123,7 @@ impl HfDownloadProgress {
             0.0
         };
         let _ = self.app_handle.emit(
-            "model-download-progress",
+            crate::events::MODEL_DOWNLOAD_PROGRESS,
             &DownloadProgress {
                 model_id: self.model_id.clone(),
                 downloaded,

@@ -111,7 +111,7 @@ impl ModelManager {
         if added > 0 {
             info!("Model rescan discovered {} new model(s)", added);
         }
-        let _ = self.app_handle.emit("models-updated", ());
+        let _ = self.app_handle.emit(crate::events::MODELS_UPDATED, ());
         Ok(())
     }
 

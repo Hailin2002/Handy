@@ -461,7 +461,7 @@ pub(crate) async fn process_transcription_output_with_translation(
             Err(err) => {
                 warn!("DeepL translation failed; using the source transcript: {err}");
                 let _ = app.emit(
-                    "transcription-error",
+                    crate::events::TRANSCRIPTION_ERROR,
                     format!("DeepL translation failed: {err}"),
                 );
             }
@@ -911,7 +911,7 @@ impl ShortcutAction for TranscribeAction {
                                         ),
                                         Err(e) => {
                                             error!("Failed to paste transcription: {}", e);
-                                            let _ = ah_clone.emit("paste-error", ());
+                                            let _ = ah_clone.emit(crate::events::PASTE_ERROR, ());
                                         }
                                     }
                                     utils::hide_recording_overlay(&ah_clone);
@@ -938,7 +938,7 @@ impl ShortcutAction for TranscribeAction {
                             error!("Transcription failed: {}", err);
                             // Surface the failure to the UI (toast). The full
                             // message is also in handy.log via the line above.
-                            let _ = ah.emit("transcription-error", err.to_string());
+                            let _ = ah.emit(crate::events::TRANSCRIPTION_ERROR, err.to_string());
                             // Save entry with empty text so user can retry
                             if wav_saved {
                                 if let Err(save_err) = hm.save_entry(

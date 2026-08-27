@@ -270,7 +270,7 @@ impl AzureSpeechStreamManager {
                 self.emit_overlay_text(state);
                 warn!("DeepL live translation failed; keeping source segment: {error}");
                 let _ = self.app.emit(
-                    "transcription-error",
+                    crate::events::TRANSCRIPTION_ERROR,
                     format!("DeepL translation failed: {error}"),
                 );
                 return Ok(());

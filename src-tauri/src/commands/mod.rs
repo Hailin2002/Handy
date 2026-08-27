@@ -119,7 +119,7 @@ pub fn trigger_update_check(app: AppHandle) -> Result<(), String> {
     if !get_settings(&app).update_checks_enabled {
         return Ok(());
     }
-    app.emit("check-for-updates", ())
+    app.emit(crate::events::CHECK_FOR_UPDATES, ())
         .map_err(|e| e.to_string())?;
     Ok(())
 }

@@ -8,6 +8,8 @@ mod catalog;
 pub mod cli;
 mod clipboard;
 mod commands;
+/// Names of the events emitted to the webview.
+pub mod events;
 mod headless;
 mod helpers;
 mod input;
