@@ -154,6 +154,23 @@ src/i18n/
 
 For translation contribution guidelines, see [CONTRIBUTING_TRANSLATIONS.md](CONTRIBUTING_TRANSLATIONS.md).
 
+## Verification tooling
+
+The repository ships more verification than its npm scripts used to expose.
+What exists, and when to reach for it:
+
+| Command                     | What it does                                                                                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run check`             | Translations, Tauri bindings drift, and both log-hygiene guards. Fast; run it before pushing.                                                                                                                                             |
+| `bun run gate`              | The full sequential gate — lint, format, frontend build, cargo fmt/clippy/test — writing per-step logs, a SHA-256 sidecar per log and a machine-readable `summary.json` under `logs/gate-run/`. This is the "is everything green" answer. |
+| `bun run gate:verify`       | Checks a gate run's own artifacts against each other. Use it when a summary is being quoted as evidence.                                                                                                                                  |
+| `bun run check:clipboard`   | Clipboard output fidelity on Windows: umlauts, emoji, CJK, RTL and a 65 KB payload, plus byte-for-byte restore of the previous clipboard. Takes the system clipboard while it runs, so it is not part of `check` or CI.                   |
+| `bun run bindings:generate` | Regenerates `src/bindings.ts` from the Rust command surface. Needed after adding or changing a Tauri command.                                                                                                                             |
+
+`scripts/verify/diff-gate-summaries.ps1` compares two gate runs, which is the
+intended way to show a change did not regress anything: run the gate before and
+after, then diff the summaries.
+
 ## Concurrency
 
 The codebase uses OS threads and Tokio tasks in roughly equal numbers, which
