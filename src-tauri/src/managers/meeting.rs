@@ -753,6 +753,55 @@ pub trait MeetingEnvironment: Send + Sync {
     }
 }
 
+/// True when a provider base URL points at this machine.
+///
+/// The plan lists "lokale STT + lokale Zusammenfassung" as a first-class
+/// combination in which "kein Audio oder Transkript den Rechner" leaves. The
+/// only local LLM Speak can reach is an OpenAI-compatible server on loopback
+/// (the shipped `custom` provider defaults to `http://localhost:11434/v1`), so
+/// recognising loopback is what makes that combination reachable at all.
+///
+/// Demanding *cloud* consent for a request that never leaves the machine would
+/// be both wrong and confusing, so this decides the consent gate as well as the
+/// label the UI shows.
+pub fn is_local_provider_url(base_url: &str) -> bool {
+    let without_scheme = base_url
+        .split_once("://")
+        .map(|(_, rest)| rest)
+        .unwrap_or(base_url);
+    // Authority ends at the first path separator; strip any userinfo before it.
+    let authority = without_scheme.split('/').next().unwrap_or("");
+    let authority = authority.rsplit('@').next().unwrap_or(authority);
+
+    // Bracketed IPv6 literal: `[::1]:1234`.
+    let host = if let Some(rest) = authority.strip_prefix('[') {
+        match rest.split_once(']') {
+            Some((inner, _)) => inner.to_string(),
+            None => return false,
+        }
+    } else {
+        authority
+            .split(':')
+            .next()
+            .unwrap_or("")
+            .trim()
+            .to_ascii_lowercase()
+    };
+
+    if host == "localhost" {
+        return true;
+    }
+    // Parsed, never prefix-matched: `127.0.0.1.evil.example` and
+    // `localhost.evil.example` are ordinary remote hostnames that merely look
+    // local, and treating them as loopback would silently drop the cloud
+    // consent gate for a real upload.
+    match host.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V4(v4)) => v4.is_loopback() || v4.is_unspecified(),
+        Ok(std::net::IpAddr::V6(v6)) => v6.is_loopback() || v6.is_unspecified(),
+        Err(_) => false,
+    }
+}
+
 /// Pen-test hardening: a pathological title (megabytes pasted, zero-width
 /// spam) must be rejected at the boundary instead of flowing into the
 /// database, every event payload and every render path.
@@ -922,13 +971,23 @@ impl MeetingEnvironment for AppEnvironment {
                 !settings.custom_stt_endpoint.trim().is_empty(),
             ),
         };
+        // The summary provider is reported separately from the STT provider:
+        // the two are independent choices, and the user must be able to see
+        // that a local transcription can still be summarised in the cloud.
+        let summary_provider = settings.active_post_process_provider().map(|provider| {
+            if is_local_provider_url(&provider.base_url) {
+                format!("{} (local)", provider.label)
+            } else {
+                provider.label.clone()
+            }
+        });
         ProviderSnapshot {
             kind: kind.to_string(),
             name,
             language: Some(settings.selected_language.clone()),
             configured,
-            summary_provider: None,
-            retention_policy: "default".to_string(),
+            summary_provider,
+            retention_policy: settings.meeting_retention_policy.as_token().to_string(),
         }
     }
 
@@ -946,7 +1005,17 @@ impl MeetingEnvironment for AppEnvironment {
     }
 
     fn summary_cloud_consent(&self) -> bool {
-        crate::settings::get_settings(&self.app).meeting_summary_cloud_consent
+        let settings = crate::settings::get_settings(&self.app);
+        // A summary produced by a server on this machine is not a cloud upload,
+        // so it is not what the cloud-consent switch is about. Without this the
+        // plan's local/local combination could never run.
+        if settings
+            .active_post_process_provider()
+            .is_some_and(|provider| is_local_provider_url(&provider.base_url))
+        {
+            return true;
+        }
+        settings.meeting_summary_cloud_consent
     }
 
     fn summary_llm(&self) -> Option<SummaryLlmConfig> {
@@ -5044,6 +5113,35 @@ mod tests {
         assert_eq!(value["recovered_chunks"], 1);
         assert_eq!(value["damaged_chunks"], 2);
         assert_eq!(value["quarantined_files"], 3);
+    }
+
+    /// A summary produced on this machine is not a cloud upload, so it must not
+    /// be gated behind cloud consent (plan §10: local STT + local summary is a
+    /// supported combination).
+    #[test]
+    fn loopback_providers_count_as_local() {
+        for url in [
+            "http://localhost:11434/v1",
+            "http://127.0.0.1:8080/v1",
+            "https://127.0.0.5/v1",
+            "http://[::1]:1234/v1",
+        ] {
+            assert!(is_local_provider_url(url), "{url} must count as local");
+        }
+    }
+
+    #[test]
+    fn remote_providers_are_never_mistaken_for_local() {
+        for url in [
+            "https://api.openai.com/v1",
+            "https://openrouter.ai/api/v1",
+            // Deliberately adversarial: a hostname that merely *contains* a
+            // loopback-looking label must not pass.
+            "https://localhost.evil.example/v1",
+            "https://127.0.0.1.evil.example/v1",
+        ] {
+            assert!(!is_local_provider_url(url), "{url} must count as remote");
+        }
     }
 
     /// Seeds one finalized chunk plus its backing file, which is what both the

@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Projeyi analiz et",
+    "analyseDone": "Analiz bitti: {{count}} görev önerisi.",
+    "analyseDropped": "{{count}} öneri hiçbir kaynak göstermediği için elendi.",
+    "analyseFailed": "Analiz başarısız.",
+    "taskWhy": "Neden?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Sohbet dosyası: {{chat}} · {{count}} medya dosyası bulundu",
     "mediaImported": "{{count}} medya dosyası kaydedildi. Olduğu gibi saklanır ve analiz edilmedi olarak işaretlenir.",
     "mediaSkipped": "{{count}} dosya kaydedilemedi."
+  },
+  "search": {
+    "label": "Ara",
+    "placeholder": "Projelerde, toplantılarda ve sohbetlerde ara",
+    "searching": "Aranıyor…",
+    "results": "{{count}} sonuç",
+    "kind": {
+      "project": "Proje",
+      "meeting": "Toplantı",
+      "transcript": "Döküm",
+      "task": "Görev",
+      "source_item": "Mesaj"
+    }
+  },
+  "evidence": {
+    "label": "Kaynaklar",
+    "none": "Kayıtlı kaynak yok.",
+    "fromMeeting": "{{position}} konumundaki toplantı",
+    "fromChat": "Sohbet mesajı"
   }
 }

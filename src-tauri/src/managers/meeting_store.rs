@@ -665,6 +665,49 @@ pub trait MeetingRepository: Send + Sync {
     ) -> Result<Vec<SourceAsset>, StoreError>;
     fn list_source_assets(&self, source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError>;
 
+    // -- evidence, links and search (Phase 10) -------------------------------
+
+    /// Publishes an AI task together with its citations, atomically.
+    ///
+    /// Returns `None` when `evidence` is empty: an unevidenced suggestion is
+    /// never written at all, which is what makes "jede KI-Aussage hat einen
+    /// Beleg" a property of the data rather than of the caller's discipline.
+    fn suggest_task_with_evidence(
+        &self,
+        draft: NewProjectTask,
+        evidence: Vec<NewEvidence>,
+    ) -> Result<Option<(ProjectTask, bool)>, StoreError>;
+    fn list_task_evidence(&self, task_id: Uuid) -> Result<Vec<Evidence>, StoreError>;
+    fn create_snapshot_with_evidence(
+        &self,
+        project_id: Uuid,
+        summary_markdown: String,
+        prompt_version: String,
+        model: Option<String>,
+        source_marker: String,
+        evidence: Vec<NewEvidence>,
+    ) -> Result<Option<ProjectSnapshot>, StoreError>;
+    fn list_snapshot_evidence(&self, snapshot_id: Uuid) -> Result<Vec<Evidence>, StoreError>;
+
+    /// Links an imported source to a project (many-to-many, idempotent).
+    fn link_source_to_project(&self, project_id: Uuid, source_id: Uuid) -> Result<(), StoreError>;
+    fn unlink_source_from_project(
+        &self,
+        project_id: Uuid,
+        source_id: Uuid,
+    ) -> Result<(), StoreError>;
+    fn list_source_ids_for_project(&self, project_id: Uuid) -> Result<Vec<String>, StoreError>;
+
+    /// Rebuilds the FTS5 index from the authoritative tables.
+    fn reindex_search(&self) -> Result<usize, StoreError>;
+    /// Full-text search; `project_id` narrows to one project when given.
+    fn search(
+        &self,
+        query: &str,
+        project_id: Option<Uuid>,
+        limit: u32,
+    ) -> Result<Vec<SearchHit>, StoreError>;
+
     // -- project tasks & snapshots (Phase 10) --------------------------------
 
     /// Manual task creation (origin `manual`, state `accepted`).
@@ -1180,7 +1223,118 @@ static MIGRATIONS: &[M] = &[
     CREATE INDEX IF NOT EXISTS idx_source_assets_source
         ON source_assets (source_id, original_name);",
     ),
+    // -- 12 ----------------------------------------------------------------
+    // Phase 10: evidence plus the many-to-many project<->source link.
+    //
+    // `task_evidence` is the table that makes the plan's central rule
+    // enforceable: "ein KI-Vorschlag ohne mindestens einen gültigen Beleg wird
+    // nicht als Aufgabe veröffentlicht". Every row points at a source and, when
+    // known, at the exact item or transcript segment, so the UI can jump from a
+    // claim back to the sentence that produced it.
+    //
+    // The links are deliberately many-to-many (plan §9 `project_sources`): v1
+    // shows one primary project, but a cross-cutting source must not have to be
+    // duplicated later.
+    M::up(
+        "CREATE TABLE IF NOT EXISTS project_sources (
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+        is_primary INTEGER NOT NULL DEFAULT 1,
+        origin TEXT NOT NULL DEFAULT 'manual',
+        confidence REAL,
+        confirmed_at INTEGER,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (project_id, source_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_project_sources_source
+        ON project_sources (source_id);
+    CREATE TABLE IF NOT EXISTS task_evidence (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL REFERENCES project_tasks(id) ON DELETE CASCADE,
+        source_id TEXT,
+        source_item_id TEXT,
+        meeting_id TEXT,
+        segment_start_ms INTEGER,
+        segment_end_ms INTEGER,
+        quote TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_task_evidence_task
+        ON task_evidence (task_id);
+    CREATE TABLE IF NOT EXISTS snapshot_evidence (
+        id TEXT PRIMARY KEY,
+        snapshot_id TEXT NOT NULL REFERENCES project_snapshots(id) ON DELETE CASCADE,
+        source_id TEXT,
+        source_item_id TEXT,
+        meeting_id TEXT,
+        segment_start_ms INTEGER,
+        segment_end_ms INTEGER,
+        quote TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_snapshot_evidence_snapshot
+        ON snapshot_evidence (snapshot_id);",
+    ),
+    // -- 13 ----------------------------------------------------------------
+    // Phase 3/§9 search: one FTS5 index over everything the user can search.
+    //
+    // Contentless (`content=''`) on purpose: the authoritative text already
+    // lives in its own table, and duplicating it would let the two drift. Rows
+    // are maintained by `reindex_search`, which rebuilds from the tables inside
+    // one transaction — simpler to reason about than triggers spread over five
+    // tables, and cheap because it only ever runs after an import or an
+    // analysis run.
+    //
+    // `entity_kind`/`entity_id` travel with every hit so a result can always
+    // name where it came from ("Suchtreffer liefern immer Entity-ID und
+    // Belegposition").
+    M::up(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
+        entity_kind UNINDEXED,
+        entity_id UNINDEXED,
+        project_id UNINDEXED,
+        title,
+        body,
+        tokenize = 'unicode61 remove_diacritics 2'
+    );",
+    ),
 ];
+
+/// Builds a safe FTS5 `MATCH` expression from free user input.
+///
+/// FTS5 has its own query syntax where `-`, `"`, `*`, `:` and `NEAR` are
+/// operators. Typing a phone number or an email address would otherwise raise
+/// a syntax error that the user cannot act on, so every term is quoted as a
+/// literal and a trailing `*` turns the last one into a prefix match — which is
+/// what "search as you type" means to a user.
+///
+/// Returns `None` when nothing searchable remains.
+fn fts_match_expression(query: &str) -> Option<String> {
+    let terms: Vec<String> = query
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|t| !t.is_empty())
+        .map(|t| t.replace('"', ""))
+        .filter(|t| !t.is_empty())
+        .collect();
+    if terms.is_empty() {
+        return None;
+    }
+    let last = terms.len() - 1;
+    Some(
+        terms
+            .iter()
+            .enumerate()
+            .map(|(i, term)| {
+                if i == last {
+                    format!("\"{term}\"*")
+                } else {
+                    format!("\"{term}\"")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
+    )
+}
 
 /// Resolves the portable-aware path of `meetings.db`.
 ///
@@ -1650,6 +1804,78 @@ impl SqliteMeetingStore {
 
     /// Locks the connection, mapping a poisoned mutex onto a typed error
     /// instead of propagating a panic across the seam.
+    /// Writes citations for one owner row. Shared by tasks and snapshots
+    /// because the two tables are identical apart from their owner column.
+    fn insert_evidence(
+        &self,
+        table: &'static str,
+        owner_column: &'static str,
+        owner_id: &str,
+        evidence: Vec<NewEvidence>,
+    ) -> Result<(), StoreError> {
+        let op = "insert_evidence";
+        let now = to_ms(self.now());
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+        for item in evidence {
+            tx.execute(
+                &format!(
+                    "INSERT INTO {table}
+                       (id, {owner_column}, source_id, source_item_id, meeting_id,
+                        segment_start_ms, segment_end_ms, quote, created_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+                ),
+                params![
+                    self.uuids.new_uuid().0,
+                    owner_id,
+                    item.source_id,
+                    item.source_item_id,
+                    item.meeting_id,
+                    item.segment_start_ms,
+                    item.segment_end_ms,
+                    item.quote,
+                    now,
+                ],
+            )
+            .map_err(sql_err(op))?;
+        }
+        tx.commit().map_err(sql_err(op))?;
+        Ok(())
+    }
+
+    fn read_evidence(
+        &self,
+        table: &'static str,
+        owner_column: &'static str,
+        owner_id: &str,
+    ) -> Result<Vec<Evidence>, StoreError> {
+        let op = "read_evidence";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT id, source_id, source_item_id, meeting_id,
+                        segment_start_ms, segment_end_ms, quote
+                 FROM {table} WHERE {owner_column} = ?1 ORDER BY created_at ASC"
+            ))
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![owner_id], |row| {
+                Ok(Evidence {
+                    id: row.get(0)?,
+                    source_id: row.get(1)?,
+                    source_item_id: row.get(2)?,
+                    meeting_id: row.get(3)?,
+                    segment_start_ms: row.get(4)?,
+                    segment_end_ms: row.get(5)?,
+                    quote: row.get(6)?,
+                })
+            })
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
     fn locked(&self, operation: &'static str) -> Result<MutexGuard<'_, Connection>, StoreError> {
         self.conn.lock().map_err(|_| StoreError::Sql {
             operation,
@@ -1757,6 +1983,49 @@ pub struct Source {
     pub parser_version: String,
     pub content_hash: String,
     pub created_at: i64,
+}
+
+/// One citation backing an AI-produced task or status statement.
+///
+/// At least one of these must exist before a suggestion is published: the plan
+/// treats an unevidenced AI claim as not publishable at all.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+pub struct Evidence {
+    pub id: String,
+    /// Imported source the claim came from, when it was a source.
+    pub source_id: Option<String>,
+    /// Exact normalised item (chat message, document chunk).
+    pub source_item_id: Option<String>,
+    /// Meeting the claim came from, when it was a meeting.
+    pub meeting_id: Option<String>,
+    /// Timeline position inside that meeting, milliseconds.
+    pub segment_start_ms: Option<i64>,
+    pub segment_end_ms: Option<i64>,
+    /// Short excerpt so the user recognises the citation without navigating.
+    pub quote: String,
+}
+
+/// Draft citation; the id and timestamp are assigned by the store.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct NewEvidence {
+    pub source_id: Option<String>,
+    pub source_item_id: Option<String>,
+    pub meeting_id: Option<String>,
+    pub segment_start_ms: Option<i64>,
+    pub segment_end_ms: Option<i64>,
+    pub quote: String,
+}
+
+/// One full-text hit, always carrying where it came from.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+pub struct SearchHit {
+    /// `meeting | transcript | task | snapshot | source_item | project`
+    pub entity_kind: String,
+    pub entity_id: String,
+    pub project_id: Option<String>,
+    pub title: String,
+    /// Excerpt with the match highlighted by `[` `]`.
+    pub snippet: String,
 }
 
 /// One media file extracted from an imported archive.
@@ -2513,6 +2782,191 @@ impl MeetingRepository for SqliteMeetingStore {
                     size_bytes: row.get(5)?,
                     content_hash: row.get(6)?,
                     analysis_state: row.get(7)?,
+                })
+            })
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
+    fn suggest_task_with_evidence(
+        &self,
+        draft: NewProjectTask,
+        evidence: Vec<NewEvidence>,
+    ) -> Result<Option<(ProjectTask, bool)>, StoreError> {
+        // The gate, before any write: no citation, no task.
+        if evidence.is_empty() {
+            return Ok(None);
+        }
+        let (task, created) = self.suggest_task(draft)?;
+        // Only a freshly created suggestion gets citations; re-running the
+        // analysis must not pile duplicates onto an existing task.
+        if created {
+            self.insert_evidence("task_evidence", "task_id", &task.id, evidence)?;
+        }
+        Ok(Some((task, created)))
+    }
+
+    fn list_task_evidence(&self, task_id: Uuid) -> Result<Vec<Evidence>, StoreError> {
+        self.read_evidence("task_evidence", "task_id", &task_id.0)
+    }
+
+    fn create_snapshot_with_evidence(
+        &self,
+        project_id: Uuid,
+        summary_markdown: String,
+        prompt_version: String,
+        model: Option<String>,
+        source_marker: String,
+        evidence: Vec<NewEvidence>,
+    ) -> Result<Option<ProjectSnapshot>, StoreError> {
+        if evidence.is_empty() {
+            return Ok(None);
+        }
+        let snapshot = self.create_snapshot(
+            project_id,
+            summary_markdown,
+            prompt_version,
+            model,
+            source_marker,
+        )?;
+        self.insert_evidence("snapshot_evidence", "snapshot_id", &snapshot.id, evidence)?;
+        Ok(Some(snapshot))
+    }
+
+    fn list_snapshot_evidence(&self, snapshot_id: Uuid) -> Result<Vec<Evidence>, StoreError> {
+        self.read_evidence("snapshot_evidence", "snapshot_id", &snapshot_id.0)
+    }
+
+    fn link_source_to_project(&self, project_id: Uuid, source_id: Uuid) -> Result<(), StoreError> {
+        let op = "link_source_to_project";
+        let conn = self.locked(op)?;
+        conn.execute(
+            "INSERT OR IGNORE INTO project_sources
+               (project_id, source_id, is_primary, origin, created_at)
+             VALUES (?1, ?2, 1, 'manual', ?3)",
+            params![project_id.0, source_id.0, to_ms(self.now())],
+        )
+        .map_err(classify("project_sources", &project_id, op))?;
+        Ok(())
+    }
+
+    fn unlink_source_from_project(
+        &self,
+        project_id: Uuid,
+        source_id: Uuid,
+    ) -> Result<(), StoreError> {
+        let op = "unlink_source_from_project";
+        let conn = self.locked(op)?;
+        conn.execute(
+            "DELETE FROM project_sources WHERE project_id = ?1 AND source_id = ?2",
+            params![project_id.0, source_id.0],
+        )
+        .map_err(sql_err(op))?;
+        Ok(())
+    }
+
+    fn list_source_ids_for_project(&self, project_id: Uuid) -> Result<Vec<String>, StoreError> {
+        let op = "list_source_ids_for_project";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT ps.source_id FROM project_sources ps
+                 JOIN sources s ON s.id = ps.source_id AND s.deleted_at IS NULL
+                 WHERE ps.project_id = ?1
+                 ORDER BY ps.created_at ASC",
+            )
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![project_id.0], |row| row.get(0))
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<String>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
+    fn reindex_search(&self) -> Result<usize, StoreError> {
+        let op = "reindex_search";
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+        tx.execute("DELETE FROM search_index", [])
+            .map_err(sql_err(op))?;
+
+        // Each statement contributes one entity kind. Project association is
+        // resolved here so a hit can be filtered by project without a join at
+        // query time; rows with no project stay searchable globally.
+        let statements: [&str; 5] = [
+            "INSERT INTO search_index (entity_kind, entity_id, project_id, title, body)
+             SELECT 'project', id, id, name, description
+             FROM projects WHERE deleted_at IS NULL",
+            "INSERT INTO search_index (entity_kind, entity_id, project_id, title, body)
+             SELECT 'meeting', s.id,
+                    (SELECT l.project_id FROM project_meeting_links l
+                      WHERE l.meeting_id = s.id LIMIT 1),
+                    s.title, COALESCE(sm.summary_markdown, '')
+             FROM meeting_sessions s
+             LEFT JOIN meeting_summaries sm
+                    ON sm.meeting_id = s.id AND sm.deleted_at IS NULL
+             WHERE s.deleted_at IS NULL",
+            "INSERT INTO search_index (entity_kind, entity_id, project_id, title, body)
+             SELECT 'transcript', t.id,
+                    (SELECT l.project_id FROM project_meeting_links l
+                      WHERE l.meeting_id = t.meeting_id LIMIT 1),
+                    (SELECT s.title FROM meeting_sessions s WHERE s.id = t.meeting_id),
+                    t.text
+             FROM meeting_transcript_segments t WHERE t.deleted_at IS NULL",
+            "INSERT INTO search_index (entity_kind, entity_id, project_id, title, body)
+             SELECT 'task', id, project_id, title, description
+             FROM project_tasks WHERE deleted_at IS NULL",
+            "INSERT INTO search_index (entity_kind, entity_id, project_id, title, body)
+             SELECT 'source_item', i.id,
+                    (SELECT ps.project_id FROM project_sources ps
+                      WHERE ps.source_id = i.source_id LIMIT 1),
+                    COALESCE(i.author_label, ''), i.text
+             FROM source_items i WHERE i.deleted_at IS NULL",
+        ];
+        let mut indexed = 0usize;
+        for sql in statements {
+            indexed += tx.execute(sql, []).map_err(sql_err(op))?;
+        }
+        tx.commit().map_err(sql_err(op))?;
+        Ok(indexed)
+    }
+
+    fn search(
+        &self,
+        query: &str,
+        project_id: Option<Uuid>,
+        limit: u32,
+    ) -> Result<Vec<SearchHit>, StoreError> {
+        let op = "search";
+        let Some(match_expr) = fts_match_expression(query) else {
+            // An empty or punctuation-only query is not an error; it simply
+            // matches nothing, and passing it to FTS5 raw would be a syntax
+            // error the user never caused.
+            return Ok(Vec::new());
+        };
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT entity_kind, entity_id, project_id, title,
+                        snippet(search_index, 4, '[', ']', '…', 12)
+                 FROM search_index
+                 WHERE search_index MATCH ?1
+                   AND (?2 IS NULL OR project_id = ?2)
+                 ORDER BY rank
+                 LIMIT ?3",
+            )
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![match_expr, project_id.map(|p| p.0), limit], |row| {
+                Ok(SearchHit {
+                    entity_kind: row.get(0)?,
+                    entity_id: row.get(1)?,
+                    project_id: row.get(2)?,
+                    title: row.get(3)?,
+                    snippet: row.get(4)?,
                 })
             })
             .map_err(sql_err(op))?
@@ -3488,6 +3942,61 @@ mod tests {
         fn list_source_assets(&self, _source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError> {
             unimplemented!("fake")
         }
+        fn suggest_task_with_evidence(
+            &self,
+            _draft: NewProjectTask,
+            _evidence: Vec<NewEvidence>,
+        ) -> Result<Option<(ProjectTask, bool)>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn list_task_evidence(&self, _task_id: Uuid) -> Result<Vec<Evidence>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn create_snapshot_with_evidence(
+            &self,
+            _project_id: Uuid,
+            _summary_markdown: String,
+            _prompt_version: String,
+            _model: Option<String>,
+            _source_marker: String,
+            _evidence: Vec<NewEvidence>,
+        ) -> Result<Option<ProjectSnapshot>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn list_snapshot_evidence(&self, _snapshot_id: Uuid) -> Result<Vec<Evidence>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn link_source_to_project(
+            &self,
+            _project_id: Uuid,
+            _source_id: Uuid,
+        ) -> Result<(), StoreError> {
+            unimplemented!("fake")
+        }
+        fn unlink_source_from_project(
+            &self,
+            _project_id: Uuid,
+            _source_id: Uuid,
+        ) -> Result<(), StoreError> {
+            unimplemented!("fake")
+        }
+        fn list_source_ids_for_project(
+            &self,
+            _project_id: Uuid,
+        ) -> Result<Vec<String>, StoreError> {
+            unimplemented!("fake")
+        }
+        fn reindex_search(&self) -> Result<usize, StoreError> {
+            unimplemented!("fake")
+        }
+        fn search(
+            &self,
+            _query: &str,
+            _project_id: Option<Uuid>,
+            _limit: u32,
+        ) -> Result<Vec<SearchHit>, StoreError> {
+            unimplemented!("fake")
+        }
         fn create_manual_task(&self, _draft: NewProjectTask) -> Result<ProjectTask, StoreError> {
             unimplemented!("fake")
         }
@@ -3799,6 +4308,313 @@ mod sqlite_tests {
             config_snapshot: serde_json::json!({ "beam": 5 }),
             next_attempt_at: None,
         }
+    }
+
+    // -- evidence and search (Phase 10) ------------------------------------
+
+    fn evidence(quote: &str) -> NewEvidence {
+        NewEvidence {
+            meeting_id: Some("m-1".to_string()),
+            segment_start_ms: Some(1_000),
+            segment_end_ms: Some(2_000),
+            quote: quote.to_string(),
+            ..NewEvidence::default()
+        }
+    }
+
+    fn task_draft(project: &Uuid, title: &str) -> NewProjectTask {
+        NewProjectTask {
+            project_id: project.clone(),
+            title: title.to_string(),
+            description: String::new(),
+            origin: "ai",
+        }
+    }
+
+    /// The plan's central rule: an AI suggestion without a citation is not
+    /// published at all. Enforcing it in the store means no caller can forget.
+    #[test]
+    fn an_ai_task_without_evidence_is_never_written() {
+        let (_dir, store) = temp_store();
+        let project = store
+            .create_project(NewProject {
+                name: "BDNA".into(),
+                description: String::new(),
+            })
+            .expect("project");
+        let id = Uuid(project.id.clone());
+
+        let result = store
+            .suggest_task_with_evidence(task_draft(&id, "Angebot senden"), Vec::new())
+            .expect("call succeeds");
+
+        assert!(result.is_none(), "no evidence means no task");
+        assert!(
+            store.list_tasks(id).expect("list").is_empty(),
+            "nothing may have been written"
+        );
+    }
+
+    #[test]
+    fn an_evidenced_task_is_published_with_its_citations() {
+        let (_dir, store) = temp_store();
+        let project = store
+            .create_project(NewProject {
+                name: "BDNA".into(),
+                description: String::new(),
+            })
+            .expect("project");
+        let id = Uuid(project.id.clone());
+
+        let (task, created) = store
+            .suggest_task_with_evidence(
+                task_draft(&id, "Angebot senden"),
+                vec![evidence("wir schicken das Angebot bis Freitag")],
+            )
+            .expect("call")
+            .expect("task published");
+        assert!(created);
+
+        let cited = store
+            .list_task_evidence(Uuid(task.id.clone()))
+            .expect("evidence");
+        assert_eq!(cited.len(), 1);
+        assert_eq!(cited[0].meeting_id.as_deref(), Some("m-1"));
+        assert_eq!(cited[0].segment_start_ms, Some(1_000));
+    }
+
+    /// Re-running an analysis must not pile a second set of citations onto a
+    /// task the user may already have accepted.
+    #[test]
+    fn re_running_the_analysis_does_not_duplicate_citations() {
+        let (_dir, store) = temp_store();
+        let project = store
+            .create_project(NewProject {
+                name: "BDNA".into(),
+                description: String::new(),
+            })
+            .expect("project");
+        let id = Uuid(project.id.clone());
+
+        let (first, created) = store
+            .suggest_task_with_evidence(task_draft(&id, "Angebot senden"), vec![evidence("a")])
+            .expect("call")
+            .expect("published");
+        assert!(created);
+
+        let (again, created_again) = store
+            .suggest_task_with_evidence(task_draft(&id, "Angebot senden"), vec![evidence("a")])
+            .expect("call")
+            .expect("published");
+
+        assert_eq!(first.id, again.id, "the same suggestion is one task");
+        assert!(!created_again);
+        assert_eq!(
+            store
+                .list_task_evidence(Uuid(first.id))
+                .expect("evidence")
+                .len(),
+            1,
+            "citations must not accumulate on repeat runs"
+        );
+        assert_eq!(store.list_tasks(id).expect("list").len(), 1);
+    }
+
+    #[test]
+    fn a_snapshot_without_evidence_is_never_written() {
+        let (_dir, store) = temp_store();
+        let project = store
+            .create_project(NewProject {
+                name: "BDNA".into(),
+                description: String::new(),
+            })
+            .expect("project");
+        let id = Uuid(project.id.clone());
+
+        assert!(store
+            .create_snapshot_with_evidence(
+                id.clone(),
+                "Status".into(),
+                "v1".into(),
+                None,
+                "marker".into(),
+                Vec::new(),
+            )
+            .expect("call")
+            .is_none());
+        assert!(store.list_snapshots(id).expect("list").is_empty());
+    }
+
+    /// A source may belong to several projects without being copied (plan §9).
+    #[test]
+    fn a_source_can_belong_to_several_projects_without_duplication() {
+        let (_dir, store) = temp_store();
+        let alpha = store
+            .create_project(NewProject {
+                name: "Alpha".into(),
+                description: String::new(),
+            })
+            .expect("alpha");
+        let beta = store
+            .create_project(NewProject {
+                name: "Beta".into(),
+                description: String::new(),
+            })
+            .expect("beta");
+        let (source, _) = store
+            .create_whatsapp_source(NewWhatsappSource {
+                title: "Chat".into(),
+                parser_version: "v1".into(),
+                content_hash: "hash-1".into(),
+                messages: vec![(Some("Ana".into()), "Hallo".into(), false)],
+            })
+            .expect("source");
+        let source_id = Uuid(source.id.clone());
+
+        store
+            .link_source_to_project(Uuid(alpha.id.clone()), source_id.clone())
+            .expect("link alpha");
+        store
+            .link_source_to_project(Uuid(beta.id.clone()), source_id.clone())
+            .expect("link beta");
+        // Linking twice must stay a no-op rather than fail.
+        store
+            .link_source_to_project(Uuid(alpha.id.clone()), source_id.clone())
+            .expect("relink alpha");
+
+        assert_eq!(
+            store
+                .list_source_ids_for_project(Uuid(alpha.id.clone()))
+                .expect("alpha"),
+            vec![source.id.clone()]
+        );
+        assert_eq!(
+            store
+                .list_source_ids_for_project(Uuid(beta.id.clone()))
+                .expect("beta"),
+            vec![source.id.clone()]
+        );
+
+        store
+            .unlink_source_from_project(Uuid(alpha.id.clone()), source_id)
+            .expect("unlink");
+        assert!(store
+            .list_source_ids_for_project(Uuid(alpha.id))
+            .expect("alpha after unlink")
+            .is_empty());
+        assert_eq!(
+            store
+                .list_source_ids_for_project(Uuid(beta.id))
+                .expect("beta unaffected")
+                .len(),
+            1,
+            "unlinking one project must not affect the other"
+        );
+    }
+
+    /// Search must find chat text and name where the hit came from.
+    #[test]
+    fn search_finds_imported_chat_text_and_names_its_origin() {
+        let (_dir, store) = temp_store();
+        let (source, _) = store
+            .create_whatsapp_source(NewWhatsappSource {
+                title: "Chat".into(),
+                parser_version: "v1".into(),
+                content_hash: "hash-2".into(),
+                messages: vec![
+                    (
+                        Some("Ana".into()),
+                        "Der Vertrag liegt beim Notar".into(),
+                        false,
+                    ),
+                    (Some("Ben".into()), "Alles klar".into(), false),
+                ],
+            })
+            .expect("source");
+
+        store.reindex_search().expect("reindex");
+        let hits = store.search("Notar", None, 10).expect("search");
+
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].entity_kind, "source_item");
+        assert!(hits[0].snippet.contains("Notar"));
+        let items = store.list_source_items(Uuid(source.id)).expect("items");
+        assert!(
+            items.iter().any(|i| i.id == hits[0].entity_id),
+            "a hit must point at a real item"
+        );
+    }
+
+    /// Free text is not FTS5 syntax: a query full of operators must return no
+    /// results rather than raise an error the user cannot act on.
+    #[test]
+    fn punctuation_heavy_queries_never_error() {
+        let (_dir, store) = temp_store();
+        store.reindex_search().expect("reindex");
+
+        for query in ["", "   ", "-", "\"", "NEAR(", "a:b", "***"] {
+            let hits = store.search(query, None, 10);
+            assert!(hits.is_ok(), "query {query:?} must not error");
+        }
+    }
+
+    #[test]
+    fn a_prefix_query_matches_as_the_user_types() {
+        let (_dir, store) = temp_store();
+        store
+            .create_project(NewProject {
+                name: "Kundenprojekt".into(),
+                description: "Angebotsphase".into(),
+            })
+            .expect("project");
+        store.reindex_search().expect("reindex");
+
+        let hits = store.search("Kunden", None, 10).expect("search");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].entity_kind, "project");
+    }
+
+    /// Restricting to a project must not leak another project's content.
+    #[test]
+    fn search_can_be_narrowed_to_one_project() {
+        let (_dir, store) = temp_store();
+        let alpha = store
+            .create_project(NewProject {
+                name: "Alpha Angebot".into(),
+                description: String::new(),
+            })
+            .expect("alpha");
+        store
+            .create_project(NewProject {
+                name: "Beta Angebot".into(),
+                description: String::new(),
+            })
+            .expect("beta");
+        store.reindex_search().expect("reindex");
+
+        assert_eq!(store.search("Angebot", None, 10).expect("all").len(), 2);
+        let narrowed = store
+            .search("Angebot", Some(Uuid(alpha.id.clone())), 10)
+            .expect("narrowed");
+        assert_eq!(narrowed.len(), 1);
+        assert_eq!(narrowed[0].entity_id, alpha.id);
+    }
+
+    /// Reindexing is idempotent: running it twice must not double every hit.
+    #[test]
+    fn reindexing_replaces_rather_than_appends() {
+        let (_dir, store) = temp_store();
+        store
+            .create_project(NewProject {
+                name: "Einmalig".into(),
+                description: String::new(),
+            })
+            .expect("project");
+
+        let first = store.reindex_search().expect("first");
+        let second = store.reindex_search().expect("second");
+        assert_eq!(first, second);
+        assert_eq!(store.search("Einmalig", None, 10).expect("search").len(), 1);
     }
 
     /// Regression: a chunk is inserted empty (`timeline_end_ms` ==

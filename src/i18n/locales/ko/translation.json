@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "프로젝트 분석",
+    "analyseDone": "분석 완료: 작업 제안 {{count}}개.",
+    "analyseDropped": "근거를 제시하지 못한 제안 {{count}}개를 버렸습니다.",
+    "analyseFailed": "분석에 실패했습니다.",
+    "taskWhy": "왜?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "채팅 파일: {{chat}} · 미디어 파일 {{count}}개 발견",
     "mediaImported": "미디어 파일 {{count}}개를 저장했습니다. 그대로 보관되며 분석되지 않음으로 표시됩니다.",
     "mediaSkipped": "{{count}}개 파일을 저장하지 못했습니다."
+  },
+  "search": {
+    "label": "검색",
+    "placeholder": "프로젝트, 회의, 채팅 검색",
+    "searching": "검색 중…",
+    "results": "{{count}}개 결과",
+    "kind": {
+      "project": "프로젝트",
+      "meeting": "회의",
+      "transcript": "스크립트",
+      "task": "작업",
+      "source_item": "메시지"
+    }
+  },
+  "evidence": {
+    "label": "근거",
+    "none": "기록된 근거가 없습니다.",
+    "fromMeeting": "{{position}}의 회의",
+    "fromChat": "채팅 메시지"
   }
 }

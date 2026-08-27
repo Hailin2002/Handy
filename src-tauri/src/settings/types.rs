@@ -209,6 +209,20 @@ pub enum MeetingRetentionPolicy {
 }
 
 impl MeetingRetentionPolicy {
+    /// Stable lower-case token, matching the serialized form.
+    ///
+    /// Persisted on a session so a meeting keeps the rule that was in force
+    /// when it was recorded, even if the global setting changes later.
+    pub fn as_token(self) -> &'static str {
+        match self {
+            MeetingRetentionPolicy::Ask => "ask",
+            MeetingRetentionPolicy::Immediately => "immediately",
+            MeetingRetentionPolicy::Days7 => "days7",
+            MeetingRetentionPolicy::Days30 => "days30",
+            MeetingRetentionPolicy::Forever => "forever",
+        }
+    }
+
     /// Age after which audio may be deleted, or `None` when this policy never
     /// deletes on its own.
     pub fn max_age(self) -> Option<chrono::Duration> {

@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Analysera projekt",
+    "analyseDone": "Analys klar: {{count}} uppgiftsförslag.",
+    "analyseDropped": "{{count}} förslag förkastades eftersom de inte hänvisade till något.",
+    "analyseFailed": "Analysen misslyckades.",
+    "taskWhy": "Varför?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Chattfil: {{chat}} · {{count}} mediefil(er) hittade",
     "mediaImported": "{{count}} mediefil(er) sparade. De behålls oförändrade och märks som inte analyserade.",
     "mediaSkipped": "{{count}} fil(er) kunde inte sparas."
+  },
+  "search": {
+    "label": "Sök",
+    "placeholder": "Sök i projekt, möten och chattar",
+    "searching": "Söker…",
+    "results": "{{count}} träff(ar)",
+    "kind": {
+      "project": "Projekt",
+      "meeting": "Möte",
+      "transcript": "Transkription",
+      "task": "Uppgift",
+      "source_item": "Meddelande"
+    }
+  },
+  "evidence": {
+    "label": "Källor",
+    "none": "Inga källor registrerade.",
+    "fromMeeting": "Möte vid {{position}}",
+    "fromChat": "Chattmeddelande"
   }
 }

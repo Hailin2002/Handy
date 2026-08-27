@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Analizuj projekt",
+    "analyseDone": "Analiza zakończona: propozycji zadań: {{count}}.",
+    "analyseDropped": "Odrzucono propozycji: {{count}} — nie wskazywały żadnego źródła.",
+    "analyseFailed": "Analiza nie powiodła się.",
+    "taskWhy": "Dlaczego?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Plik czatu: {{chat}} · znaleziono {{count}} plik(ów) multimedialnych",
     "mediaImported": "Zapisano {{count}} plik(ów) multimedialnych. Pozostają bez zmian i są oznaczone jako nieprzeanalizowane.",
     "mediaSkipped": "Nie udało się zapisać {{count}} plik(ów)."
+  },
+  "search": {
+    "label": "Szukaj",
+    "placeholder": "Przeszukaj projekty, spotkania i czaty",
+    "searching": "Wyszukiwanie…",
+    "results": "Wyników: {{count}}",
+    "kind": {
+      "project": "Projekt",
+      "meeting": "Spotkanie",
+      "transcript": "Transkrypcja",
+      "task": "Zadanie",
+      "source_item": "Wiadomość"
+    }
+  },
+  "evidence": {
+    "label": "Źródła",
+    "none": "Brak zapisanych źródeł.",
+    "fromMeeting": "Spotkanie o {{position}}",
+    "fromChat": "Wiadomość czatu"
   }
 }

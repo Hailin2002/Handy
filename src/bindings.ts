@@ -1383,6 +1383,98 @@ async sourceAssets(sourceId: string) : Promise<Result<SourceAsset[], string>> {
 }
 },
 /**
+ * Full-text search across projects, meetings, transcripts, tasks and imports.
+ */
+async searchEverything(query: string, projectId: string | null, limit: number | null) : Promise<Result<SearchHit[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("search_everything", { query, projectId, limit }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Rebuilds the search index. Cheap enough to call after an import.
+ */
+async reindexSearch() : Promise<Result<number, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reindex_search") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Links an imported source to a project (many-to-many, plan §9).
+ */
+async projectLinkSource(projectId: string, sourceId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("project_link_source", { projectId, sourceId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Removes the link without deleting the source.
+ */
+async projectUnlinkSource(projectId: string, sourceId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("project_unlink_source", { projectId, sourceId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Source ids linked to one project.
+ */
+async projectSourceIds(projectId: string) : Promise<Result<string[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("project_source_ids", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Citations behind one AI task (plan §6.17 "Warum dringend?").
+ */
+async taskEvidence(taskId: string) : Promise<Result<Evidence[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("task_evidence", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Citations behind one project status snapshot.
+ */
+async snapshotEvidence(snapshotId: string) : Promise<Result<Evidence[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("snapshot_evidence", { snapshotId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Runs one Phase 10 analysis for a project.
+ * 
+ * The summary provider is reused deliberately: the plan wants one deliberate
+ * provider choice per run, not a second key mechanism. A project with no
+ * material never spends a model call.
+ */
+async projectAnalyse(projectId: string) : Promise<Result<ProjectAnalysisDto, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("project_analyse", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Manual task creation (origin `manual`, immediately accepted).
  */
 async taskCreateManual(projectId: string, title: string, description: string | null) : Promise<Result<ProjectTask, string>> {
@@ -1629,6 +1721,33 @@ export type EngineType =
  * the file, so this one variant covers the whole transcribe-cpp family.
  */
 "TranscribeCpp" | "Parakeet" | "Moonshine" | "MoonshineStreaming" | "SenseVoice" | "GigaAM" | "Canary" | "Cohere"
+/**
+ * One citation backing an AI-produced task or status statement.
+ * 
+ * At least one of these must exist before a suggestion is published: the plan
+ * treats an unevidenced AI claim as not publishable at all.
+ */
+export type Evidence = { id: string; 
+/**
+ * Imported source the claim came from, when it was a source.
+ */
+source_id: string | null; 
+/**
+ * Exact normalised item (chat message, document chunk).
+ */
+source_item_id: string | null; 
+/**
+ * Meeting the claim came from, when it was a meeting.
+ */
+meeting_id: string | null; 
+/**
+ * Timeline position inside that meeting, milliseconds.
+ */
+segment_start_ms: number | null; segment_end_ms: number | null; 
+/**
+ * Short excerpt so the user recognises the citation without navigating.
+ */
+quote: string }
 export type ExportFormat = "markdown" | "txt" | "json"
 export type GpuDeviceOption = { id: string; name: string; total_vram_mb: number }
 export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean }
@@ -2134,6 +2253,14 @@ export type PostProcessProvider = { id: string; label: string; base_url: string;
  */
 export type Project = { id: string; name: string; description: string; created_at: number; updated_at: number }
 /**
+ * Result of one analysis run, as the UI reports it.
+ */
+export type ProjectAnalysisDto = { snapshot: ProjectSnapshot | null; task_count: number; 
+/**
+ * Suggestions dropped for lack of a usable citation — surfaced, not hidden.
+ */
+rejected_without_evidence: number; provider: string; model: string }
+/**
  * Wire-facing versioned snapshot (Phase 10).
  */
 export type ProjectSnapshot = { id: string; project_id: string; summary_markdown: string; prompt_version: string; model: string | null; source_marker: string; created_at: number }
@@ -2150,6 +2277,18 @@ state: string;
  */
 origin: string; human_edited_at: number | null }
 export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" | "weeks_2" | "months_3"
+/**
+ * One full-text hit, always carrying where it came from.
+ */
+export type SearchHit = { 
+/**
+ * `meeting | transcript | task | snapshot | source_item | project`
+ */
+entity_kind: string; entity_id: string; project_id: string | null; title: string; 
+/**
+ * Excerpt with the match highlighted by `[` `]`.
+ */
+snippet: string }
 export type SecretMap = Partial<{ [key in string]: string }>
 export type SecureInputStatus = { 
 /**

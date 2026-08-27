@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Анализирай проекта",
+    "analyseDone": "Анализът приключи: {{count}} предложения за задачи.",
+    "analyseDropped": "{{count}} предложения бяха отхвърлени, защото не сочеха към нищо.",
+    "analyseFailed": "Анализът е неуспешен.",
+    "taskWhy": "Защо?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Файл на чата: {{chat}} · намерени са {{count}} медийни файла",
     "mediaImported": "Запазени са {{count}} медийни файла. Остават непроменени и са отбелязани като неанализирани.",
     "mediaSkipped": "{{count}} файл(а) не можаха да бъдат запазени."
+  },
+  "search": {
+    "label": "Търсене",
+    "placeholder": "Търси в проекти, срещи и чатове",
+    "searching": "Търсене…",
+    "results": "{{count}} резултата",
+    "kind": {
+      "project": "Проект",
+      "meeting": "Среща",
+      "transcript": "Транскрипция",
+      "task": "Задача",
+      "source_item": "Съобщение"
+    }
+  },
+  "evidence": {
+    "label": "Източници",
+    "none": "Няма записани източници.",
+    "fromMeeting": "Среща в {{position}}",
+    "fromChat": "Съобщение от чат"
   }
 }

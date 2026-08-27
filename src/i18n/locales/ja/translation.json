@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "プロジェクトを分析",
+    "analyseDone": "分析が完了しました: タスク候補 {{count}} 件。",
+    "analyseDropped": "根拠を示さなかった候補 {{count}} 件を破棄しました。",
+    "analyseFailed": "分析に失敗しました。",
+    "taskWhy": "根拠は?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "チャットファイル: {{chat}} · メディアファイル {{count}} 件",
     "mediaImported": "メディアファイルを {{count}} 件保存しました。そのまま保持され、未解析として扱われます。",
     "mediaSkipped": "{{count}} 件のファイルを保存できませんでした。"
+  },
+  "search": {
+    "label": "検索",
+    "placeholder": "プロジェクト・会議・チャットを検索",
+    "searching": "検索中…",
+    "results": "{{count}} 件",
+    "kind": {
+      "project": "プロジェクト",
+      "meeting": "会議",
+      "transcript": "文字起こし",
+      "task": "タスク",
+      "source_item": "メッセージ"
+    }
+  },
+  "evidence": {
+    "label": "根拠",
+    "none": "根拠が記録されていません。",
+    "fromMeeting": "{{position}} の会議",
+    "fromChat": "チャットメッセージ"
   }
 }

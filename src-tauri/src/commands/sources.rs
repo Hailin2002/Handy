@@ -143,3 +143,82 @@ pub async fn source_assets(
         .list_source_assets(crate::managers::meeting_store::Uuid(source_id))
         .map_err(|e| e.to_string())
 }
+
+/// Full-text search across projects, meetings, transcripts, tasks and imports.
+#[tauri::command]
+#[specta::specta]
+pub async fn search_everything(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    query: String,
+    project_id: Option<String>,
+    limit: Option<u32>,
+) -> Result<Vec<crate::managers::meeting_store::SearchHit>, String> {
+    ingestion
+        .store
+        .search(
+            &query,
+            project_id.map(crate::managers::meeting_store::Uuid),
+            limit.unwrap_or(50).min(200),
+        )
+        .map_err(|e| e.to_string())
+}
+
+/// Rebuilds the search index. Cheap enough to call after an import.
+#[tauri::command]
+#[specta::specta]
+pub async fn reindex_search(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+) -> Result<i64, String> {
+    ingestion
+        .store
+        .reindex_search()
+        .map(|n| n as i64)
+        .map_err(|e| e.to_string())
+}
+
+/// Links an imported source to a project (many-to-many, plan §9).
+#[tauri::command]
+#[specta::specta]
+pub async fn project_link_source(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    project_id: String,
+    source_id: String,
+) -> Result<(), String> {
+    ingestion
+        .store
+        .link_source_to_project(
+            crate::managers::meeting_store::Uuid(project_id),
+            crate::managers::meeting_store::Uuid(source_id),
+        )
+        .map_err(|e| e.to_string())
+}
+
+/// Removes the link without deleting the source.
+#[tauri::command]
+#[specta::specta]
+pub async fn project_unlink_source(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    project_id: String,
+    source_id: String,
+) -> Result<(), String> {
+    ingestion
+        .store
+        .unlink_source_from_project(
+            crate::managers::meeting_store::Uuid(project_id),
+            crate::managers::meeting_store::Uuid(source_id),
+        )
+        .map_err(|e| e.to_string())
+}
+
+/// Source ids linked to one project.
+#[tauri::command]
+#[specta::specta]
+pub async fn project_source_ids(
+    ingestion: State<'_, Arc<SourceIngestionService>>,
+    project_id: String,
+) -> Result<Vec<String>, String> {
+    ingestion
+        .store
+        .list_source_ids_for_project(crate::managers::meeting_store::Uuid(project_id))
+        .map_err(|e| e.to_string())
+}

@@ -1313,7 +1313,12 @@
     "taskSuggested": "von der KI vorgeschlagen",
     "taskAccept": "Annehmen",
     "taskReject": "Verwerfen",
-    "taskEditPrompt": "Aufgabentitel bearbeiten:"
+    "taskEditPrompt": "Aufgabentitel bearbeiten:",
+    "analyse": "Projekt analysieren",
+    "analyseDone": "Analyse fertig: {{count}} Aufgabenvorschlag/-vorschläge.",
+    "analyseDropped": "{{count}} Vorschlag/Vorschläge wurden verworfen, weil sie nichts belegt haben.",
+    "analyseFailed": "Analyse fehlgeschlagen.",
+    "taskWhy": "Warum?"
   },
   "whatsapp": {
     "title": "WhatsApp-Chat importieren",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Chatdatei: {{chat}} · {{count}} Mediendatei(en) gefunden",
     "mediaImported": "{{count}} Mediendatei(en) gespeichert. Sie bleiben unverändert und gelten als nicht analysiert.",
     "mediaSkipped": "{{count}} Datei(en) konnten nicht gespeichert werden."
+  },
+  "search": {
+    "label": "Suche",
+    "placeholder": "Projekte, Meetings und Chats durchsuchen",
+    "searching": "Suche läuft…",
+    "results": "{{count}} Treffer",
+    "kind": {
+      "project": "Projekt",
+      "meeting": "Meeting",
+      "transcript": "Transkript",
+      "task": "Aufgabe",
+      "source_item": "Nachricht"
+    }
+  },
+  "evidence": {
+    "label": "Belege",
+    "none": "Keine Belege hinterlegt.",
+    "fromMeeting": "Meeting bei {{position}}",
+    "fromChat": "Chatnachricht"
   }
 }

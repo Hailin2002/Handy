@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Phân tích dự án",
+    "analyseDone": "Phân tích xong: {{count}} đề xuất công việc.",
+    "analyseDropped": "Đã loại {{count}} đề xuất vì không dẫn nguồn nào.",
+    "analyseFailed": "Phân tích thất bại.",
+    "taskWhy": "Vì sao?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Tệp trò chuyện: {{chat}} · tìm thấy {{count}} tệp phương tiện",
     "mediaImported": "Đã lưu {{count}} tệp phương tiện. Chúng được giữ nguyên và đánh dấu là chưa phân tích.",
     "mediaSkipped": "Không thể lưu {{count}} tệp."
+  },
+  "search": {
+    "label": "Tìm kiếm",
+    "placeholder": "Tìm trong dự án, cuộc họp và trò chuyện",
+    "searching": "Đang tìm…",
+    "results": "{{count}} kết quả",
+    "kind": {
+      "project": "Dự án",
+      "meeting": "Cuộc họp",
+      "transcript": "Bản chép lời",
+      "task": "Việc cần làm",
+      "source_item": "Tin nhắn"
+    }
+  },
+  "evidence": {
+    "label": "Nguồn",
+    "none": "Chưa ghi nhận nguồn nào.",
+    "fromMeeting": "Cuộc họp tại {{position}}",
+    "fromChat": "Tin nhắn trò chuyện"
   }
 }

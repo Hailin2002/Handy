@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Analysér projekt",
+    "analyseDone": "Analyse færdig: {{count}} opgaveforslag.",
+    "analyseDropped": "{{count}} forslag blev kasseret, fordi de ikke henviste til noget.",
+    "analyseFailed": "Analysen mislykkedes.",
+    "taskWhy": "Hvorfor?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Chatfil: {{chat}} · {{count}} mediefil(er) fundet",
     "mediaImported": "{{count}} mediefil(er) gemt. De bevares uændret og markeres som ikke analyseret.",
     "mediaSkipped": "{{count}} fil(er) kunne ikke gemmes."
+  },
+  "search": {
+    "label": "Søg",
+    "placeholder": "Søg i projekter, møder og chats",
+    "searching": "Søger…",
+    "results": "{{count}} resultat(er)",
+    "kind": {
+      "project": "Projekt",
+      "meeting": "Møde",
+      "transcript": "Transskription",
+      "task": "Opgave",
+      "source_item": "Besked"
+    }
+  },
+  "evidence": {
+    "label": "Kilder",
+    "none": "Ingen kilder registreret.",
+    "fromMeeting": "Møde ved {{position}}",
+    "fromChat": "Chatbesked"
   }
 }

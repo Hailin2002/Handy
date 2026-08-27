@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "परियोजना विश्लेषण",
+    "analyseDone": "विश्लेषण सकियो: {{count}} कार्य सुझाव।",
+    "analyseDropped": "{{count}} सुझाव हटाइयो किनभने तिनमा कुनै प्रमाण थिएन।",
+    "analyseFailed": "विश्लेषण असफल भयो।",
+    "taskWhy": "किन?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "च्याट फाइल: {{chat}} · {{count}} मिडिया फाइल भेटिए",
     "mediaImported": "{{count}} मिडिया फाइल सुरक्षित गरियो। तिनीहरू जस्ताको तस्तै रहन्छन् र विश्लेषण नगरिएको भनी चिन्ह लगाइन्छ।",
     "mediaSkipped": "{{count}} फाइल सुरक्षित गर्न सकिएन।"
+  },
+  "search": {
+    "label": "खोज",
+    "placeholder": "परियोजना, बैठक र च्याट खोज्नुहोस्",
+    "searching": "खोज्दै…",
+    "results": "{{count}} नतिजा",
+    "kind": {
+      "project": "परियोजना",
+      "meeting": "बैठक",
+      "transcript": "ट्रान्सक्रिप्ट",
+      "task": "कार्य",
+      "source_item": "सन्देश"
+    }
+  },
+  "evidence": {
+    "label": "प्रमाण",
+    "none": "कुनै प्रमाण अभिलेख छैन।",
+    "fromMeeting": "{{position}} को बैठक",
+    "fromChat": "च्याट सन्देश"
   }
 }

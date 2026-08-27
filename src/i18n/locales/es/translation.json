@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Analizar proyecto",
+    "analyseDone": "Análisis terminado: {{count}} sugerencia(s) de tarea.",
+    "analyseDropped": "Se descartaron {{count}} sugerencia(s) porque no citaban nada.",
+    "analyseFailed": "El análisis falló.",
+    "taskWhy": "¿Por qué?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Archivo de chat: {{chat}} · {{count}} archivo(s) multimedia encontrados",
     "mediaImported": "{{count}} archivo(s) multimedia guardados. Se conservan tal cual y se marcan como no analizados.",
     "mediaSkipped": "No se pudieron guardar {{count}} archivo(s)."
+  },
+  "search": {
+    "label": "Búsqueda",
+    "placeholder": "Buscar en proyectos, reuniones y chats",
+    "searching": "Buscando…",
+    "results": "{{count}} resultado(s)",
+    "kind": {
+      "project": "Proyecto",
+      "meeting": "Reunión",
+      "transcript": "Transcripción",
+      "task": "Tarea",
+      "source_item": "Mensaje"
+    }
+  },
+  "evidence": {
+    "label": "Pruebas",
+    "none": "No hay pruebas registradas.",
+    "fromMeeting": "Reunión en {{position}}",
+    "fromChat": "Mensaje de chat"
   }
 }

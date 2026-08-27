@@ -1,8 +1,24 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Check, FolderPlus, Inbox, Pencil, Trash2, Unlink, X } from "lucide-react";
-import { commands, type MeetingSession, type Project, type ProjectTask } from "@/bindings";
+import {
+  Check,
+  FolderPlus,
+  Inbox,
+  Pencil,
+  Sparkles,
+  Trash2,
+  Unlink,
+  X,
+} from "lucide-react";
+import {
+  commands,
+  type MeetingSession,
+  type Project,
+  type ProjectTask,
+} from "@/bindings";
+import { ProjectSearch } from "./ProjectSearch";
+import { TaskEvidenceList } from "./TaskEvidenceList";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -22,6 +38,9 @@ export const ProjectsPage: React.FC = () => {
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  /** Task whose citations are expanded; only one at a time keeps it readable. */
+  const [evidenceFor, setEvidenceFor] = useState<string | null>(null);
+  const [analysing, setAnalysing] = useState(false);
 
   const sessionById = useCallback(
     (id: string) => sessions.find((s) => s.id === id),
@@ -191,6 +210,43 @@ export const ProjectsPage: React.FC = () => {
 
   const selected = projects.find((p) => p.id === selectedId) ?? null;
 
+  /**
+   * Runs one Phase 10 analysis.
+   *
+   * Suggestions the model could not cite are reported rather than hidden: the
+   * user should see that something was dropped, not wonder why the count is
+   * lower than the model claimed.
+   */
+  const runAnalysis = async () => {
+    if (!selectedId || analysing) return;
+    setAnalysing(true);
+    try {
+      const result = await commands.projectAnalyse(selectedId);
+      if (result.status === "ok") {
+        toast.success(
+          t("projects.analyseDone", { count: result.data.task_count }),
+        );
+        if (result.data.rejected_without_evidence > 0) {
+          toast.warning(
+            t("projects.analyseDropped", {
+              count: result.data.rejected_without_evidence,
+            }),
+          );
+        }
+        await refreshMembers();
+      } else {
+        toast.error(t("projects.analyseFailed"), {
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      toast.error(t("projects.analyseFailed"));
+    } finally {
+      setAnalysing(false);
+    }
+  };
+
   return (
     <section className="w-full max-w-xl" aria-label={t("nav.projects")}>
       <h2 className="text-lg font-semibold">{t("nav.projects")}</h2>
@@ -241,7 +297,22 @@ export const ProjectsPage: React.FC = () => {
 
       {selected && (
         <div className="mt-5 rounded-lg border border-mid-gray/20 p-3">
-          <h3 className="text-sm font-medium">{selected.name}</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-medium">{selected.name}</h3>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void runAnalysis()}
+              disabled={analysing}
+            >
+              <Sparkles className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              {t("projects.analyse")}
+            </Button>
+          </div>
+
+          <div className="mt-3">
+            <ProjectSearch projectId={selected.id} />
+          </div>
 
           <ul className="mt-2 space-y-1">
             {memberIds.map((meetingId) => {
@@ -252,7 +323,11 @@ export const ProjectsPage: React.FC = () => {
                   className="flex items-center justify-between gap-2 rounded-md bg-mid-gray/5 px-2 py-1 text-sm"
                 >
                   <span>{session?.title ?? meetingId}</span>
-                  <Button size="sm" variant="ghost" onClick={() => void unassign(meetingId)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void unassign(meetingId)}
+                  >
                     <Unlink className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                     {t("projects.unlink")}
                   </Button>
@@ -260,7 +335,9 @@ export const ProjectsPage: React.FC = () => {
               );
             })}
             {memberIds.length === 0 && (
-              <li className="text-sm text-text/50">{t("projects.noMeetings")}</li>
+              <li className="text-sm text-text/50">
+                {t("projects.noMeetings")}
+              </li>
             )}
           </ul>
 
@@ -294,40 +371,82 @@ export const ProjectsPage: React.FC = () => {
               {tasks.map((task) => (
                 <li
                   key={task.id}
-                  className="flex items-center justify-between gap-2 rounded-md bg-mid-gray/5 px-2 py-1 text-sm"
+                  className="flex flex-col gap-1 rounded-md bg-mid-gray/5 px-2 py-1 text-sm"
                 >
-                  <span className={task.state === "rejected" ? "line-through opacity-50" : ""}>
-                    {task.title}
-                    {task.origin === "ai" && task.state === "suggested" && (
-                      <span className="ml-1 text-xs text-text/50">
-                        ({t("projects.taskSuggested")})
-                      </span>
-                    )}
-                  </span>
-                  <span className="flex gap-1">
-                    {task.state === "suggested" && (
-                      <>
-                        <Button size="sm" variant="ghost" aria-label={t("projects.taskAccept")}
-                          onClick={() => void decideTask(task.id, "accepted")}>
-                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={
+                        task.state === "rejected"
+                          ? "line-through opacity-50"
+                          : ""
+                      }
+                    >
+                      {task.title}
+                      {task.origin === "ai" && task.state === "suggested" && (
+                        <span className="ml-1 text-xs text-text/50">
+                          ({t("projects.taskSuggested")})
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex gap-1">
+                      {/* Plan §6.17: an AI suggestion must always be able to show
+                        what it is based on, never only a score. */}
+                      {task.origin === "ai" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-expanded={evidenceFor === task.id}
+                          onClick={() =>
+                            setEvidenceFor((current) =>
+                              current === task.id ? null : task.id,
+                            )
+                          }
+                        >
+                          {t("projects.taskWhy")}
                         </Button>
-                        <Button size="sm" variant="ghost" aria-label={t("projects.taskReject")}
-                          onClick={() => void decideTask(task.id, "rejected")}>
-                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                      {task.state === "suggested" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={t("projects.taskAccept")}
+                            onClick={() => void decideTask(task.id, "accepted")}
+                          >
+                            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={t("projects.taskReject")}
+                            onClick={() => void decideTask(task.id, "rejected")}
+                          >
+                            <X className="h-3.5 w-3.5" aria-hidden="true" />
+                          </Button>
+                        </>
+                      )}
+                      {(task.state === "accepted" ||
+                        task.state === "edited") && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={t("common.edit")}
+                          onClick={() => void decideTask(task.id, "edited")}
+                        >
+                          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                         </Button>
-                      </>
-                    )}
-                    {(task.state === "accepted" || task.state === "edited") && (
-                      <Button size="sm" variant="ghost" aria-label={t("common.edit")}
-                        onClick={() => void decideTask(task.id, "edited")}>
-                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                      </Button>
-                    )}
-                  </span>
+                      )}
+                    </span>
+                  </div>
+                  {evidenceFor === task.id && (
+                    <TaskEvidenceList taskId={task.id} />
+                  )}
                 </li>
               ))}
               {tasks.length === 0 && (
-                <li className="text-sm text-text/50">{t("projects.noTasks")}</li>
+                <li className="text-sm text-text/50">
+                  {t("projects.noTasks")}
+                </li>
               )}
             </ul>
             <div className="mt-2 flex gap-1">

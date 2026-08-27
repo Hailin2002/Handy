@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "تحليل المشروع",
+    "analyseDone": "انتهى التحليل: {{count}} اقتراح مهمة.",
+    "analyseDropped": "تم استبعاد {{count}} اقتراح لعدم استنادها إلى أي مصدر.",
+    "analyseFailed": "فشل التحليل.",
+    "taskWhy": "لماذا؟"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "ملف المحادثة: {{chat}} · تم العثور على {{count}} ملف وسائط",
     "mediaImported": "تم حفظ {{count}} ملف وسائط. تُحفظ كما هي وتُعلَّم بأنها غير محلَّلة.",
     "mediaSkipped": "تعذّر حفظ {{count}} ملف."
+  },
+  "search": {
+    "label": "بحث",
+    "placeholder": "ابحث في المشاريع والاجتماعات والمحادثات",
+    "searching": "جارٍ البحث…",
+    "results": "{{count}} نتيجة",
+    "kind": {
+      "project": "مشروع",
+      "meeting": "اجتماع",
+      "transcript": "نص",
+      "task": "مهمة",
+      "source_item": "رسالة"
+    }
+  },
+  "evidence": {
+    "label": "الأدلة",
+    "none": "لا توجد أدلة مسجَّلة.",
+    "fromMeeting": "اجتماع عند {{position}}",
+    "fromChat": "رسالة محادثة"
   }
 }

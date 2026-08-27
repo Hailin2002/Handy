@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Analyzovat projekt",
+    "analyseDone": "Analýza hotová: návrhů úkolů: {{count}}.",
+    "analyseDropped": "Zahozeno návrhů: {{count}} — neuváděly žádný zdroj.",
+    "analyseFailed": "Analýza selhala.",
+    "taskWhy": "Proč?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Soubor chatu: {{chat}} · nalezeno {{count}} mediálních souborů",
     "mediaImported": "Uloženo {{count}} mediálních souborů. Zůstávají beze změny a jsou označeny jako neanalyzované.",
     "mediaSkipped": "{{count}} soubor(ů) se nepodařilo uložit."
+  },
+  "search": {
+    "label": "Hledat",
+    "placeholder": "Hledat v projektech, schůzkách a chatech",
+    "searching": "Hledání…",
+    "results": "Výsledků: {{count}}",
+    "kind": {
+      "project": "Projekt",
+      "meeting": "Schůzka",
+      "transcript": "Přepis",
+      "task": "Úkol",
+      "source_item": "Zpráva"
+    }
+  },
+  "evidence": {
+    "label": "Zdroje",
+    "none": "Nejsou zaznamenány žádné zdroje.",
+    "fromMeeting": "Schůzka v {{position}}",
+    "fromChat": "Zpráva z chatu"
   }
 }

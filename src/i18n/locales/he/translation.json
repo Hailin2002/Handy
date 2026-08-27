@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "נתח פרויקט",
+    "analyseDone": "הניתוח הסתיים: {{count}} הצעות למשימות.",
+    "analyseDropped": "{{count}} הצעות נפסלו כי לא הפנו לשום מקור.",
+    "analyseFailed": "הניתוח נכשל.",
+    "taskWhy": "למה?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "קובץ הצ׳אט: {{chat}} · נמצאו {{count}} קובצי מדיה",
     "mediaImported": "נשמרו {{count}} קובצי מדיה. הם נשמרים כמות שהם ומסומנים כלא מנותחים.",
     "mediaSkipped": "לא ניתן היה לשמור {{count}} קבצים."
+  },
+  "search": {
+    "label": "חיפוש",
+    "placeholder": "חפש בפרויקטים, פגישות וצ׳אטים",
+    "searching": "מחפש…",
+    "results": "{{count}} תוצאות",
+    "kind": {
+      "project": "פרויקט",
+      "meeting": "פגישה",
+      "transcript": "תמליל",
+      "task": "משימה",
+      "source_item": "הודעה"
+    }
+  },
+  "evidence": {
+    "label": "מקורות",
+    "none": "לא נרשמו מקורות.",
+    "fromMeeting": "פגישה ב-{{position}}",
+    "fromChat": "הודעת צ׳אט"
   }
 }

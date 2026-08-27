@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "Project analyseren",
+    "analyseDone": "Analyse klaar: {{count}} taaksuggestie(s).",
+    "analyseDropped": "{{count}} suggestie(s) zijn verworpen omdat ze niets aanhaalden.",
+    "analyseFailed": "Analyse mislukt.",
+    "taskWhy": "Waarom?"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "Chatbestand: {{chat}} · {{count}} mediabestand(en) gevonden",
     "mediaImported": "{{count}} mediabestand(en) opgeslagen. Ze blijven ongewijzigd en gelden als niet geanalyseerd.",
     "mediaSkipped": "{{count}} bestand(en) konden niet worden opgeslagen."
+  },
+  "search": {
+    "label": "Zoeken",
+    "placeholder": "Zoek in projecten, vergaderingen en chats",
+    "searching": "Bezig met zoeken…",
+    "results": "{{count}} resulta(a)t(en)",
+    "kind": {
+      "project": "Project",
+      "meeting": "Vergadering",
+      "transcript": "Transcript",
+      "task": "Taak",
+      "source_item": "Bericht"
+    }
+  },
+  "evidence": {
+    "label": "Bronnen",
+    "none": "Geen bronnen vastgelegd.",
+    "fromMeeting": "Vergadering op {{position}}",
+    "fromChat": "Chatbericht"
   }
 }

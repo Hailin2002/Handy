@@ -1313,7 +1313,12 @@
     "taskSuggested": "suggested by AI",
     "taskAccept": "Accept",
     "taskReject": "Reject",
-    "taskEditPrompt": "Edit the task title:"
+    "taskEditPrompt": "Edit the task title:",
+    "analyse": "分析專案",
+    "analyseDone": "分析完成：{{count}} 筆任務建議。",
+    "analyseDropped": "有 {{count}} 筆建議因未引用任何依據而被捨棄。",
+    "analyseFailed": "分析失敗。",
+    "taskWhy": "為什麼？"
   },
   "whatsapp": {
     "title": "Import WhatsApp chat",
@@ -1342,5 +1347,24 @@
     "previewArchive": "聊天檔案：{{chat}} · 找到 {{count}} 個媒體檔案",
     "mediaImported": "已儲存 {{count}} 個媒體檔案。它們保持原狀，並標記為未分析。",
     "mediaSkipped": "有 {{count}} 個檔案無法儲存。"
+  },
+  "search": {
+    "label": "搜尋",
+    "placeholder": "搜尋專案、會議與聊天",
+    "searching": "搜尋中…",
+    "results": "{{count}} 筆結果",
+    "kind": {
+      "project": "專案",
+      "meeting": "會議",
+      "transcript": "逐字稿",
+      "task": "任務",
+      "source_item": "訊息"
+    }
+  },
+  "evidence": {
+    "label": "依據",
+    "none": "未記錄任何依據。",
+    "fromMeeting": "{{position}} 的會議",
+    "fromChat": "聊天訊息"
   }
 }
