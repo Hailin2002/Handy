@@ -27,6 +27,15 @@
 .NOTES
     Read-only with respect to product code. Only writes its own log directory.
 
+    Run it with `bun run check:clipboard`.
+
+    Deliberately NOT part of `bun run check` or of CI. It takes ownership of the
+    system clipboard while it runs — it restores the prior contents and verifies
+    the restore byte-for-byte, but a developer mid-copy would still notice. And
+    the Win32 clipboard needs an interactive window station, which makes it
+    unreliable on hosted runners. It is a Windows developer's pre-release check,
+    not a gate.
+
     Exit codes: 0 = all gates pass, 1 = at least one check failed,
     2 = unsupported PowerShell language mode (ConstrainedLanguage).
 
