@@ -9,7 +9,10 @@ target
 *.bundle.*
 
 # Tauri
-src-tauri/target
+#  rather than : the loopback spike builds into
+# src-tauri/target-spike/, which is 900+ files prettier would otherwise try to
+# parse — including .lib blobs it cannot read at all.
+src-tauri/target*
 src-tauri/gen
 
 # Generated files
