@@ -9,3 +9,26 @@
 # always overwrites for build scripts — and pins `cmake --build --parallel 1`.
 # Raise it only after re-verifying MSBuild parallelism works on this machine.
 CMAKE_BUILD_PARALLEL_LEVEL = "1"
+
+# Windows: link every binary against common-controls v6.
+#
+# `rfd` (via tauri-plugin-dialog) and tauri-runtime-wry import
+# `TaskDialogIndirect`, which only comctl32 **version 6** exports. A process
+# gets v6 by declaring a side-by-side dependency on it; without one the loader
+# binds to the v5 stub in System32, the import cannot be resolved, and the
+# process dies at load with STATUS_ENTRYPOINT_NOT_FOUND (0xC0000139) before
+# `main` runs.
+#
+# The app binary carries that dependency through the manifest tauri-build
+# embeds. Test and example harnesses get no manifest, which is why `cargo test`
+# on Windows failed to start every single test binary while `speak.exe` ran
+# fine — a difference that looks like a broken toolchain and is really a
+# missing three lines of link configuration.
+#
+# Passing it as a link argument covers every binary cargo produces, harnesses
+# included.
+[target.'cfg(windows)']
+rustflags = [
+  "-C",
+  "link-arg=/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'",
+]
