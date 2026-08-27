@@ -26,12 +26,7 @@ export interface NavIconProps {
 }
 
 export type ProductViewId =
-  | "dictate"
-  | "meetings"
-  | "projects"
-  | "history"
-  | "settings"
-  | "about";
+  "dictate" | "meetings" | "projects" | "history" | "settings" | "about";
 
 export interface ProductNavEntry {
   id: ProductViewId;

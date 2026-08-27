@@ -5,7 +5,7 @@
 - **Scope:** read-only audit of the current `src/` frontend tree against every bullet of `docs/meeting-mode-plan.md` §6.14 ("Zugänglichkeit und Fehlbedienungsschutz", plan lines 683–695). No source files were modified.
 - **Method:** manual code inspection of all shared UI primitives (`src/components/ui/*`), navigation (`Sidebar`, `Footer`), feature components (model selector, history, settings, onboarding), and the recording overlay (`src/overlay/*`), plus repo-wide greps for `aria-*`, `role=`, `sr-only`, `focus-visible`, `prefers-reduced-motion`, `motion-reduce`. Contrast ratios were computed programmatically (WCAG relative-luminance formula) from the exact palette values in `src/styles/theme.css`; the computed ratios are quoted below.
 
-**Legend:** PASS / PARTIAL / FAIL. Verdicts are for the *current* app as baseline; the delta list at the end defines what the Phase 3 App-Shell rework must implement.
+**Legend:** PASS / PARTIAL / FAIL. Verdicts are for the _current_ app as baseline; the delta list at the end defines what the Phase 3 App-Shell rework must implement.
 
 ---
 
@@ -15,16 +15,16 @@
 
 Nearly every interactive control in the current tree is far below 44 × 44:
 
-| Component | Evidence | Approx. size |
-|---|---|---|
-| `Button` sizes | `src/components/ui/Button.tsx:45-49` (`sm: px-2 py-1 text-xs`, `md: px-4 py-[5px]`) | ~24–32 px tall |
-| Dialog close | `src/components/ui/Dialog.tsx:189` (`p-1` around a 16 px `X` icon, line 191) | ~24 px |
-| History icon actions | `src/components/settings/history/HistorySettings.tsx:28` (`p-1.5` around 16 px icons; used at lines 363–411 incl. copy/save/retranscribe/**delete**) | ~28 px |
-| ResetButton | `src/components/ui/ResetButton.tsx:17` (`p-1` around 16 px icon) | ~24 px |
-| Overlay cancel `.sx` | `src/components/overlay/RecordingOverlay.css:404-408` (`width: 22px; height: 22px`) with 9 px glyph; rendered from `src/overlay/RecordingOverlay.tsx:186-201` | 22 px |
-| SettingContainer info icon | `src/components/ui/SettingContainer.tsx:71-92` and `144-165` (bare 16 px SVG, no padding) | ~16 px |
-| Shortcut recorder chip | `src/components/settings/shared/GlobalShortcutInput.tsx:287-293`, `HandyKeysShortcutInput.tsx:335-340` (`px-2 py-1 text-sm`) | ~28 px |
-| Model status button | `src/components/model-selector/ModelStatusButton.tsx:52-58` (text-sm row) | ~28 px |
+| Component                  | Evidence                                                                                                                                                      | Approx. size   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `Button` sizes             | `src/components/ui/Button.tsx:45-49` (`sm: px-2 py-1 text-xs`, `md: px-4 py-[5px]`)                                                                           | ~24–32 px tall |
+| Dialog close               | `src/components/ui/Dialog.tsx:189` (`p-1` around a 16 px `X` icon, line 191)                                                                                  | ~24 px         |
+| History icon actions       | `src/components/settings/history/HistorySettings.tsx:28` (`p-1.5` around 16 px icons; used at lines 363–411 incl. copy/save/retranscribe/**delete**)          | ~28 px         |
+| ResetButton                | `src/components/ui/ResetButton.tsx:17` (`p-1` around 16 px icon)                                                                                              | ~24 px         |
+| Overlay cancel `.sx`       | `src/components/overlay/RecordingOverlay.css:404-408` (`width: 22px; height: 22px`) with 9 px glyph; rendered from `src/overlay/RecordingOverlay.tsx:186-201` | 22 px          |
+| SettingContainer info icon | `src/components/ui/SettingContainer.tsx:71-92` and `144-165` (bare 16 px SVG, no padding)                                                                     | ~16 px         |
+| Shortcut recorder chip     | `src/components/settings/shared/GlobalShortcutInput.tsx:287-293`, `HandyKeysShortcutInput.tsx:335-340` (`px-2 py-1 text-sm`)                                  | ~28 px         |
+| Model status button        | `src/components/model-selector/ModelStatusButton.tsx:52-58` (text-sm row)                                                                                     | ~28 px         |
 
 No `min-h`/`min-w` guard, hit-area pseudo-element, or spacing compensation exists anywhere (`grep min-h-11|min-w-11|44` → no matches).
 
@@ -52,6 +52,7 @@ Visible-focus defects (repo-wide `focus-visible` appears exactly once, in `Dialo
 ### 6.14.4 Screen-reader names for all icons, levels and status changes — **PARTIAL**
 
 Present (good examples to build on):
+
 - Toggle switches wrap an `sr-only` checkbox inside a labelled setting row: `src/components/ui/ToggleSwitch.tsx:39-46`.
 - `CustomWords` remove button: `aria-label={t("settings.advanced.customWords.remove", { word })}` — `src/components/settings/advanced/CustomWords.tsx:102`.
 - Secure-input dismiss: `aria-label={t("secureInput.dismiss")}` — `src/components/SecureInputWarning.tsx:110`.
@@ -59,6 +60,7 @@ Present (good examples to build on):
 - Dialog close: `aria-label={closeLabel}` — `Dialog.tsx:188`; decorative lucide icons marked `aria-hidden` (e.g. `Dialog.tsx:191`).
 
 Missing / broken:
+
 - **History icon actions rely on `title` only** (copy, save, retranscribe, delete): `HistorySettings.tsx:25-36` (component takes `title`, no `aria-label`) used at lines 363–411.
 - **ResetButton's `ariaLabel` is optional and never passed** at call sites (`GlobalShortcutInput.tsx:294-297`, `Slider.tsx:75-77`), so unnamed-icon-button: `src/components/ui/ResetButton.tsx:13-17`.
 - **Model status is conveyed by a colored dot only**, with an untranslated hardcoded `title={`Model status: ${displayText}`}` and no `aria-expanded` for the attached dropdown: `src/components/model-selector/ModelStatusButton.tsx:28-49, 52-58`. Dropdown rows lack `aria-current` for the active model (`ModelDropdown.tsx:31-47`).
@@ -75,26 +77,27 @@ Missing / broken:
 
 Ratios below were computed with the WCAG relative-luminance formula from the exact hex values in `src/styles/theme.css:7-28` (opacity classes blended over the theme backgrounds). AA requires 4.5:1 normal text, 3:1 large text (≥18 pt / 14 pt bold).
 
-| Pair (light theme) | Ratio | Verdict | Example usages |
-|---|---|---|---|
-| `--color-text` #0f0f0f on `--color-background` #fbfbfb | 18.52 | ✅ | body text |
-| `text-text/60` blended | 4.97 | ✅ (barely) | `Footer.tsx:26`, `UpdateChecker.tsx:245` |
-| `text-text/50` blended | 3.57 | ❌ normal | `ModelDropdown.tsx:64` desc, `ModelCard.tsx:265,301,308,337` |
-| `text-text/40` blended | 2.63 | ❌ even large | `ModelDropdown.tsx:54,64`, `ModelCard.tsx:273` |
-| `mid-gray` #808080 | 3.82 | ❌ normal | `Dialog.tsx:179`, `Dropdown.tsx:91`, descriptions in `HandyKeysShortcutInput.tsx:268` etc. |
-| white on `background-ui` #da5893 | 3.62 | ❌ normal (14 px medium button labels) | primary `Button` (`Button.tsx:26-27`) |
-| `logo-primary` #faa2ca **as text** | 1.83 | ❌ severe | active model row `ModelDropdown.tsx:45`, update link `UpdateChecker.tsx:244` |
+| Pair (light theme)                                     | Ratio | Verdict                                | Example usages                                                                             |
+| ------------------------------------------------------ | ----- | -------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `--color-text` #0f0f0f on `--color-background` #fbfbfb | 18.52 | ✅                                     | body text                                                                                  |
+| `text-text/60` blended                                 | 4.97  | ✅ (barely)                            | `Footer.tsx:26`, `UpdateChecker.tsx:245`                                                   |
+| `text-text/50` blended                                 | 3.57  | ❌ normal                              | `ModelDropdown.tsx:64` desc, `ModelCard.tsx:265,301,308,337`                               |
+| `text-text/40` blended                                 | 2.63  | ❌ even large                          | `ModelDropdown.tsx:54,64`, `ModelCard.tsx:273`                                             |
+| `mid-gray` #808080                                     | 3.82  | ❌ normal                              | `Dialog.tsx:179`, `Dropdown.tsx:91`, descriptions in `HandyKeysShortcutInput.tsx:268` etc. |
+| white on `background-ui` #da5893                       | 3.62  | ❌ normal (14 px medium button labels) | primary `Button` (`Button.tsx:26-27`)                                                      |
+| `logo-primary` #faa2ca **as text**                     | 1.83  | ❌ severe                              | active model row `ModelDropdown.tsx:45`, update link `UpdateChecker.tsx:244`               |
 
-| Pair (dark theme) | Ratio | Verdict |
-|---|---|---|
-| `--color-text` on `--color-background` | 13.67 | ✅ |
-| `text-text/60` | 5.94 | ✅ |
-| `text-text/50` | 4.61 | ✅ (marginal) |
-| `text-text/40` | 3.50 | ❌ normal |
-| `mid-gray` | 3.58 | ❌ normal |
-| `logo-primary` #f28cbb as text | 6.23 | ✅ (dark only — shows light theme is the outlier) |
+| Pair (dark theme)                      | Ratio | Verdict                                           |
+| -------------------------------------- | ----- | ------------------------------------------------- |
+| `--color-text` on `--color-background` | 13.67 | ✅                                                |
+| `text-text/60`                         | 5.94  | ✅                                                |
+| `text-text/50`                         | 4.61  | ✅ (marginal)                                     |
+| `text-text/40`                         | 3.50  | ❌ normal                                         |
+| `mid-gray`                             | 3.58  | ❌ normal                                         |
+| `logo-primary` #f28cbb as text         | 6.23  | ✅ (dark only — shows light theme is the outlier) |
 
 Additional failures:
+
 - `Alert` variant texts use raw Tailwind `red-400/yellow-400/blue-400/green-400` on tinted surfaces (`src/components/ui/Alert.tsx:18-37`) — e.g. yellow-400/red-400 on light backgrounds fall well under 4.5:1; status also carried by color alone (see 6.14.10 context).
 - Overlay timer uses `--s-faint` #9a9a9a on the near-white surface = **2.72** (`src/overlay/RecordingOverlay.css:30, 338-345`); dark-theme faint #6f6c66 = **2.70** (`RecordingOverlay.css:31, 89-95`). Muted tokens pass (4.93 / 5.42).
 - Warning icon token `#d97706` = 3.08 on light bg (`theme.css:20`) — acceptable for icons/UI elements (≥3:1) but not for text.
@@ -114,7 +117,7 @@ Repo-wide grep for `prefers-reduced-motion` / `motion-reduce`: **zero matches** 
 
 - `Tooltip` portal has positioning logic but **no `role="tooltip"`, no `aria-describedby` wiring, no Escape dismissal, and does not open on keyboard focus**: `src/components/ui/Tooltip.tsx:93-113`.
 - `SettingContainer` defaults `descriptionMode="tooltip"` (`SettingContainer.tsx:19`), hiding every setting's explanation behind a hover/click-only info icon. Keyboard toggling of the icon exists (Enter/Space handlers, `SettingContainer.tsx:79-84, 152-157` — better than nothing) but the popup isn't focus-linked, lacks roles, and stays open until outside-click.
-- Native `title` tooltips are the *only* name for several icon actions (history actions `HistorySettings.tsx:366, 378-382, 393, 408`; model delete `ModelCard.tsx:282`; model status `ModelStatusButton.tsx:55`) — titles don't replace labels per the requirement and aren't reliably exposed to SRs/touch.
+- Native `title` tooltips are the _only_ name for several icon actions (history actions `HistorySettings.tsx:366, 378-382, 393, 408`; model delete `ModelCard.tsx:282`; model status `ModelStatusButton.tsx:55`) — titles don't replace labels per the requirement and aren't reliably exposed to SRs/touch.
 
 ### 6.14.9 Delete and stop actions remain reachable without hover — **PARTIAL**
 
@@ -158,18 +161,18 @@ Each item names affected component(s) and the concrete change. Items D1–D3 are
 
 ## 3. Summary scorecard
 
-| §6.14 requirement | Verdict |
-|---|---|
-| 44×44 targets | FAIL |
-| Keyboard operability + visible focus | FAIL |
-| Tab order + focus return | PARTIAL |
-| SR names for icons/levels/status | PARTIAL |
-| Restrained live regions | PARTIAL |
-| WCAG AA contrast | FAIL |
-| Reduced motion | FAIL |
-| Tooltips complement labels | PARTIAL |
-| Delete/stop without hover | PARTIAL |
-| Deletion names what is lost | FAIL |
+| §6.14 requirement                            | Verdict              |
+| -------------------------------------------- | -------------------- |
+| 44×44 targets                                | FAIL                 |
+| Keyboard operability + visible focus         | FAIL                 |
+| Tab order + focus return                     | PARTIAL              |
+| SR names for icons/levels/status             | PARTIAL              |
+| Restrained live regions                      | PARTIAL              |
+| WCAG AA contrast                             | FAIL                 |
+| Reduced motion                               | FAIL                 |
+| Tooltips complement labels                   | PARTIAL              |
+| Delete/stop without hover                    | PARTIAL              |
+| Deletion names what is lost                  | FAIL                 |
 | Nothing lost via navigation during recording | PASS (architectural) |
 
 Verification of gates: every verdict cites ≥1 current-tree `file:line` (G1); the delta list names components and required changes per item (G2); audit date and exact HEAD commit stated above (G3); `git status` after this task shows only the new untracked `docs/a11y-baseline-meeting-mode.md`, no modified source files (G4).

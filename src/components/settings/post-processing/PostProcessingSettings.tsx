@@ -166,6 +166,10 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
       setDraftName("");
       setDraftText("");
     }
+    // Depending on `selectedPrompt` itself would re-run this on every render:
+    // it comes from a `.find()` and therefore has a fresh identity each time.
+    // The fields below are everything the effect actually reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isCreating,
     selectedPromptId,

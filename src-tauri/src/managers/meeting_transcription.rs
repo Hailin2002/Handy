@@ -24,8 +24,8 @@ use chrono::{TimeDelta, Utc};
 
 use super::meeting::{MeetingAudioSource, MeetingTranscriptSegmentDto};
 use super::meeting_store::{
-    MeetingRepository, NewTranscriptSegment, SqliteMeetingStore, StoreError, SttJob, SttJobState,
-    TranscriptSegment, WorkerId,
+    CaptureRepository, NewTranscriptSegment, SessionRepository, SqliteMeetingStore, StoreError,
+    SttJob, SttJobState, TranscriptSegment, WorkerId,
 };
 use super::transcription::TranscriptionManager;
 use crate::audio_toolkit::vad::{SileroVad, VoiceActivityDetector};
@@ -741,8 +741,8 @@ mod tests {
 
     use super::*;
     use crate::managers::meeting_store::{
-        AudioChunk, ChunkFacts, MeetingRepository, NewAudioChunk, NewMeetingSession, NewSttJob,
-        Uuid,
+        AudioChunk, CaptureRepository, ChunkFacts, NewAudioChunk, NewMeetingSession, NewSttJob,
+        SessionRepository, Uuid,
     };
 
     type TestStore = SqliteMeetingStore;

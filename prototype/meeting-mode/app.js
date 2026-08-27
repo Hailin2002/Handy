@@ -5,87 +5,157 @@
 "use strict";
 
 (function () {
-  var $ = function (sel) { return document.querySelector(sel); };
+  var $ = function (sel) {
+    return document.querySelector(sel);
+  };
   var liveRegion = $("#live-region");
 
-  function announce(msg) { liveRegion.textContent = msg; }
+  function announce(msg) {
+    liveRegion.textContent = msg;
+  }
 
   /* ---------- Zustand ---------- */
   var meetingSeq = 0;
-  function nextMeetingId() { meetingSeq += 1; return "m" + meetingSeq; }
+  function nextMeetingId() {
+    meetingSeq += 1;
+    return "m" + meetingSeq;
+  }
   var state = {
-    sessionActive: false,      // läuft gerade ein Meeting? (steuert Pin in der Navigation)
+    sessionActive: false, // läuft gerade ein Meeting? (steuert Pin in der Navigation)
     paused: false,
-    seconds: 0,                // gemockte Aufnahmedauer, pro Tick inkrementiert
+    seconds: 0, // gemockte Aufnahmedauer, pro Tick inkrementiert
     meetings: [
-      { id: nextMeetingId(),
-        title: "Wochenplanung", date: "Gestern, 16:00", duration: "00:58:12",
-        provider: "Lokal", status: "fertig",
+      {
+        id: nextMeetingId(),
+        title: "Wochenplanung",
+        date: "Gestern, 16:00",
+        duration: "00:58:12",
+        provider: "Lokal",
+        status: "fertig",
         project: null,
-        summary: "Team einigte sich auf Release-Termin und zwei Follow-up-Aufgaben.",
-        decisions: ["Release-Termin wird um eine Woche verschoben.",
-                    "Messestand-Budget bleibt unverändert."],
-        tasks: [{ text: "Zahlen bis Donnerstag prüfen", done: false },
-                { text: "Protokoll an das Team senden", done: true }],
+        summary:
+          "Team einigte sich auf Release-Termin und zwei Follow-up-Aufgaben.",
+        decisions: [
+          "Release-Termin wird um eine Woche verschoben.",
+          "Messestand-Budget bleibt unverändert.",
+        ],
+        tasks: [
+          { text: "Zahlen bis Donnerstag prüfen", done: false },
+          { text: "Protokoll an das Team senden", done: true },
+        ],
         questions: ["Ist das Budget für die Support-Werkstudenten bewilligt?"],
         segments: [
           ["0:02", "Wir starten mit dem Tagesordnungspunkt Budget."],
-          ["0:04", "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen."],
+          [
+            "0:04",
+            "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen.",
+          ],
           ["0:06", "Einwand: Der Messestand braucht dieses Jahr mehr Mittel."],
-          ["0:08", "Entscheidung: Wir verschieben die Entscheidung um eine Woche."],
+          [
+            "0:08",
+            "Entscheidung: Wir verschieben die Entscheidung um eine Woche.",
+          ],
           ["0:10", "Nächster Punkt: Personalplanung für das vierte Quartal."],
-          ["0:12", "Vorschlag: Zwei zusätzliche Werkstudenten für den Support."],
+          [
+            "0:12",
+            "Vorschlag: Zwei zusätzliche Werkstudenten für den Support.",
+          ],
           ["0:14", "Einwand: Das Budget dafür ist noch nicht bewilligt."],
           ["0:16", "Wir prüfen die Zahlen bis Donnerstag und melden uns."],
-          ["0:18", "Abschließend: Das Protokoll geht heute Abend an alle."]
+          ["0:18", "Abschließend: Das Protokoll geht heute Abend an alle."],
         ],
         audio: true,
-        processing: { provider: "Lokal", model: "Whisper Small",
-                      chunksTotal: 24, transcribed: 24, failedChunks: 0, retries: 0 } },
-      { id: nextMeetingId(),
-        title: "Kundengespräch Berger", date: "Mo, 10:30", duration: "00:31:40",
-        provider: "Lokal", status: "verarbeitung",
+        processing: {
+          provider: "Lokal",
+          model: "Whisper Small",
+          chunksTotal: 24,
+          transcribed: 24,
+          failedChunks: 0,
+          retries: 0,
+        },
+      },
+      {
+        id: nextMeetingId(),
+        title: "Kundengespräch Berger",
+        date: "Mo, 10:30",
+        duration: "00:31:40",
+        provider: "Lokal",
+        status: "verarbeitung",
         project: null,
         summary: null,
-        decisions: [], tasks: [], questions: [],
-        segments: [["1:04", "Herr Berger bittet um ein Angebot für zwanzig Lizenzen."]],
+        decisions: [],
+        tasks: [],
+        questions: [],
+        segments: [
+          ["1:04", "Herr Berger bittet um ein Angebot für zwanzig Lizenzen."],
+        ],
         audio: true,
-        processing: { provider: "Lokal", model: "Whisper Small",
-                      chunksTotal: 11, transcribed: 4, failedChunks: 0, retries: 0 } },
+        processing: {
+          provider: "Lokal",
+          model: "Whisper Small",
+          chunksTotal: 11,
+          transcribed: 4,
+          failedChunks: 0,
+          retries: 0,
+        },
+      },
       /* G1 (dieses Blatt): realistischer englischsprachiger Beispielinhalt,
          damit der Journey-End-to-End-Durchlauf beide Sprachen zeigt. */
-      { id: nextMeetingId(),
-        title: "Weekly Sync (English)", date: "Tue, 09:00", duration: "00:24:05",
-        provider: "Lokal", status: "fertig",
+      {
+        id: nextMeetingId(),
+        title: "Weekly Sync (English)",
+        date: "Tue, 09:00",
+        duration: "00:24:05",
+        provider: "Lokal",
+        status: "fertig",
         project: null,
-        summary: "Team agreed on the launch date and assigned two follow-up tasks.",
-        decisions: ["Launch moves to March 14.",
-                    "The pricing page is reduced to three tiers."],
-        tasks: [{ text: "Send the updated timeline to stakeholders", done: false },
-                { text: "Draft the pricing page copy", done: true }],
+        summary:
+          "Team agreed on the launch date and assigned two follow-up tasks.",
+        decisions: [
+          "Launch moves to March 14.",
+          "The pricing page is reduced to three tiers.",
+        ],
+        tasks: [
+          { text: "Send the updated timeline to stakeholders", done: false },
+          { text: "Draft the pricing page copy", done: true },
+        ],
         questions: ["Does the new pricing tier need a legal review?"],
         segments: [
           ["0:03", "Let's start with the launch timeline."],
           ["0:06", "Proposal: we move the launch to March 14."],
           ["0:09", "Concern: marketing assets won't be ready by then."],
-          ["0:12", "Decision: launch moves to March 14; assets are due March 7."],
+          [
+            "0:12",
+            "Decision: launch moves to March 14; assets are due March 7.",
+          ],
           ["0:15", "Next topic: simplifying the pricing page to three tiers."],
           ["0:18", "Action item: draft the pricing copy by Friday."],
-          ["0:21", "Open question: does legal need to review the new tier?"]
+          ["0:21", "Open question: does legal need to review the new tier?"],
         ],
         audio: true,
-        processing: { provider: "Lokal", model: "Whisper Small",
-                      chunksTotal: 18, transcribed: 18, failedChunks: 0, retries: 0 } }
+        processing: {
+          provider: "Lokal",
+          model: "Whisper Small",
+          chunksTotal: 18,
+          transcribed: 18,
+          failedChunks: 0,
+          retries: 0,
+        },
+      },
     ],
     filter: "alle",
     search: "",
     activeTitle: "",
-    selectedId: null,          // Meeting in der Detailansicht (§6.13)
-    lastProcessingId: null     // Meeting, dessen Checkliste gerade läuft (§6.12)
+    selectedId: null, // Meeting in der Detailansicht (§6.13)
+    lastProcessingId: null, // Meeting, dessen Checkliste gerade läuft (§6.12)
   };
 
   function meetingById(id) {
-    return state.meetings.filter(function (m) { return m.id === id; })[0] || null;
+    return (
+      state.meetings.filter(function (m) {
+        return m.id === id;
+      })[0] || null
+    );
   }
 
   function fmt(sec) {
@@ -99,10 +169,21 @@
   }
 
   /* ---------- Routing ---------- */
-  var ROUTES = ["diktieren", "meetings", "meeting-aktiv", "verarbeitung",
-                "projekte", "eingang", "projekt-detail", "import",
-                "diktatverlauf", "einstellungen", "hilfe",
-                "meeting-einrichtung", "meeting-detail"];
+  var ROUTES = [
+    "diktieren",
+    "meetings",
+    "meeting-aktiv",
+    "verarbeitung",
+    "projekte",
+    "eingang",
+    "projekt-detail",
+    "import",
+    "diktatverlauf",
+    "einstellungen",
+    "hilfe",
+    "meeting-einrichtung",
+    "meeting-detail",
+  ];
 
   function currentRoute() {
     var h = location.hash.replace(/^#\/?/, "").split("/")[0];
@@ -128,7 +209,7 @@
     if (route === "meetings") renderMeetings();
     if (route === "meeting-einrichtung") initSetupView();
     if (route === "meeting-detail") renderDetail();
-    if (route === "meeting-aktiv") renderRecordingStatus();   // Chip/Pin synchron halten
+    if (route === "meeting-aktiv") renderRecordingStatus(); // Chip/Pin synchron halten
     if (route === "projekte") renderProjects();
     if (route === "eingang") renderEingang();
     if (route === "projekt-detail") renderProjectDetail();
@@ -145,26 +226,45 @@
     if (!state.search) return true;
     // summary kann während der Verarbeitung noch null sein – nicht als
     // String "null" in die Suche mischen
-    return (m.title + " " + (m.summary || "")).toLowerCase()
-      .indexOf(state.search.toLowerCase()) !== -1;
+    return (
+      (m.title + " " + (m.summary || ""))
+        .toLowerCase()
+        .indexOf(state.search.toLowerCase()) !== -1
+    );
   }
 
   /* Fortschrittstext aus deterministischen Verarbeitungszahlen (§6.5/§6.12) */
   function meetingProgressText(m) {
     if (!m.processing) return "";
     var p = m.processing;
-    if (m.status === "fertig") return "Verarbeitung abgeschlossen · " +
-      p.transcribed + " von " + p.chunksTotal + " Abschnitten transkribiert";
+    if (m.status === "fertig")
+      return (
+        "Verarbeitung abgeschlossen · " +
+        p.transcribed +
+        " von " +
+        p.chunksTotal +
+        " Abschnitten transkribiert"
+      );
     if (p.transcribed < p.chunksTotal)
-      return "Transkription läuft · " + p.transcribed + " von " + p.chunksTotal + " Abschnitten";
+      return (
+        "Transkription läuft · " +
+        p.transcribed +
+        " von " +
+        p.chunksTotal +
+        " Abschnitten"
+      );
     return "Zusammenfassung wird erstellt …";
   }
 
   /* Gemeinsame Löschbestätigung: nennt konkret Audio, Transkript und
      Zusammenfassung (§6.14, Gate G2) – im Listen-Menü wie im Detail-Menü */
   function confirmDeleteMeeting(m) {
-    return window.confirm("„" + m.title + "“ endgültig löschen?\n\n" +
-      "Es werden Audio, Transkript und Zusammenfassung dieses Meetings unwiderruflich entfernt.");
+    return window.confirm(
+      "„" +
+        m.title +
+        "“ endgültig löschen?\n\n" +
+        "Es werden Audio, Transkript und Zusammenfassung dieses Meetings unwiderruflich entfernt.",
+    );
   }
 
   function renderMeetings() {
@@ -187,21 +287,42 @@
       else if (m.status === "fehler")
         chip = '<span class="status-chip status-recording">✗ Fehler</span>';
       else
-        chip = '<span class="status-chip status-processing">⟳ In Verarbeitung</span>';
-      var summaryText = m.summary !== null && m.summary !== undefined ? m.summary
-        : "Zusammenfassung wird nach Abschluss der Verarbeitung angezeigt.";
+        chip =
+          '<span class="status-chip status-processing">⟳ In Verarbeitung</span>';
+      var summaryText =
+        m.summary !== null && m.summary !== undefined
+          ? m.summary
+          : "Zusammenfassung wird nach Abschluss der Verarbeitung angezeigt.";
       li.innerHTML =
         "<div class='row-between'>" +
         // Karte öffnet die Detailansicht (§6.13); eigenes, mit Tastatur
         // erreichbares Element – das Drei-Punkte-Menü bleibt separat (Gate G4)
-        "<button type='button' class='card-open' data-id='" + m.id + "'" +
-        " aria-label='Meeting „" + esc(m.title) + "“ öffnen'>" +
-        "<strong>" + esc(m.title) + "</strong> · <span class='muted'>" + esc(m.date) +
-        "</span> · " + esc(m.duration) + " · " + esc(m.provider) + "</button>" +
+        "<button type='button' class='card-open' data-id='" +
+        m.id +
+        "'" +
+        " aria-label='Meeting „" +
+        esc(m.title) +
+        "“ öffnen'>" +
+        "<strong>" +
+        esc(m.title) +
+        "</strong> · <span class='muted'>" +
+        esc(m.date) +
+        "</span> · " +
+        esc(m.duration) +
+        " · " +
+        esc(m.provider) +
+        "</button>" +
         "<div class='menu-row'><button type='button' class='btn btn-ghost btn-small menu-btn' " +
-        "aria-haspopup='true' aria-expanded='false' aria-label='Aktionen für " + esc(m.title) + "'>⋯ Menü</button></div></div>" +
-        chip + "<span class='muted small'>" + esc(meetingProgressText(m)) + "</span>" +
-        "<p class='muted small'>" + esc(summaryText) + "</p>";
+        "aria-haspopup='true' aria-expanded='false' aria-label='Aktionen für " +
+        esc(m.title) +
+        "'>⋯ Menü</button></div></div>" +
+        chip +
+        "<span class='muted small'>" +
+        esc(meetingProgressText(m)) +
+        "</span>" +
+        "<p class='muted small'>" +
+        esc(summaryText) +
+        "</p>";
       li.querySelector(".card-open").addEventListener("click", function () {
         state.selectedId = m.id;
         location.hash = "#/meeting-detail";
@@ -214,7 +335,8 @@
     });
 
     if (!shown.length && state.meetings.length) {
-      list.innerHTML = "<li class='muted'>Keine Meetings für Suche/Filter.</li>";
+      list.innerHTML =
+        "<li class='muted'>Keine Meetings für Suche/Filter.</li>";
     }
   }
 
@@ -225,7 +347,11 @@
     var menu = document.createElement("div");
     menu.className = "menu";
     menu.setAttribute("role", "menu");
-    [["Exportieren …", ""], ["Erneut verarbeiten", ""], ["Löschen …", "menu-danger"]].forEach(function (item) {
+    [
+      ["Exportieren …", ""],
+      ["Erneut verarbeiten", ""],
+      ["Löschen …", "menu-danger"],
+    ].forEach(function (item) {
       var b = document.createElement("button");
       b.type = "button";
       b.setAttribute("role", "menuitem");
@@ -235,13 +361,19 @@
         b.addEventListener("click", function () {
           // Irreversible Löschung nennt konkret, was entfernt wird (§6.14)
           if (confirmDeleteMeeting(m)) {
-            state.meetings = state.meetings.filter(function (x) { return x !== m; });
+            state.meetings = state.meetings.filter(function (x) {
+              return x !== m;
+            });
             announce("Meeting gelöscht.");
           }
-          closeMenus(); renderMeetings();
+          closeMenus();
+          renderMeetings();
         });
       } else {
-        b.addEventListener("click", function () { closeMenus(); announce(item[0] + " – im Prototyp nicht implementiert."); });
+        b.addEventListener("click", function () {
+          closeMenus();
+          announce(item[0] + " – im Prototyp nicht implementiert.");
+        });
       }
       menu.appendChild(b);
     });
@@ -251,7 +383,9 @@
   function closeMenus() {
     // Nur dynamische Karten-Menüs entfernen; das statische Detail-Menü
     // (.menu-static) bleibt im DOM und wird lediglich zugeklappt
-    document.querySelectorAll(".menu:not(.menu-static)").forEach(function (el) { el.remove(); });
+    document.querySelectorAll(".menu:not(.menu-static)").forEach(function (el) {
+      el.remove();
+    });
     var more = $("#detail-more-menu");
     if (more) more.open = false;
     document.querySelectorAll(".menu-btn[aria-expanded]").forEach(function (b) {
@@ -273,7 +407,8 @@
     });
   });
   $("#meeting-search").addEventListener("input", function (e) {
-    state.search = e.target.value; renderMeetings();
+    state.search = e.target.value;
+    renderMeetings();
   });
   /* Leaf-G1: der leere Zustand muss klickbar erreichbar sein, ohne alle
      Seed-Meetings löschen zu müssen. */
@@ -287,19 +422,28 @@
   var dlg = {
     mic: { ok: true, name: "Standardmikrofon" },
     sys: { ok: true, name: "Lautsprecher / Headset" },
-    provider: "lokal",          // lokal | azure | custom
+    provider: "lokal", // lokal | azure | custom
     azureKey: false,
     lang: "Deutsch",
-    project: null               // null = Kein Projekt (gültiger Zustand → Eingang)
+    project: null, // null = Kein Projekt (gültiger Zustand → Eingang)
   };
   var inputDevices = [{ name: "Standardmikrofon" }, { name: "USB-Headset" }];
-  var outputDevices = [{ name: "Lautsprecher / Headset" }, { name: "HDMI-Monitor" }];
+  var outputDevices = [
+    { name: "Lautsprecher / Headset" },
+    { name: "HDMI-Monitor" },
+  ];
   var projects = ["BDNA Club", "Atlas GmbH"];
-  var openPicker = null;        // 'mic' | 'sys' | 'provider' | 'lang' | 'project' | null
+  var openPicker = null; // 'mic' | 'sys' | 'provider' | 'lang' | 'project' | null
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[c];
     });
   }
 
@@ -320,31 +464,43 @@
 
   function providerValueHtml() {
     if (dlg.provider === "azure") {
-      return "Azure Cloud " + (dlg.azureKey
-        ? '<span class="ok">✓ Schlüssel vorhanden</span>'
-        : '<span class="warn-text">⚠ Schlüssel fehlt</span>');
+      return (
+        "Azure Cloud " +
+        (dlg.azureKey
+          ? '<span class="ok">✓ Schlüssel vorhanden</span>'
+          : '<span class="warn-text">⚠ Schlüssel fehlt</span>')
+      );
     }
-    if (dlg.provider === "custom") return 'Custom <span class="muted">Eigener Endpoint</span>';
+    if (dlg.provider === "custom")
+      return 'Custom <span class="muted">Eigener Endpoint</span>';
     return 'Lokal · Meeting-Modell <span class="muted">Auf diesem Gerät</span>';
   }
 
   /* Gründe, warum „Meeting starten“ gerade deaktiviert ist (Gate G3) */
   function startBlockers() {
     var b = [];
-    if (!dlg.mic.ok) b.push("Kein Mikrofon verfügbar – in der Zeile „Mikrofon“ beheben.");
-    if (!dlg.sys.ok) b.push("Kein Systemaudio-Gerät – in der Zeile „Systemaudio“ beheben.");
+    if (!dlg.mic.ok)
+      b.push("Kein Mikrofon verfügbar – in der Zeile „Mikrofon“ beheben.");
+    if (!dlg.sys.ok)
+      b.push("Kein Systemaudio-Gerät – in der Zeile „Systemaudio“ beheben.");
     if (dlg.provider === "azure" && !dlg.azureKey)
-      b.push("Azure-Schlüssel fehlt – in der Zeile „Transkription“ hinzufügen.");
+      b.push(
+        "Azure-Schlüssel fehlt – in der Zeile „Transkription“ hinzufügen.",
+      );
     return b;
   }
 
   function renderDialog() {
     $("#row-mic-value").innerHTML = dlg.mic.ok
       ? esc(dlg.mic.name) + ' <span class="ok">✓ funktioniert</span>'
-      : '<span class="warn-text">' + esc(dlg.mic.name) + ' ⚠ Aufmerksamkeit nötig</span>';
+      : '<span class="warn-text">' +
+        esc(dlg.mic.name) +
+        " ⚠ Aufmerksamkeit nötig</span>";
     $("#row-sys-value").innerHTML = dlg.sys.ok
       ? esc(dlg.sys.name) + ' <span class="ok">✓ funktioniert</span>'
-      : '<span class="warn-text">' + esc(dlg.sys.name) + ' ⚠ Aufmerksamkeit nötig</span>';
+      : '<span class="warn-text">' +
+        esc(dlg.sys.name) +
+        " ⚠ Aufmerksamkeit nötig</span>";
     $("#row-provider-value").innerHTML = providerValueHtml();
     $("#row-lang-value").innerHTML =
       esc(dlg.lang) + ' <span class="link-like">Ändern</span>';
@@ -367,7 +523,11 @@
     b.type = "button";
     b.className = "picker-option" + (extraClass ? " " + extraClass : "");
     b.setAttribute("aria-pressed", String(!!selected));
-    b.innerHTML = "<strong>" + esc(label) + "</strong>" + (sub ? '<span class="opt-sub">' + sub + "</span>" : "");
+    b.innerHTML =
+      "<strong>" +
+      esc(label) +
+      "</strong>" +
+      (sub ? '<span class="opt-sub">' + sub + "</span>" : "");
     b.addEventListener("click", onClick);
     return b;
   }
@@ -376,7 +536,9 @@
     b.type = "button";
     b.className = "btn btn-ghost btn-small picker-back";
     b.textContent = "Zurück";
-    b.addEventListener("click", function () { closePicker(true); });
+    b.addEventListener("click", function () {
+      closePicker(true);
+    });
     return b;
   }
   function pickerHead(title) {
@@ -397,87 +559,156 @@
   function devicePickerHtml(host, kind) {
     var key = kind === "mic" ? "mic" : "sys";
     var devices = kind === "mic" ? inputDevices : outputDevices;
-    host.appendChild(pickerHead(kind === "mic" ? "Mikrofon wählen" : "Systemaudio-Gerät wählen"));
+    host.appendChild(
+      pickerHead(
+        kind === "mic" ? "Mikrofon wählen" : "Systemaudio-Gerät wählen",
+      ),
+    );
     devices.forEach(function (d) {
-      host.appendChild(optionButton(
-        d.name,
-        kind === "mic" ? "Eingabe" : "Ausgabe · Loopback",
-        dlg[key].ok && dlg[key].name === d.name,
-        function () {
-          dlg[key] = { ok: true, name: d.name };
-          renderDialog(); refreshPicker(d.name);
-          announce(d.name + " ausgewählt.");
-        }));
+      host.appendChild(
+        optionButton(
+          d.name,
+          kind === "mic" ? "Eingabe" : "Ausgabe · Loopback",
+          dlg[key].ok && dlg[key].name === d.name,
+          function () {
+            dlg[key] = { ok: true, name: d.name };
+            renderDialog();
+            refreshPicker(d.name);
+            announce(d.name + " ausgewählt.");
+          },
+        ),
+      );
     });
     host.appendChild(divider());
     if (!dlg[key].ok) {
       var note = document.createElement("p");
       note.className = "sim-note warn-text";
-      note.textContent = "Kein Gerät verbunden – „Meeting starten“ ist deaktiviert.";
+      note.textContent =
+        "Kein Gerät verbunden – „Meeting starten“ ist deaktiviert.";
       host.appendChild(note);
     } else {
-      host.appendChild(optionButton(
-        "Simulation: Gerät entfernen",
-        "Prototyp-Mock: zeigt den deaktivierten Start-Button (Gate G3)",
-        false,
-        function () {
-          dlg[key] = { ok: false, name: "Kein Gerät" };
-          renderDialog(); refreshPicker("Simulation: Gerät entfernen");
-          announce("Simuliert: kein Gerät. Meeting starten ist deaktiviert.");
-        }, "picker-sim"));
+      host.appendChild(
+        optionButton(
+          "Simulation: Gerät entfernen",
+          "Prototyp-Mock: zeigt den deaktivierten Start-Button (Gate G3)",
+          false,
+          function () {
+            dlg[key] = { ok: false, name: "Kein Gerät" };
+            renderDialog();
+            refreshPicker("Simulation: Gerät entfernen");
+            announce("Simuliert: kein Gerät. Meeting starten ist deaktiviert.");
+          },
+          "picker-sim",
+        ),
+      );
     }
   }
 
   function providerPickerInto(host) {
     host.appendChild(pickerHead("Verarbeitung wählen"));
-    host.appendChild(optionButton(
-      "Lokal auf diesem Gerät", "Datenschutzfreundliche Empfehlung · Auf diesem Gerät",
-      dlg.provider === "lokal",
-      function () { dlg.provider = "lokal"; renderDialog(); refreshPicker("Lokal auf diesem Gerät"); announce("Verarbeitung: lokal."); }));
-    host.appendChild(optionButton(
-      "Azure Cloud",
-      dlg.azureKey ? "Schlüssel vorhanden ✓" : "Audio wird hochgeladen · Schlüssel fehlt ⚠",
-      dlg.provider === "azure",
-      function () { dlg.provider = "azure"; renderDialog(); refreshPicker(); announce("Verarbeitung: Azure Cloud."); }));
+    host.appendChild(
+      optionButton(
+        "Lokal auf diesem Gerät",
+        "Datenschutzfreundliche Empfehlung · Auf diesem Gerät",
+        dlg.provider === "lokal",
+        function () {
+          dlg.provider = "lokal";
+          renderDialog();
+          refreshPicker("Lokal auf diesem Gerät");
+          announce("Verarbeitung: lokal.");
+        },
+      ),
+    );
+    host.appendChild(
+      optionButton(
+        "Azure Cloud",
+        dlg.azureKey
+          ? "Schlüssel vorhanden ✓"
+          : "Audio wird hochgeladen · Schlüssel fehlt ⚠",
+        dlg.provider === "azure",
+        function () {
+          dlg.provider = "azure";
+          renderDialog();
+          refreshPicker();
+          announce("Verarbeitung: Azure Cloud.");
+        },
+      ),
+    );
     if (dlg.provider === "azure" && !dlg.azureKey) {
-      host.appendChild(optionButton(
-        "Azure-Schlüssel hinzufügen (Mock)",
-        "Setzt im Prototyp einen vorhandenen Schlüssel",
-        false,
-        function () { dlg.azureKey = true; renderDialog(); refreshPicker("Azure-Schlüssel hinzufügen (Mock)"); announce("Azure-Schlüssel gesetzt. Meeting starten aktiviert."); },
-        "picker-sim"));
+      host.appendChild(
+        optionButton(
+          "Azure-Schlüssel hinzufügen (Mock)",
+          "Setzt im Prototyp einen vorhandenen Schlüssel",
+          false,
+          function () {
+            dlg.azureKey = true;
+            renderDialog();
+            refreshPicker("Azure-Schlüssel hinzufügen (Mock)");
+            announce("Azure-Schlüssel gesetzt. Meeting starten aktiviert.");
+          },
+          "picker-sim",
+        ),
+      );
     }
     var more = document.createElement("details");
     more.className = "more-options";
     more.innerHTML = "<summary>Weitere Optionen</summary>";
-    more.appendChild(optionButton(
-      "Custom", "Eigener Provider mit Endpoint und Schlüssel",
-      dlg.provider === "custom",
-      function () { dlg.provider = "custom"; renderDialog(); refreshPicker("Custom"); announce("Verarbeitung: Custom."); }));
+    more.appendChild(
+      optionButton(
+        "Custom",
+        "Eigener Provider mit Endpoint und Schlüssel",
+        dlg.provider === "custom",
+        function () {
+          dlg.provider = "custom";
+          renderDialog();
+          refreshPicker("Custom");
+          announce("Verarbeitung: Custom.");
+        },
+      ),
+    );
     host.appendChild(more);
   }
 
   function langPickerInto(host) {
     host.appendChild(pickerHead("Sprache wählen"));
     ["Deutsch", "English", "Français", "Español"].forEach(function (l) {
-      host.appendChild(optionButton(l, "", dlg.lang === l, function () {
-        dlg.lang = l; renderDialog(); refreshPicker(l); announce("Sprache: " + l);
-      }));
+      host.appendChild(
+        optionButton(l, "", dlg.lang === l, function () {
+          dlg.lang = l;
+          renderDialog();
+          refreshPicker(l);
+          announce("Sprache: " + l);
+        }),
+      );
     });
   }
 
   function projectPickerInto(host) {
     host.appendChild(pickerHead("Projekt wählen"));
     // „Kein Projekt“ ist gültig und sichtbar unterschieden (gestrichelt, Eingang-Hinweis)
-    host.appendChild(optionButton(
-      "📥 Kein Projekt", "Ohne Zuordnung – landet im Eingang",
-      !dlg.project,
-      function () { dlg.project = null; renderDialog(); refreshPicker("📥 Kein Projekt"); announce("Kein Projekt gewählt. Meeting landet im Eingang."); },
-      "picker-none-opt"));
+    host.appendChild(
+      optionButton(
+        "📥 Kein Projekt",
+        "Ohne Zuordnung – landet im Eingang",
+        !dlg.project,
+        function () {
+          dlg.project = null;
+          renderDialog();
+          refreshPicker("📥 Kein Projekt");
+          announce("Kein Projekt gewählt. Meeting landet im Eingang.");
+        },
+        "picker-none-opt",
+      ),
+    );
     projects.forEach(function (p) {
-      host.appendChild(optionButton(p, "Projekt", dlg.project === p, function () {
-        dlg.project = p; renderDialog(); refreshPicker(p); announce("Projekt: " + p);
-      }));
+      host.appendChild(
+        optionButton(p, "Projekt", dlg.project === p, function () {
+          dlg.project = p;
+          renderDialog();
+          refreshPicker(p);
+          announce("Projekt: " + p);
+        }),
+      );
     });
   }
 
@@ -490,9 +721,10 @@
   }
 
   function setTriggerExpanded(row, expanded) {
-    var trigger = row === "project"
-      ? $("#project-chip")
-      : document.querySelector('.status-line-btn[data-row="' + row + '"]');
+    var trigger =
+      row === "project"
+        ? $("#project-chip")
+        : document.querySelector('.status-line-btn[data-row="' + row + '"]');
     if (trigger) trigger.setAttribute("aria-expanded", String(!!expanded));
   }
 
@@ -513,22 +745,29 @@
     openPicker = null;
     if (prev) setTriggerExpanded(prev, false);
     if (refocus !== false && prev) {
-      var target = prev === "project"
-        ? $("#project-chip")
-        : document.querySelector('.status-line-btn[data-row="' + prev + '"]');
+      var target =
+        prev === "project"
+          ? $("#project-chip")
+          : document.querySelector('.status-line-btn[data-row="' + prev + '"]');
       if (target) target.focus();
     }
   }
   /* Picker-Inhalt nach Zustandsänderung neu zeichnen, Fokus möglichst halten */
   function refreshPicker(focusLabel) {
     if (!openPicker) return;
-    var host = openPicker === "project" ? $("#project-picker") : $("#row-picker");
+    var host =
+      openPicker === "project" ? $("#project-picker") : $("#row-picker");
     buildPicker(host, openPicker);
     if (focusLabel) {
-      var btns = Array.prototype.filter.call(host.querySelectorAll("button"), function (b) {
-        return b.textContent.indexOf(focusLabel.replace("📥 ", "")) !== -1 ||
-               b.textContent === focusLabel;
-      });
+      var btns = Array.prototype.filter.call(
+        host.querySelectorAll("button"),
+        function (b) {
+          return (
+            b.textContent.indexOf(focusLabel.replace("📥 ", "")) !== -1 ||
+            b.textContent === focusLabel
+          );
+        },
+      );
       if (btns.length) btns[0].focus();
     }
   }
@@ -550,12 +789,15 @@
       resetDialogState();
       dlgInitialized = true;
     } else {
-      closePicker(false);   // keinen veralteten Mini-Picker in den Dialog schleppen
+      closePicker(false); // keinen veralteten Mini-Picker in den Dialog schleppen
     }
     startDialog.hidden = false;
     var ts = new Date();
-    $("#meeting-title-input").value = ts.toLocaleDateString("de-DE") + " " +
-      ts.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " Uhr";
+    $("#meeting-title-input").value =
+      ts.toLocaleDateString("de-DE") +
+      " " +
+      ts.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) +
+      " Uhr";
     $("#meeting-title-input").focus();
   }
   window.closeStartDialog = function () {
@@ -584,7 +826,10 @@
 
   startDialog.addEventListener("click", function (e) {
     if (e.target !== startDialog) return;
-    if (openPicker) { closePicker(true); return; }   // erster Klick schließt nur den Picker
+    if (openPicker) {
+      closePicker(true);
+      return;
+    } // erster Klick schließt nur den Picker
     window.closeStartDialog();
   });
   /* Escape schließt zuerst den Mini-Picker, erst dann den Dialog (Zustand bleibt) */
@@ -597,24 +842,37 @@
   /* Einfacher Fokus-Fall: Tab bleibt im offenen modalen Dialog (§6.14). */
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Tab") return;
-    var modal = !$("#stop-confirm").hidden ? $("#stop-confirm .modal")
-      : (!$("#countdown-overlay").hidden ? $("#countdown-overlay .modal")
-      : (!startDialog.hidden ? startDialog.querySelector(".modal") : null));
+    var modal = !$("#stop-confirm").hidden
+      ? $("#stop-confirm .modal")
+      : !$("#countdown-overlay").hidden
+        ? $("#countdown-overlay .modal")
+        : !startDialog.hidden
+          ? startDialog.querySelector(".modal")
+          : null;
     if (!modal) return;
     var focusables = Array.prototype.filter.call(
       modal.querySelectorAll("button, input, select, a[href]"),
-      function (el) { return el.offsetParent !== null; });
+      function (el) {
+        return el.offsetParent !== null;
+      },
+    );
     if (!focusables.length) return;
-    var first = focusables[0], last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
-    else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+    var first = focusables[0],
+      last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      last.focus();
+      e.preventDefault();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      first.focus();
+      e.preventDefault();
+    }
   });
 
   $("#start-form").addEventListener("submit", function (e) {
     e.preventDefault();
     state.activeTitle = $("#meeting-title-input").value || "Meeting";
     window.closeStartDialog();
-    beginCountdown();   // §6.9: Aufnahme beginnt erst nach 3-Sekunden-Countdown
+    beginCountdown(); // §6.9: Aufnahme beginnt erst nach 3-Sekunden-Countdown
   });
 
   /* ---------- 3-Sekunden-Countdown (§6.9) ----------
@@ -631,7 +889,10 @@
     var n = 3;
     countdownIv = window.setInterval(function () {
       n -= 1;
-      if (n <= 0) { finishCountdown(); return; }
+      if (n <= 0) {
+        finishCountdown();
+        return;
+      }
       setCountdownNumber(n);
       announce(n + " …");
     }, 1000);
@@ -640,13 +901,19 @@
     $("#countdown-number").textContent = String(n);
   }
   function finishCountdown() {
-    if (countdownIv) { window.clearInterval(countdownIv); countdownIv = null; }
+    if (countdownIv) {
+      window.clearInterval(countdownIv);
+      countdownIv = null;
+    }
     $("#countdown-overlay").hidden = true;
     startSession();
   }
   function cancelCountdown() {
     if (!countdownIv && $("#countdown-overlay").hidden) return;
-    if (countdownIv) { window.clearInterval(countdownIv); countdownIv = null; }
+    if (countdownIv) {
+      window.clearInterval(countdownIv);
+      countdownIv = null;
+    }
     $("#countdown-overlay").hidden = true;
     // Zurück in den Startdialog; dessen Zustand bleibt erhalten (§6.9)
     startDialog.hidden = false;
@@ -655,7 +922,8 @@
   }
   $("#btn-countdown-abbruch").addEventListener("click", cancelCountdown);
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !$("#countdown-overlay").hidden) cancelCountdown();
+    if (e.key === "Escape" && !$("#countdown-overlay").hidden)
+      cancelCountdown();
   });
 
   function startSession() {
@@ -682,7 +950,7 @@
     [14, "Einwand: Das Budget dafür ist noch nicht bewilligt."],
     [16, "Wir prüfen die Zahlen bis Donnerstag und melden uns."],
     [18, "Abschließend: Das Protokoll geht heute Abend an alle."],
-    [20, "Damit ist der Tagesordnungspunkt Budget abgeschlossen."]
+    [20, "Damit ist der Tagesordnungspunkt Budget abgeschlossen."],
   ];
   var demoSegmentsEn = [
     [2, "Let's start with the first agenda item: budget."],
@@ -694,7 +962,7 @@
     [14, "Objection: the budget for that hasn't been approved yet."],
     [16, "We will verify the numbers by Thursday and follow up."],
     [18, "To close: the minutes will go out to everyone tonight."],
-    [20, "That wraps up the budget agenda item."]
+    [20, "That wraps up the budget agenda item."],
   ];
   function demoSegments() {
     return dlg.lang === "English" ? demoSegmentsEn : demoSegmentsDe;
@@ -708,9 +976,12 @@
      Intervall-Treiber statt fester Timeouts, damit pausierte Segmente beim
      Fortsetzen nachrücken, statt verworfen zu werden. */
   var SEG_MS = 500;
-  var segDriver = null, segClock = 0, segFired = [];
-  var nextFillerAt = Infinity, fillerCount = 0;
-  var sessionCaptured = [];   // fertige Segmente der laufenden Session (§6.13)
+  var segDriver = null,
+    segClock = 0,
+    segFired = [];
+  var nextFillerAt = Infinity,
+    fillerCount = 0;
+  var sessionCaptured = []; // fertige Segmente der laufenden Session (§6.13)
 
   function startSegments() {
     stopSegments();
@@ -721,14 +992,16 @@
     $("#live-segments").innerHTML = "";
     $("#listening-state").textContent =
       dlg.lang === "English" ? "Listening …" : "Hört zu …";
-    sessionCaptured = [];   // Transkript der Session für die Detailansicht (§6.13)
+    sessionCaptured = []; // Transkript der Session für die Detailansicht (§6.13)
     segClock = 0;
     var scripted = demoSegments();
-    segFired = scripted.map(function () { return false; });
+    segFired = scripted.map(function () {
+      return false;
+    });
     nextFillerAt = Infinity;
     fillerCount = 0;
     segDriver = window.setInterval(function () {
-      if (!state.sessionActive || state.paused) return;   // Pause stoppt die Demo-Zeit
+      if (!state.sessionActive || state.paused) return; // Pause stoppt die Demo-Zeit
       segClock += 100;
       var scriptedLeft = false;
       scripted.forEach(function (seg, i) {
@@ -743,7 +1016,8 @@
       });
       // Danach wächst das Transkript weiter wie in einem echten Meeting –
       // dadurch ist der Scroll-Lock jederzeit erreichbar (§6.11).
-      if (!scriptedLeft && nextFillerAt === Infinity) nextFillerAt = segClock + 1000;
+      if (!scriptedLeft && nextFillerAt === Infinity)
+        nextFillerAt = segClock + 1000;
       if (segClock >= nextFillerAt && fillerCount < 40) {
         nextFillerAt += 1000;
         fillerCount += 1;
@@ -752,11 +1026,15 @@
     }, 100);
   }
   function stopSegments() {
-    if (segDriver) { window.clearInterval(segDriver); segDriver = null; }
+    if (segDriver) {
+      window.clearInterval(segDriver);
+      segDriver = null;
+    }
   }
   function appendSegment(seg, i) {
     var li = document.createElement("li");
-    li.innerHTML = "<span class='segment-time'>+" + seg[0] + "s</span>" + esc(seg[1]);
+    li.innerHTML =
+      "<span class='segment-time'>+" + seg[0] + "s</span>" + esc(seg[1]);
     $("#live-segments").appendChild(li);
     // Für die spätere Detailansicht mitschneiden (§6.13)
     sessionCaptured.push({ t: seg[0], text: seg[1] });
@@ -764,15 +1042,25 @@
     if (stickToBottom) transcriptArea.scrollTop = transcriptArea.scrollHeight;
     $("#listening-state").textContent =
       i === demoSegments().length - 1
-        ? (dlg.lang === "English" ? "Transcribing segment …" : "Abschnitt wird transkribiert …")
-        : (dlg.lang === "English" ? "Listening …" : "Hört zu …");
+        ? dlg.lang === "English"
+          ? "Transcribing segment …"
+          : "Abschnitt wird transkribiert …"
+        : dlg.lang === "English"
+          ? "Listening …"
+          : "Hört zu …";
   }
   /* Timeline-Marker (Pause/Fortsetzen); Icon+Text, nie nur Farbe */
   function addTimelineMarker(text) {
     var li = document.createElement("li");
     li.className = "timeline-marker";
-    li.innerHTML = "<span class='segment-time'>" + fmt(elapsedSec()) + "</span>" +
-      "<span aria-hidden='true'>" + text.icon + "</span> " + esc(text.label);
+    li.innerHTML =
+      "<span class='segment-time'>" +
+      fmt(elapsedSec()) +
+      "</span>" +
+      "<span aria-hidden='true'>" +
+      text.icon +
+      "</span> " +
+      esc(text.label);
     $("#live-segments").appendChild(li);
     if (stickToBottom) transcriptArea.scrollTop = transcriptArea.scrollHeight;
   }
@@ -804,22 +1092,30 @@
   /* Zentrale Zustandsdarstellung: Text+Icon immer gemeinsam, Rot nur bei
      echter Aufnahme, Orange bei Pause (§6.8 / §6.11 – Gate G3) */
   function providerLabel() {
-    return dlg.provider === "azure" ? "Azure Cloud"
-      : dlg.provider === "custom" ? "Custom" : "Lokal";
+    return dlg.provider === "azure"
+      ? "Azure Cloud"
+      : dlg.provider === "custom"
+        ? "Custom"
+        : "Lokal";
   }
   function renderRecordingStatus() {
     var rec = state.sessionActive && !state.paused;
-    var chipClass = "status-chip " + (rec ? "status-recording" : "status-paused");
+    var chipClass =
+      "status-chip " + (rec ? "status-recording" : "status-paused");
     $("#live-status-chip").className = chipClass;
     $("#live-status-icon").textContent = rec ? "●" : "⏸";
     $("#live-status-text").textContent = rec ? "Aufnahme läuft" : "Pausiert";
-    $("#live-provider").textContent = providerLabel();   // lesbar, nicht änderbar (§6.11)
+    $("#live-provider").textContent = providerLabel(); // lesbar, nicht änderbar (§6.11)
     $("#am-status").className = chipClass;
     $("#am-status-icon").textContent = rec ? "●" : "⏸";
     $("#am-status-text").textContent = rec ? "Aufnahme läuft" : "Pausiert";
-    document.querySelector(".pinned-label").textContent =
-      rec ? "Aufnahme läuft" : "Pausiert";
-    $("#pinned-recording").classList.toggle("is-paused", state.sessionActive && state.paused);
+    document.querySelector(".pinned-label").textContent = rec
+      ? "Aufnahme läuft"
+      : "Pausiert";
+    $("#pinned-recording").classList.toggle(
+      "is-paused",
+      state.sessionActive && state.paused,
+    );
   }
 
   $("#btn-pause").addEventListener("click", function () {
@@ -833,7 +1129,10 @@
       $("#mic-level").value = 0;
       $("#sys-level").value = 0;
       // Plan „Pause“: sauberer Abschnittsende + Timeline-Marker
-      addTimelineMarker({ icon: "⏸", label: "Pausiert – Aufnahme unterbrochen" });
+      addTimelineMarker({
+        icon: "⏸",
+        label: "Pausiert – Aufnahme unterbrochen",
+      });
       announce("Aufnahme pausiert.");
     } else {
       this.textContent = "Pause";
@@ -865,7 +1164,10 @@
   }
   function closeStopConfirm() {
     $("#stop-confirm").hidden = true;
-    if (confirmTimer) { window.clearTimeout(confirmTimer); confirmTimer = null; }
+    if (confirmTimer) {
+      window.clearTimeout(confirmTimer);
+      confirmTimer = null;
+    }
   }
 
   $("#btn-beenden").addEventListener("click", openStopConfirm);
@@ -885,20 +1187,30 @@
     var chunksTotal = Math.max(sessionCaptured.length * 2, 6);
     var newMeeting = {
       id: nextMeetingId(),
-      title: state.activeTitle || "Meeting", date: "Gerade eben", duration: dur,
-      provider: providerLabel(), status: "verarbeitung",
-      project: dlg.project || null,   // §6.18: nur sichtbare Vorauswahl, kein Zwang
+      title: state.activeTitle || "Meeting",
+      date: "Gerade eben",
+      duration: dur,
+      provider: providerLabel(),
+      status: "verarbeitung",
+      project: dlg.project || null, // §6.18: nur sichtbare Vorauswahl, kein Zwang
       summary: null,
-      decisions: [], tasks: [], questions: [],
+      decisions: [],
+      tasks: [],
+      questions: [],
       segments: sessionCaptured.map(function (s) {
-        var mm = Math.floor(s.t / 60), ss = String(s.t % 60).padStart(2, "0");
+        var mm = Math.floor(s.t / 60),
+          ss = String(s.t % 60).padStart(2, "0");
         return [mm + ":" + ss, s.text];
       }),
       audio: true,
-      processing: { provider: providerLabel(), model: "Whisper Small",
-                    chunksTotal: chunksTotal,
-                    transcribed: Math.min(1, chunksTotal),
-                    failedChunks: 0, retries: 0 }
+      processing: {
+        provider: providerLabel(),
+        model: "Whisper Small",
+        chunksTotal: chunksTotal,
+        transcribed: Math.min(1, chunksTotal),
+        failedChunks: 0,
+        retries: 0,
+      },
     };
     sessionCaptured = [];
     state.meetings.unshift(newMeeting);
@@ -908,7 +1220,9 @@
     // alten Vorschläge des vorherigen Meetings sichtbar bleiben, bis die neue
     // Checkliste startet (§6.12, Gates G1/G2)
     ["saved", "chunks", "transcribe", "summary"].forEach(function (s) {
-      var li = document.querySelector('#proc-checklist li[data-step="' + s + '"]');
+      var li = document.querySelector(
+        '#proc-checklist li[data-step="' + s + '"]',
+      );
       if (li) li.className = "";
     });
     $("#ai-suggestion").hidden = true;
@@ -927,7 +1241,10 @@
     // wieder per Tastatur schließbar sein)
     if (e.key !== "Escape") return;
     var more = $("#detail-more-menu");
-    if (document.querySelector(".menu:not(.menu-static)") || (more && more.open)) {
+    if (
+      document.querySelector(".menu:not(.menu-static)") ||
+      (more && more.open)
+    ) {
       closeMenus();
       announce("Menü geschlossen.");
     }
@@ -940,17 +1257,24 @@
   var procTimers = [];
 
   function clearProcTimers() {
-    procTimers.forEach(function (t) { window.clearTimeout(t); window.clearInterval(t); });
+    procTimers.forEach(function (t) {
+      window.clearTimeout(t);
+      window.clearInterval(t);
+    });
     procTimers = [];
   }
-  function procLater(ms, fn) { procTimers.push(window.setTimeout(fn, ms)); }
+  function procLater(ms, fn) {
+    procTimers.push(window.setTimeout(fn, ms));
+  }
 
   function checklistMeeting() {
     return meetingById(state.lastProcessingId) || state.meetings[0] || null;
   }
 
   function setStep(step, cls, text) {
-    var li = document.querySelector('#proc-checklist li[data-step="' + step + '"]');
+    var li = document.querySelector(
+      '#proc-checklist li[data-step="' + step + '"]',
+    );
     if (!li) return;
     li.className = cls || "";
     li.textContent = text;
@@ -960,7 +1284,7 @@
     clearProcTimers();
     $("#btn-retry-failed").hidden = true;
     $("#btn-open-processing-meeting").hidden = true;
-    $("#ai-suggestion").hidden = true;   // Vorschlag erst nach Abschluss (§6.18)
+    $("#ai-suggestion").hidden = true; // Vorschlag erst nach Abschluss (§6.18)
     var m = checklistMeeting();
     if (!m) return;
     m.status = "verarbeitung";
@@ -978,14 +1302,21 @@
     procLater(600, function () {
       // Jetzt ist die Gesamtmenge bekannt → deterministische Stückzahl
       m.processing.transcribed = 0;
-      setStep("chunks", "done",
-        "✓ " + total + " von " + total + " Audioabschnitten vorbereitet");
+      setStep(
+        "chunks",
+        "done",
+        "✓ " + total + " von " + total + " Audioabschnitten vorbereitet",
+      );
 
       // Transkription in vier deterministischen Etappen; optional scheitert
       // genau ein Abschnitt (Mock-Simulation, nicht zufällig)
       var simulateError = $("#sim-chunk-error").checked;
-      var stages = [Math.round(total * 0.25), Math.round(total * 0.5),
-                    Math.round(total * 0.75), total];
+      var stages = [
+        Math.round(total * 0.25),
+        Math.round(total * 0.5),
+        Math.round(total * 0.75),
+        total,
+      ];
       // Offsets relativ zum Vorbereitungs-Abschluss; absolut also
       // 1100/1600/2100/2600 ms nach Checkliststart (deterministisch)
       var stageTimes = [500, 1000, 1500, 2000];
@@ -995,15 +1326,25 @@
             // Ein Abschnitt dauerhaft fehlgeschlagen → Wiederholung anbieten
             m.processing.transcribed = total - 1;
             m.processing.failedChunks = 1;
-            setStep("transcribe", "error",
-              "✗ " + (total - 1) + " von " + total + " Abschnitten transkribiert · 1 fehlerhaft");
+            setStep(
+              "transcribe",
+              "error",
+              "✗ " +
+                (total - 1) +
+                " von " +
+                total +
+                " Abschnitten transkribiert · 1 fehlerhaft",
+            );
             $("#btn-retry-failed").hidden = false;
             announce("Ein Abschnitt konnte nicht transkribiert werden.");
             return;
           }
           m.processing.transcribed = upto;
-          setStep("transcribe", "",
-            "● " + upto + " von " + total + " Abschnitten transkribiert");
+          setStep(
+            "transcribe",
+            "",
+            "● " + upto + " von " + total + " Abschnitten transkribiert",
+          );
           if (idx === stages.length - 1) finishChecklist(m);
         });
       });
@@ -1013,24 +1354,37 @@
   function finishChecklist(m) {
     m.processing.failedChunks = 0;
     m.processing.transcribed = m.processing.chunksTotal;
-    setStep("transcribe", "done", "✓ " + m.processing.chunksTotal + " von " +
-      m.processing.chunksTotal + " Abschnitten transkribiert");
+    setStep(
+      "transcribe",
+      "done",
+      "✓ " +
+        m.processing.chunksTotal +
+        " von " +
+        m.processing.chunksTotal +
+        " Abschnitten transkribiert",
+    );
     procLater(700, function () {
       m.status = "fertig";
       /* Leaf-G1: die Kurzfassung folgt der im Startdialog gewählten
          Meeting-Sprache – realistische deutsche UND englische Inhalte. */
-      m.summary = dlg.lang === "English"
-        ? "Automatic short summary: meeting completed; results were extracted from " +
-          m.segments.length + " transcript segments (mock)."
-        : "Automatische Kurzfassung: Besprechung abgeschlossen, " +
-          "Ergebnisse wurden aus " + m.segments.length + " Transkriptsegmenten extrahiert (Mock).";
+      m.summary =
+        dlg.lang === "English"
+          ? "Automatic short summary: meeting completed; results were extracted from " +
+            m.segments.length +
+            " transcript segments (mock)."
+          : "Automatische Kurzfassung: Besprechung abgeschlossen, " +
+            "Ergebnisse wurden aus " +
+            m.segments.length +
+            " Transkriptsegmenten extrahiert (Mock).";
       setStep("summary", "done", "✓ Zusammenfassung erstellt");
       $("#btn-retry-failed").hidden = true;
-      $("#btn-open-processing-meeting").hidden = false;   // direkt ins Detail (§6.13)
+      $("#btn-open-processing-meeting").hidden = false; // direkt ins Detail (§6.13)
       // §6.18 (Gate G2): nach dem Stop darf ein Projektvorschlag erscheinen –
       // aber nie ohne explizite Wahl des Nutzers wird etwas verschoben
       if (!m.project) showProjectSuggestion(m);
-      announce("Verarbeitung abgeschlossen. Systembenachrichtigung gesendet (Mock).");
+      announce(
+        "Verarbeitung abgeschlossen. Systembenachrichtigung gesendet (Mock).",
+      );
     });
   }
 
@@ -1039,9 +1393,15 @@
     if (!m) return;
     this.hidden = true;
     m.processing.retries += 1;
-    setStep("transcribe", "", "● Fehlerhafte Abschnitte werden erneut versucht …");
+    setStep(
+      "transcribe",
+      "",
+      "● Fehlerhafte Abschnitte werden erneut versucht …",
+    );
     announce("Fehlerhafte Abschnitte werden erneut versucht.");
-    procLater(900, function () { finishChecklist(m); });
+    procLater(900, function () {
+      finishChecklist(m);
+    });
   });
 
   /* Im Hintergrund weiterarbeiten: zurück zur Liste; Verarbeitung läuft
@@ -1067,29 +1427,42 @@
      optionale Geteilte Ansicht nur auf breiten Bildschirmen (§6.13). */
 
   function statusChipHtml(m) {
-    if (m.status === "fertig") return '<span class="status-chip status-ready">✓ Fertig</span>';
-    if (m.status === "fehler") return '<span class="status-chip status-recording">✗ Fehler</span>';
+    if (m.status === "fertig")
+      return '<span class="status-chip status-ready">✓ Fertig</span>';
+    if (m.status === "fehler")
+      return '<span class="status-chip status-recording">✗ Fehler</span>';
     return '<span class="status-chip status-processing">⟳ In Verarbeitung</span>';
   }
 
   function renderDetail() {
     var m = meetingById(state.selectedId);
-    if (!m) { location.hash = "#/meetings"; return; }
+    if (!m) {
+      location.hash = "#/meetings";
+      return;
+    }
     $("#detail-title").value = m.title;
     $("#detail-date").textContent = m.date;
     $("#detail-duration").textContent = m.duration;
-    $("#detail-provider-line").textContent = m.provider +
-      (m.processing ? " · " + m.processing.model : "");
+    $("#detail-provider-line").textContent =
+      m.provider + (m.processing ? " · " + m.processing.model : "");
     $("#detail-status-chip").innerHTML = statusChipHtml(m);
 
     // Übersicht
-    $("#detail-summary").textContent = m.summary !== null && m.summary !== undefined
-      ? m.summary : "Zusammenfassung wird nach Abschluss der Verarbeitung erstellt …";
-    fillSimpleList("#detail-decisions", m.decisions,
-      "Noch keine Entscheidungen erkannt.");
+    $("#detail-summary").textContent =
+      m.summary !== null && m.summary !== undefined
+        ? m.summary
+        : "Zusammenfassung wird nach Abschluss der Verarbeitung erstellt …";
+    fillSimpleList(
+      "#detail-decisions",
+      m.decisions,
+      "Noch keine Entscheidungen erkannt.",
+    );
     fillTaskList("#detail-tasks", m.tasks);
-    fillSimpleList("#detail-questions", m.questions,
-      "Keine offenen Fragen erkannt.");
+    fillSimpleList(
+      "#detail-questions",
+      m.questions,
+      "Keine offenen Fragen erkannt.",
+    );
 
     renderDetailTranscript(m);
     renderAudioPanel(m);
@@ -1146,7 +1519,8 @@
       li.dataset.index = String(i);
       li.dataset.pos = seg[0];
       li.tabIndex = -1;
-      li.innerHTML = "<span class='segment-time'>" + esc(seg[0]) + "</span>" + esc(seg[1]);
+      li.innerHTML =
+        "<span class='segment-time'>" + esc(seg[0]) + "</span>" + esc(seg[1]);
       ul.appendChild(li);
     });
     if (!(m.segments || []).length) {
@@ -1159,27 +1533,39 @@
 
   function runTranscriptSearch() {
     var q = $("#detail-transcript-search").value.trim().toLowerCase();
-    var lis = Array.prototype.slice.call(document.querySelectorAll("#detail-segments li[data-index]"));
+    var lis = Array.prototype.slice.call(
+      document.querySelectorAll("#detail-segments li[data-index]"),
+    );
     var hits = [];
     lis.forEach(function (li) {
       li.classList.remove("seg-hit", "seg-hit-first");
       if (q && li.textContent.toLowerCase().indexOf(q) !== -1) hits.push(li);
     });
     var status = $("#transcript-search-status");
-    if (!q) { status.textContent = ""; return; }
+    if (!q) {
+      status.textContent = "";
+      return;
+    }
     if (!hits.length) {
       status.textContent = "Kein Treffer für „" + q + "“.";
       return;
     }
-    hits.forEach(function (li) { li.classList.add("seg-hit"); });
+    hits.forEach(function (li) {
+      li.classList.add("seg-hit");
+    });
     var first = hits[0];
     first.classList.add("seg-hit-first");
     // Sprung zur gemockten Audioposition des ersten Treffers (§6.13/Gate G3)
     first.scrollIntoView({ block: "center" });
     first.focus();
-    status.textContent = hits.length + " Treffer · erster Treffer bei Segment " +
-      (Number(first.dataset.index) + 1) + " von " + lis.length +
-      " · Audioposition " + first.dataset.pos;
+    status.textContent =
+      hits.length +
+      " Treffer · erster Treffer bei Segment " +
+      (Number(first.dataset.index) + 1) +
+      " von " +
+      lis.length +
+      " · Audioposition " +
+      first.dataset.pos;
     announce(status.textContent);
   }
   $("#detail-transcript-search").addEventListener("input", runTranscriptSearch);
@@ -1201,17 +1587,30 @@
       "<button type='button' class='btn btn-secondary btn-small' id='btn-audio-play'>▶ Wiedergabe (Mock)</button>" +
       "<div class='audio-progress' role='progressbar' aria-label='Wiedergegebene Position' " +
       "aria-valuemin='0' aria-valuemax='100' aria-valuenow='0' id='audio-progress'></div>" +
-      "<span class='mono muted' id='audio-pos'>0:00 / " + esc(m.duration) + "</span></div>" +
+      "<span class='mono muted' id='audio-pos'>0:00 / " +
+      esc(m.duration) +
+      "</span></div>" +
       "<p class='muted small'>Aufbewahrung: Das Audio bleibt lokal auf diesem Gerät gespeichert, " +
       "solange das Meeting existiert.</p>" +
       "<button type='button' class='btn btn-neutral btn-small' id='btn-audio-delete'>Audio löschen (Mock)</button>";
     $("#btn-audio-play").addEventListener("click", function () {
       audioPlaying = !audioPlaying;
-      this.textContent = audioPlaying ? "⏸ Pause (Mock)" : "▶ Wiedergabe (Mock)";
-      announce(audioPlaying ? "Wiedergabe gestartet (Mock)." : "Wiedergabe pausiert.");
+      this.textContent = audioPlaying
+        ? "⏸ Pause (Mock)"
+        : "▶ Wiedergabe (Mock)";
+      announce(
+        audioPlaying ? "Wiedergabe gestartet (Mock)." : "Wiedergabe pausiert.",
+      );
     });
     $("#btn-audio-delete").addEventListener("click", function () {
-      if (!window.confirm("Audio von „" + m.title + "“ löschen?\n\nTranskript und Zusammenfassung bleiben erhalten.")) return;
+      if (
+        !window.confirm(
+          "Audio von „" +
+            m.title +
+            "“ löschen?\n\nTranskript und Zusammenfassung bleiben erhalten.",
+        )
+      )
+        return;
       m.audio = false;
       announce("Audio gelöscht (Mock).");
       renderAudioPanel(meetingById(state.selectedId));
@@ -1221,49 +1620,81 @@
   /* Verarbeitung-Tab: Provider, Modell, Jobs, Fehler und Wiederholungen (§6.13) */
   function renderProcessingPanel(m) {
     var p = m.processing || {};
-    var jobs = "<li>" + (m.status === "fertig" ? "✓" : "●") +
-      " Audio vorbereiten – " + (p.chunksTotal || 0) + " Abschnitte</li>" +
-      "<li>" + (m.status === "fertig" ? "✓" : "●") + " Transkription – " +
-      (p.transcribed || 0) + " von " + (p.chunksTotal || 0) + " Abschnitten" +
-      (p.failedChunks ? " · " + p.failedChunks + " fehlerhaft" : "") + "</li>" +
-      "<li>" + (m.status === "fertig" ? "✓" : "○") + " Zusammenfassung" +
-      (m.status === "fertig" ? "" : " – wartet") + "</li>";
+    var jobs =
+      "<li>" +
+      (m.status === "fertig" ? "✓" : "●") +
+      " Audio vorbereiten – " +
+      (p.chunksTotal || 0) +
+      " Abschnitte</li>" +
+      "<li>" +
+      (m.status === "fertig" ? "✓" : "●") +
+      " Transkription – " +
+      (p.transcribed || 0) +
+      " von " +
+      (p.chunksTotal || 0) +
+      " Abschnitten" +
+      (p.failedChunks ? " · " + p.failedChunks + " fehlerhaft" : "") +
+      "</li>" +
+      "<li>" +
+      (m.status === "fertig" ? "✓" : "○") +
+      " Zusammenfassung" +
+      (m.status === "fertig" ? "" : " – wartet") +
+      "</li>";
     $("#detail-processing-panel").innerHTML =
       "<h2 class='small-heading'>Verarbeitungsdetails</h2>" +
       "<dl class='status-lines'>" +
-      "<div class='status-line'><dt>Provider</dt><dd>" + esc(p.provider || m.provider) + "</dd></div>" +
-      "<div class='status-line'><dt>Modell</dt><dd>" + esc(p.model || "–") + "</dd></div>" +
+      "<div class='status-line'><dt>Provider</dt><dd>" +
+      esc(p.provider || m.provider) +
+      "</dd></div>" +
+      "<div class='status-line'><dt>Modell</dt><dd>" +
+      esc(p.model || "–") +
+      "</dd></div>" +
       "</dl>" +
-      "<h2 class='small-heading'>Jobs</h2><ul class='checklist' role='list'>" + jobs + "</ul>" +
+      "<h2 class='small-heading'>Jobs</h2><ul class='checklist' role='list'>" +
+      jobs +
+      "</ul>" +
       "<h2 class='small-heading'>Fehler &amp; Wiederholungen</h2>" +
-      "<p>" + (p.failedChunks
+      "<p>" +
+      (p.failedChunks
         ? "1 Abschnitt fehlgeschlagen – in der Verarbeitung-Seite erneut versuchen."
         : "Keine offenen Fehler.") +
-      " Wiederholungen bisher: " + (p.retries || 0) + ".</p>";
+      " Wiederholungen bisher: " +
+      (p.retries || 0) +
+      ".</p>";
   }
 
   /* Detail-Tabs */
   function selectDetailTab(name) {
-    document.querySelectorAll("#view-meeting-detail .tab").forEach(function (t) {
-      t.setAttribute("aria-selected", String(t.dataset.dtab === name));
-    });
-    document.querySelectorAll("#view-meeting-detail .tabpanel").forEach(function (p) {
-      p.hidden = p.dataset.dpanel !== name;
-    });
+    document
+      .querySelectorAll("#view-meeting-detail .tab")
+      .forEach(function (t) {
+        t.setAttribute("aria-selected", String(t.dataset.dtab === name));
+      });
+    document
+      .querySelectorAll("#view-meeting-detail .tabpanel")
+      .forEach(function (p) {
+        p.hidden = p.dataset.dpanel !== name;
+      });
   }
-  document.querySelectorAll("#view-meeting-detail .tab").forEach(function (tab) {
-    tab.addEventListener("click", function () { selectDetailTab(this.dataset.dtab); });
-  });
+  document
+    .querySelectorAll("#view-meeting-detail .tab")
+    .forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        selectDetailTab(this.dataset.dtab);
+      });
+    });
   /* Pfeiltasten-Navigation im Tablist (§6.14: vollständige Tastaturbedienung) */
-  document.querySelector("#view-meeting-detail .tabs").addEventListener("keydown",
-    function (e) {
+  document
+    .querySelector("#view-meeting-detail .tabs")
+    .addEventListener("keydown", function (e) {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       var tabs = Array.prototype.slice.call(this.querySelectorAll(".tab"));
       var i = tabs.indexOf(document.activeElement);
       if (i === -1) return;
-      var n = e.key === "ArrowRight"
-        ? (i + 1) % tabs.length
-        : (i - 1 + tabs.length) % tabs.length;
+      var n =
+        e.key === "ArrowRight"
+          ? (i + 1) % tabs.length
+          : (i - 1 + tabs.length) % tabs.length;
       tabs[n].focus();
       selectDetailTab(tabs[n].dataset.dtab);
       e.preventDefault();
@@ -1296,7 +1727,9 @@
 
   $("#btn-detail-copy").addEventListener("click", function () {
     var m = meetingById(state.selectedId);
-    announce("Zusammenfassung kopiert (Mock): „" + ((m && m.summary) || "–") + "“");
+    announce(
+      "Zusammenfassung kopiert (Mock): „" + ((m && m.summary) || "–") + "“",
+    );
   });
   $("#btn-detail-export").addEventListener("click", function () {
     announce("Export geöffnet (Mock).");
@@ -1313,7 +1746,9 @@
     if (!m) return;
     // Gleiche benannte Bestätigung wie in der Liste (Gate G2)
     if (confirmDeleteMeeting(m)) {
-      state.meetings = state.meetings.filter(function (x) { return x !== m; });
+      state.meetings = state.meetings.filter(function (x) {
+        return x !== m;
+      });
       state.selectedId = null;
       announce("Meeting gelöscht.");
       location.hash = "#/meetings";
@@ -1354,7 +1789,8 @@
       $("#mic-level").value = 25 + Math.round(Math.random() * 45);
       $("#sys-level").value = 45 + Math.round(Math.random() * 45);
     } else {
-      $("#mic-level").value = 0; $("#sys-level").value = 0;
+      $("#mic-level").value = 0;
+      $("#sys-level").value = 0;
     }
   }, 700);
 
@@ -1362,7 +1798,10 @@
   var setupTimers = [];
 
   function clearSetupTimers() {
-    setupTimers.forEach(function (t) { window.clearTimeout(t); window.clearInterval(t); });
+    setupTimers.forEach(function (t) {
+      window.clearTimeout(t);
+      window.clearInterval(t);
+    });
     setupTimers = [];
   }
   /* Livepegel-Mock: animiert ~2 s und ruft dann done() auf */
@@ -1372,11 +1811,13 @@
       meter.value = 25 + Math.round(Math.random() * 55);
     }, 130);
     setupTimers.push(iv);
-    setupTimers.push(window.setTimeout(function () {
-      window.clearInterval(iv);
-      meter.value = 0;
-      done();
-    }, 2000));
+    setupTimers.push(
+      window.setTimeout(function () {
+        window.clearInterval(iv);
+        meter.value = 0;
+        done();
+      }, 2000),
+    );
   }
 
   function showAudioHint(html) {
@@ -1389,7 +1830,8 @@
         if (fix === "mic-denied") $("#sim-mic-denied").checked = false;
         if (fix === "no-mic") $("#sim-no-mic").checked = false;
         if (fix === "no-output") $("#sim-no-output").checked = false;
-        runMicTest(); runSysTest();
+        runMicTest();
+        runSysTest();
       });
     });
   }
@@ -1399,8 +1841,10 @@
   }
 
   function runMicTest() {
-    var res = $("#result-mic"), meter = $("#setup-mic-level");
-    var denied = $("#sim-mic-denied").checked, missing = $("#sim-no-mic").checked;
+    var res = $("#result-mic"),
+      meter = $("#setup-mic-level");
+    var denied = $("#sim-mic-denied").checked,
+      missing = $("#sim-no-mic").checked;
     hideAudioHint();
     if (missing || denied) {
       meter.value = 0;
@@ -1409,13 +1853,19 @@
         : "✗ Kein Mikrofon erkannt";
       res.className = "test-result test-fail";
       showAudioHint(
-        "<strong>" + (denied
-          ? "Speak hat keinen Zugriff auf dein Mikrofon."
-          : "Es ist kein Mikrofon angeschlossen.") + "</strong>" +
-        "<button type='button' class='btn btn-secondary btn-small' data-fix='" +
-          (denied ? "mic-denied" : "no-mic") + "'>" +
-          (denied ? "Berechtigung in den Systemeinstellungen erteilen (Mock)"
-                  : "Mikrofon anschließen (Mock)") + "</button>");
+        "<strong>" +
+          (denied
+            ? "Speak hat keinen Zugriff auf dein Mikrofon."
+            : "Es ist kein Mikrofon angeschlossen.") +
+          "</strong>" +
+          "<button type='button' class='btn btn-secondary btn-small' data-fix='" +
+          (denied ? "mic-denied" : "no-mic") +
+          "'>" +
+          (denied
+            ? "Berechtigung in den Systemeinstellungen erteilen (Mock)"
+            : "Mikrofon anschließen (Mock)") +
+          "</button>",
+      );
       return;
     }
     res.textContent = "Pegel wird gemessen …";
@@ -1427,7 +1877,8 @@
   }
 
   function runSysTest() {
-    var res = $("#result-sys"), meter = $("#setup-sys-level");
+    var res = $("#result-sys"),
+      meter = $("#setup-sys-level");
     hideAudioHint();
     if ($("#sim-no-output").checked) {
       meter.value = 0;
@@ -1435,7 +1886,8 @@
       res.className = "test-result test-fail";
       showAudioHint(
         "<strong>Es ist kein Ausgabegerät angeschlossen.</strong>" +
-        "<button type='button' class='btn btn-secondary btn-small' data-fix='no-output'>Ausgabegerät anschließen (Mock)</button>");
+          "<button type='button' class='btn btn-secondary btn-small' data-fix='no-output'>Ausgabegerät anschließen (Mock)</button>",
+      );
       return;
     }
     res.textContent = "Testton wird abgespielt …";
@@ -1449,25 +1901,29 @@
 
   function checkShortcut() {
     var st = $("#shortcut-cand-status");
-    st.textContent = "Wird geprüft …";   // Registrierung vor Anzeige prüfen (§6.6)
+    st.textContent = "Wird geprüft …"; // Registrierung vor Anzeige prüfen (§6.6)
     st.className = "test-result";
-    setupTimers.push(window.setTimeout(function () {
-      if ($("#sim-shortcut-taken").checked) {
-        st.textContent = "✗ nicht verfügbar – bereits belegt";
-        st.className = "test-result test-fail";
-        $("#shortcut-alternatives").hidden = false;
-      } else {
-        st.textContent = "✓ verfügbar";
-        st.className = "test-result test-ok";
-        $("#shortcut-alternatives").hidden = true;
-      }
-    }, 500));
+    setupTimers.push(
+      window.setTimeout(function () {
+        if ($("#sim-shortcut-taken").checked) {
+          st.textContent = "✗ nicht verfügbar – bereits belegt";
+          st.className = "test-result test-fail";
+          $("#shortcut-alternatives").hidden = false;
+        } else {
+          st.textContent = "✓ verfügbar";
+          st.className = "test-result test-ok";
+          $("#shortcut-alternatives").hidden = true;
+        }
+      }, 500),
+    );
   }
 
   function initSetupView() {
     clearSetupTimers();
     ["#result-mic", "#result-sys"].forEach(function (sel) {
-      var el = $(sel); el.textContent = ""; el.className = "test-result";
+      var el = $(sel);
+      el.textContent = "";
+      el.className = "test-result";
     });
     $("#setup-mic-level").value = 0;
     $("#setup-sys-level").value = 0;
@@ -1492,7 +1948,7 @@
     var chosen = document.querySelector('input[name="setup-provider"]:checked');
     dlg.provider = chosen ? chosen.value : "lokal";
     location.hash = "#/meetings";
-    openStartDialog();   // §6.6: nach Abschluss direkt in den kompakten Startdialog
+    openStartDialog(); // §6.6: nach Abschluss direkt in den kompakten Startdialog
   });
   $("#btn-setup-later").addEventListener("click", function () {
     announce("Einrichtung übersprungen.");
@@ -1503,7 +1959,8 @@
   $("#btn-dictat-testen").addEventListener("click", function () {
     var preview = $("#dict-preview");
     preview.hidden = false;
-    $("#dict-preview-text").textContent = "Dies ist eine Testdiktat-Vorschau. Sie wird nur hier angezeigt und in keine andere App eingefügt.";
+    $("#dict-preview-text").textContent =
+      "Dies ist eine Testdiktat-Vorschau. Sie wird nur hier angezeigt und in keine andere App eingefügt.";
     announce("Testdiktat fertig. Ergebnis nur in der Vorschau.");
   });
 
@@ -1541,54 +1998,142 @@
 
   /* ---------- Gemockte Quellen + Belegregister (Gate G1) ---------- */
   var SOURCES = {
-    "src-wa": { title: "WhatsApp-Export · BDNA Club", meta: "Importiert heute, 09:05 · Zeitraum 12.01.–12.08.2026 · nur lokal",
+    "src-wa": {
+      title: "WhatsApp-Export · BDNA Club",
+      meta: "Importiert heute, 09:05 · Zeitraum 12.01.–12.08.2026 · nur lokal",
       lines: [
-        ["12.03., 18:42", "Lena", "Können wir endlich die Einladungen für den Sommerball rausschicken?"],
-        ["12.03., 18:47", "Tarek", "Ja – ich mache die Einladungen diese Woche fertig."],
-        ["02.06., 09:15", "Lena", "Erinnerung: Die Einladungen sind immer noch nicht raus."],
-        ["03.06., 11:02", "Tarek", "Sorry, diese Woche klappt es nicht, ich verschiebe auf nächste Woche."],
-        ["10.07., 20:14", "Mira", "Sollen wir für den Sommerball jetzt 80 oder 120 Getränkekarten planen?"],
-        ["10.07., 20:31", "Lena", "Nehmen wir 120, beim Sommerfest waren alle Getränke nach zwei Stunden weg."],
-        ["28.07., 17:20", "Tarek", "Ich schicke heute die Zahlen für die Kasse an alle, bitte bis Donnerstag prüfen."]
-      ] },
-    "src-tr": { title: "Transkript · Wochenplanung", meta: "Meeting von gestern, 16:00 · lokal transkribiert",
+        [
+          "12.03., 18:42",
+          "Lena",
+          "Können wir endlich die Einladungen für den Sommerball rausschicken?",
+        ],
+        [
+          "12.03., 18:47",
+          "Tarek",
+          "Ja – ich mache die Einladungen diese Woche fertig.",
+        ],
+        [
+          "02.06., 09:15",
+          "Lena",
+          "Erinnerung: Die Einladungen sind immer noch nicht raus.",
+        ],
+        [
+          "03.06., 11:02",
+          "Tarek",
+          "Sorry, diese Woche klappt es nicht, ich verschiebe auf nächste Woche.",
+        ],
+        [
+          "10.07., 20:14",
+          "Mira",
+          "Sollen wir für den Sommerball jetzt 80 oder 120 Getränkekarten planen?",
+        ],
+        [
+          "10.07., 20:31",
+          "Lena",
+          "Nehmen wir 120, beim Sommerfest waren alle Getränke nach zwei Stunden weg.",
+        ],
+        [
+          "28.07., 17:20",
+          "Tarek",
+          "Ich schicke heute die Zahlen für die Kasse an alle, bitte bis Donnerstag prüfen.",
+        ],
+      ],
+    },
+    "src-tr": {
+      title: "Transkript · Wochenplanung",
+      meta: "Meeting von gestern, 16:00 · lokal transkribiert",
       lines: [
-        ["0:04", "", "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen."],
-        ["0:08", "", "Entscheidung: Wir verschieben die Entscheidung um eine Woche."],
-        ["0:12", "", "Vorschlag: Zwei zusätzliche Werkstudenten für den Support."],
+        [
+          "0:04",
+          "",
+          "Ich schlage vor, das Marketingbudget um zehn Prozent zu erhöhen.",
+        ],
+        [
+          "0:08",
+          "",
+          "Entscheidung: Wir verschieben die Entscheidung um eine Woche.",
+        ],
+        [
+          "0:12",
+          "",
+          "Vorschlag: Zwei zusätzliche Werkstudenten für den Support.",
+        ],
         ["0:14", "", "Einwand: Das Budget dafür ist noch nicht bewilligt."],
-        ["0:16", "", "Wir prüfen die Zahlen bis Donnerstag und melden uns."]
-      ] },
-    "src-berger": { title: "Transkript · Kundengespräch Berger", meta: "Meeting von Montag, 10:30 · lokal transkribiert",
+        ["0:16", "", "Wir prüfen die Zahlen bis Donnerstag und melden uns."],
+      ],
+    },
+    "src-berger": {
+      title: "Transkript · Kundengespräch Berger",
+      meta: "Meeting von Montag, 10:30 · lokal transkribiert",
       lines: [
         ["0:10", "", "Herr Berger bittet um ein Angebot für zwanzig Lizenzen."],
-        ["0:22", "", "Berger meldet sich bis Donnerstag mit Rückmeldung zu den Zahlen."]
-      ] }
+        [
+          "0:22",
+          "",
+          "Berger meldet sich bis Donnerstag mit Rückmeldung zu den Zahlen.",
+        ],
+      ],
+    },
   };
   var EVIDENCE = {
-    "ev-invite":  { sourceId: "src-wa", line: 0, label: "WhatsApp · 12.03., 18:42" },
-    "ev-chase":   { sourceId: "src-wa", line: 2, label: "WhatsApp · 02.06., 09:15" },
-    "ev-drinks":  { sourceId: "src-wa", line: 5, label: "WhatsApp · 10.07., 20:31" },
-    "ev-zahlen":  { sourceId: "src-wa", line: 6, label: "WhatsApp · 28.07., 17:20" },
-    "ev-budget":  { sourceId: "src-tr", line: 1, label: "Transkript · 0:08" },
-    "ev-budget-q":{ sourceId: "src-tr", line: 3, label: "Transkript · 0:14" },
-    "ev-license": { sourceId: "src-berger", line: 0, label: "Transkript · 0:10" },
-    "ev-berger-d": { sourceId: "src-berger", line: 1, label: "Transkript · 0:22" }
+    "ev-invite": {
+      sourceId: "src-wa",
+      line: 0,
+      label: "WhatsApp · 12.03., 18:42",
+    },
+    "ev-chase": {
+      sourceId: "src-wa",
+      line: 2,
+      label: "WhatsApp · 02.06., 09:15",
+    },
+    "ev-drinks": {
+      sourceId: "src-wa",
+      line: 5,
+      label: "WhatsApp · 10.07., 20:31",
+    },
+    "ev-zahlen": {
+      sourceId: "src-wa",
+      line: 6,
+      label: "WhatsApp · 28.07., 17:20",
+    },
+    "ev-budget": { sourceId: "src-tr", line: 1, label: "Transkript · 0:08" },
+    "ev-budget-q": { sourceId: "src-tr", line: 3, label: "Transkript · 0:14" },
+    "ev-license": {
+      sourceId: "src-berger",
+      line: 0,
+      label: "Transkript · 0:10",
+    },
+    "ev-berger-d": {
+      sourceId: "src-berger",
+      line: 1,
+      label: "Transkript · 0:22",
+    },
   };
 
   function evidenceLinkHtml(evId) {
     var ev = EVIDENCE[evId];
     if (!ev) return "";
-    return '<li><a href="#" class="evidence-link" data-evidence="' + evId + '">' +
-      '🔗 ' + esc(ev.label) + '</a></li>';
+    return (
+      '<li><a href="#" class="evidence-link" data-evidence="' +
+      evId +
+      '">' +
+      "🔗 " +
+      esc(ev.label) +
+      "</a></li>"
+    );
   }
 
   /* Inline-Variante ohne <li> für Fließtext (z. B. Detail-Kopfzeile) */
   function evidenceAnchorHtml(evId) {
     var ev = EVIDENCE[evId];
     if (!ev) return "";
-    return '<a href="#" class="evidence-link" data-evidence="' + evId + '">🔗 ' +
-      esc(ev.label) + '</a>';
+    return (
+      '<a href="#" class="evidence-link" data-evidence="' +
+      evId +
+      '">🔗 ' +
+      esc(ev.label) +
+      "</a>"
+    );
   }
 
   /* Quellenansicht: Beleg-Klick springt zur gemockten Stelle und hebt sie
@@ -1605,8 +2150,12 @@
       var li = document.createElement("li");
       li.className = i === ev.line ? "src-hit" : "";
       li.setAttribute("data-src-line", String(i));
-      li.innerHTML = "<span class='segment-time'>" + esc(ln[0]) + "</span>" +
-        (ln[1] ? "<strong>" + esc(ln[1]) + ":</strong> " : "") + esc(ln[2]);
+      li.innerHTML =
+        "<span class='segment-time'>" +
+        esc(ln[0]) +
+        "</span>" +
+        (ln[1] ? "<strong>" + esc(ln[1]) + ":</strong> " : "") +
+        esc(ln[2]);
       ul.appendChild(li);
     });
     $("#source-viewer").hidden = false;
@@ -1628,123 +2177,227 @@
 
   /* ---------- Projekt-Mockdaten (§6.16/§6.17) ---------- */
   var projectSeq = 0;
-  function nextProjectId() { projectSeq += 1; return "p" + projectSeq; }
+  function nextProjectId() {
+    projectSeq += 1;
+    return "p" + projectSeq;
+  }
 
   function defaultProjects() {
     return [
-      { id: nextProjectId(), name: "BDNA Club",
+      {
+        id: nextProjectId(),
+        name: "BDNA Club",
         statusText: "In Arbeit",
         aiLastRun: "Heute, 09:12",
         lastActiveRank: 5,
         unreviewed: 3,
         overview: {
           status: [
-            { text: "Die Einladungen für den Sommerball sind überfällig.",
-              evidence: ["ev-invite"] },
-            { text: "Die Budgetentscheidung wurde um eine Woche verschoben.",
-              evidence: ["ev-budget"] },
-            { text: "Für den Sommerball werden 120 statt 80 Getränkekarten eingeplant.",
-              evidence: ["ev-drinks"] }
+            {
+              text: "Die Einladungen für den Sommerball sind überfällig.",
+              evidence: ["ev-invite"],
+            },
+            {
+              text: "Die Budgetentscheidung wurde um eine Woche verschoben.",
+              evidence: ["ev-budget"],
+            },
+            {
+              text: "Für den Sommerball werden 120 statt 80 Getränkekarten eingeplant.",
+              evidence: ["ev-drinks"],
+            },
           ],
           decisions: [
-            { text: "Getränkekontingent auf 120 Karten erhöht.",
-              evidence: ["ev-drinks"] }
+            {
+              text: "Getränkekontingent auf 120 Karten erhöht.",
+              evidence: ["ev-drinks"],
+            },
           ],
           questions: [
-            { text: "Ist das Budget für die Support-Werkstudenten bewilligt?",
-              evidence: ["ev-budget-q"] }
+            {
+              text: "Ist das Budget für die Support-Werkstudenten bewilligt?",
+              evidence: ["ev-budget-q"],
+            },
           ],
-          activity: ["Heute, 09:12 · KI-Analyse läuft (3 neue Vorschläge)",
-                     "Gestern · Meeting „Wochenplanung“ verarbeitet"]
+          activity: [
+            "Heute, 09:12 · KI-Analyse läuft (3 neue Vorschläge)",
+            "Gestern · Meeting „Wochenplanung“ verarbeitet",
+          ],
         },
         sources: [
-          { name: "WhatsApp-Export · BDNA Club", kind: "WhatsApp-Export",
-            status: "Importiert · indexiert", period: "12.01.–12.08.2026",
-            privacy: "Nur lokal", importedOn: "Heute, 09:05" }
+          {
+            name: "WhatsApp-Export · BDNA Club",
+            kind: "WhatsApp-Export",
+            status: "Importiert · indexiert",
+            period: "12.01.–12.08.2026",
+            privacy: "Nur lokal",
+            importedOn: "Heute, 09:05",
+          },
         ],
         tasks: [
-          { id: "t-inv", title: "Einladungen versenden", status: "offen",
-            dueLabel: "Fälligkeit: 12.08. (vor 3 Tagen)", overdueRank: 1,
-            dueRank: 1, userPrio: null, aiScore: null, updatedRank: 4,
+          {
+            id: "t-inv",
+            title: "Einladungen versenden",
+            status: "offen",
+            dueLabel: "Fälligkeit: 12.08. (vor 3 Tagen)",
+            overdueRank: 1,
+            dueRank: 1,
+            userPrio: null,
+            aiScore: null,
+            updatedRank: 4,
             evidence: ["ev-invite"],
-            whyUrgent: { reason: "Überfällig seit drei Tagen; Lena hat am 2.6. nachgehakt.",
-                         evidence: ["ev-invite", "ev-chase"] } },
-          { id: "t-zahlen", title: "Zahlen bis Donnerstag prüfen", status: "vorgeschlagen",
-            dueLabel: "KI-Vorschlag: bis Donnerstag", overdueRank: 0,
-            dueRank: 2, userPrio: null, aiScore: 82, confidence: "87 %",
+            whyUrgent: {
+              reason:
+                "Überfällig seit drei Tagen; Lena hat am 2.6. nachgehakt.",
+              evidence: ["ev-invite", "ev-chase"],
+            },
+          },
+          {
+            id: "t-zahlen",
+            title: "Zahlen bis Donnerstag prüfen",
+            status: "vorgeschlagen",
+            dueLabel: "KI-Vorschlag: bis Donnerstag",
+            overdueRank: 0,
+            dueRank: 2,
+            userPrio: null,
+            aiScore: 82,
+            confidence: "87 %",
             updatedRank: 3,
             evidence: ["ev-zahlen"],
-            whyUrgent: { reason: "Tarek hat die Prüfung für Donnerstag zugesagt; die Kassenentscheidung hängt daran.",
-                         evidence: ["ev-zahlen"] } },
-          { id: "t-protokoll", title: "Protokoll an das Team senden", status: "erledigt",
-            dueLabel: "—", overdueRank: 0, dueRank: null, userPrio: null,
-            aiScore: null, updatedRank: 2,
-            evidence: ["ev-budget-q"], whyUrgent: null },
-          { id: "t-flyer", title: "Alten Flyer-Entwurf drucken", status: "verworfen",
-            dueLabel: "—", overdueRank: 0, dueRank: null, userPrio: null,
-            aiScore: null, updatedRank: 1,
-            evidence: ["ev-drinks"], whyUrgent: null }
-        ]
+            whyUrgent: {
+              reason:
+                "Tarek hat die Prüfung für Donnerstag zugesagt; die Kassenentscheidung hängt daran.",
+              evidence: ["ev-zahlen"],
+            },
+          },
+          {
+            id: "t-protokoll",
+            title: "Protokoll an das Team senden",
+            status: "erledigt",
+            dueLabel: "—",
+            overdueRank: 0,
+            dueRank: null,
+            userPrio: null,
+            aiScore: null,
+            updatedRank: 2,
+            evidence: ["ev-budget-q"],
+            whyUrgent: null,
+          },
+          {
+            id: "t-flyer",
+            title: "Alten Flyer-Entwurf drucken",
+            status: "verworfen",
+            dueLabel: "—",
+            overdueRank: 0,
+            dueRank: null,
+            userPrio: null,
+            aiScore: null,
+            updatedRank: 1,
+            evidence: ["ev-drinks"],
+            whyUrgent: null,
+          },
+        ],
       },
-      { id: nextProjectId(), name: "Messestand 2026",
+      {
+        id: nextProjectId(),
+        name: "Messestand 2026",
         statusText: "Ruhend",
         aiLastRun: "Gestern, 18:40",
         lastActiveRank: 3,
         unreviewed: 0,
         overview: {
           status: [
-            { text: "Das Messestand-Budget bleibt unverändert.",
-              evidence: ["ev-budget"] }
+            {
+              text: "Das Messestand-Budget bleibt unverändert.",
+              evidence: ["ev-budget"],
+            },
           ],
           decisions: [],
           questions: [],
-          activity: ["Gestern, 18:40 · letzter KI-Lauf ohne neue Vorschläge"]
+          activity: ["Gestern, 18:40 · letzter KI-Lauf ohne neue Vorschläge"],
         },
         sources: [
-          { name: "Notiz · Budgetgespräch", kind: "Notiz",
-            status: "Indexiert", period: "—",
-            privacy: "Nur lokal", importedOn: "Gestern, 18:39" }
+          {
+            name: "Notiz · Budgetgespräch",
+            kind: "Notiz",
+            status: "Indexiert",
+            period: "—",
+            privacy: "Nur lokal",
+            importedOn: "Gestern, 18:39",
+          },
         ],
         tasks: [
-          { id: "t-messe", title: "Angebote für Standbau vergleichen", status: "offen",
-            dueLabel: "Fälligkeit: Ende August", overdueRank: 0,
-            dueRank: 3, userPrio: "Hoch", aiScore: null, updatedRank: 1,
-            evidence: ["ev-budget"], whyUrgent: null }
-        ]
+          {
+            id: "t-messe",
+            title: "Angebote für Standbau vergleichen",
+            status: "offen",
+            dueLabel: "Fälligkeit: Ende August",
+            overdueRank: 0,
+            dueRank: 3,
+            userPrio: "Hoch",
+            aiScore: null,
+            updatedRank: 1,
+            evidence: ["ev-budget"],
+            whyUrgent: null,
+          },
+        ],
       },
-      { id: nextProjectId(), name: "Atlas GmbH",
+      {
+        id: nextProjectId(),
+        name: "Atlas GmbH",
         statusText: "In Arbeit",
         aiLastRun: "Heute, 08:30",
         lastActiveRank: 4,
         unreviewed: 1,
         overview: {
           status: [
-            { text: "Für Atlas GmbH wird ein Angebot über zwanzig Lizenzen vorbereitet.",
-              evidence: ["ev-license"] }
+            {
+              text: "Für Atlas GmbH wird ein Angebot über zwanzig Lizenzen vorbereitet.",
+              evidence: ["ev-license"],
+            },
           ],
           decisions: [],
           questions: [
-            { text: "Kommt die Rückmeldung zu den Zahlen bis Donnerstag?",
-              evidence: ["ev-berger-d"] }
+            {
+              text: "Kommt die Rückmeldung zu den Zahlen bis Donnerstag?",
+              evidence: ["ev-berger-d"],
+            },
           ],
-          activity: ["Heute, 08:30 · KI-Analyse: 1 neuer Vorschlag",
-                     "Montag · Meeting „Kundengespräch Berger“ verarbeitet"]
+          activity: [
+            "Heute, 08:30 · KI-Analyse: 1 neuer Vorschlag",
+            "Montag · Meeting „Kundengespräch Berger“ verarbeitet",
+          ],
         },
         sources: [
-          { name: "Transkript · Kundengespräch Berger", kind: "Meeting-Transkript",
-            status: "Indexiert", period: "—",
-            privacy: "Nur lokal", importedOn: "Mo, 11:05" }
+          {
+            name: "Transkript · Kundengespräch Berger",
+            kind: "Meeting-Transkript",
+            status: "Indexiert",
+            period: "—",
+            privacy: "Nur lokal",
+            importedOn: "Mo, 11:05",
+          },
         ],
         tasks: [
-          { id: "t-angebot", title: "Angebot über zwanzig Lizenzen erstellen", status: "vorgeschlagen",
-            dueLabel: "KI-Vorschlag: bis Freitag", overdueRank: 0,
-            dueRank: 4, userPrio: null, aiScore: 64, confidence: "81 %",
+          {
+            id: "t-angebot",
+            title: "Angebot über zwanzig Lizenzen erstellen",
+            status: "vorgeschlagen",
+            dueLabel: "KI-Vorschlag: bis Freitag",
+            overdueRank: 0,
+            dueRank: 4,
+            userPrio: null,
+            aiScore: 64,
+            confidence: "81 %",
             updatedRank: 5,
             evidence: ["ev-license"],
-            whyUrgent: { reason: "Berger hat das Angebot im Kundengespräch direkt erfragt; die Rückmeldung zu den Zahlen hängt daran.",
-                         evidence: ["ev-license", "ev-berger-d"] } }
-        ]
-      }
+            whyUrgent: {
+              reason:
+                "Berger hat das Angebot im Kundengespräch direkt erfragt; die Rückmeldung zu den Zahlen hängt daran.",
+              evidence: ["ev-license", "ev-berger-d"],
+            },
+          },
+        ],
+      },
     ];
   }
 
@@ -1754,10 +2407,14 @@
   state.projectSort = "aktiv";
   state.pendingSuggestionMeetingId = null;
 
-  state.unassignedSources = [];   // Importe ohne Projekt (Eingang)
+  state.unassignedSources = []; // Importe ohne Projekt (Eingang)
 
   function projectById(id) {
-    return state.projects.filter(function (p) { return p.id === id; })[0] || null;
+    return (
+      state.projects.filter(function (p) {
+        return p.id === id;
+      })[0] || null
+    );
   }
   function activeTasks(p) {
     return p.tasks.filter(function (t) {
@@ -1768,19 +2425,24 @@
      1. überfällig, 2. frühestes Fälligkeitsdatum, 3. Nutzerpriorität,
      4. KI-Dringlichkeit + Confidence, 5. zuletzt aktualisiert */
   function taskComparator(a, b) {
-    if ((b.overdueRank || 0) !== (a.overdueRank || 0)) return (b.overdueRank || 0) - (a.overdueRank || 0);
+    if ((b.overdueRank || 0) !== (a.overdueRank || 0))
+      return (b.overdueRank || 0) - (a.overdueRank || 0);
     var da = a.dueRank == null ? Infinity : a.dueRank;
     var db = b.dueRank == null ? Infinity : b.dueRank;
     if (da !== db) return da - db;
-    var pa = a.userPrio ? 1 : 0, pb = b.userPrio ? 1 : 0;
+    var pa = a.userPrio ? 1 : 0,
+      pb = b.userPrio ? 1 : 0;
     if (pa !== pb) return pb - pa;
-    if ((b.aiScore || 0) !== (a.aiScore || 0)) return (b.aiScore || 0) - (a.aiScore || 0);
+    if ((b.aiScore || 0) !== (a.aiScore || 0))
+      return (b.aiScore || 0) - (a.aiScore || 0);
     return (b.updatedRank || 0) - (a.updatedRank || 0);
   }
 
   function updateInboxBadge() {
-    var n = state.meetings.filter(function (m) { return !m.project; }).length +
-            state.unassignedSources.length;
+    var n =
+      state.meetings.filter(function (m) {
+        return !m.project;
+      }).length + state.unassignedSources.length;
     var badge = $("#eingang-badge");
     badge.textContent = String(n);
     badge.hidden = n === 0;
@@ -1800,15 +2462,25 @@
     var shown = projects.filter(function (p) {
       if (!q) return true;
       var hay = [p.name, p.statusText]
-        .concat(p.tasks.map(function (t) { return t.title; }))
-        .concat(p.overview.status.map(function (s) { return s.text; }))
+        .concat(
+          p.tasks.map(function (t) {
+            return t.title;
+          }),
+        )
+        .concat(
+          p.overview.status.map(function (s) {
+            return s.text;
+          }),
+        )
         .join(" ")
         .toLowerCase()
-        .replace(/\s+/g, " ");   // normalisierte Quellentexte
+        .replace(/\s+/g, " "); // normalisierte Quellentexte
       return hay.indexOf(q.replace(/\s+/g, " ")) !== -1;
     });
     if (state.projectSort === "name") {
-      shown.sort(function (a, b) { return a.name.localeCompare(b.name); });
+      shown.sort(function (a, b) {
+        return a.name.localeCompare(b.name);
+      });
     } else if (state.projectSort === "dringend") {
       shown.sort(function (a, b) {
         var ta = activeTasks(a).sort(taskComparator)[0];
@@ -1816,44 +2488,70 @@
         return taskUrgencyRank(tb) - taskUrgencyRank(ta);
       });
     } else {
-      shown.sort(function (a, b) { return b.lastActiveRank - a.lastActiveRank; });
+      shown.sort(function (a, b) {
+        return b.lastActiveRank - a.lastActiveRank;
+      });
     }
 
     var list = $("#project-list");
     list.innerHTML = "";
 
     // Eingang immer zuerst, nie wegsortierbar (§6.16)
-    var unassignedCount = state.meetings.filter(function (m) { return !m.project; }).length +
-      state.unassignedSources.length;
+    var unassignedCount =
+      state.meetings.filter(function (m) {
+        return !m.project;
+      }).length + state.unassignedSources.length;
     var inbox = document.createElement("li");
     inbox.className = "project-card inbox-card";
     inbox.innerHTML =
       "<a href='#/eingang' class='project-link'>" +
       "<strong>Eingang – Nicht zugeordnet</strong>" +
-      "<span class='badge badge-accent'>" + unassignedCount + "</span>" +
-      "<span class='muted'>" + unassignedCount + (unassignedCount === 1 ? " Element" : " Elemente") +
+      "<span class='badge badge-accent'>" +
+      unassignedCount +
+      "</span>" +
+      "<span class='muted'>" +
+      unassignedCount +
+      (unassignedCount === 1 ? " Element" : " Elemente") +
       " ohne Projektzuordnung</span></a>";
     list.appendChild(inbox);
 
     shown.forEach(function (p) {
       var top = activeTasks(p).sort(taskComparator)[0];
       var topText = top
-        ? "Nächste Aufgabe: " + esc(top.title) +
-          (top.overdueRank ? " (überfällig)" :
-           top.aiScore ? " (KI-Vorschlag)" : "") +
-          " · " + esc(top.dueLabel)
+        ? "Nächste Aufgabe: " +
+          esc(top.title) +
+          (top.overdueRank
+            ? " (überfällig)"
+            : top.aiScore
+              ? " (KI-Vorschlag)"
+              : "") +
+          " · " +
+          esc(top.dueLabel)
         : "Keine offenen Aufgaben";
       var li = document.createElement("li");
       li.className = "project-card";
       li.innerHTML =
-        "<a href='#/projekt-detail' class='project-link' data-project='" + p.id + "'>" +
-        "<strong>" + esc(p.name) + "</strong> " +
-        "<span class='status-chip " + (p.statusText === "In Arbeit" ? "status-processing" : "status-ready") + "'>" +
-        esc(p.statusText) + "</span><br>" +
-        "<span class='muted'>" + topText + "</span><br>" +
+        "<a href='#/projekt-detail' class='project-link' data-project='" +
+        p.id +
+        "'>" +
+        "<strong>" +
+        esc(p.name) +
+        "</strong> " +
+        "<span class='status-chip " +
+        (p.statusText === "In Arbeit" ? "status-processing" : "status-ready") +
+        "'>" +
+        esc(p.statusText) +
+        "</span><br>" +
+        "<span class='muted'>" +
+        topText +
+        "</span><br>" +
         "<span class='muted small'>Zuletzt aktiv: " +
-        (p.lastActiveRank >= 5 ? "heute" : "vor " + (5 - p.lastActiveRank) + " Tagen") +
-        " · " + p.unreviewed + " ungeprüfte Vorschläge</span></a>";
+        (p.lastActiveRank >= 5
+          ? "heute"
+          : "vor " + (5 - p.lastActiveRank) + " Tagen") +
+        " · " +
+        p.unreviewed +
+        " ungeprüfte Vorschläge</span></a>";
       li.querySelector(".project-link").addEventListener("click", function () {
         state.selectedProjectId = p.id;
       });
@@ -1868,10 +2566,12 @@
   }
 
   $("#project-search").addEventListener("input", function (e) {
-    state.projectSearch = e.target.value; renderProjects();
+    state.projectSearch = e.target.value;
+    renderProjects();
   });
   $("#project-sort").addEventListener("change", function (e) {
-    state.projectSort = e.target.value; renderProjects();
+    state.projectSort = e.target.value;
+    renderProjects();
   });
   $("#sim-no-projects").addEventListener("change", renderProjects);
 
@@ -1885,7 +2585,10 @@
     inp.focus();
   }
   $("#btn-projekt-erstellen").addEventListener("click", openProjectCreate);
-  $("#btn-projekt-erstellen-empty").addEventListener("click", openProjectCreate);
+  $("#btn-projekt-erstellen-empty").addEventListener(
+    "click",
+    openProjectCreate,
+  );
   $("#project-name-input").addEventListener("input", function () {
     $("#btn-pc-create").disabled = this.value.trim().length === 0;
     $("#project-name-blocker").hidden = this.value.trim().length > 0;
@@ -1898,10 +2601,15 @@
     var name = $("#project-name-input").value.trim();
     if (!name) return;
     state.projects.push({
-      id: nextProjectId(), name: name, statusText: "Neu",
-      aiLastRun: "–", lastActiveRank: 9, unreviewed: 0,
+      id: nextProjectId(),
+      name: name,
+      statusText: "Neu",
+      aiLastRun: "–",
+      lastActiveRank: 9,
+      unreviewed: 0,
       overview: { status: [], decisions: [], questions: [], activity: [] },
-      sources: [], tasks: []
+      sources: [],
+      tasks: [],
     });
     $("#project-create-dialog").hidden = true;
     $("#sim-no-projects").checked = false;
@@ -1917,27 +2625,43 @@
 
   /* ---------- Projekt-Detailansicht (§6.17) ---------- */
   function selectProjectTab(name) {
-    document.querySelectorAll("#view-projekt-detail .tab").forEach(function (t) {
-      t.setAttribute("aria-selected", String(t.dataset.ptab === name));
-    });
-    document.querySelectorAll("#view-projekt-detail .tabpanel").forEach(function (p) {
-      p.hidden = p.dataset.ppanel !== name;
-    });
+    document
+      .querySelectorAll("#view-projekt-detail .tab")
+      .forEach(function (t) {
+        t.setAttribute("aria-selected", String(t.dataset.ptab === name));
+      });
+    document
+      .querySelectorAll("#view-projekt-detail .tabpanel")
+      .forEach(function (p) {
+        p.hidden = p.dataset.ppanel !== name;
+      });
   }
-  document.querySelectorAll("#view-projekt-detail .tab").forEach(function (tab) {
-    tab.addEventListener("click", function () { selectProjectTab(this.dataset.ptab); });
-  });
+  document
+    .querySelectorAll("#view-projekt-detail .tab")
+    .forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        selectProjectTab(this.dataset.ptab);
+      });
+    });
 
   function renderProjectDetail() {
     var p = projectById(state.selectedProjectId);
-    if (!p) { location.hash = "#/projekte"; return; }
+    if (!p) {
+      location.hash = "#/projekte";
+      return;
+    }
     $("#pd-name").textContent = p.name;
     $("#pd-more-menu").open = false;
     // Belegbarer Kurzstatus: jeder Satz mit ≥1 Beleglink (Gate G1)
     var firstStatus = p.overview.status[0];
     $("#pd-statusline").innerHTML =
       esc(p.statusText) +
-      (firstStatus ? " · " + esc(firstStatus.text) + " " + evidenceAnchorHtml(firstStatus.evidence[0]) : "");
+      (firstStatus
+        ? " · " +
+          esc(firstStatus.text) +
+          " " +
+          evidenceAnchorHtml(firstStatus.evidence[0])
+        : "");
     $("#pd-ai-last-run").textContent = "Letzter KI-Lauf: " + p.aiLastRun;
 
     renderProjectOverview(p);
@@ -1950,88 +2674,167 @@
   function renderProjectOverview(p) {
     var el = $("#pd-overview");
     var html = "<h2 class='small-heading'>Status</h2>";
-    if (!p.overview.status.length) html += "<p class='muted'>Noch keine Statusaussagen.</p>";
+    if (!p.overview.status.length)
+      html += "<p class='muted'>Noch keine Statusaussagen.</p>";
     p.overview.status.forEach(function (s) {
-      html += "<p>" + esc(s.text) + "</p><ul class='evidence-list' role='list'>" +
-        s.evidence.map(evidenceLinkHtml).join("") + "</ul>";
+      html +=
+        "<p>" +
+        esc(s.text) +
+        "</p><ul class='evidence-list' role='list'>" +
+        s.evidence.map(evidenceLinkHtml).join("") +
+        "</ul>";
     });
     html += "<h2 class='small-heading'>Entscheidungen</h2>";
-    if (!p.overview.decisions.length) html += "<p class='muted'>Keine Entscheidungen erkannt.</p>";
+    if (!p.overview.decisions.length)
+      html += "<p class='muted'>Keine Entscheidungen erkannt.</p>";
     p.overview.decisions.forEach(function (d) {
-      html += "<p>" + esc(d.text) + "</p><ul class='evidence-list' role='list'>" +
-        d.evidence.map(evidenceLinkHtml).join("") + "</ul>";
+      html +=
+        "<p>" +
+        esc(d.text) +
+        "</p><ul class='evidence-list' role='list'>" +
+        d.evidence.map(evidenceLinkHtml).join("") +
+        "</ul>";
     });
     html += "<h2 class='small-heading'>Offene Fragen</h2>";
-    if (!p.overview.questions.length) html += "<p class='muted'>Keine offenen Fragen erkannt.</p>";
+    if (!p.overview.questions.length)
+      html += "<p class='muted'>Keine offenen Fragen erkannt.</p>";
     p.overview.questions.forEach(function (qq) {
-      html += "<p>" + esc(qq.text) + "</p><ul class='evidence-list' role='list'>" +
-        qq.evidence.map(evidenceLinkHtml).join("") + "</ul>";
+      html +=
+        "<p>" +
+        esc(qq.text) +
+        "</p><ul class='evidence-list' role='list'>" +
+        qq.evidence.map(evidenceLinkHtml).join("") +
+        "</ul>";
     });
     var urgent = activeTasks(p).sort(taskComparator).slice(0, 2);
     html += "<h2 class='small-heading'>Dringende Aufgaben</h2>";
     html += urgent.length
-      ? "<ul role='list'>" + urgent.map(function (t) {
-          return "<li>" + esc(t.title) + (t.overdueRank ? " (überfällig)" : "") + "</li>";
-        }).join("") + "</ul>"
+      ? "<ul role='list'>" +
+        urgent
+          .map(function (t) {
+            return (
+              "<li>" +
+              esc(t.title) +
+              (t.overdueRank ? " (überfällig)" : "") +
+              "</li>"
+            );
+          })
+          .join("") +
+        "</ul>"
       : "<p class='muted'>Keine dringenden Aufgaben.</p>";
-    html += "<h2 class='small-heading'>Letzte Aktivität</h2><ul role='list'>" +
-      p.overview.activity.map(function (a) { return "<li class='muted small'>" + esc(a) + "</li>"; }).join("") +
+    html +=
+      "<h2 class='small-heading'>Letzte Aktivität</h2><ul role='list'>" +
+      p.overview.activity
+        .map(function (a) {
+          return "<li class='muted small'>" + esc(a) + "</li>";
+        })
+        .join("") +
       "</ul>";
     el.innerHTML = html;
   }
 
   function taskCardHtml(p, t) {
-    var chip = t.status === "offen"
-      ? "<span class='status-chip status-processing'>Offen</span>"
-      : t.status === "vorgeschlagen"
-      ? "<span class='status-chip status-ready'>Vorgeschlagen (KI)</span>"
-      : t.status === "erledigt"
-      ? "<span class='status-chip status-done'>✓ Erledigt</span>"
-      : "<span class='status-chip'>Verworfen</span>";
+    var chip =
+      t.status === "offen"
+        ? "<span class='status-chip status-processing'>Offen</span>"
+        : t.status === "vorgeschlagen"
+          ? "<span class='status-chip status-ready'>Vorgeschlagen (KI)</span>"
+          : t.status === "erledigt"
+            ? "<span class='status-chip status-done'>✓ Erledigt</span>"
+            : "<span class='status-chip'>Verworfen</span>";
     var actions = "";
     if (t.status === "vorgeschlagen") {
-      actions += "<button type='button' class='btn btn-primary btn-small' data-task-action='annehmen' data-task='" + t.id + "'>Annehmen</button>";
+      actions +=
+        "<button type='button' class='btn btn-primary btn-small' data-task-action='annehmen' data-task='" +
+        t.id +
+        "'>Annehmen</button>";
     }
     if (t.status === "offen" || t.status === "vorgeschlagen") {
-      actions += " <button type='button' class='btn btn-secondary btn-small' data-task-action='erledigen' data-task='" + t.id + "'>Erledigen</button>" +
-        " <button type='button' class='btn btn-ghost btn-small' data-task-action='bearbeiten' data-task='" + t.id + "'>Bearbeiten</button>" +
-        " <button type='button' class='btn btn-ghost btn-small' data-task-action='verwerfen' data-task='" + t.id + "'>Verwerfen</button>";
+      actions +=
+        " <button type='button' class='btn btn-secondary btn-small' data-task-action='erledigen' data-task='" +
+        t.id +
+        "'>Erledigen</button>" +
+        " <button type='button' class='btn btn-ghost btn-small' data-task-action='bearbeiten' data-task='" +
+        t.id +
+        "'>Bearbeiten</button>" +
+        " <button type='button' class='btn btn-ghost btn-small' data-task-action='verwerfen' data-task='" +
+        t.id +
+        "'>Verwerfen</button>";
     }
     var why = "";
     if (t.whyUrgent && t.whyUrgent.reason) {
-      why = "<div class='why-box' data-why='" + t.id + "' hidden>" +
-        "<strong>Warum dringend?</strong> " + esc(t.whyUrgent.reason) +
+      why =
+        "<div class='why-box' data-why='" +
+        t.id +
+        "' hidden>" +
+        "<strong>Warum dringend?</strong> " +
+        esc(t.whyUrgent.reason) +
         "<ul class='evidence-list' role='list'>" +
-        t.whyUrgent.evidence.map(evidenceLinkHtml).join("") + "</ul></div>" +
-        "<button type='button' class='btn btn-ghost btn-small why-btn' data-why-toggle='" + t.id + "'" +
+        t.whyUrgent.evidence.map(evidenceLinkHtml).join("") +
+        "</ul></div>" +
+        "<button type='button' class='btn btn-ghost btn-small why-btn' data-why-toggle='" +
+        t.id +
+        "'" +
         " aria-expanded='false'>Warum dringend?</button>";
     }
     var meta = [];
     if (t.dueLabel !== "—") meta.push(esc(t.dueLabel));
     if (t.userPrio) meta.push("Priorität (von dir): " + esc(t.userPrio));
-    if (t.aiScore != null) meta.push("KI-Dringlichkeit " + t.aiScore + "/100 · Confidence " + t.confidence);
-    return "<div class='task-card' data-task-card='" + t.id + "'>" +
-      "<div class='row-between'><strong>" + esc(t.title) + "</strong>" + chip + "</div>" +
-      (meta.length ? "<p class='muted small'>" + meta.join(" · ") + "</p>" : "") +
-      "<ul class='evidence-list' role='list'>" + t.evidence.map(evidenceLinkHtml).join("") + "</ul>" +
+    if (t.aiScore != null)
+      meta.push(
+        "KI-Dringlichkeit " + t.aiScore + "/100 · Confidence " + t.confidence,
+      );
+    return (
+      "<div class='task-card' data-task-card='" +
+      t.id +
+      "'>" +
+      "<div class='row-between'><strong>" +
+      esc(t.title) +
+      "</strong>" +
+      chip +
+      "</div>" +
+      (meta.length
+        ? "<p class='muted small'>" + meta.join(" · ") + "</p>"
+        : "") +
+      "<ul class='evidence-list' role='list'>" +
+      t.evidence.map(evidenceLinkHtml).join("") +
+      "</ul>" +
       why +
-      "<div class='row-gap task-actions'>" + actions + "</div></div>";
+      "<div class='row-gap task-actions'>" +
+      actions +
+      "</div></div>"
+    );
   }
 
   function renderProjectTasks(p) {
     var host = $("#pd-tasks");
-    var groups = [["vorgeschlagen", "Vorgeschlagen"],
-                  ["offen", "Offen"],
-                  ["erledigt", "Erledigt"],
-                  ["verworfen", "Verworfen"]];
+    var groups = [
+      ["vorgeschlagen", "Vorgeschlagen"],
+      ["offen", "Offen"],
+      ["erledigt", "Erledigt"],
+      ["verworfen", "Verworfen"],
+    ];
     var sorted = p.tasks.slice().sort(taskComparator);
-    var html = "<p class='muted small'>Reihenfolge nachvollziehbar: überfällig → früheste Fälligkeit → deine Priorität → KI-Dringlichkeit → zuletzt aktualisiert. Erledigte oder bearbeitete Aufgaben werden bei einer Neuanalyse nie still zurückgesetzt.</p>";
+    var html =
+      "<p class='muted small'>Reihenfolge nachvollziehbar: überfällig → früheste Fälligkeit → deine Priorität → KI-Dringlichkeit → zuletzt aktualisiert. Erledigte oder bearbeitete Aufgaben werden bei einer Neuanalyse nie still zurückgesetzt.</p>";
     groups.forEach(function (g) {
-      var items = sorted.filter(function (t) { return t.status === g[0]; });
-      html += "<section class='task-group'><h2 class='small-heading'>" + g[1] +
-        " <span class='badge'>" + items.length + "</span></h2>" +
-        (items.length ? items.map(function (t) { return taskCardHtml(p, t); }).join("")
-                      : "<p class='muted small'>Keine.</p>") + "</section>";
+      var items = sorted.filter(function (t) {
+        return t.status === g[0];
+      });
+      html +=
+        "<section class='task-group'><h2 class='small-heading'>" +
+        g[1] +
+        " <span class='badge'>" +
+        items.length +
+        "</span></h2>" +
+        (items.length
+          ? items
+              .map(function (t) {
+                return taskCardHtml(p, t);
+              })
+              .join("")
+          : "<p class='muted small'>Keine.</p>") +
+        "</section>";
     });
     host.innerHTML = html;
   }
@@ -2042,28 +2845,39 @@
     var btn = e.target.closest("[data-task-action]");
     if (btn) {
       var p = projectById(state.selectedProjectId);
-      var t = p.tasks.filter(function (x) { return x.id === btn.dataset.task; })[0];
+      var t = p.tasks.filter(function (x) {
+        return x.id === btn.dataset.task;
+      })[0];
       if (!t) return;
       if (btn.dataset.taskAction === "annehmen") {
-        t.status = "offen"; t.updatedRank = 99;
+        t.status = "offen";
+        t.updatedRank = 99;
         announce("Aufgabe angenommen: " + t.title);
       } else if (btn.dataset.taskAction === "erledigen") {
-        t.status = "erledigt"; t.updatedRank = 99;
+        t.status = "erledigt";
+        t.updatedRank = 99;
         announce("Aufgabe erledigt: " + t.title);
       } else if (btn.dataset.taskAction === "verwerfen") {
-        t.status = "verworfen"; t.updatedRank = 99;
+        t.status = "verworfen";
+        t.updatedRank = 99;
         announce("Aufgabe verworfen: " + t.title);
       } else if (btn.dataset.taskAction === "bearbeiten") {
         var neu = window.prompt("Aufgabe bearbeiten", t.title);
-        if (neu && neu.trim()) { t.title = neu.trim(); t.updatedRank = 99; }
+        if (neu && neu.trim()) {
+          t.title = neu.trim();
+          t.updatedRank = 99;
+        }
         announce("Aufgabe bearbeitet.");
       }
-      renderProjectTasks(p); renderProjectOverview(p);
+      renderProjectTasks(p);
+      renderProjectOverview(p);
       return;
     }
     var whyBtn = e.target.closest("[data-why-toggle]");
     if (whyBtn) {
-      var box = document.querySelector("[data-why='" + whyBtn.dataset.whyToggle + "']");
+      var box = document.querySelector(
+        "[data-why='" + whyBtn.dataset.whyToggle + "']",
+      );
       if (box) {
         box.hidden = !box.hidden;
         whyBtn.setAttribute("aria-expanded", String(!box.hidden));
@@ -2073,28 +2887,60 @@
 
   function renderProjectMeetings(p) {
     var el = $("#pd-meetings");
-    var mine = state.meetings.filter(function (m) { return m.project === p.name; });
+    var mine = state.meetings.filter(function (m) {
+      return m.project === p.name;
+    });
     // Dieselben Datensätze wie in der globalen Bibliothek – keine Kopien:
     // Änderungen im Detail wirken sofort auch hier.
-    el.innerHTML = "<p class='muted small'>Dieselben Meeting-Datensätze wie in der globalen Bibliothek, nur gefiltert – keine duplizierten Kopien.</p>" +
+    el.innerHTML =
+      "<p class='muted small'>Dieselben Meeting-Datensätze wie in der globalen Bibliothek, nur gefiltert – keine duplizierten Kopien.</p>" +
       (mine.length
-        ? "<ul role='list'>" + mine.map(function (m) {
-            return "<li class='meeting-item'><strong>" + esc(m.title) + "</strong> · " +
-              esc(m.date) + " · " + esc(m.duration) + " " + statusChipHtml(m) + "</li>";
-          }).join("") + "</ul>"
+        ? "<ul role='list'>" +
+          mine
+            .map(function (m) {
+              return (
+                "<li class='meeting-item'><strong>" +
+                esc(m.title) +
+                "</strong> · " +
+                esc(m.date) +
+                " · " +
+                esc(m.duration) +
+                " " +
+                statusChipHtml(m) +
+                "</li>"
+              );
+            })
+            .join("") +
+          "</ul>"
         : "<p class='muted'>Noch keine Meetings diesem Projekt zugeordnet.</p>");
   }
 
   function renderProjectSources(p) {
     var el = $("#pd-sources");
-    el.innerHTML = "<p class='muted small'>WhatsApp-Exporte, Dateien und Notizen mit Verarbeitungsstatus, Zeitraum, Datenschutzmodus und Importdatum.</p>" +
+    el.innerHTML =
+      "<p class='muted small'>WhatsApp-Exporte, Dateien und Notizen mit Verarbeitungsstatus, Zeitraum, Datenschutzmodus und Importdatum.</p>" +
       (p.sources.length
         ? "<table class='sources-table'><thead><tr><th>Quelle</th><th>Status</th><th>Zeitraum</th><th>Datenschutz</th><th>Importiert</th></tr></thead><tbody>" +
-          p.sources.map(function (s) {
-            return "<tr><td>" + esc(s.name) + "<br><span class='muted small'>" + esc(s.kind) +
-              "</span></td><td>" + esc(s.status) + "</td><td>" + esc(s.period) +
-              "</td><td>" + esc(s.privacy) + "</td><td>" + esc(s.importedOn) + "</td></tr>";
-          }).join("") + "</tbody></table>"
+          p.sources
+            .map(function (s) {
+              return (
+                "<tr><td>" +
+                esc(s.name) +
+                "<br><span class='muted small'>" +
+                esc(s.kind) +
+                "</span></td><td>" +
+                esc(s.status) +
+                "</td><td>" +
+                esc(s.period) +
+                "</td><td>" +
+                esc(s.privacy) +
+                "</td><td>" +
+                esc(s.importedOn) +
+                "</td></tr>"
+              );
+            })
+            .join("") +
+          "</tbody></table>"
         : "<p class='muted'>Noch keine Quellen importiert.</p>");
   }
 
@@ -2109,18 +2955,31 @@
       var alt = p.name;
       p.name = neu.trim();
       // Nur die Verknüpfung ändern – Meetings behalten Transkript/Audio/Belege
-      state.meetings.forEach(function (m) { if (m.project === alt) m.project = p.name; });
+      state.meetings.forEach(function (m) {
+        if (m.project === alt) m.project = p.name;
+      });
       $("#pd-more-menu").open = false;
-      renderProjectDetail(); renderMeetings();
+      renderProjectDetail();
+      renderMeetings();
       announce("Projekt umbenannt in „" + p.name + "“.");
     }
   });
   $("#btn-pd-delete").addEventListener("click", function () {
     var p = projectById(state.selectedProjectId);
     if (!p) return;
-    if (window.confirm("Projekt „" + p.name + "“ löschen?\n\nMeetings, Transkripte und Audio bleiben erhalten und landen im Eingang „Nicht zugeordnet“. Nur Verknüpfungen, Aufgaben und Projektquellen werden entfernt.")) {
-      state.meetings.forEach(function (m) { if (m.project === p.name) m.project = null; });
-      state.projects = state.projects.filter(function (x) { return x !== p; });
+    if (
+      window.confirm(
+        "Projekt „" +
+          p.name +
+          "“ löschen?\n\nMeetings, Transkripte und Audio bleiben erhalten und landen im Eingang „Nicht zugeordnet“. Nur Verknüpfungen, Aufgaben und Projektquellen werden entfernt.",
+      )
+    ) {
+      state.meetings.forEach(function (m) {
+        if (m.project === p.name) m.project = null;
+      });
+      state.projects = state.projects.filter(function (x) {
+        return x !== p;
+      });
       location.hash = "#/projekte";
       announce("Projekt gelöscht. Zugeordnete Meetings liegen im Eingang.");
     }
@@ -2132,19 +2991,38 @@
     updateInboxBadge();
     var list = $("#eingang-list");
     list.innerHTML = "";
-    var items = state.meetings.filter(function (m) { return !m.project; })
-      .map(function (m) { return { kind: "Meeting", label: m.title + " (" + m.date + " · " + m.duration + ")", ref: m }; })
-      .concat(state.unassignedSources.map(function (s) {
-        return { kind: "Import", label: s.label, ref: s };
-      }));
+    var items = state.meetings
+      .filter(function (m) {
+        return !m.project;
+      })
+      .map(function (m) {
+        return {
+          kind: "Meeting",
+          label: m.title + " (" + m.date + " · " + m.duration + ")",
+          ref: m,
+        };
+      })
+      .concat(
+        state.unassignedSources.map(function (s) {
+          return { kind: "Import", label: s.label, ref: s };
+        }),
+      );
     if (!items.length) {
-      list.innerHTML = "<li class='muted'>Der Eingang ist leer – alles ist zugeordnet.</li>";
+      list.innerHTML =
+        "<li class='muted'>Der Eingang ist leer – alles ist zugeordnet.</li>";
     }
     items.forEach(function (it, idx) {
       var li = document.createElement("li");
       li.className = "inbox-item";
-      li.innerHTML = "<label><input type='checkbox' data-inbox-idx='" + idx + "'> " +
-        "<span class='badge'>" + esc(it.kind) + "</span> " + esc(it.label) + "</label>";
+      li.innerHTML =
+        "<label><input type='checkbox' data-inbox-idx='" +
+        idx +
+        "'> " +
+        "<span class='badge'>" +
+        esc(it.kind) +
+        "</span> " +
+        esc(it.label) +
+        "</label>";
       li.querySelector("input")._ref = it.ref;
       li.querySelector("input")._kind = it.kind;
       list.appendChild(li);
@@ -2154,37 +3032,69 @@
     sel.innerHTML = "";
     state.projects.forEach(function (p) {
       var o = document.createElement("option");
-      o.value = p.id; o.textContent = p.name;
+      o.value = p.id;
+      o.textContent = p.name;
       sel.appendChild(o);
     });
   }
 
   $("#btn-eingang-assign").addEventListener("click", function () {
     var checked = [...document.querySelectorAll("#eingang-list input:checked")];
-    if (!checked.length) { announce("Erst Elemente auswählen."); return; }
+    if (!checked.length) {
+      announce("Erst Elemente auswählen.");
+      return;
+    }
     var target = projectById($("#eingang-target").value);
-    if (!target) { announce("Kein Zielprojekt vorhanden – erst ein Projekt erstellen."); return; }
+    if (!target) {
+      announce("Kein Zielprojekt vorhanden – erst ein Projekt erstellen.");
+      return;
+    }
     // Vorschau vor jeder Stapelzuordnung (§6.18)
     $("#assign-preview-text").textContent =
-      checked.length + (checked.length === 1 ? " Element" : " Elemente") +
-      " dem Projekt „" + target.name + "“ zuweisen?";
-    $("#assign-preview-list").innerHTML = checked.map(function (inp) {
-      return "<li>" + esc(inp._kind) + ": " + esc(inp._ref.title || inp._ref.label) + "</li>";
-    }).join("");
+      checked.length +
+      (checked.length === 1 ? " Element" : " Elemente") +
+      " dem Projekt „" +
+      target.name +
+      "“ zuweisen?";
+    $("#assign-preview-list").innerHTML = checked
+      .map(function (inp) {
+        return (
+          "<li>" +
+          esc(inp._kind) +
+          ": " +
+          esc(inp._ref.title || inp._ref.label) +
+          "</li>"
+        );
+      })
+      .join("");
     $("#assign-preview").hidden = false;
     $("#btn-assign-ok").onclick = function () {
       checked.forEach(function (inp) {
         if (inp._kind === "Meeting") inp._ref.project = target.name;
         else {
-          state.unassignedSources = state.unassignedSources.filter(function (s) { return s !== inp._ref; });
-          target.sources.push({ name: inp._ref.label, kind: inp._ref.kind,
-            status: "Importiert · indexiert", period: inp._ref.period,
-            privacy: "Nur lokal", importedOn: "Heute, 09:05" });
+          state.unassignedSources = state.unassignedSources.filter(
+            function (s) {
+              return s !== inp._ref;
+            },
+          );
+          target.sources.push({
+            name: inp._ref.label,
+            kind: inp._ref.kind,
+            status: "Importiert · indexiert",
+            period: inp._ref.period,
+            privacy: "Nur lokal",
+            importedOn: "Heute, 09:05",
+          });
         }
       });
       $("#assign-preview").hidden = true;
       renderEingang();
-      announce(checked.length + " Element(e) „" + target.name + "“ zugeordnet. Nur Verknüpfungen geändert.");
+      announce(
+        checked.length +
+          " Element(e) „" +
+          target.name +
+          "“ zugeordnet. Nur Verknüpfungen geändert.",
+      );
     };
   });
   $("#btn-assign-cancel").addEventListener("click", function () {
@@ -2197,7 +3107,9 @@
     state.pendingSuggestionMeetingId = m.id;
     var card = $("#ai-suggestion");
     $("#suggestion-headline").innerHTML =
-      "Für <strong>„" + esc(m.title) + "“</strong> wird <strong>Projekt „BDNA Club“ vorgeschlagen</strong>" +
+      "Für <strong>„" +
+      esc(m.title) +
+      "“</strong> wird <strong>Projekt „BDNA Club“ vorgeschlagen</strong>" +
       " · Confidence 87 %";
     $("#suggestion-evidence").innerHTML =
       evidenceLinkHtml("ev-invite") + evidenceLinkHtml("ev-chase");
@@ -2219,7 +3131,11 @@
     var m = meetingById(state.pendingSuggestionMeetingId);
     if (!m) return;
     m.project = "BDNA Club";
-    closeSuggestion("„" + m.title + "“ wurde „BDNA Club“ zugeordnet. Nur die Verknüpfung wurde geändert.");
+    closeSuggestion(
+      "„" +
+        m.title +
+        "“ wurde „BDNA Club“ zugeordnet. Nur die Verknüpfung wurde geändert.",
+    );
     announce("Meeting zugeordnet: BDNA Club.");
     updateInboxBadge();
   });
@@ -2249,38 +3165,61 @@
   });
   $("#btn-suggest-none").addEventListener("click", function () {
     var m = meetingById(state.pendingSuggestionMeetingId);
-    closeSuggestion(m ? "„" + m.title + "“ bleibt ohne Projekt – es liegt im Eingang." : "");
+    closeSuggestion(
+      m ? "„" + m.title + "“ bleibt ohne Projekt – es liegt im Eingang." : "",
+    );
     announce("Meeting bleibt ohne Projektzuordnung.");
   });
 
   /* ---------- WhatsApp-Importassistent (§6.19) ---------- */
   var IMPORT_FILES = {
-    a: { name: "WhatsApp Export – BDNA Club.zip",
-         chat: "BDNA Club", participants: 4, period: "12.01.–12.08.2026",
-         messages: 48, media: 6, voice: 2, video: 1, unsupported: 1,
-         warnings: ["1 Sprachnachricht ohne Transkript-Datei",
-                    "1 nicht unterstützte Datei (sticker.webp)"],
-         duplicates: [], newMessages: 48 },
-    b: { name: "BDNA Club Chat (Teil 2).zip",
-         chat: "BDNA Club", participants: 4, period: "01.06.–12.08.2026",
-         messages: 26, media: 3, voice: 1, video: 0, unsupported: 0,
-         warnings: ["Export überlappt mit bereits importiertem Archiv"],
-         // Dubletten-Demo (Gate G4): 12 Nachrichten sind bereits vorhanden
-         duplicates: ["Können wir endlich die Einladungen für den Sommerball rausschicken?",
-                      "Ja – ich mache die Einladungen diese Woche fertig.",
-                      "Erinnerung: Die Einladungen sind immer noch nicht raus.",
-                      "Sorry, diese Woche klappt es nicht, ich verschiebe auf nächste Woche.",
-                      "Sollen wir für den Sommerball jetzt 80 oder 120 Getränkekarten planen?",
-                      "Nehmen wir 120, beim Sommerfest waren alle Getränke nach zwei Stunden weg.",
-                      "Ich schicke heute die Zahlen für die Kasse an alle, bitte bis Donnerstag prüfen.",
-                      "Wer holt eigentlich die Kisten vom Lager?",
-                      "Ich kann Freitag gegen 16 Uhr.",
-                      "Dann treffen wir uns um 15:30 am Lager.",
-                      "Bringt bitte noch die Restposten-Coupons mit.",
-                      "Und nicht vergessen: Kassenzettel für die Abrechnung aufheben."],
-         newMessages: 14 }
+    a: {
+      name: "WhatsApp Export – BDNA Club.zip",
+      chat: "BDNA Club",
+      participants: 4,
+      period: "12.01.–12.08.2026",
+      messages: 48,
+      media: 6,
+      voice: 2,
+      video: 1,
+      unsupported: 1,
+      warnings: [
+        "1 Sprachnachricht ohne Transkript-Datei",
+        "1 nicht unterstützte Datei (sticker.webp)",
+      ],
+      duplicates: [],
+      newMessages: 48,
+    },
+    b: {
+      name: "BDNA Club Chat (Teil 2).zip",
+      chat: "BDNA Club",
+      participants: 4,
+      period: "01.06.–12.08.2026",
+      messages: 26,
+      media: 3,
+      voice: 1,
+      video: 0,
+      unsupported: 0,
+      warnings: ["Export überlappt mit bereits importiertem Archiv"],
+      // Dubletten-Demo (Gate G4): 12 Nachrichten sind bereits vorhanden
+      duplicates: [
+        "Können wir endlich die Einladungen für den Sommerball rausschicken?",
+        "Ja – ich mache die Einladungen diese Woche fertig.",
+        "Erinnerung: Die Einladungen sind immer noch nicht raus.",
+        "Sorry, diese Woche klappt es nicht, ich verschiebe auf nächste Woche.",
+        "Sollen wir für den Sommerball jetzt 80 oder 120 Getränkekarten planen?",
+        "Nehmen wir 120, beim Sommerfest waren alle Getränke nach zwei Stunden weg.",
+        "Ich schicke heute die Zahlen für die Kasse an alle, bitte bis Donnerstag prüfen.",
+        "Wer holt eigentlich die Kisten vom Lager?",
+        "Ich kann Freitag gegen 16 Uhr.",
+        "Dann treffen wir uns um 15:30 am Lager.",
+        "Bringt bitte noch die Restposten-Coupons mit.",
+        "Und nicht vergessen: Kassenzettel für die Abrechnung aufheben.",
+      ],
+      newMessages: 14,
+    },
   };
-  var importState = null;   // aktuell gewählte Datei
+  var importState = null; // aktuell gewählte Datei
 
   function setWizardStep(n) {
     document.querySelectorAll("#wizard-steps li").forEach(function (li) {
@@ -2303,7 +3242,9 @@
     $("#btn-import-run").hidden = false;
     $("#btn-import-finish").hidden = true;
     $("#btn-import-back3").hidden = true;
-    var radio = document.querySelector('input[name="import-mode"][value="lokal"]');
+    var radio = document.querySelector(
+      'input[name="import-mode"][value="lokal"]',
+    );
     if (radio) radio.checked = true;
     fillImportProjectSelect();
     setWizardStep(1);
@@ -2312,18 +3253,24 @@
     var sel = $("#import-project");
     sel.innerHTML = "";
     var none = document.createElement("option");
-    none.value = ""; none.textContent = "Nicht zugeordnet (Eingang)";
+    none.value = "";
+    none.textContent = "Nicht zugeordnet (Eingang)";
     sel.appendChild(none);
     state.projects.forEach(function (p) {
       var o = document.createElement("option");
-      o.value = p.id; o.textContent = p.name;
+      o.value = p.id;
+      o.textContent = p.name;
       sel.appendChild(o);
     });
     // Optionen tragen die Projekt-IDs – Vorauswahl daher per ID, nicht Name
     if (preselectId && projectById(preselectId)) sel.value = preselectId;
   }
   function projectByName(name) {
-    return state.projects.filter(function (p) { return p.name === name; })[0] || null;
+    return (
+      state.projects.filter(function (p) {
+        return p.name === name;
+      })[0] || null
+    );
   }
 
   document.querySelectorAll(".file-pick").forEach(function (b) {
@@ -2334,36 +3281,64 @@
       announce("Datei analysiert: " + importState.name);
     });
   });
-  $("#btn-import-back1").addEventListener("click", function () { setWizardStep(1); });
+  $("#btn-import-back1").addEventListener("click", function () {
+    setWizardStep(1);
+  });
   $("#btn-to-step3").addEventListener("click", function () {
     fillImportProjectSelect(state.selectedProjectId);
     setWizardStep(3);
   });
-  $("#btn-import-back2").addEventListener("click", function () { setWizardStep(2); });
+  $("#btn-import-back2").addEventListener("click", function () {
+    setWizardStep(2);
+  });
 
   function renderDetected() {
     var f = importState;
     $("#detected-grid").innerHTML =
-      "<dt>Chatname</dt><dd>" + esc(f.chat) + "</dd>" +
-      "<dt>Teilnehmer</dt><dd>" + f.participants + " (Lena, Tarek, Mira, Du)</dd>" +
-      "<dt>Zeitraum</dt><dd>" + esc(f.period) + "</dd>" +
-      "<dt>Nachrichten</dt><dd>" + f.messages + "</dd>" +
-      "<dt>Medien</dt><dd>" + f.media + " Bilder · " + f.voice + " Sprachnachrichten · " +
-      f.video + " Video</dd>" +
-      "<dt>Warnungen</dt><dd>" + f.warnings.map(esc).join("<br>") + "</dd>" +
-      "<dt>Mögliche Dubletten</dt><dd id='detected-dup-count'>" + f.duplicates.length + "</dd>";
+      "<dt>Chatname</dt><dd>" +
+      esc(f.chat) +
+      "</dd>" +
+      "<dt>Teilnehmer</dt><dd>" +
+      f.participants +
+      " (Lena, Tarek, Mira, Du)</dd>" +
+      "<dt>Zeitraum</dt><dd>" +
+      esc(f.period) +
+      "</dd>" +
+      "<dt>Nachrichten</dt><dd>" +
+      f.messages +
+      "</dd>" +
+      "<dt>Medien</dt><dd>" +
+      f.media +
+      " Bilder · " +
+      f.voice +
+      " Sprachnachrichten · " +
+      f.video +
+      " Video</dd>" +
+      "<dt>Warnungen</dt><dd>" +
+      f.warnings.map(esc).join("<br>") +
+      "</dd>" +
+      "<dt>Mögliche Dubletten</dt><dd id='detected-dup-count'>" +
+      f.duplicates.length +
+      "</dd>";
 
     // Deduplizieren passiert lokal VOR jedem Import; die Vorschau zeigt
     // genau, welche Nachrichten übersprungen würden (Gate G4)
     var dp = $("#dedup-preview");
     if (f.duplicates.length) {
-      dp.innerHTML = "<strong>Dubletten-Vorschau (lokal dedupliziert):</strong> " +
-        f.duplicates.length + " Nachrichten existieren bereits im Projekt „BDNA Club“ " +
+      dp.innerHTML =
+        "<strong>Dubletten-Vorschau (lokal dedupliziert):</strong> " +
+        f.duplicates.length +
+        " Nachrichten existieren bereits im Projekt „BDNA Club“ " +
         "und werden beim Import übersprungen:" +
         "<ul class='dup-list' role='list'>" +
-        f.duplicates.map(function (d) {
-          return "<li class='dup-item'>⤵ schon vorhanden · „" + esc(d) + "“</li>";
-        }).join("") + "</ul>" +
+        f.duplicates
+          .map(function (d) {
+            return (
+              "<li class='dup-item'>⤵ schon vorhanden · „" + esc(d) + "“</li>"
+            );
+          })
+          .join("") +
+        "</ul>" +
         "<p class='muted small'>Inhalts-Hashes machen erneute Importe idempotent – nichts wird doppelt gespeichert.</p>";
       dp.hidden = false;
     } else {
@@ -2373,17 +3348,31 @@
 
   /* Schritt 3: exakte Offenlegung, was das Gerät verlässt (Gate G3) */
   function renderCloudDisclosure() {
-    var cloud = document.querySelector('input[name="import-mode"]:checked').value === "cloud";
+    var cloud =
+      document.querySelector('input[name="import-mode"]:checked').value ===
+      "cloud";
     $("#cloud-disclosure").hidden = !cloud;
     $("#local-disclosure").hidden = cloud;
     if (cloud) {
       var f = importState;
       $("#cloud-leaves-list").innerHTML =
-        "<li>Nachrichtentexte: alle " + f.messages + " erkannten Nachrichten des Exports</li>" +
-        "<li>Bilder: " + f.media + " Bilder als Base64-Dateninhalt – nur nach Bestätigung gesendet</li>" +
-        "<li>Sprachnachrichten: " + f.voice + " Audiodatei(en) – nur wenn du unten explizit „Sprache transkribieren (Cloud)“ wählst, sonst nur lokales Asset</li>" +
-        "<li>PDF/Dokumente: " + 0 + " – kein Dokument im Export</li>" +
-        "<li><strong>Nicht</strong>: Video (" + f.video + ") und nicht unterstützte Dateien (" + f.unsupported + ") bleiben vollständig auf dem Gerät</li>";
+        "<li>Nachrichtentexte: alle " +
+        f.messages +
+        " erkannten Nachrichten des Exports</li>" +
+        "<li>Bilder: " +
+        f.media +
+        " Bilder als Base64-Dateninhalt – nur nach Bestätigung gesendet</li>" +
+        "<li>Sprachnachrichten: " +
+        f.voice +
+        " Audiodatei(en) – nur wenn du unten explizit „Sprache transkribieren (Cloud)“ wählst, sonst nur lokales Asset</li>" +
+        "<li>PDF/Dokumente: " +
+        0 +
+        " – kein Dokument im Export</li>" +
+        "<li><strong>Nicht</strong>: Video (" +
+        f.video +
+        ") und nicht unterstützte Dateien (" +
+        f.unsupported +
+        ") bleiben vollständig auf dem Gerät</li>";
       $("#cloud-cost").textContent =
         "Kostenschätzung: ca. 0,04 € (ca. 21.000 Text-Token · Mock-Betrag).";
     }
@@ -2397,7 +3386,9 @@
     setWizardStep(4);
     $("#import-checklist").innerHTML =
       "<li data-istep='parse' class='done'>✓ Lokal entpackt und geparst</li>" +
-      "<li data-istep='dedup' class='done'>✓ Lokal dedupliziert (" + importState.duplicates.length + " Dubletten erkannt)</li>" +
+      "<li data-istep='dedup' class='done'>✓ Lokal dedupliziert (" +
+      importState.duplicates.length +
+      " Dubletten erkannt)</li>" +
       "<li data-istep='index' class='done'>✓ Lokal indexiert – Export ist durchsuchbar</li>" +
       "<li data-istep='cloud' hidden></li>";
     $("#import-result").hidden = true;
@@ -2405,11 +3396,15 @@
     $("#btn-import-finish").hidden = true;
     $("#btn-import-back3").hidden = false;
   });
-  $("#btn-import-back3").addEventListener("click", function () { setWizardStep(3); });
+  $("#btn-import-back3").addEventListener("click", function () {
+    setWizardStep(3);
+  });
 
   $("#btn-import-run").addEventListener("click", function () {
     var f = importState;
-    var cloud = document.querySelector('input[name="import-mode"]:checked').value === "cloud";
+    var cloud =
+      document.querySelector('input[name="import-mode"]:checked').value ===
+      "cloud";
     this.disabled = true;
     this.textContent = "Import läuft …";
     var steps = $("#import-checklist");
@@ -2423,58 +3418,91 @@
       cloudLi.className = "";
       cloudLi.textContent = "● Cloud-Analyse der freigegebenen Inhalte …";
     }
-    window.setTimeout(function () {
-      if (cloud) markDone('[data-istep="cloud"]');
-      // Ergebnis: importierte / übersprungene / fehlerhafte Elemente (§6.19)
-      var skipped = f.duplicates.length;
-      var failed = f.unsupported;
-      var res = $("#import-result");
-      res.innerHTML = "<strong>Import abgeschlossen.</strong>" +
-        "<ul role='list'>" +
-        "<li>Importiert: " + f.newMessages + " Nachrichten, " + (f.media - failed) + " Medien</li>" +
-        "<li>Übersprungen (Dubletten): " + skipped + "</li>" +
-        "<li>Fehlerhaft/nicht analysiert: " + failed + " (klar als „nicht analysiert“ markiert)</li>" +
-        "</ul>" +
-        "<p class='muted small'>Gesamt im Projekt: " + (48 + f.newMessages) +
-        " Nachrichten – die " + skipped + " Dubletten wurden NICHT doppelt gespeichert.</p>";
-      res.hidden = false;
-      // Quelle dem gewählten Zielprojekt zuordnen (oder Eingang lassen)
-      var projSel = $("#import-project").value;
-      var target = projSel ? projectById(projSel) : null;
-      var entry = { name: f.name, kind: "WhatsApp-Export",
-        status: "Importiert · indexiert", period: f.period,
-        privacy: cloud ? "Teils Cloud (bestätigte Inhalte)" : "Nur lokal",
-        importedOn: "Gerade eben" };
-      if (target) target.sources.push(entry);
-      else state.unassignedSources.push({ label: f.name, kind: "WhatsApp-Export", period: f.period });
-      updateInboxBadge();
-      $("#btn-import-run").hidden = true;
-      $("#btn-import-finish").hidden = false;
-      $("#btn-import-run").disabled = false;
-      $("#btn-import-run").textContent = "Import starten";
-      announce("Import abgeschlossen. " + f.newMessages + " importiert, " + skipped + " übersprungen.");
-    }, cloud ? 900 : 400);
+    window.setTimeout(
+      function () {
+        if (cloud) markDone('[data-istep="cloud"]');
+        // Ergebnis: importierte / übersprungene / fehlerhafte Elemente (§6.19)
+        var skipped = f.duplicates.length;
+        var failed = f.unsupported;
+        var res = $("#import-result");
+        res.innerHTML =
+          "<strong>Import abgeschlossen.</strong>" +
+          "<ul role='list'>" +
+          "<li>Importiert: " +
+          f.newMessages +
+          " Nachrichten, " +
+          (f.media - failed) +
+          " Medien</li>" +
+          "<li>Übersprungen (Dubletten): " +
+          skipped +
+          "</li>" +
+          "<li>Fehlerhaft/nicht analysiert: " +
+          failed +
+          " (klar als „nicht analysiert“ markiert)</li>" +
+          "</ul>" +
+          "<p class='muted small'>Gesamt im Projekt: " +
+          (48 + f.newMessages) +
+          " Nachrichten – die " +
+          skipped +
+          " Dubletten wurden NICHT doppelt gespeichert.</p>";
+        res.hidden = false;
+        // Quelle dem gewählten Zielprojekt zuordnen (oder Eingang lassen)
+        var projSel = $("#import-project").value;
+        var target = projSel ? projectById(projSel) : null;
+        var entry = {
+          name: f.name,
+          kind: "WhatsApp-Export",
+          status: "Importiert · indexiert",
+          period: f.period,
+          privacy: cloud ? "Teils Cloud (bestätigte Inhalte)" : "Nur lokal",
+          importedOn: "Gerade eben",
+        };
+        if (target) target.sources.push(entry);
+        else
+          state.unassignedSources.push({
+            label: f.name,
+            kind: "WhatsApp-Export",
+            period: f.period,
+          });
+        updateInboxBadge();
+        $("#btn-import-run").hidden = true;
+        $("#btn-import-finish").hidden = false;
+        $("#btn-import-run").disabled = false;
+        $("#btn-import-run").textContent = "Import starten";
+        announce(
+          "Import abgeschlossen. " +
+            f.newMessages +
+            " importiert, " +
+            skipped +
+            " übersprungen.",
+        );
+      },
+      cloud ? 900 : 400,
+    );
   });
   $("#btn-import-finish").addEventListener("click", function () {
     location.hash = "#/projekte";
   });
 
-
   $("#mock-reset").addEventListener("click", function () {
-    state.sessionActive = false; state.paused = false;
+    state.sessionActive = false;
+    state.paused = false;
     state.seconds = 0;
     stopSegments();
-    clearProcTimers();          // laufende Checklisten anhalten (§6.12)
+    clearProcTimers(); // laufende Checklisten anhalten (§6.12)
     sessionCaptured = [];
     state.selectedId = null;
     $("#btn-retry-failed").hidden = true;
     $("#btn-open-processing-meeting").hidden = true;
     // offene Overlays (Countdown/Bestätigung) sauber schließen
-    if (countdownIv) { window.clearInterval(countdownIv); countdownIv = null; }
+    if (countdownIv) {
+      window.clearInterval(countdownIv);
+      countdownIv = null;
+    }
     $("#countdown-overlay").hidden = true;
     closeStopConfirm();
     resetDialogState();
-    dlgInitialized = true;   // Defaults sind gerade explizit hergestellt
+    dlgInitialized = true; // Defaults sind gerade explizit hergestellt
     // Projekte/Eingang/Vorschlag/Import auf die Mock-Defaults zurücksetzen
     state.projects = defaultProjects();
     state.selectedProjectId = null;
@@ -2490,9 +3518,15 @@
     $("#assign-preview").hidden = true;
     $("#project-create-dialog").hidden = true;
     importState = null;
-    ["#sim-no-mic", "#sim-mic-denied", "#sim-no-output", "#sim-shortcut-taken",
-     "#sim-chunk-error"]
-      .forEach(function (sel) { $(sel).checked = false; });
+    [
+      "#sim-no-mic",
+      "#sim-mic-denied",
+      "#sim-no-output",
+      "#sim-shortcut-taken",
+      "#sim-chunk-error",
+    ].forEach(function (sel) {
+      $(sel).checked = false;
+    });
     location.hash = "#/diktieren";
     render();
     announce("Prototyp-Zustand zurückgesetzt.");

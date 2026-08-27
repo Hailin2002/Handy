@@ -12,13 +12,13 @@ Sibling contracts consumed read-only below, abbreviated:
 - **STT** — [stt-provider-contract.md](stt-provider-contract.md)
 - **SPC** — [summary-provider-contract.md](summary-provider-contract.md)
 - **COPY** — [../meeting-mode-ux-copy-catalog.md](../meeting-mode-ux-copy-catalog.md)
-  (proposal-only; remains the sole authority for key *text*)
+  (proposal-only; remains the sole authority for key _text_)
 - **REG** — [identifier-registry.md](identifier-registry.md)
 
 Conflict rule (identical to the documentation index): the plan wins over this
 contract, this contract wins over catalogs, and nothing wins over actual code.
 Where this contract assigns copy keys, the catalog stays the authority for the
-*wording*; this contract is the authority for the *code ↔ key binding*.
+_wording_; this contract is the authority for the _code ↔ key binding_.
 
 ---
 
@@ -55,7 +55,7 @@ Normative claims:
 4. Retryability of STT-origin codes is inherited verbatim from STT §6
    (§4).
 
-This contract resolves the *mapping half* of REG findings F-07, F-08, F-09,
+This contract resolves the _mapping half_ of REG findings F-07, F-08, F-09,
 F-10 and F-14 (which technical name binds to which user-facing key) without
 editing those documents; REG remains the inventory owner.
 
@@ -69,7 +69,7 @@ uses exactly this shape:
 ```jsonc
 {
   "code": "meeting.recorder.system_device_lost",
-  "params": { "source": "system", "segmentId": "42" }
+  "params": { "source": "system", "segmentId": "42" },
 }
 ```
 
@@ -153,33 +153,33 @@ Format: **`meeting.<origin>.<snake_case_name>`**
 
 ### 4.1 Severity (drives color/icon per plan §6.8; never color alone)
 
-| Value | Meaning |
-| --- | --- |
-| `info` | State notice; no fault (e.g. default-device change handled). |
-| `warning` | Attention/degraded, orange; capture or processing continues. |
-| `error` | Progress blocked or stopped; data preserved; action required. |
+| Value     | Meaning                                                       |
+| --------- | ------------------------------------------------------------- |
+| `info`    | State notice; no fault (e.g. default-device change handled).  |
+| `warning` | Attention/degraded, orange; capture or processing continues.  |
+| `error`   | Progress blocked or stopped; data preserved; action required. |
 
 ### 4.2 Action class (plan §6.2 rule 8: every error explains the next action)
 
-| Value | Buttons (all from COPY §2.3 unless noted) |
-| --- | --- |
-| `none` | passive indicator only |
-| `retry` | `tryAgain` / `reconnect` / `retryFailedSegments` |
-| `repair` | focused repair dialog: `switchDevice`, `openSettings`, `openSystemSettings`, `recordMicOnly` |
+| Value      | Buttons (all from COPY §2.3 unless noted)                                                                        |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- |
+| `none`     | passive indicator only                                                                                           |
+| `retry`    | `tryAgain` / `reconnect` / `retryFailedSegments`                                                                 |
+| `repair`   | focused repair dialog: `switchDevice`, `openSettings`, `openSystemSettings`, `recordMicOnly`                     |
 | `fallback` | alternative path offered: `continueWithoutSystemAudio`, `keepRecording`, `workInBackground`, `resumeWithDevices` |
-| `block` | start/primary action disabled until repaired (Startvalidierung) |
+| `block`    | start/primary action disabled until repaired (Startvalidierung)                                                  |
 
 A row may combine (e.g. `repair` + `fallback`); the primary class is listed
 first.
 
 ### 4.3 Retryability — inherited verbatim from STT §6 (G4 anchor)
 
-| Table value | Semantics | Source |
-| --- | --- | --- |
-| `never` | permanent classification; automatic retry is pointless; only an explicit user re-queue creates a fresh job (STT §3.2 `failed → queued`) | STT §6.1 |
-| `auto_backoff` | transitory classification; bounded exponential backoff per STT §3.5 while `attempt_count < max_attempts`; afterwards `failed` + manual retry hint | STT §6.2 |
-| `conservative_auto_backoff` | unclassifiable faults treated as transitory (better a wasted attempt than a lost segment) until classification is refined | STT §6.3 |
-| `n/a` | recorder/session-origin conditions; retry is a user gesture (Reconnect/Resume/Try again), never an automatic loop | RC §7 |
+| Table value                 | Semantics                                                                                                                                         | Source   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `never`                     | permanent classification; automatic retry is pointless; only an explicit user re-queue creates a fresh job (STT §3.2 `failed → queued`)           | STT §6.1 |
+| `auto_backoff`              | transitory classification; bounded exponential backoff per STT §3.5 while `attempt_count < max_attempts`; afterwards `failed` + manual retry hint | STT §6.2 |
+| `conservative_auto_backoff` | unclassifiable faults treated as transitory (better a wasted attempt than a lost segment) until classification is refined                         | STT §6.3 |
+| `n/a`                       | recorder/session-origin conditions; retry is a user gesture (Reconnect/Resume/Try again), never an automatic loop                                 | RC §7    |
 
 Recorder- and session-origin codes are **never** auto-retried by background
 machinery; their retry affordances are the visible buttons of the mapped
@@ -194,37 +194,37 @@ proposed here for the catalog owner (§6). Key paths sit under the catalog's
 
 ### 5.1 Origin `recorder` — `RecorderError` variants (RC:409–433)
 
-| Code | Defined by | Sev | Action | Auto-retry | Copy key(s) | Params |
-| --- | --- | --- | --- | --- | --- | --- |
-| `meeting.recorder.mic_unavailable` | `MicDeviceUnavailable` RC:411; RC §7.2 row 1 | error | block, repair | n/a | NEW `meeting.errors.deviceUnavailable.title` + `.body.mic` | `deviceName` |
-| `meeting.recorder.system_output_unavailable` | `SystemOutputUnavailable` RC:413; RC §7.2 row 2 | error | block, repair | n/a | NEW `.body.system` of the same family | `deviceName` |
-| `meeting.recorder.loopback_shared_mode_required` | `LoopbackSharedModeRequired` RC:416; RC §7.2 row 3 | error | repair, fallback | n/a | existing `meeting.errors.exclusiveMode.*` (E6; wording bridge for REG F-07) | `deviceName` |
-| `meeting.recorder.capture_permission_denied` | `CapturePermissionDenied` RC:418; RC §7.2 row 5 | error | repair (`openSystemSettings`) | n/a | existing `meeting.errors.micPermission.*` (E17); selector `params.source`: `microphone` → existing body, `system` → NEW `.body.system` | `source` |
-| `meeting.recorder.loopback_unavailable` | `LoopbackUnavailable` RC:421; RC §7.2 row 4 | error | fallback (`recordMicOnly`), repair | n/a | existing `meeting.errors.noLoopback.*`, `meeting.session.micOnly.badge` (E5; REG F-08 bridge) | — |
-| `meeting.recorder.insufficient_disk_space` | `InsufficientDiskSpace` RC:423; RC §7.2 row 6 | warning | block (start disabled, RC:812), repair | n/a | existing `meeting.warnings.diskLow.*` (E7) | `freeGb`, `requiredGb` |
-| `meeting.recorder.chunk_create_failed` | `ChunkCreateFailed` RC:425; RC §3.1 property 3 | error | fallback (`openMeeting`) | n/a | selector `params.reason`: `disk_full` → existing `meeting.errors.diskFull.*` (E8); otherwise NEW `meeting.errors.storageWriteFailed.*` | `source`, `reason` |
-| `meeting.recorder.chunk_state_persist_failed` | `ChunkStatePersistFailed` RC:427; feeds SSC T17 example | error | retry, fallback | n/a (single retry already done in RC §3.1 prop. 2) | existing `meeting.errors.recoverable.*` (S9) | `chunkId` |
-| `meeting.recorder.stream_error` | `StreamError` RC:429; mid-session stream fault | warning | retry (`reconnect`), repair | n/a | selector `params.source`: `microphone` → existing `meeting.errors.micLost.*` (E1), `system` → `meeting.errors.systemLost.*` (E2) | `source`, `detailCode?` |
-| `meeting.recorder.session_already_active` | `SessionAlreadyActive` RC:430 (guard) | error | none (dev-facing guard) | n/a | NEW `meeting.errors.actionUnavailable.*` | — |
-| `meeting.recorder.no_active_session` | `NoActiveSession` RC:431 (guard) | error | none | n/a | NEW `meeting.errors.actionUnavailable.*` (shared) | — |
-| `meeting.recorder.recovery_failed` | `RecoveryFailed` RC:432; RC §8 | error | retry (`recover`), repair | n/a | existing `meeting.errors.recoverable.*` (S9) + `meeting.recovery.*` (E12) in banner context | `chunkId` |
+| Code                                             | Defined by                                              | Sev     | Action                                 | Auto-retry                                         | Copy key(s)                                                                                                                            | Params                  |
+| ------------------------------------------------ | ------------------------------------------------------- | ------- | -------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `meeting.recorder.mic_unavailable`               | `MicDeviceUnavailable` RC:411; RC §7.2 row 1            | error   | block, repair                          | n/a                                                | NEW `meeting.errors.deviceUnavailable.title` + `.body.mic`                                                                             | `deviceName`            |
+| `meeting.recorder.system_output_unavailable`     | `SystemOutputUnavailable` RC:413; RC §7.2 row 2         | error   | block, repair                          | n/a                                                | NEW `.body.system` of the same family                                                                                                  | `deviceName`            |
+| `meeting.recorder.loopback_shared_mode_required` | `LoopbackSharedModeRequired` RC:416; RC §7.2 row 3      | error   | repair, fallback                       | n/a                                                | existing `meeting.errors.exclusiveMode.*` (E6; wording bridge for REG F-07)                                                            | `deviceName`            |
+| `meeting.recorder.capture_permission_denied`     | `CapturePermissionDenied` RC:418; RC §7.2 row 5         | error   | repair (`openSystemSettings`)          | n/a                                                | existing `meeting.errors.micPermission.*` (E17); selector `params.source`: `microphone` → existing body, `system` → NEW `.body.system` | `source`                |
+| `meeting.recorder.loopback_unavailable`          | `LoopbackUnavailable` RC:421; RC §7.2 row 4             | error   | fallback (`recordMicOnly`), repair     | n/a                                                | existing `meeting.errors.noLoopback.*`, `meeting.session.micOnly.badge` (E5; REG F-08 bridge)                                          | —                       |
+| `meeting.recorder.insufficient_disk_space`       | `InsufficientDiskSpace` RC:423; RC §7.2 row 6           | warning | block (start disabled, RC:812), repair | n/a                                                | existing `meeting.warnings.diskLow.*` (E7)                                                                                             | `freeGb`, `requiredGb`  |
+| `meeting.recorder.chunk_create_failed`           | `ChunkCreateFailed` RC:425; RC §3.1 property 3          | error   | fallback (`openMeeting`)               | n/a                                                | selector `params.reason`: `disk_full` → existing `meeting.errors.diskFull.*` (E8); otherwise NEW `meeting.errors.storageWriteFailed.*` | `source`, `reason`      |
+| `meeting.recorder.chunk_state_persist_failed`    | `ChunkStatePersistFailed` RC:427; feeds SSC T17 example | error   | retry, fallback                        | n/a (single retry already done in RC §3.1 prop. 2) | existing `meeting.errors.recoverable.*` (S9)                                                                                           | `chunkId`               |
+| `meeting.recorder.stream_error`                  | `StreamError` RC:429; mid-session stream fault          | warning | retry (`reconnect`), repair            | n/a                                                | selector `params.source`: `microphone` → existing `meeting.errors.micLost.*` (E1), `system` → `meeting.errors.systemLost.*` (E2)       | `source`, `detailCode?` |
+| `meeting.recorder.session_already_active`        | `SessionAlreadyActive` RC:430 (guard)                   | error   | none (dev-facing guard)                | n/a                                                | NEW `meeting.errors.actionUnavailable.*`                                                                                               | —                       |
+| `meeting.recorder.no_active_session`             | `NoActiveSession` RC:431 (guard)                        | error   | none                                   | n/a                                                | NEW `meeting.errors.actionUnavailable.*` (shared)                                                                                      | —                       |
+| `meeting.recorder.recovery_failed`               | `RecoveryFailed` RC:432; RC §8                          | error   | retry (`recover`), repair              | n/a                                                | existing `meeting.errors.recoverable.*` (S9) + `meeting.recovery.*` (E12) in banner context                                            | `chunkId`               |
 
 ### 5.2 Origin `recorder` — failure-bearing `RecorderEvent`s and stop reasons (RC §7.1)
 
-| Code | Defined by | Sev | Action | Auto-retry | Copy key(s) | Params |
-| --- | --- | --- | --- | --- | --- | --- |
-| `meeting.recorder.mic_device_lost` | `MicDeviceLost` RC:385; RC §7.1 row 1 | warning | retry (`reconnect`), repair, fallback | n/a | existing `meeting.errors.micLost.*` (E1) | `segmentId`, `atTimelineMs` |
-| `meeting.recorder.system_device_lost` | `SystemDeviceLost` RC:386; RC §7.1 row 2 | warning | retry, fallback (`continueWithoutSystemAudio`), repair | n/a | existing `meeting.errors.systemLost.*` (E2) | `segmentId`, `atTimelineMs` |
-| `meeting.recorder.default_device_changed` | `DefaultDeviceChanged` RC:387; RC §7.1 row 3 | info | none / fallback | n/a | selector `params.followMode`: `bound` → existing `meeting.errors.defaultChanged.*` (E3), `followed` → `.defaultChanged.followed` | `observedDefault`, `followMode` |
-| `meeting.recorder.disk_space_low` | `DiskSpaceLow` RC:393; RC §7.1 row 5 early warning | warning | fallback (`keepRecording`, `endMeeting`), repair | n/a | existing `meeting.warnings.diskLow.*` (E7) | `freeBytes` |
-| `meeting.recorder.controlled_stop_disk_full` | `ControlledStopInitiated { DiskFull }` RC:394 with `StopReason::DiskFull` RC:345; RC §7.1 row 5 | error | fallback (`openMeeting`), repair | n/a | existing `meeting.errors.diskFull.*` (E8) | — |
-| `meeting.recorder.controlled_stop_fatal_stream_error` | `ControlledStopInitiated { FatalStreamError }` RC:346 | error | fallback (`openMeeting`), repair | n/a | NEW `meeting.errors.captureStoppedUnexpectedly.*` | `source?` |
-| `meeting.recorder.sleep_wake_interrupted` | `SleepWake` RC:390; RC §7.1 row 9 | warning | fallback (`resume`, `endMeeting`) | n/a | existing `meeting.errors.slept.*` (E13) | `gapCount` |
-| `meeting.recorder.capture_degraded` | `DriftToleranceExceeded` RC:378 / `SourceState::Degraded` (beyond-G1 completeness; §7.1 has no dedicated row) | info | none | n/a | NEW `meeting.warnings.degradedCapture.*` | `source` |
+| Code                                                  | Defined by                                                                                                    | Sev     | Action                                                 | Auto-retry | Copy key(s)                                                                                                                      | Params                          |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `meeting.recorder.mic_device_lost`                    | `MicDeviceLost` RC:385; RC §7.1 row 1                                                                         | warning | retry (`reconnect`), repair, fallback                  | n/a        | existing `meeting.errors.micLost.*` (E1)                                                                                         | `segmentId`, `atTimelineMs`     |
+| `meeting.recorder.system_device_lost`                 | `SystemDeviceLost` RC:386; RC §7.1 row 2                                                                      | warning | retry, fallback (`continueWithoutSystemAudio`), repair | n/a        | existing `meeting.errors.systemLost.*` (E2)                                                                                      | `segmentId`, `atTimelineMs`     |
+| `meeting.recorder.default_device_changed`             | `DefaultDeviceChanged` RC:387; RC §7.1 row 3                                                                  | info    | none / fallback                                        | n/a        | selector `params.followMode`: `bound` → existing `meeting.errors.defaultChanged.*` (E3), `followed` → `.defaultChanged.followed` | `observedDefault`, `followMode` |
+| `meeting.recorder.disk_space_low`                     | `DiskSpaceLow` RC:393; RC §7.1 row 5 early warning                                                            | warning | fallback (`keepRecording`, `endMeeting`), repair       | n/a        | existing `meeting.warnings.diskLow.*` (E7)                                                                                       | `freeBytes`                     |
+| `meeting.recorder.controlled_stop_disk_full`          | `ControlledStopInitiated { DiskFull }` RC:394 with `StopReason::DiskFull` RC:345; RC §7.1 row 5               | error   | fallback (`openMeeting`), repair                       | n/a        | existing `meeting.errors.diskFull.*` (E8)                                                                                        | —                               |
+| `meeting.recorder.controlled_stop_fatal_stream_error` | `ControlledStopInitiated { FatalStreamError }` RC:346                                                         | error   | fallback (`openMeeting`), repair                       | n/a        | NEW `meeting.errors.captureStoppedUnexpectedly.*`                                                                                | `source?`                       |
+| `meeting.recorder.sleep_wake_interrupted`             | `SleepWake` RC:390; RC §7.1 row 9                                                                             | warning | fallback (`resume`, `endMeeting`)                      | n/a        | existing `meeting.errors.slept.*` (E13)                                                                                          | `gapCount`                      |
+| `meeting.recorder.capture_degraded`                   | `DriftToleranceExceeded` RC:378 / `SourceState::Degraded` (beyond-G1 completeness; §7.1 has no dedicated row) | info    | none                                                   | n/a        | NEW `meeting.warnings.degradedCapture.*`                                                                                         | `source`                        |
 
 Explicit non-errors preserved from RC §7.1: **"Keine Systemlautstärke" is not
 a fault** (silence is legitimate, RC:796) — it surfaces through the setup test
-flow with existing `meeting.warnings.silence.*` (E4) bound to the *test*
+flow with existing `meeting.warnings.silence.*` (E4) bound to the _test_
 outcome, not to an error code. **Backlog growth** ("Lokales Modell zu langsam",
 RC §7.1 row 7) is likewise state-derived information, not an error: the
 existing `meeting.warnings.backlog.*` (E11) binds to
@@ -232,15 +232,15 @@ existing `meeting.warnings.backlog.*` (E11) binds to
 
 ### 5.3 Origin `session` — SSC failure behaviors
 
-| Code | Defined by | Sev | Action | Auto-retry | Copy key(s) | Params |
-| --- | --- | --- | --- | --- | --- | --- |
-| `meeting.session.start_validation_failed` | SSC T04 (validation fails) | error | block | n/a | **Composition:** publishes the *child* code (recorder §5.1 / stt §5.4 cause); this code itself is a fallback rendering existing `meeting.errors.missingKey.*` (E16) | `causeCode` |
-| `meeting.session.resume_validation_failed` | SSC §3.2 step 4 (resume re-validation fails, session stays `paused`) | warning | fallback (`resumeWithDevices`), repair | n/a | context existing `meeting.warnings.devicesChanged.*` (E14) + published child code | `micDevice`, `outputDevice`, `causeCode` |
-| `meeting.session.consent_gate_refused` | SSC §7 gate point G-start, fail-closed refusal of T02 | error | none (fail-closed; no bypass) | n/a | NEW `meeting.errors.consentRequired.*` | — |
-| `meeting.session.recovery_disposition_failed` | SSC §6.2 R5(c) (recovery failed irrecoverably) | error | retry (`recover`), repair | n/a | existing `meeting.errors.recoverable.*` (S9) + `meeting.recovery.*` (E12) | `sessionId` |
-| `meeting.session.stt_jobs_exhausted` | SSC T13 bullet 1 (jobs exhausted retries → `failed`) | error | retry (`retryFailedSegments`), fallback (`workInBackground`) | user-only | NEW `meeting.errors.segmentsFailed.*` | `failedCount`, `totalCount` |
-| `meeting.session.summary_no_path_available` | SPC §6 error class `summary_no_path_available`; SSC T13 bullet 2 | error | retry (`tryAgain`), repair (`openSettings`), fallback (`disableSummary`) | user-only | existing-as-proposed `meeting.summary.failed.*` (owned by SPC §6.2; selector `params.reason` → `.reason.noPath` / `.reason.consentWithdrawn`) | `reason` |
-| `meeting.session.recoverable_error_generic` | SSC T17 overlay when a cause arrives **without** its own code (defensive totality; must stay empty if §5 is complete — a hit is a defect filed against this contract) | error | retry, repair | n/a | existing `meeting.errors.recoverable.*` (S9) | — |
+| Code                                          | Defined by                                                                                                                                                            | Sev     | Action                                                                   | Auto-retry | Copy key(s)                                                                                                                                                         | Params                                   |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `meeting.session.start_validation_failed`     | SSC T04 (validation fails)                                                                                                                                            | error   | block                                                                    | n/a        | **Composition:** publishes the _child_ code (recorder §5.1 / stt §5.4 cause); this code itself is a fallback rendering existing `meeting.errors.missingKey.*` (E16) | `causeCode`                              |
+| `meeting.session.resume_validation_failed`    | SSC §3.2 step 4 (resume re-validation fails, session stays `paused`)                                                                                                  | warning | fallback (`resumeWithDevices`), repair                                   | n/a        | context existing `meeting.warnings.devicesChanged.*` (E14) + published child code                                                                                   | `micDevice`, `outputDevice`, `causeCode` |
+| `meeting.session.consent_gate_refused`        | SSC §7 gate point G-start, fail-closed refusal of T02                                                                                                                 | error   | none (fail-closed; no bypass)                                            | n/a        | NEW `meeting.errors.consentRequired.*`                                                                                                                              | —                                        |
+| `meeting.session.recovery_disposition_failed` | SSC §6.2 R5(c) (recovery failed irrecoverably)                                                                                                                        | error   | retry (`recover`), repair                                                | n/a        | existing `meeting.errors.recoverable.*` (S9) + `meeting.recovery.*` (E12)                                                                                           | `sessionId`                              |
+| `meeting.session.stt_jobs_exhausted`          | SSC T13 bullet 1 (jobs exhausted retries → `failed`)                                                                                                                  | error   | retry (`retryFailedSegments`), fallback (`workInBackground`)             | user-only  | NEW `meeting.errors.segmentsFailed.*`                                                                                                                               | `failedCount`, `totalCount`              |
+| `meeting.session.summary_no_path_available`   | SPC §6 error class `summary_no_path_available`; SSC T13 bullet 2                                                                                                      | error   | retry (`tryAgain`), repair (`openSettings`), fallback (`disableSummary`) | user-only  | existing-as-proposed `meeting.summary.failed.*` (owned by SPC §6.2; selector `params.reason` → `.reason.noPath` / `.reason.consentWithdrawn`)                       | `reason`                                 |
+| `meeting.session.recoverable_error_generic`   | SSC T17 overlay when a cause arrives **without** its own code (defensive totality; must stay empty if §5 is complete — a hit is a defect filed against this contract) | error   | retry, repair                                                            | n/a        | existing `meeting.errors.recoverable.*` (S9)                                                                                                                        | —                                        |
 
 User-abort terminals `stopped_unprocessed`/`cancelled` (SSC T15/T16) are
 deliberate user actions, not faults: they carry **no error code** and render
@@ -250,30 +250,30 @@ through existing `meeting.session.cancelled.*` (COPY S10) directly.
 
 Permanent (STT §6.1 — all `never`):
 
-| Code | Covers STT §6.1 rows | Sev | Action | Copy key(s) | Params |
-| --- | --- | --- | --- | --- | --- |
-| `meeting.stt.auth_invalid` | Azure key invalid/revoked (401/403); Custom token wrong (401/403) | error | repair (`openSettings`) | existing `meeting.errors.cloudConfig.*` (E10) | `provider` |
-| `meeting.stt.endpoint_invalid` | Azure endpoint/region wrong (400/404/region resolution); Custom endpoint wrong (404/400/405) | error | repair | existing `meeting.errors.cloudConfig.*` (E10) | `provider` |
-| `meeting.stt.provider_not_configured` | validate(): Secret/Endpoint missing before job start (Azure + Custom row) | error | block, repair | existing `meeting.errors.missingKey.body.cloud` (E16) | `provider` |
-| `meeting.stt.package_limit_exceeded` | Azure format/limit violated (HTTP 415 or internal 400 MB/4 h caps, STT §4.2) | error | repair | NEW `meeting.errors.audioPackageRejected.*` | `provider`, `limitKind` |
-| `meeting.stt.model_missing` | Local model missing/not loadable | error | block, repair | existing `meeting.errors.missingKey.body.local` (E16) | `modelId` |
-| `meeting.stt.language_unsupported` | Provider rejects the language | error | repair | NEW `meeting.errors.languageUnsupported.*` | `language`, `provider` |
-| `meeting.stt.source_chunk_damaged` | queued job whose chunk turned out `damaged` — failed by pre-run readiness validation as permanent (SSC §6.3; RC §8 steps 2b/2c) | error | retry (`retryFailedSegments`), fallback | NEW `meeting.errors.segmentsFailed.*` (shared with §5.3) | `chunkId` |
+| Code                                  | Covers STT §6.1 rows                                                                                                            | Sev   | Action                                  | Copy key(s)                                              | Params                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----- | --------------------------------------- | -------------------------------------------------------- | ----------------------- |
+| `meeting.stt.auth_invalid`            | Azure key invalid/revoked (401/403); Custom token wrong (401/403)                                                               | error | repair (`openSettings`)                 | existing `meeting.errors.cloudConfig.*` (E10)            | `provider`              |
+| `meeting.stt.endpoint_invalid`        | Azure endpoint/region wrong (400/404/region resolution); Custom endpoint wrong (404/400/405)                                    | error | repair                                  | existing `meeting.errors.cloudConfig.*` (E10)            | `provider`              |
+| `meeting.stt.provider_not_configured` | validate(): Secret/Endpoint missing before job start (Azure + Custom row)                                                       | error | block, repair                           | existing `meeting.errors.missingKey.body.cloud` (E16)    | `provider`              |
+| `meeting.stt.package_limit_exceeded`  | Azure format/limit violated (HTTP 415 or internal 400 MB/4 h caps, STT §4.2)                                                    | error | repair                                  | NEW `meeting.errors.audioPackageRejected.*`              | `provider`, `limitKind` |
+| `meeting.stt.model_missing`           | Local model missing/not loadable                                                                                                | error | block, repair                           | existing `meeting.errors.missingKey.body.local` (E16)    | `modelId`               |
+| `meeting.stt.language_unsupported`    | Provider rejects the language                                                                                                   | error | repair                                  | NEW `meeting.errors.languageUnsupported.*`               | `language`, `provider`  |
+| `meeting.stt.source_chunk_damaged`    | queued job whose chunk turned out `damaged` — failed by pre-run readiness validation as permanent (SSC §6.3; RC §8 steps 2b/2c) | error | retry (`retryFailedSegments`), fallback | NEW `meeting.errors.segmentsFailed.*` (shared with §5.3) | `chunkId`               |
 
 Transitory (STT §6.2 — all `auto_backoff`, bounded by STT §3.5):
 
-| Code | Covers STT §6.2 rows | Sev | Action | Copy key(s) | Params |
-| --- | --- | --- | --- | --- | --- |
-| `meeting.stt.network_unreachable` | connection/DNS/refused-reset | warning | fallback (`workInBackground`), retry | existing `meeting.errors.cloudUnreachable.*` (E9) | `provider`, `waitingCount` |
-| `meeting.stt.provider_overloaded` | HTTP 408/429 (`Retry-After` respected)/5xx | warning | same as above | existing `meeting.errors.cloudUnreachable.*` (E9) | `provider`, `retryInSeconds` |
-| `meeting.stt.attempt_timeout` | attempt exceeded STT §3.5 timeout | warning | same as above | existing `meeting.errors.cloudUnreachable.*` (E9) | `provider` |
-| `meeting.stt.tls_disrupted` | handshake/certificate-time faults (durable invalid certificate = `endpoint_invalid`) | warning | same as above | existing `meeting.errors.cloudUnreachable.*` (E9) | `provider` |
-| `meeting.stt.local_engine_transient` | intercepted inference panic/OOM-like fault of a single segment with valid model | warning | fallback (`workInBackground`), retry | NEW `meeting.warnings.localTranscriptionRetrying.*` | `attempt`, `maxAttempts` |
+| Code                                 | Covers STT §6.2 rows                                                                 | Sev     | Action                               | Copy key(s)                                         | Params                       |
+| ------------------------------------ | ------------------------------------------------------------------------------------ | ------- | ------------------------------------ | --------------------------------------------------- | ---------------------------- |
+| `meeting.stt.network_unreachable`    | connection/DNS/refused-reset                                                         | warning | fallback (`workInBackground`), retry | existing `meeting.errors.cloudUnreachable.*` (E9)   | `provider`, `waitingCount`   |
+| `meeting.stt.provider_overloaded`    | HTTP 408/429 (`Retry-After` respected)/5xx                                           | warning | same as above                        | existing `meeting.errors.cloudUnreachable.*` (E9)   | `provider`, `retryInSeconds` |
+| `meeting.stt.attempt_timeout`        | attempt exceeded STT §3.5 timeout                                                    | warning | same as above                        | existing `meeting.errors.cloudUnreachable.*` (E9)   | `provider`                   |
+| `meeting.stt.tls_disrupted`          | handshake/certificate-time faults (durable invalid certificate = `endpoint_invalid`) | warning | same as above                        | existing `meeting.errors.cloudUnreachable.*` (E9)   | `provider`                   |
+| `meeting.stt.local_engine_transient` | intercepted inference panic/OOM-like fault of a single segment with valid model      | warning | fallback (`workInBackground`), retry | NEW `meeting.warnings.localTranscriptionRetrying.*` | `attempt`, `maxAttempts`     |
 
 Unclassifiable (STT §6.3):
 
-| Code | Meaning | Sev | Action | Auto-retry | Copy key(s) |
-| --- | --- | --- | --- | --- | --- |
+| Code                       | Meaning                                                       | Sev     | Action          | Auto-retry                  | Copy key(s)                                                                                                                                            |
+| -------------------------- | ------------------------------------------------------------- | ------- | --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `meeting.stt.unclassified` | fault the provider cannot classify; conservatively transitory | warning | fallback, retry | `conservative_auto_backoff` | selector `params.provider`: `local` → NEW `meeting.warnings.localTranscriptionRetrying.*`; otherwise existing `meeting.errors.cloudUnreachable.*` (E9) |
 
 While any `retry_wait` exists, capture continues untouched and no segment is
@@ -287,19 +287,19 @@ English source file first, `{{…}}` interpolation). Text drafts are
 deliberately **not** invented here — wording stays owned by the catalog;
 this section fixes only key paths and consumption. Proposed skeleton:
 
-| Family | Needed keys | Consumed by codes |
-| --- | --- | --- |
-| `meeting.errors.deviceUnavailable.*` | `title`, `body.mic`, `body.system` | mic/system_output_unavailable |
-| `meeting.errors.storageWriteFailed.*` | `title`, `body` | chunk_create_failed (non-disk-full) |
-| `meeting.errors.actionUnavailable.*` | `title`, `body` | session_already_active, no_active_session |
-| `meeting.errors.captureStoppedUnexpectedly.*` | `title`, `body` | controlled_stop_fatal_stream_error |
-| `meeting.errors.consentRequired.*` | `title`, `body` | consent_gate_refused |
-| `meeting.errors.segmentsFailed.*` | `title`, `body` | stt_jobs_exhausted, source_chunk_damaged |
-| `meeting.errors.audioPackageRejected.*` | `title`, `body` | package_limit_exceeded |
-| `meeting.errors.languageUnsupported.*` | `title`, `body` | language_unsupported |
-| `meeting.warnings.degradedCapture.*` | `title`, `body` | capture_degraded |
-| `meeting.warnings.localTranscriptionRetrying.*` | `title`, `body` | local_engine_transient, unclassified(local) |
-| `meeting.errors.generic.*` | `title`, `body` | unknown-code fallback (§2.3) |
+| Family                                          | Needed keys                        | Consumed by codes                           |
+| ----------------------------------------------- | ---------------------------------- | ------------------------------------------- |
+| `meeting.errors.deviceUnavailable.*`            | `title`, `body.mic`, `body.system` | mic/system_output_unavailable               |
+| `meeting.errors.storageWriteFailed.*`           | `title`, `body`                    | chunk_create_failed (non-disk-full)         |
+| `meeting.errors.actionUnavailable.*`            | `title`, `body`                    | session_already_active, no_active_session   |
+| `meeting.errors.captureStoppedUnexpectedly.*`   | `title`, `body`                    | controlled_stop_fatal_stream_error          |
+| `meeting.errors.consentRequired.*`              | `title`, `body`                    | consent_gate_refused                        |
+| `meeting.errors.segmentsFailed.*`               | `title`, `body`                    | stt_jobs_exhausted, source_chunk_damaged    |
+| `meeting.errors.audioPackageRejected.*`         | `title`, `body`                    | package_limit_exceeded                      |
+| `meeting.errors.languageUnsupported.*`          | `title`, `body`                    | language_unsupported                        |
+| `meeting.warnings.degradedCapture.*`            | `title`, `body`                    | capture_degraded                            |
+| `meeting.warnings.localTranscriptionRetrying.*` | `title`, `body`                    | local_engine_transient, unclassified(local) |
+| `meeting.errors.generic.*`                      | `title`, `body`                    | unknown-code fallback (§2.3)                |
 
 Buttons for every family come exclusively from COPY §2.3 per the action-class
 column — no new action keys are proposed. This keeps the complexity budget:
@@ -404,9 +404,9 @@ via the §3 registration duty.
 
 ## Appendix A — Gate traceability
 
-| Gate | Coverage |
-| --- | --- |
-| G1 — every RC §7 and SSC failure-behavior error mapped, zero unmapped | §5 tables + §7 inventories A–E with line citations |
-| G2 — collision-proof naming scheme registered | §3 (closed origin set, uniqueness, stability, registration duty, provider-signal ban) |
+| Gate                                                                                                        | Coverage                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| G1 — every RC §7 and SSC failure-behavior error mapped, zero unmapped                                       | §5 tables + §7 inventories A–E with line citations                                                                           |
+| G2 — collision-proof naming scheme registered                                                               | §3 (closed origin set, uniqueness, stability, registration duty, provider-signal ban)                                        |
 | G3 — frontend receives `{code, params}` only; localization consumes keys, verified against catalog coverage | §2 (envelope, untagged-string prohibition, fallback), §5 key columns (existing vs NEW), §6 hand-off, §8.3 key-existence test |
-| G4 — non-goals + documentation index updated | §9; index table row and reading-order entry added in `docs/meeting-mode-documentation-index.md` |
+| G4 — non-goals + documentation index updated                                                                | §9; index table row and reading-order entry added in `docs/meeting-mode-documentation-index.md`                              |

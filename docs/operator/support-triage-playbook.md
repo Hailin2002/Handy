@@ -36,7 +36,7 @@ Aufgenommen am: 22.08.2026
    Berichtstext.
 3. **Kein Restatement.** Dieses Playbook wiederholt keine Symptom-Ursache-
    Tabellen der Troubleshooting-Dokumente; es verlinkt sie und benennt nur,
-   *welche* Zeilen/Evidenzfelder aus ihnen anzufordern sind.
+   _welche_ Zeilen/Evidenzfelder aus ihnen anzufordern sind.
 4. **Discovery-Feed.** Das Ziel jeder Triage ist ein strukturierter
    Lane-Datensatz (Abschnitt 5), der ohne Nachbearbeitung in die
    Evidenz/Frequenz/Nutzerwert/Komplexitäts-Matrix des Discovery-Zyklus
@@ -48,13 +48,13 @@ Jeder eingehende Bericht wird in genau eine Primär-Lane einsortiert. Bei
 Mehr-Klassen-Berichten gilt die Reihenfolge unten (erste zutreffende Klasse
 gewinnt); die Sekundärklasse wird im Datensatz vermerkt.
 
-| Lane | Klasse | Typische Erkennungssignale | Primäre Referenz |
-|---|---|---|---|
-| **T1** | Aufnahme schlägt fehl / Capture-Failure | Kein Ton, leere Aufnahme, Gerät verschwindet, Berechtigungsfehler, Recording startet/stopped nicht | [troubleshooting-audio-devices.md](troubleshooting-audio-devices.md) |
-| **T2** | Ausgabe falsch | Falscher/fehlender Text, falsche Sprache, Halluzinationen, Formatierungsfehler, Text landet nicht im Zielfeld | [troubleshooting-models.md](troubleshooting-models.md) (Modell-/Sprachwahl) + [troubleshooting-audio-devices.md](troubleshooting-audio-devices.md) (Resampler-/Rate-Fälle R12–R15) |
-| **T3** | Performance | Hohe Latenz, CPU/GPU-Last, Stottern während Aufnahme, langsamer Modellstart | [troubleshooting-models.md](troubleshooting-models.md) (Modellgröße/-Variante) + [meeting-mode-known-limitations.md](../meeting-mode-known-limitations.md) |
-| **T4** | Installation / Modell-Setup | Download bricht ab, Prüfsummenfehler, Offline-Setup, VAD-Modell fehlt, portable Installation | [troubleshooting-models.md](troubleshooting-models.md) |
-| **T5** | Shortcut / CLI / Fernsteuerung | Hotkey registriert nicht, Doppelbelegung, PTT-Verhalten, `--toggle-*`-Flags wirkungslos, Single-Instance | [troubleshooting-shortcuts-cli.md](troubleshooting-shortcuts-cli.md) |
+| Lane   | Klasse                                  | Typische Erkennungssignale                                                                                    | Primäre Referenz                                                                                                                                                                   |
+| ------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **T1** | Aufnahme schlägt fehl / Capture-Failure | Kein Ton, leere Aufnahme, Gerät verschwindet, Berechtigungsfehler, Recording startet/stopped nicht            | [troubleshooting-audio-devices.md](troubleshooting-audio-devices.md)                                                                                                               |
+| **T2** | Ausgabe falsch                          | Falscher/fehlender Text, falsche Sprache, Halluzinationen, Formatierungsfehler, Text landet nicht im Zielfeld | [troubleshooting-models.md](troubleshooting-models.md) (Modell-/Sprachwahl) + [troubleshooting-audio-devices.md](troubleshooting-audio-devices.md) (Resampler-/Rate-Fälle R12–R15) |
+| **T3** | Performance                             | Hohe Latenz, CPU/GPU-Last, Stottern während Aufnahme, langsamer Modellstart                                   | [troubleshooting-models.md](troubleshooting-models.md) (Modellgröße/-Variante) + [meeting-mode-known-limitations.md](../meeting-mode-known-limitations.md)                         |
+| **T4** | Installation / Modell-Setup             | Download bricht ab, Prüfsummenfehler, Offline-Setup, VAD-Modell fehlt, portable Installation                  | [troubleshooting-models.md](troubleshooting-models.md)                                                                                                                             |
+| **T5** | Shortcut / CLI / Fernsteuerung          | Hotkey registriert nicht, Doppelbelegung, PTT-Verhalten, `--toggle-*`-Flags wirkungslos, Single-Instance      | [troubleshooting-shortcuts-cli.md](troubleshooting-shortcuts-cli.md)                                                                                                               |
 
 **Lane T0 (Vorsortierung, keine End-Lane):** Bericht ohne erkennbares Signal
 oder mit mehreren gleichwertigen Klassen. T0-Berichte erhalten die
@@ -172,13 +172,13 @@ Eskalation bedeutet: Übergabe an die Entwicklungs-Dokumentation/den
 Limitations-Register-Prozess — **kein** externer Post. Eine Lane wird
 eskaliert, wenn mindestens ein Kriterium erfüllt ist:
 
-| # | Kriterium | Eskalationsziel |
-|---|---|---|
-| E1 | Mindest-Evidenz (§3) liegt vollständig vor und widerlegt alle dokumentierten Ursachen der Lane-Matrix | Neuer Kandidat für [meeting-mode-known-limitations.md](../meeting-mode-known-limitations.md) (nur mit Beleg, Registerregel dort) |
-| E2 | Dasselbe Symptomsignal tritt in ≥3 unabhängigen Lane-Datensätzen auf | Discovery-Matrix (Frequenz-Spalte), Abschnitt 5 |
-| E3 | Datenverlust oder Wiederherstellungsversuch betroffen | [Backup/Restore-Drill](backup-restore-drill.md) zur Verifikation des Restore-Pfads + E1 |
-| E4 | Verhalten widerspricht einer belegten Aussage eines Operator-Troubleshooting-Dokuments (Dokument-Drift) | Eigentümer des jeweiligen Troubleshooting-Dokuments (Drift-Fix, keine Feature-Deutung) |
-| E5 | Bericht betrifft Meeting-Mode-Zielverhalten aus dem Plan | Discovery-Zyklus als Nutzerbedarfs-Signal; **keine** Umsetzungsannahme (Feature-Freeze, Plan §1/§2 Nicht-Ziele) |
+| #   | Kriterium                                                                                               | Eskalationsziel                                                                                                                  |
+| --- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | Mindest-Evidenz (§3) liegt vollständig vor und widerlegt alle dokumentierten Ursachen der Lane-Matrix   | Neuer Kandidat für [meeting-mode-known-limitations.md](../meeting-mode-known-limitations.md) (nur mit Beleg, Registerregel dort) |
+| E2  | Dasselbe Symptomsignal tritt in ≥3 unabhängigen Lane-Datensätzen auf                                    | Discovery-Matrix (Frequenz-Spalte), Abschnitt 5                                                                                  |
+| E3  | Datenverlust oder Wiederherstellungsversuch betroffen                                                   | [Backup/Restore-Drill](backup-restore-drill.md) zur Verifikation des Restore-Pfads + E1                                          |
+| E4  | Verhalten widerspricht einer belegten Aussage eines Operator-Troubleshooting-Dokuments (Dokument-Drift) | Eigentümer des jeweiligen Troubleshooting-Dokuments (Drift-Fix, keine Feature-Deutung)                                           |
+| E5  | Bericht betrifft Meeting-Mode-Zielverhalten aus dem Plan                                                | Discovery-Zyklus als Nutzerbedarfs-Signal; **keine** Umsetzungsannahme (Feature-Freeze, Plan §1/§2 Nicht-Ziele)                  |
 
 **Explizit keine Eskalation:** Einzelvorkommen dokumentierten Verhaltens
 (z. B. Kaltstart-No-op der Fernsteuerungsflags), fehlende Evidenz (→

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   getKeyName,
@@ -26,7 +26,7 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
   disabled = false,
 }) => {
   const { t } = useTranslation();
-  const { getSetting, updateBinding, resetBinding, isUpdating, isLoading } =
+  const { settings, updateBinding, resetBinding, isUpdating, isLoading } =
     useSettings();
   const [keyPressed, setKeyPressed] = useState<string[]>([]);
   const [recordedKeys, setRecordedKeys] = useState<string[]>([]);
@@ -43,7 +43,15 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
   const restoreFocusOnEndRef = useRef(false);
   const osType = useOsType();
 
-  const bindings = getSetting("bindings") || {};
+  // Memoized: the `?? {}` fallback would otherwise produce a fresh object on
+  // every render, re-binding the keydown/keyup/click listeners below each time.
+  // Keyed on the settings slice rather than on `getSetting` — that accessor is
+  // referentially stable for the store's lifetime, so memoizing on it would
+  // freeze `bindings` at its first value.
+  const bindings = useMemo(
+    () => settings?.bindings ?? {},
+    [settings?.bindings],
+  );
 
   useEffect(() => {
     // Only add event listeners when we're in editing mode
@@ -203,6 +211,7 @@ export const GlobalShortcutInput: React.FC<GlobalShortcutInputProps> = ({
     originalBinding,
     updateBinding,
     osType,
+    t,
   ]);
 
   // Start recording a new shortcut

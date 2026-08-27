@@ -47,7 +47,22 @@ rusqlite_migration = "2.3"
 tauri-plugin-fs = "2.4.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rdev = { git = "https://github.com/rustdesk-org/rdev" }
+# Pinned to the rev Cargo.lock already resolves. Without a rev, a force-push
+# to the upstream branch silently changes what `cargo update` pulls into a
+# binary that injects synthetic keystrokes.
+rdev = { git = "https://github.com/rustdesk-org/rdev", rev = "a90dbe1172f8832f54c97c62e823c5a34af5fdfe" }
+# Held at 0.16 by the rodio fork, not by our own code. `cjpais/rodio` (pinned
+# below) depends on cpal 0.16, so moving the app to 0.17 puts two incompatible
+# cpal versions in the graph and audio_feedback.rs then hands a `cpal::Device`
+# across that boundary into rodio's `OutputStreamBuilder::from_device` — a type
+# mismatch the compiler catches immediately.
+#
+# Bumping this means bumping the rodio fork first. Once that happens, expect
+# deprecation warnings too: 0.17 deprecates `DeviceTrait::name()` in favour of
+# `description()` (human-readable) and `id()` (stable across reboots and
+# reconnects), which affects audio_feedback.rs and audio_toolkit/audio/device.rs.
+# The `id()` migration is worth doing on its own merits — device identity today
+# is a display name, which is neither stable nor unique.
 cpal = "0.16.0"
 anyhow = "1.0.95"
 base64 = "0.22"
@@ -56,9 +71,9 @@ hound = "3.5.1"
 log = "0.4.25"
 env_filter = "0.1.0"
 tokio = "1.43.0"
-vad-rs = { git = "https://github.com/cjpais/vad-rs", default-features = false }
+vad-rs = { git = "https://github.com/cjpais/vad-rs", rev = "2a412ed858695b9251f3f5a1a20d95b59fa7c498", default-features = false }
 enigo = "0.6.1"
-rodio = { git = "https://github.com/cjpais/rodio.git" }
+rodio = { git = "https://github.com/cjpais/rodio.git", rev = "fed30292db417cb95305c118c0e1d804fb74cbff" }
 reqwest = { version = "0.12", features = ["json", "stream", "gzip", "brotli", "deflate"] }
 futures-util = "0.3"
 rustfft = "6.4.0"
@@ -89,7 +104,7 @@ specta = "=2.0.0-rc.22"
 specta-typescript = "0.0.9"
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
 tauri-plugin-dialog = "2.6"
-hf-hub = { git = "https://github.com/cjpais/hf-hub", branch = "cancellable-downloads", features = [
+hf-hub = { git = "https://github.com/cjpais/hf-hub", rev = "9918f11ab3473135eb7865aa4a5d79d597e6e810", features = [
   "tokio",
 ] }
 
@@ -160,7 +175,7 @@ transcribe-cpp = { version = "0.2.0", default-features = false, features = [
 transcribe-cpp = { version = "0.2.0", default-features = false }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2.1" }
+tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "da9c9a8d4eb7f0524a2508988df1a7d9585b4904" }
 transcribe-cpp = { version = "0.2.0", default-features = false, features = ["metal"] }
 # Used by the receipt-sequenced ("reliable") paste path for lazy NSPasteboard
 # promises. Versions track what Tauri already pulls in.
@@ -194,6 +209,17 @@ transcribe-cpp = { version = "0.2.0", default-features = false, features = [
 # lockfile carries two tao-macros 0.1.3 entries (registry + git). cargo tolerates
 # that, but Nix's importCargoLock vendors both to the same `tao-macros-0.1.3`
 # dir and fails with a symlink collision. Unifying the source removes the dup.
+#
+# Status checked 2026-08-27: tao #1274 IS merged upstream (2026-07-21), so the
+# "repoint at upstream once #1274 merges" note above now reads as done — but it
+# is not. The fix only ships in tao 0.36.0 (2026-07-29) and 0.37.0, while
+# tauri-runtime-wry still requires `tao = "0.35"`. Removing this patch resolves
+# straight back to upstream 0.35.3, which predates both fixes.
+#
+# Drop condition, stated precisely so it does not need re-deriving: this patch
+# goes away when tauri-runtime-wry accepts tao >= 0.36. Verify with
+# `cargo tree -p tao` after commenting the patch out — if it resolves to 0.36 or
+# later, the fork is redundant.
 [patch.crates-io]
 tao = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08c95c3b6f8d4bde052b876" }
 tao-macros = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08c95c3b6f8d4bde052b876" }
@@ -202,6 +228,15 @@ tao-macros = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08
 # Windows because MSBuild worker nodes (/m) fail the transcribe-cpp-sys build
 # silently; .cargo/config.toml pins CMAKE_BUILD_PARALLEL_LEVEL=1 so the native
 # build runs serially. See docs/meeting-mode-phase0-baseline.md section 2.3.
+# Status checked 2026-08-27: still required. Upstream cmake-rs at HEAD (v0.1.58;
+# this fork is 0.1.57) reads only NUM_JOBS for `--parallel`, and cargo
+# overwrites NUM_JOBS for build scripts, so there is still no way to pin native
+# parallelism from `[env]` without this patch.
+#
+# Drop condition: upstream honouring CMAKE_BUILD_PARALLEL_LEVEL ahead of
+# NUM_JOBS. Check with
+#   gh api repos/rust-lang/cmake-rs/contents/src/lib.rs -H "Accept: application/vnd.github.raw" | grep CMAKE_BUILD_PARALLEL_LEVEL
+# and if it matches, replace this with a plain version requirement.
 cmake = { path = "../vendor/cmake" }
 
 [dev-dependencies]

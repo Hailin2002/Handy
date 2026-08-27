@@ -1,0 +1,57 @@
+version: 2
+
+# Why: nothing watched this project's ~600 transitive crates or its npm tree for
+# advisories. cargo-deny (see .github/workflows/supply-chain.yml) reports known
+# vulnerabilities; dependabot is what actually raises the PR to fix them.
+#
+# Grouping is deliberate. Ungrouped, a tree this size produces a PR wall nobody
+# reviews, and unreviewed dependency PRs are worse than none — they train people
+# to merge dependency changes without looking.
+updates:
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      tauri:
+        patterns:
+          - "tauri"
+          - "tauri-*"
+      rust-patch-and-minor:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # These are pinned to an exact rev on purpose (see Cargo.toml): tao
+      # carries a Wayland/Windows-shutdown patch that is not upstream yet, and
+      # the rest are forks. Dependabot cannot know when the fork has caught up.
+      - dependency-name: tao
+      - dependency-name: tao-macros
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      tauri-plugins:
+        patterns:
+          - "@tauri-apps/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      dev-tooling:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3

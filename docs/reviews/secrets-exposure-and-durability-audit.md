@@ -13,13 +13,13 @@ All `file:line` references are against this worktree as of the audit date.
 
 ### 1.1 The flow
 
-| Step | Location | What happens |
-|---|---|---|
-| 1 | `secret_store.rs:200-230` (`hydrate_secret_maps`) | Reads every configured key from the OS keychain / fallback (`imp::get_secret`, `secret_store.rs:208,225`) and inserts the **plaintext** values into the in-memory maps `AppSettings.speech_pipeline_api_keys` and `AppSettings.post_process_api_keys`. |
-| 2 | `settings/store.rs:90` | `get_settings_unlocked` calls `hydrate_secret_maps` at the end of **every** settings load — so any caller of `get_settings` receives an `AppSettings` whose maps hold live plaintext keys. |
-| 3 | `commands/mod.rs:34-36` (`get_app_settings`) | The Tauri command returns `Ok(get_settings(&app))` — i.e. the hydrated `AppSettings` — directly to the webview. This is the only command whose return value carries the hydrated maps. |
-| 4 | `settings/types.rs:323-337` (`impl Serialize for SecretMap`) | **The choke point:** regardless of contents, `SecretMap` serializes as a zero-entry map (`serializer.serialize_map(Some(0))`). The wire format sent to the webview therefore contains `"speech_pipeline_api_keys": {}` and `"post_process_api_keys": {}`. |
-| 5 | Events | Verified against the full emit inventory (`grep '\.emit' src-tauri/src`, 76 hits reviewed): no event payload contains `AppSettings`, either `SecretMap`, or any raw `HashMap<String,String>` of keys. Event payloads are transcription text, audio levels, model-download progress, history ids, theme, secure-input status, log records. |
+| Step | Location                                                     | What happens                                                                                                                                                                                                                                                                                                                              |
+| ---- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `secret_store.rs:200-230` (`hydrate_secret_maps`)            | Reads every configured key from the OS keychain / fallback (`imp::get_secret`, `secret_store.rs:208,225`) and inserts the **plaintext** values into the in-memory maps `AppSettings.speech_pipeline_api_keys` and `AppSettings.post_process_api_keys`.                                                                                    |
+| 2    | `settings/store.rs:90`                                       | `get_settings_unlocked` calls `hydrate_secret_maps` at the end of **every** settings load — so any caller of `get_settings` receives an `AppSettings` whose maps hold live plaintext keys.                                                                                                                                                |
+| 3    | `commands/mod.rs:34-36` (`get_app_settings`)                 | The Tauri command returns `Ok(get_settings(&app))` — i.e. the hydrated `AppSettings` — directly to the webview. This is the only command whose return value carries the hydrated maps.                                                                                                                                                    |
+| 4    | `settings/types.rs:323-337` (`impl Serialize for SecretMap`) | **The choke point:** regardless of contents, `SecretMap` serializes as a zero-entry map (`serializer.serialize_map(Some(0))`). The wire format sent to the webview therefore contains `"speech_pipeline_api_keys": {}` and `"post_process_api_keys": {}`.                                                                                 |
+| 5    | Events                                                       | Verified against the full emit inventory (`grep '\.emit' src-tauri/src`, 76 hits reviewed): no event payload contains `AppSettings`, either `SecretMap`, or any raw `HashMap<String,String>` of keys. Event payloads are transcription text, audio levels, model-download progress, history ids, theme, secure-input status, log records. |
 
 ### 1.2 Verdict on webview exposure
 
@@ -32,15 +32,15 @@ All `file:line` references are against this worktree as of the audit date.
 ### 1.3 Debug dumps and store snapshots
 
 - `debug!("Loaded settings: {:?}", settings)` fires after hydration (`store.rs:34`, called from `load_or_create_app_settings:32-36`) — safe: `SecretMap`'s `Debug` impl redacts non-empty values to `[REDACTED]` (`types.rs:339-348`; tested in `settings/tests.rs:392-417`).
-- Salvage-path logging logs field *names* only, with an explicit comment that values may hold secrets (`store.rs:115-116`).
+- Salvage-path logging logs field _names_ only, with an explicit comment that values may hold secrets (`store.rs:115-116`).
 - No code path serializes the hydrated maps anywhere except through `SecretMap::Serialize` → `{}`. A grep for `to_value`/`to_string` over settings confirms all persistence and command-output serialization goes through the redacting impl (`store.rs:74,80,85,106,215`; `commands/mod.rs:34-41`).
-- The webview holds the `store:default` plugin permission plus `fs:read-files` scoped to `$APPDATA` (`capabilities/default.json:9,18-23`), i.e. it *could* open `settings_store.json` directly — but post-migration that file contains no key material, so this is defense-in-depth surface only (see §4.5).
+- The webview holds the `store:default` plugin permission plus `fs:read-files` scoped to `$APPDATA` (`capabilities/default.json:9,18-23`), i.e. it _could_ open `settings_store.json` directly — but post-migration that file contains no key material, so this is defense-in-depth surface only (see §4.5).
 
 ### 1.4 Adjacent IPC finding
 
-| ID | Finding | Severity |
-|---|---|---|
-| F-1 | `get_azure_speech_auth` (`speech_pipeline.rs:460-503`) fetches a **short-lived Azure issueToken result** and returns it in `AzureSpeechAuth { token, region, … }` to the webview (`speech_pipeline.rs:495-503`). The long-lived API key itself stays backend-side (`speech_pipeline.rs:466-468`), so this does not violate the no-key-material rule — but the token is a bearer credential exposed to webview JS (and thereby to any XSS in the frontend bundle). It never touches disk or logs. | **Low** |
+| ID  | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Severity |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| F-1 | `get_azure_speech_auth` (`speech_pipeline.rs:460-503`) fetches a **short-lived Azure issueToken result** and returns it in `AzureSpeechAuth { token, region, … }` to the webview (`speech_pipeline.rs:495-503`). The long-lived API key itself stays backend-side (`speech_pipeline.rs:466-468`), so this does not violate the no-key-material rule — but the token is a bearer credential exposed to webview JS (and thereby to any XSS in the frontend bundle). It never touches disk or logs. | **Low**  |
 
 **Remediation F-1:** acceptable as-is for desktop trust model; if hardening, keep the token in backend state and proxy Azure websocket auth through a command, or shorten token TTL handling. Document the token as intentional webview-visible credential in the meeting-mode redaction contract's non-goals.
 
@@ -56,20 +56,22 @@ Scope: the `#[cfg(not(windows|macos))] imp` module, `secret_store.rs:72-115`, ba
 
 ### 2.1 Non-atomic read-modify-write can destroy ALL secrets
 
-| ID | Finding | Severity |
-|---|---|---|
-| F-2 | Every mutation is a whole-file read-modify-write: `set_secret` = `read_all()` → `insert` → `write_all` (`secret_store.rs:103-107`); `delete_secret` likewise (`109-114`). `write_all` uses plain `std::fs::write(&path, json)` (`secret_store.rs:96`) — truncate-then-write, no temp file, no rename, no fsync. `read_all` treats *any* read error **and** any JSON parse failure as "no secrets" (`Err(_) => HashMap::new()`, `unwrap_or_default()`, `secret_store.rs:81-84`). | **High** |
+| ID  | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Severity |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| F-2 | Every mutation is a whole-file read-modify-write: `set_secret` = `read_all()` → `insert` → `write_all` (`secret_store.rs:103-107`); `delete_secret` likewise (`109-114`). `write_all` uses plain `std::fs::write(&path, json)` (`secret_store.rs:96`) — truncate-then-write, no temp file, no rename, no fsync. `read_all` treats _any_ read error **and** any JSON parse failure as "no secrets" (`Err(_) => HashMap::new()`, `unwrap_or_default()`, `secret_store.rs:81-84`). | **High** |
 
 **Concrete loss interleavings (derived from the actual code):**
 
-*Torn write / crash (total loss):*
+_Torn write / crash (total loss):_
+
 1. Secrets file contains `{"speak:speech-pipeline/azure":"KEY_A","speak:post-process/p1":"KEY_B"}`.
 2. User saves a DeepL key → `set_secret` → `std::fs::write` **truncates** `secrets.json` (`secret_store.rs:96`) and begins writing the new 3-entry JSON.
 3. Process crash / power loss mid-write → file holds a partial JSON document.
 4. Next launch: `read_all` → `from_str(...).unwrap_or_default()` fails silently → `{}` (`secret_store.rs:82`).
 5. The next successful `set_secret` writes a fresh file containing **only** the newly set key. KEY_A and KEY_B are permanently destroyed; there is no backup, no quarantine, no error ever surfaced.
 
-*Concurrent lost update (silent partial loss):*
+_Concurrent lost update (silent partial loss):_
+
 1. Two Tauri commands execute concurrently on different runtime threads (Tauri 2 runs commands off the main thread; nothing in the fallback `imp` takes a lock — contrast `SETTINGS_TRANSACTION_LOCK` which guards the settings store, `store.rs:21-27`).
 2. Thread 1 (`change_speech_pipeline_api_key_setting`) and thread 2 (`delete_secret` from `change_post_process_api_key_setting`) both `read_all()` → same snapshot.
 3. Thread 1 writes `{azure, p1}`; thread 2 then writes back its own stale-based map without azure → azure's new key is silently gone. Last writer wins; no conflict detection.
@@ -78,16 +80,16 @@ Scope: the `#[cfg(not(windows|macos))] imp` module, `secret_store.rs:72-115`, ba
 
 ### 2.2 No restrictive permissions on `secrets.json`
 
-| ID | Finding | Severity |
-|---|---|---|
+| ID  | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Severity                                          |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | F-3 | `write_all` creates the file with default umask-derived mode (typically `0644` on Linux) — world/group readable plaintext API keys. No `PermissionsExt::set_mode(0o600)`, no pre-create chmod before content lands, no check on existing files. The parent dir is created with `create_dir_all` defaults (`secret_store.rs:91-94`). Portable-mode deployments (`fallback_file()` prefers `portable::data_dir()`, `secret_store.rs:119`) put the file next to the executable, frequently on FAT/exFAT USB media where POSIX modes don't exist at all. | **High (multi-user Linux), Medium (single-user)** |
 
 **Remediation F-3:** create/open the temp file with mode `0600` before writing content (and chmod existing files to `0600` on first touch); verify after rename; in portable mode, warn that the fallback file inherits media semantics and recommend the OS keychain where available.
 
 ### 2.3 Silently ignored delete errors
 
-| ID | Finding | Severity |
-|---|---|---|
+| ID  | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Severity   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | F-4 | `delete_secret` discards the `write_all` result: `let _ = write_all(&map);` (`secret_store.rs:112`), and the public wrapper returns `()` (`secret_store.rs:142-144`). Callers (`shortcut/mod.rs:710-714,1159`) then report success to the UI. On a full disk or permission error, the "deleted" key remains in the plaintext file indefinitely while the user believes it is gone. Note the same pattern exists in the keychain imp (`let _ = entry.delete_credential();`, `secret_store.rs:67`), where a failed delete also surfaces as success. | **Medium** |
 
 **Remediation F-4:** make `delete_secret` return `Result<(), String>` like `set_secret`, propagate through `change_*_api_key_setting`, and surface a toast/error in the UI. At minimum, `error!`-log the failure (currently fully silent).
@@ -104,8 +106,8 @@ Function: `secret_store.rs:152-194`; invoked once per startup at `lib.rs:512-515
 
 ### 3.1 Partial-failure migration erases legacy plaintext keys (data loss)
 
-| ID | Finding | Severity |
-|---|---|---|
+| ID  | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Severity |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | F-5 | If `imp::set_secret` fails for provider X (locked keychain, Credential Manager error, F-2 torn file), the loop `continue`s **with X still present in the in-memory map** (`secret_store.rs:179-184`) — the comment says this is so "nothing is lost" and migration retries next startup. But `lib.rs:512` uses `update_settings`, whose write path is unconditional (`store.rs:219-225` → `write_settings_unlocked` → `serde_json::to_value(settings)`), and `SecretMap::Serialize` emits `{}` (`types.rs:329-336`). Result: the settings store is rewritten with `"speech_pipeline_api_keys": {}`, destroying the legacy plaintext of provider X on disk while X was **never** written to the keychain. On next startup there is nothing left to migrate. The retry-safety comment is false. | **High** |
 
 **Concrete sequence:** legacy store has `azure=K1, deepl=K2` → azure migrates OK, `migrated_any=true` → deepl `set_secret` fails → `continue` keeps K2 in memory → `update_settings` persists → disk now `{}` for both maps → K2 lost forever.
@@ -114,8 +116,8 @@ Function: `secret_store.rs:152-194`; invoked once per startup at `lib.rs:512-515
 
 ### 3.2 Headless CLI path can persist settings without ever migrating
 
-| ID | Finding | Severity |
-|---|---|---|
+| ID  | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Severity   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | F-6 | In headless mode (`--transcribe-file` etc.), setup returns early at `lib.rs:488`, so the migration at `lib.rs:512` never runs. But `apply_accelerator_settings` (`lib.rs:466` → `managers/transcription.rs:2027-2030`) calls `get_settings`, and `get_settings_unlocked` persists whenever a migration/bindings-merge marks the store dirty (`store.rs:73-75,84-86`). For a user whose store still holds legacy plaintext keys (e.g. GUI never launched since upgrade), a CLI-only invocation can rewrite the store with `{}` maps — destroying unmigrated keys without migrating them. Normal GUI startup orders correctly (migration at `lib.rs:512` precedes the first other settings consumer, `initialize_core_logic` at `lib.rs:541`), so this needs the specific headless-first condition. | **Medium** |
 
 **Remediation F-6:** run `migrate_legacy_settings_secrets` (or at minimum refuse to persist settings) in the headless setup branch before any `get_settings` call; simplest is hoisting the migration above the headless split.
@@ -156,15 +158,15 @@ There are tests for `Debug` redaction (`settings/tests.rs:392-417`) but **no tes
 
 ## 5. Findings summary
 
-| ID | Area | Severity | One-line remediation |
-|---|---|---|---|
-| F-1 | IPC (`speech_pipeline.rs:460-503`) | Low | Accept short-lived Azure token exposure; document as intentional in the redaction contract. |
-| F-2 | Fallback durability (`secret_store.rs:81-84,96,103-114`) | High | Temp-file + fsync + atomic rename; fail closed on parse errors; add a process-wide mutex. |
-| F-3 | Fallback durability (`secret_store.rs:91-96,119`) | High/Medium | Create temp file mode `0600` before content; chmod existing files; warn in portable mode. |
-| F-4 | Fallback/keychain delete (`secret_store.rs:67,112`) | Medium | Return `Result` from `delete_secret`; propagate to callers/UI; stop swallowing errors. |
-| F-5 | Migration (`secret_store.rs:179-189` + `store.rs:219-225` + `types.rs:329-336`) | High | Use `try_update_settings`; abort persistence if any keychain write fails; remove entries only after success. |
-| F-6 | Migration ordering (`lib.rs:454-488` vs `lib.rs:512`) | Medium | Migrate before the headless early-return, or suppress persist-on-read in headless mode. |
-| — | Test gap (§4.4) | Medium (contract risk) | Add serialize-canary test pinning `SecretMap` → `{}`. |
+| ID  | Area                                                                            | Severity               | One-line remediation                                                                                         |
+| --- | ------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| F-1 | IPC (`speech_pipeline.rs:460-503`)                                              | Low                    | Accept short-lived Azure token exposure; document as intentional in the redaction contract.                  |
+| F-2 | Fallback durability (`secret_store.rs:81-84,96,103-114`)                        | High                   | Temp-file + fsync + atomic rename; fail closed on parse errors; add a process-wide mutex.                    |
+| F-3 | Fallback durability (`secret_store.rs:91-96,119`)                               | High/Medium            | Create temp file mode `0600` before content; chmod existing files; warn in portable mode.                    |
+| F-4 | Fallback/keychain delete (`secret_store.rs:67,112`)                             | Medium                 | Return `Result` from `delete_secret`; propagate to callers/UI; stop swallowing errors.                       |
+| F-5 | Migration (`secret_store.rs:179-189` + `store.rs:219-225` + `types.rs:329-336`) | High                   | Use `try_update_settings`; abort persistence if any keychain write fails; remove entries only after success. |
+| F-6 | Migration ordering (`lib.rs:454-488` vs `lib.rs:512`)                           | Medium                 | Migrate before the headless early-return, or suppress persist-on-read in headless mode.                      |
+| —   | Test gap (§4.4)                                                                 | Medium (contract risk) | Add serialize-canary test pinning `SecretMap` → `{}`.                                                        |
 
 No findings require immediate code change within this read-only task; F-2/F-3/F-5 are the priority repairs for a follow-up implementation task.
 

@@ -23,10 +23,7 @@ import { commands, events } from "@/bindings";
 export type DictationPhase = "ready" | "recording" | "transcribing" | "error";
 
 export type DictationErrorKind =
-  | "microphone_permission"
-  | "no_input_device"
-  | "recording"
-  | "transcription";
+  "microphone_permission" | "no_input_device" | "recording" | "transcription";
 
 export interface DictationStatusError {
   kind: DictationErrorKind;

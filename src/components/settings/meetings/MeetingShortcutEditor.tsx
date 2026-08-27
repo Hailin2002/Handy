@@ -87,8 +87,11 @@ export const MeetingShortcutEditor: React.FC<MeetingShortcutEditorProps> = ({
         label: t(action.nameKey),
         hotkey: store.read(action.id),
       })),
-    // meetingValuesVersion intentionally invalidates the store reads
-    // (the injected store is mutable outside React's knowledge).
+    // meetingValuesVersion intentionally invalidates the store reads: the
+    // injected store is mutable outside React's knowledge, so bumping the
+    // counter is the only signal that `store.read` will return something new.
+    // The rule cannot see that and reports it as an unnecessary dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [store, t, meetingValuesVersion],
   );
 

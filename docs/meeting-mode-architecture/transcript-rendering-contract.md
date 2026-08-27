@@ -31,7 +31,7 @@ Sibling contracts consumed by this document (read-only):
 - [live-view-streaming-contract.md](live-view-streaming-contract.md) —
   abbreviated **LV-§n**. Its E1 `meeting://transcript-delta` channel
   (§2.1), ordering rules D1–D8 (§4), snapshot + tail-page handshake (§6.2),
-  and healing rules (§6.3) are the *only* live input path; this contract
+  and healing rules (§6.3) are the _only_ live input path; this contract
   defines how a renderer consumes them without redefining any of it.
 - [frontend-state-contract.md](frontend-state-contract.md) — abbreviated
   **FSC-§n**. Store boundaries (§2), listener ownership L1–L8 (§3), envelope
@@ -73,10 +73,10 @@ contract, this contract wins over catalogs, and nothing wins over actual code.
 Exactly two surfaces render transcripts, and both use the same module family
 with different initial anchors:
 
-| Surface | Plan anchor | Component | Initial anchor |
-| --- | --- | --- | --- |
+| Surface                  | Plan anchor    | Component                    | Initial anchor            |
+| ------------------------ | -------------- | ---------------------------- | ------------------------- |
 | Live recording main area | §6.11 line 624 | F7 `MeetingRecorderView.tsx` | anchored to tail (follow) |
-| Detail `Transkript` tab | §6.13 line 673 | F9 `MeetingDetail.tsx` | top of transcript |
+| Detail `Transkript` tab  | §6.13 line 673 | F9 `MeetingDetail.tsx`       | top of transcript         |
 
 No third transcript renderer may exist (rule R1, §3.3). The processing view
 (plan §6.12) shows a checklist, not segments, and is out of scope.
@@ -161,7 +161,7 @@ TranscriptRow = {
 ```
 
 Rows are immutable once created: E1 deltas carry finished, persisted segments
-only (LV-§2.1 "Append-only"), and re-transcription is *not* a live event
+only (LV-§2.1 "Append-only"), and re-transcription is _not_ a live event
 (LV-§8 NG-4 — it belongs to the detail view's envelope/refetch machinery).
 Immutability of rendered rows is what makes the anchor compensation of §4.3
 sound; any future feature that mutates delivered segment text in place must
@@ -173,7 +173,7 @@ P2C-§6 rule 5 requires equal-time overlaps to render as parallel tracks,
 never as one merged text run. The renderer resolves this deterministically:
 
 - Segments whose `(timeline_start_ms, timeline_end_ms)` are **exactly equal**
-  form one *track group*. The group renders at most one row per `source`;
+  form one _track group_. The group renders at most one row per `source`;
   if persistence ever delivered more than one same-source segment with
   byte-identical bounds (no known producer path does — VAD segmentation
   yields disjoint ranges per source, and job idempotency excludes retry
@@ -195,15 +195,15 @@ the windowed list stays a flat measured list.
 
 ### 3.1 Constants (testable, UI constants not spike-derived)
 
-| Constant | Value | Meaning |
-| --- | --- | --- |
-| `TR_PAGE_SIZE` | 250 | segments per paged fetch (store action, FSC-§2.2 row 4 query) |
-| `TR_MAX_CACHED_PAGES` | 8 | LRU cap on loaded pages per meeting ⇒ ≤ 2000 segments resident |
-| `TR_OVERSCAN_ROWS` | 10 | rows rendered beyond each viewport edge |
-| `TR_MIN_ROW_PX` | 28 | lower bound of any row/track-group height (timestamp line + text line at minimum font size) |
-| `TR_TAIL_ANCHOR_SLACK_PX` | 48 | distance-from-bottom below which the view counts as "anchored to tail" (§4.1) |
-| `TR_MAX_VIEWPORT_PX` | 2000 | viewport height assumed for the fixed DOM budget (§3.2); taller viewports re-derive by the same formula |
-| `TR_MAX_NODES_PER_ROW` | 8 | upper bound of DOM nodes per row (container, timestamp button, source badge, text spans, icon) |
+| Constant                  | Value | Meaning                                                                                                 |
+| ------------------------- | ----- | ------------------------------------------------------------------------------------------------------- |
+| `TR_PAGE_SIZE`            | 250   | segments per paged fetch (store action, FSC-§2.2 row 4 query)                                           |
+| `TR_MAX_CACHED_PAGES`     | 8     | LRU cap on loaded pages per meeting ⇒ ≤ 2000 segments resident                                          |
+| `TR_OVERSCAN_ROWS`        | 10    | rows rendered beyond each viewport edge                                                                 |
+| `TR_MIN_ROW_PX`           | 28    | lower bound of any row/track-group height (timestamp line + text line at minimum font size)             |
+| `TR_TAIL_ANCHOR_SLACK_PX` | 48    | distance-from-bottom below which the view counts as "anchored to tail" (§4.1)                           |
+| `TR_MAX_VIEWPORT_PX`      | 2000  | viewport height assumed for the fixed DOM budget (§3.2); taller viewports re-derive by the same formula |
+| `TR_MAX_NODES_PER_ROW`    | 8     | upper bound of DOM nodes per row (container, timestamp button, source badge, text spans, icon)          |
 
 ### 3.2 The DOM bound (G1 statement)
 
@@ -299,7 +299,7 @@ anchoredToTail ⇔ scrollTop + clientHeight ≥ scrollHeight − TR_TAIL_ANCHOR_
   accumulate below the fold; the `Zum aktuellen Text` button appears
   (plan line 628). **Rationale:** plan line 627 forbids the auto-jump
   outright, and for a reason that survives contact with users — a
-  programmatic jump discards the reader's position *twice* (the viewport
+  programmatic jump discards the reader's position _twice_ (the viewport
   moves and the eye must re-find the line it was reading), and during a
   multi-hour meeting the tail grows for hours; losing one's place to every
   finished segment makes reading the transcript impossible. The slack of
@@ -312,7 +312,7 @@ anchoredToTail ⇔ scrollTop + clientHeight ≥ scrollHeight − TR_TAIL_ANCHOR_
   pattern of evidence-navigation-contract §"Aktivierungssequenz"), so the
   jump is announced and reversible, not a silent viewport teleport.
 - **A4 — Insertions above the viewport: compensate.** Two events insert
-  rows *above* the current top edge: loading an older history page
+  rows _above_ the current top edge: loading an older history page
   (scroll-up pagination) and an out-of-timeline-order cloud completion
   (§4.3). In both cases the controller measures the inserted block height
   `ΔH` and applies `scrollTop += ΔH` in the same frame, so the content
@@ -338,12 +338,12 @@ With the local provider, completion is timeline-serialized
 (STT-§8 "Mic- und Systemsegmente werden nach Timeline und Fairness
 serialisiert"), so every applied batch is a pure tail append — case I1.
 
-| Case | Where the tuple lands | Frequency (default local path) | Rule applied |
-| --- | --- | --- | --- |
-| I1 | at/after the absolute tail | every batch | A1 or A2 |
-| I2 | below the viewport, above the tail | rare (multi-segment batches) | A2 (no scroll action) |
-| I3 | above the viewport top | cloud providers only | A4 compensation |
-| I4 | inside the viewport | cloud providers only | A5 |
+| Case | Where the tuple lands              | Frequency (default local path) | Rule applied          |
+| ---- | ---------------------------------- | ------------------------------ | --------------------- |
+| I1   | at/after the absolute tail         | every batch                    | A1 or A2              |
+| I2   | below the viewport, above the tail | rare (multi-segment batches)   | A2 (no scroll action) |
+| I3   | above the viewport top             | cloud providers only           | A4 compensation       |
+| I4   | inside the viewport                | cloud providers only           | A5                    |
 
 Cases I3/I4 require a provider that completes jobs out of timeline order
 (bounded by JSC-§1 concurrency classes); they cannot occur in the
@@ -370,12 +370,12 @@ holds all persisted segments.
 
 ### 5.2 Resident-state bound
 
-| Consumer | Bound | Computation |
-| --- | --- | --- |
-| Loaded pages (store slice) | ≤ `TR_MAX_CACHED_PAGES × TR_PAGE_SIZE` = 2,000 segments | LRU over pages; the page intersecting the viewport and the anchor row's page are pinned, all others evictable (§5.4) |
-| Per-segment VM cost | ≤ ~1 KiB conservative (36-char UUID string, two timestamps, source enum, ~300-char text as JS string, object + Map overhead) | 2,000 × 1 KiB ≈ **2.0 MiB** |
-| Event batches | applied and discarded (§4.1 step 5); upstream producer buffer already bounded by `LV_DELTA_PENDING_CAP` = 1024 segments (LV-§3.1) | no consumer-side queue exists ⇒ **0** steady-state |
-| Mounted DOM/window | ≤ 752 nodes (§3.2) | constant, viewport-bound |
+| Consumer                   | Bound                                                                                                                             | Computation                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Loaded pages (store slice) | ≤ `TR_MAX_CACHED_PAGES × TR_PAGE_SIZE` = 2,000 segments                                                                           | LRU over pages; the page intersecting the viewport and the anchor row's page are pinned, all others evictable (§5.4) |
+| Per-segment VM cost        | ≤ ~1 KiB conservative (36-char UUID string, two timestamps, source enum, ~300-char text as JS string, object + Map overhead)      | 2,000 × 1 KiB ≈ **2.0 MiB**                                                                                          |
+| Event batches              | applied and discarded (§4.1 step 5); upstream producer buffer already bounded by `LV_DELTA_PENDING_CAP` = 1024 segments (LV-§3.1) | no consumer-side queue exists ⇒ **0** steady-state                                                                   |
+| Mounted DOM/window         | ≤ 752 nodes (§3.2)                                                                                                                | constant, viewport-bound                                                                                             |
 
 **Ceiling statement: the transcript slice stays under a 4 MiB steady-state
 ceiling in the webview regardless of session length — the 2.0 MiB computed
@@ -490,21 +490,21 @@ Anything not in §2–§7 is a non-goal until the plan changes.
 
 ## Appendix A — Gate traceability
 
-| Gate | Coverage |
-| --- | --- |
-| G1 DOM bound constant regardless of transcript length | §3.1 constants, §3.2 formula (92 rows ⇒ ≤ ~752 nodes, viewport-bound only), R4 no-unbounded-list rule; §5 shows the same structural bound holds for the 5,760-segment 4-hour worst case |
+| Gate                                                            | Coverage                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1 DOM bound constant regardless of transcript length           | §3.1 constants, §3.2 formula (92 rows ⇒ ≤ ~752 nodes, viewport-bound only), R4 no-unbounded-list rule; §5 shows the same structural bound holds for the 5,760-segment 4-hour worst case                                                      |
 | G2 live-append never resets scroll when anchored above the tail | §4.2 A2 (never touch scroll when detached) with the measurable `anchoredToTail` definition and explicit rationale grounded in plan line 627; A4/A6 compensation for above-viewport insertions; §4.3 case table bounding when each rule fires |
-| G3 segment identity/key scheme matches the shared segment model | §2.1 R-K1/R-K2 (persisted UUID verbatim, no second format, no index/rowid/composite keys), §2.2 ordering tuple consumed unchanged from P2C-§6 rule 5, dependency note on LV-D2 sequence semantics registered |
-| G4 non-goals section; documentation index updated | §8 NG-1–NG-9; row appended to `docs/meeting-mode-documentation-index.md` §3 table and reading-order entry per its Pflegeregel |
-| G5 git status confined to declared scope | verified after authoring via `git status --porcelain`; recorded in the mission result evidence |
+| G3 segment identity/key scheme matches the shared segment model | §2.1 R-K1/R-K2 (persisted UUID verbatim, no second format, no index/rowid/composite keys), §2.2 ordering tuple consumed unchanged from P2C-§6 rule 5, dependency note on LV-D2 sequence semantics registered                                 |
+| G4 non-goals section; documentation index updated               | §8 NG-1–NG-9; row appended to `docs/meeting-mode-documentation-index.md` §3 table and reading-order entry per its Pflegeregel                                                                                                                |
+| G5 git status confined to declared scope                        | verified after authoring via `git status --porcelain`; recorded in the mission result evidence                                                                                                                                               |
 
 ## Appendix B — Testability (mechanical checks once the FSC §0.2 item 4 harness exists)
 
-| Rule | Test shape |
-| --- | --- |
-| G1 DOM bound | mount the window with 5,760 synthetic segments; assert `container.querySelectorAll("[data-segment-id]").length` ≤ 92 across scroll positions swept top→bottom |
-| R-K1/R-K3 keys | apply a re-delivered E1 batch (D3 says discard) and an older-page prepend; assert zero duplicate-key warnings and stable row identity (`id` preserved across reconciliation) |
-| A2 detached no-jump | render live view, scroll up, apply 50 batches; assert `scrollTop` unchanged and the `Zum aktuellen Text` button visible with a correct count |
-| A1 follow | assert bottom-follow after each batch while `anchoredToTail`, instant under `prefers-reduced-motion` |
-| A4 prepend compensation | load an older page while scrolled; assert the first visible segment `id` is unchanged and `scrollTop` increased by the measured `ΔH` |
-| §5.2 page cap | fetch pages while scrolling through 23 synthetic pages; assert store slice never exceeds 2,000 segments and the viewport/tail pages stay pinned |
+| Rule                    | Test shape                                                                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1 DOM bound            | mount the window with 5,760 synthetic segments; assert `container.querySelectorAll("[data-segment-id]").length` ≤ 92 across scroll positions swept top→bottom                |
+| R-K1/R-K3 keys          | apply a re-delivered E1 batch (D3 says discard) and an older-page prepend; assert zero duplicate-key warnings and stable row identity (`id` preserved across reconciliation) |
+| A2 detached no-jump     | render live view, scroll up, apply 50 batches; assert `scrollTop` unchanged and the `Zum aktuellen Text` button visible with a correct count                                 |
+| A1 follow               | assert bottom-follow after each batch while `anchoredToTail`, instant under `prefers-reduced-motion`                                                                         |
+| A4 prepend compensation | load an older page while scrolled; assert the first visible segment `id` is unchanged and `scrollTop` increased by the measured `ΔH`                                         |
+| §5.2 page cap           | fetch pages while scrolling through 23 synthetic pages; assert store slice never exceeds 2,000 segments and the viewport/tail pages stay pinned                              |

@@ -13,14 +13,15 @@
     "macOSPrivateApi": true,
     "windows": [],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost blob: data: wss://*.stt.speech.microsoft.com https://*.stt.speech.microsoft.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'",
       "assetProtocol": {
         "enable": true,
         "scope": {
-          "allow": ["**"],
+          "allow": ["$APPDATA/**", "$EXE/Data/**"],
           "requireLiteralLeadingDot": false
         }
-      }
+      },
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost blob: data: ws://localhost:1420 http://localhost:1420 wss://*.stt.speech.microsoft.com https://*.stt.speech.microsoft.com; object-src 'none'; base-uri 'self'"
     }
   },
   "bundle": {

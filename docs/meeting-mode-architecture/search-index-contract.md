@@ -57,19 +57,19 @@ These exclusions are binding for v1. Each names the reason it is rejected;
 re-opening any of them requires a documented decision against this budget
 (gate G4).
 
-| # | Excluded | Reason |
-| --- | --- | --- |
-| NG-1 | Ranking ML, learning-to-rank, tuned relevance models, user/personalized ranking | BM25 (`ORDER BY rank`) is sufficient for a local library of meeting transcripts and chats (plan lines 1329–1332 deliberately defer anything beyond FTS5). |
-| NG-2 | Fuzzy matching beyond the mechanisms stated in §5.2 (tokenizer-inherent case/umlaut folding, automatic prefix matching per §5.3 Q4, deterministic `ß`↔`ss` term expansion per §5.3 Q5) | No edit distance, no Levenshtein, no trigram index, no `spellfix1`, no synonym tables. Every "did you mean" feature is deferred; the included mechanisms are deterministic, bounded, and unit-testable. |
-| NG-3 | Cross-device search, server-side search, search over sync | Single-device product in v1 (plan line 85: „zentrale Cloud-Synchronisation oder Mehrgerätebetrieb" is explicitly out; plan lines 102–103 defer server DB and multi-device access); search reads local SQLite only. |
-| NG-4 | Embedding/vector search | Plan lines 1329–1332 keep it behind a future `SearchService`; roadmap item (plan line 1753). Nothing in v1 may add vector columns, model downloads, or embedding jobs. |
-| NG-5 | Stemming (porter/snowball), German compound splitting/decompounding, lemmatization | Not available in the bundled SQLite FTS5 build beyond the porter stemmer (English-oriented); decompounding is an unsolved research problem. Prefix matching (§5.3 Q4) is the stated mitigation for trailing compounds. |
-| NG-6 | Boolean query syntax (AND/OR/NOT/NEAR/column filters) exposed to users | Users get plain word search; the store builds the FTS5 expression itself (§5.3). Raw FTS5 syntax from callers never reaches `MATCH`. |
-| NG-7 | Deep pagination of results | Fixed page: `limit` clamped to `[1, 200]`, default 50. Refining the query replaces paging. |
-| NG-8 | Indexing of media content (OCR, audio fingerprinting), asset filenames, `author_label`, meeting descriptions, snapshot evidence excerpts | Not named by plan line 1329. The corpus table (§3) is versioned; adding a field later bumps `index_version` and triggers one rebuild (§8.3). |
-| NG-9 | FTS over `meeting_sessions.title` | Plan line 1329 does not list meeting titles. The Meetings-page search box (plan line 469) filters via the ordinary `list_sessions` read path (SQL `LIKE` on title inside `MeetingStore`) — it is list filtering, not full-text search. This keeps meeting-list behavior independent of index freshness. |
-| NG-10 | Other-language tokenizers (ICU tokenizer, per-language index selection) | `unicode61` handles the plan's target language German acceptably (§5) and degrades gracefully for mixed German/English; ICU is not part of the bundled SQLite build. |
-| NG-11 | Saved searches, search history, analytics | No v1 requirement anywhere in the plan; pure scope creep. |
+| #     | Excluded                                                                                                                                                                               | Reason                                                                                                                                                                                                                                                                                                  |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NG-1  | Ranking ML, learning-to-rank, tuned relevance models, user/personalized ranking                                                                                                        | BM25 (`ORDER BY rank`) is sufficient for a local library of meeting transcripts and chats (plan lines 1329–1332 deliberately defer anything beyond FTS5).                                                                                                                                               |
+| NG-2  | Fuzzy matching beyond the mechanisms stated in §5.2 (tokenizer-inherent case/umlaut folding, automatic prefix matching per §5.3 Q4, deterministic `ß`↔`ss` term expansion per §5.3 Q5) | No edit distance, no Levenshtein, no trigram index, no `spellfix1`, no synonym tables. Every "did you mean" feature is deferred; the included mechanisms are deterministic, bounded, and unit-testable.                                                                                                 |
+| NG-3  | Cross-device search, server-side search, search over sync                                                                                                                              | Single-device product in v1 (plan line 85: „zentrale Cloud-Synchronisation oder Mehrgerätebetrieb" is explicitly out; plan lines 102–103 defer server DB and multi-device access); search reads local SQLite only.                                                                                      |
+| NG-4  | Embedding/vector search                                                                                                                                                                | Plan lines 1329–1332 keep it behind a future `SearchService`; roadmap item (plan line 1753). Nothing in v1 may add vector columns, model downloads, or embedding jobs.                                                                                                                                  |
+| NG-5  | Stemming (porter/snowball), German compound splitting/decompounding, lemmatization                                                                                                     | Not available in the bundled SQLite FTS5 build beyond the porter stemmer (English-oriented); decompounding is an unsolved research problem. Prefix matching (§5.3 Q4) is the stated mitigation for trailing compounds.                                                                                  |
+| NG-6  | Boolean query syntax (AND/OR/NOT/NEAR/column filters) exposed to users                                                                                                                 | Users get plain word search; the store builds the FTS5 expression itself (§5.3). Raw FTS5 syntax from callers never reaches `MATCH`.                                                                                                                                                                    |
+| NG-7  | Deep pagination of results                                                                                                                                                             | Fixed page: `limit` clamped to `[1, 200]`, default 50. Refining the query replaces paging.                                                                                                                                                                                                              |
+| NG-8  | Indexing of media content (OCR, audio fingerprinting), asset filenames, `author_label`, meeting descriptions, snapshot evidence excerpts                                               | Not named by plan line 1329. The corpus table (§3) is versioned; adding a field later bumps `index_version` and triggers one rebuild (§8.3).                                                                                                                                                            |
+| NG-9  | FTS over `meeting_sessions.title`                                                                                                                                                      | Plan line 1329 does not list meeting titles. The Meetings-page search box (plan line 469) filters via the ordinary `list_sessions` read path (SQL `LIKE` on title inside `MeetingStore`) — it is list filtering, not full-text search. This keeps meeting-list behavior independent of index freshness. |
+| NG-10 | Other-language tokenizers (ICU tokenizer, per-language index selection)                                                                                                                | `unicode61` handles the plan's target language German acceptably (§5) and degrades gracefully for mixed German/English; ICU is not part of the bundled SQLite build.                                                                                                                                    |
+| NG-11 | Saved searches, search history, analytics                                                                                                                                              | No v1 requirement anywhere in the plan; pure scope creep.                                                                                                                                                                                                                                               |
 
 ### 0.3 Schema authority
 
@@ -124,7 +124,7 @@ Rules inherited unchanged from RBC:
   index; services and commands see typed values (RBC §7.1 R1/R3); the frontend
   only `invoke()`s commands (RBC §7.1 R5). There is no second query path.
 - **S2 — no separate `SearchService` in v1.** Plan line 1331 names
-  `SearchService` only as the *future* seam for vector search. In v1 the
+  `SearchService` only as the _future_ seam for vector search. In v1 the
   search surface is `KnowledgeRepository::search` (RBC §2 sketches it);
   module-placement-map confirms the seam sits on `KnowledgeStore` itself.
   A future `SearchService` wraps this method set without replacing it.
@@ -161,7 +161,7 @@ are **rejected**.
 2. **Tombstones are data, not absence.** RBC §5.4: "consumers never infer
    deletion from absence." The FTS index is precisely such a consumer. The
    stage reacts to `deleted_at = Some` on the committed envelope by removing
-   index rows (rule D1, §7) — deletion is *propagated*, not discovered. A
+   index rows (rule D1, §7) — deletion is _propagated_, not discovered. A
    trigger on the base table would have to re-derive the transition
    (`OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL`) instead of being
    handed the fact.
@@ -222,14 +222,14 @@ Source-Items, Transkripte, Aufgaben und Snapshots." The assigned leaf's shorter
 list (segments, source_items, summaries, task titles) is subsumed — the plan
 additionally requires project names and snapshots, so the corpus is:
 
-| # | `entity_kind` | Base table (owner) | Indexed field(s) | Written by units of work |
-| --- | --- | --- | --- | --- |
-| 1 | `project` | `projects` (KnowledgeStore) | `name` | K1, K2/K2', K3 |
-| 2 | `source_item` | `source_items` (KnowledgeStore) | `text` | K4, K5 (+ hard deletes per ASC §9) |
-| 3 | `transcript_segment` | `meeting_transcript_segments` (MeetingStore) | `text` | U8, U3, hard deletes per ASC §9 |
-| 4 | `meeting_summary` | `meeting_summaries` (MeetingStore) | `summary_markdown` | U9, U3, hard deletes per ASC §9 |
-| 5 | `task` | `project_tasks` (KnowledgeStore) | `title`; `description` (indexed only when non-empty) | K7, task-level tombstones |
-| 6 | `project_snapshot` | `project_snapshots` (KnowledgeStore) | `summary_markdown` (current snapshots only, see below) | K9 |
+| #   | `entity_kind`        | Base table (owner)                           | Indexed field(s)                                       | Written by units of work           |
+| --- | -------------------- | -------------------------------------------- | ------------------------------------------------------ | ---------------------------------- |
+| 1   | `project`            | `projects` (KnowledgeStore)                  | `name`                                                 | K1, K2/K2', K3                     |
+| 2   | `source_item`        | `source_items` (KnowledgeStore)              | `text`                                                 | K4, K5 (+ hard deletes per ASC §9) |
+| 3   | `transcript_segment` | `meeting_transcript_segments` (MeetingStore) | `text`                                                 | U8, U3, hard deletes per ASC §9    |
+| 4   | `meeting_summary`    | `meeting_summaries` (MeetingStore)           | `summary_markdown`                                     | U9, U3, hard deletes per ASC §9    |
+| 5   | `task`               | `project_tasks` (KnowledgeStore)             | `title`; `description` (indexed only when non-empty)   | K7, task-level tombstones          |
+| 6   | `project_snapshot`   | `project_snapshots` (KnowledgeStore)         | `summary_markdown` (current snapshots only, see below) | K9                                 |
 
 Corpus rulings:
 
@@ -276,8 +276,8 @@ CREATE TABLE search_index_meta (          -- plain table, task-0020-owned DDL
 
 Design decisions, with the alternatives rejected:
 
-- **Contentful (self-storing) chosen** over *external-content*
-  (`content=`base tables) and *contentless*. External-content saves disk but
+- **Contentful (self-storing) chosen** over _external-content_
+  (`content=`base tables) and _contentless_. External-content saves disk but
   requires reproducing the exact original values on every delete/update —
   the classic drift source, and hostile to the soft-delete-first model where
   "removal" is driven by envelopes rather than row churn. Contentless tables
@@ -289,7 +289,7 @@ Design decisions, with the alternatives rejected:
 - **Unindexed metadata columns** (`entity_kind`, `entity_id`, `field`,
   `revision`) ride on the same table so that scoped queries (§6.3) and
   cascade deletions (§7) are single-table statements and `DELETE FROM
-  search_index WHERE entity_id = ?` is exact — verified in the §0.4 probe.
+search_index WHERE entity_id = ?` is exact — verified in the §0.4 probe.
   They are `UNINDEXED` so they never pollute matching or ranking.
 - **No rowids cross the seam.** FTS5 rowids are private to the index
   (identity is `(entity_kind, entity_id, field)`); RBC §5.1 forbids
@@ -307,7 +307,7 @@ Design decisions, with the alternatives rejected:
   the FTS5 default; pinning guards against silent default changes and makes
   `tokenizer_spec` self-describing). Case folding is inherent to `unicode61`.
 - **Effect (probe-verified, §0.4):** umlaut diacritics fold (`München` is
-  found by `munchen`); **`ß` is its own character and is *not* equivalent to
+  found by `munchen`); **`ß` is its own character and is _not_ equivalent to
   `ss`** (the probe shows `grusse` does not match `Grüße`, `strase` does not
   match `Straße`). Accepted at index time; compensated at
   query time (Q5) rather than by storing a folded text duplicate, because a
@@ -437,8 +437,7 @@ impl KnowledgeStore /* and trait KnowledgeRepository */ {
 - **Jump-target convergence.** Transcript-segment hits carry
   `HitPosition::MeetingPosition(MeetingPositionRef)` per EPD §3.2, so search,
   task evidence, and the audio player share the single canonical position
-  type; M20 ("Suche springt zur richtigen … Meeting-Zeitposition", plan line
-  1902) is satisfiable without format conversion.
+  type; M20 ("Suche springt zur richtigen … Meeting-Zeitposition", plan line 1902) is satisfiable without format conversion.
 - **Command-layer shape.** Any Tauri command exposing search receives/returns
   only these typed values (RBC §7.1 R3); tauri-specta bindings therefore
   cannot leak row internals (RBC §7.3 command-surface test applies verbatim).
@@ -474,7 +473,7 @@ impl KnowledgeStore /* and trait KnowledgeRepository */ {
   searchable (ASC §9 row „FTS5 index": unchanged).
 - **D3 — ancestor cascade (within one store's domain).** Removal propagates
   to dependents of the deleted entity, because index visibility follows
-  *reachability*:
+  _reachability_:
 
   ```text
   live(entity) = envelope alive (deleted_at = None)
@@ -491,6 +490,7 @@ impl KnowledgeStore /* and trait KnowledgeRepository */ {
   segment and summary rows. Restoration paths do not exist in v1 (tombstones
   are terminal); a restored entity re-enters the index only via rebuild
   (§8), which indexes exactly the `live` set.
+
 - **D4 — relink is not deletion.** `unlink_project_source` /
   reassignment (K6, plan line 796) changes linkage only; index rows are
   untouched, and scope filtering (§6.3) reflects the new linkage immediately
@@ -503,13 +503,14 @@ impl KnowledgeStore /* and trait KnowledgeRepository */ {
   > is live per D3, and its `text` equals the base field value, and its
   > `revision` equals the base envelope revision.
 
-  Cross-store residue from interrupted D6 flows is *not* a D5 violation at
+  Cross-store residue from interrupted D6 flows is _not_ a D5 violation at
   any single commit point; it is caught by the startup scan (§8.4).
+
 - **D6 — cross-store deletion flows.** Deleting a whole meeting spans both
   stores (ASC §9 level ≥2 plus U3/K5). Because each unit of work owns exactly
   one transaction (RBC W1), the orchestration flow executes U3 and K5 as two
   commits; each removes the index rows of the corpora **its** store owns.
-  A crash between the two commits cannot produce an orphan *within* either
+  A crash between the two commits cannot produce an orphan _within_ either
   store's invariant, but can leave e.g. a meeting's `source_items` indexed
   while their `source` is already tombstoned. Therefore: every startup runs
   the cheap §8.2 drift/orphan scan before the first `search`, and detected
@@ -520,16 +521,16 @@ impl KnowledgeStore /* and trait KnowledgeRepository */ {
 Each deletion path maps to a named unit of work + a named behavioral test
 (in-memory SQLite, RBC §7.3 pattern):
 
-| Deletion event | Index effect | Test |
-| --- | --- | --- |
-| U3 `soft_delete_session` | segments' + summary's rows removed (D1/D3) | T3 |
-| K3 `soft_delete_project` | project's, tasks', snapshot's rows removed (D1/D3) | T5a |
-| K5 `soft_delete_source` | its `source_items`' rows removed (D1/D3); meeting-side rows are U3's business (D6) | T5b |
-| ASC §9 level 2 hard delete | segment+summary+item rows removed (D2) | T4a |
-| ASC §9 level 3 hard delete | all meeting-text rows removed (D2) | T4b |
-| K7 task tombstone | task rows removed (D1) | T5c |
-| K9 publish_snapshot | previous current-snapshot rows replaced (C1) | T6b |
-| K6 unlink/relink | **no** index change; scope result changes (D4) | T10b |
+| Deletion event             | Index effect                                                                       | Test |
+| -------------------------- | ---------------------------------------------------------------------------------- | ---- |
+| U3 `soft_delete_session`   | segments' + summary's rows removed (D1/D3)                                         | T3   |
+| K3 `soft_delete_project`   | project's, tasks', snapshot's rows removed (D1/D3)                                 | T5a  |
+| K5 `soft_delete_source`    | its `source_items`' rows removed (D1/D3); meeting-side rows are U3's business (D6) | T5b  |
+| ASC §9 level 2 hard delete | segment+summary+item rows removed (D2)                                             | T4a  |
+| ASC §9 level 3 hard delete | all meeting-text rows removed (D2)                                                 | T4b  |
+| K7 task tombstone          | task rows removed (D1)                                                             | T5c  |
+| K9 publish_snapshot        | previous current-snapshot rows replaced (C1)                                       | T6b  |
+| K6 unlink/relink           | **no** index change; scope result changes (D4)                                     | T10b |
 
 Additionally, invariant D5 is checked as a property test (T7 runs an
 arbitrary interleaving of mutations and compares incremental state against a
@@ -590,7 +591,7 @@ the happy path.
 ## 9. Verification appendix (test targets, all in-memory SQLite per RBC §7.3)
 
 | ID | Asserts |
-| --- | --- |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | T1 | Tokenizer folding: `München` found by `munchen`; `Projektmaßnahme` found by `projekt` (mirrors §0.4 probe) |
 | T2 | Sanitized query translation: terms containing `"`, `(`, `*`, `NEAR`, `OR` are matched literally; no `StoreError` raised (Q1–Q3, Q6) |
 | T3 | U3 tombstone removes segment+summary hits (D1/D3) |
@@ -606,13 +607,13 @@ the happy path.
 | T10b | Relink (K6) changes scope results without touching index rows (D4) |
 | T11 | Fragments carry balanced U+E000/U+E001 marker pairs; elision uses `…` |
 | T12 | Q5 `ß` expansion fires in both directions (`strasse`→`straße`, `straße`→`strasse`) |
-| Static | RBC §7.3 allow-list gate extended with `fts5|search_index` awareness: only allow-listed files may name the virtual table |
+| Static | RBC §7.3 allow-list gate extended with `fts5                                                                                                             | search_index` awareness: only allow-listed files may name the virtual table |
 
 ## 10. Gate verification checklist
 
-| Gate | Where satisfied |
-| --- | --- |
-| G1 population mechanism decided with consistency argument vs. RBC §5 | §2.1 decision (explicit envelope-driven indexer stage, triggers rejected); §2.2 six-point argument; §2.3 disclosed R1 consequence |
-| G2 stable references + highlighted fragments, never raw internals | §6.1 types; §6.2 guarantees (no rowids/internals/scores; snippet markers; `MeetingPositionRef` convergence) |
-| G3 deletion provably removes index entries (cascade rule stated) | §7.1 D1–D6 (incl. `live()` reachability and cross-store flows); §7.2 event→effect→test table |
-| G4 non-goals exclude ranking ML, bounded fuzziness, cross-device; doc index updated | §0.2 NG-1/NG-2/NG-3 (plus NG-4–NG-11); `docs/meeting-mode-documentation-index.md` §3 row added in the same change |
+| Gate                                                                                | Where satisfied                                                                                                                   |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| G1 population mechanism decided with consistency argument vs. RBC §5                | §2.1 decision (explicit envelope-driven indexer stage, triggers rejected); §2.2 six-point argument; §2.3 disclosed R1 consequence |
+| G2 stable references + highlighted fragments, never raw internals                   | §6.1 types; §6.2 guarantees (no rowids/internals/scores; snippet markers; `MeetingPositionRef` convergence)                       |
+| G3 deletion provably removes index entries (cascade rule stated)                    | §7.1 D1–D6 (incl. `live()` reachability and cross-store flows); §7.2 event→effect→test table                                      |
+| G4 non-goals exclude ranking ML, bounded fuzziness, cross-device; doc index updated | §0.2 NG-1/NG-2/NG-3 (plus NG-4–NG-11); `docs/meeting-mode-documentation-index.md` §3 row added in the same change                 |

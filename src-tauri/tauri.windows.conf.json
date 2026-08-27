@@ -3,6 +3,9 @@
     "resources": {
       "resources": "resources",
       "transcribe-libs": "."
+    },
+    "windows": {
+      "signCommand": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ../scripts/sign-windows.ps1 %1"
     }
   }
 }

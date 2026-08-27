@@ -142,13 +142,13 @@ impl ModelManager {
             &move |event| {
                 let _ = match event {
                     HttpDownloadEvent::Progress(progress) => {
-                        app_handle.emit("model-download-progress", progress)
+                        app_handle.emit(crate::events::MODEL_DOWNLOAD_PROGRESS, progress)
                     }
                     HttpDownloadEvent::VerificationStarted => {
-                        app_handle.emit("model-verification-started", &id)
+                        app_handle.emit(crate::events::MODEL_VERIFICATION_STARTED, &id)
                     }
                     HttpDownloadEvent::VerificationCompleted => {
-                        app_handle.emit("model-verification-completed", &id)
+                        app_handle.emit(crate::events::MODEL_VERIFICATION_COMPLETED, &id)
                     }
                 };
             },

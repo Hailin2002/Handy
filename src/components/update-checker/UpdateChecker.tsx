@@ -35,7 +35,9 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
   const settingsLoaded = !isLoading && settings !== null;
   const updateChecksEnabled = settings?.update_checks_enabled ?? false;
 
-  const upToDateTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const upToDateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   const isManualCheckRef = useRef(false);
   const downloadedBytesRef = useRef(0);
   const contentLengthRef = useRef(0);
@@ -67,6 +69,11 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
       }
       updateUnlisten.then((fn) => fn());
     };
+    // `checkForUpdates` and `handleManualUpdateCheck` are declared below this
+    // effect, so naming them here would evaluate the dependency array during
+    // render and hit their temporal dead zone. Both close only over state this
+    // effect already re-runs on, so the current list is complete in practice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsLoaded, updateChecksEnabled]);
 
   // Update checking functions

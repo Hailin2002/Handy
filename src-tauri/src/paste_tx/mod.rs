@@ -30,6 +30,34 @@
 //! transcript may occupy the clipboard; the failure mode is always "the
 //! transcript stays on the clipboard a bit longer", never "stale content gets
 //! pasted".
+//!
+//! # Relationship to the legacy path, and how this one graduates
+//!
+//! This is not a replacement for `clipboard::paste_via_clipboard` — it is a
+//! faster path *inside* it. `clipboard::paste` owns the paste policy (method
+//! selection, direct typing, the Linux typing tools, auto-submit) and, when
+//! `settings.reliable_paste` is on and the platform is macOS or Windows, tries
+//! this module first. Any error here is logged and falls through to the legacy
+//! path with the clipboard untouched.
+//!
+//! That fallback is what makes the flag safe to ship, so the two paths are
+//! deliberately *both* alive rather than merged. What is missing is a stated
+//! condition for ending that state, without which a debug-gated beta quietly
+//! becomes permanent maintenance of two paste implementations:
+//!
+//! - **Graduation** (drop the debug gate, default `reliable_paste` on): the
+//!   receipt path has been exercised on both platforms across the applications
+//!   in the #502 report without the fallback warning
+//!   ("Reliable paste unavailable") appearing in logs.
+//! - **Retirement** (delete `paste_via_clipboard` and the fallback): only after
+//!   graduation has held through a release, since until then the legacy path is
+//!   the recovery route for any application whose clipboard behaviour this
+//!   module has not met.
+//!
+//! Note there is no test asserting the two paths agree on the user-visible
+//! contract — that the previous clipboard content comes back and auto-submit
+//! fires exactly once. Both need real platform clipboards, so this is a manual
+//! check today; it should become the graduation evidence above.
 
 // The shared transaction state is compiled on all platforms (for the unit
 // tests), but only the macOS/Windows platform modules consume all of it.

@@ -16,15 +16,15 @@ Contents:
 
 ## 1. Tool inventory
 
-| Script | Purpose |
-| --- | --- |
-| `run-120min.ps1` | Drives the full 120-min spike run: starts the binary, alternates silence/tone periods, writes `events.log` (run-120min.ps1:1–5). |
-| `device-loss-test.ps1` | Elevated; emulates device unplug by disabling/re-enabling the PnP MEDIA device node; appends markers to the run's `events.log` (device-loss-test.ps1:1–6). |
-| `sleep-wake-test.ps1` | Elevated; performs a real S3 sleep/RTC-wake cycle during a run and logs the markers (sleep-wake-test.ps1:1–7). |
-| `log-event.ps1` | Appends one free-form timestamped marker to `events.log` (log-event.ps1:1–3). |
-| `play-tone.ps1` | Plays the scenario tone (spawned by `run-120min.ps1:72–74`). |
-| `set-default-output.ps1`, `set-default-output-uia.ps1` | Change the Windows default output device before a run. |
-| `analyze-spike-csv.ps1` | Post-run analysis: CSV + optional `events.log` → markdown SUMMARY (analyze-spike-csv.ps1:1–4). |
+| Script                                                 | Purpose                                                                                                                                                    |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `run-120min.ps1`                                       | Drives the full 120-min spike run: starts the binary, alternates silence/tone periods, writes `events.log` (run-120min.ps1:1–5).                           |
+| `device-loss-test.ps1`                                 | Elevated; emulates device unplug by disabling/re-enabling the PnP MEDIA device node; appends markers to the run's `events.log` (device-loss-test.ps1:1–6). |
+| `sleep-wake-test.ps1`                                  | Elevated; performs a real S3 sleep/RTC-wake cycle during a run and logs the markers (sleep-wake-test.ps1:1–7).                                             |
+| `log-event.ps1`                                        | Appends one free-form timestamped marker to `events.log` (log-event.ps1:1–3).                                                                              |
+| `play-tone.ps1`                                        | Plays the scenario tone (spawned by `run-120min.ps1:72–74`).                                                                                               |
+| `set-default-output.ps1`, `set-default-output-uia.ps1` | Change the Windows default output device before a run.                                                                                                     |
+| `analyze-spike-csv.ps1`                                | Post-run analysis: CSV + optional `events.log` → markdown SUMMARY (analyze-spike-csv.ps1:1–4).                                                             |
 
 Usage (analyze-spike-csv.ps1:4):
 
@@ -45,36 +45,36 @@ Every value below was verified against the known-answer fixture (§3).
 
 Emitted from the CSV's `# `-prefixed lines (lines 19–25, emitted at 73–75).
 
-| Field | Unit | Computation |
-| --- | --- | --- |
+| Field            | Unit      | Computation                                                                                                                                                                                                                                                                                                                                                                               |
+| ---------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `<key>: <value>` | as logged | Parsed by regex `^([A-Za-z_]+)[ =](.*)$` into an ordered hashtable (line 22). **Limitation:** duplicate `# key=` lines collapse **last-wins** — each match overwrites the previous value (line 22). Keys must match `[A-Za-z_]+`; keys containing digits or hyphens are dropped (lines 22–23). Unparseable values become empty strings, not errors. Demonstrated by fixture check 1 (§3). |
 
 ### 2.2 Per-source metric table
 
-| SUMMARY row (emit line) | Unit | Computation source |
-| --- | --- | --- |
-| `Callbacks` (119) | count | Number of non-error rows for the source (line 79). |
-| `Stream errors` (120) | count | Rows of the source with non-empty `error` column (line 80). |
-| `Config` (121) | Hz / channels / format | `sampleRate`, `channels`, `sampleFormat` copied from the **first** non-error row (lines 82–83). Not re-derived. |
-| `Measurement span (last callback)` (122) | seconds (1 decimal) | Last non-error row's `t_rel_ms` ÷ 1000 (line 84, emit 122). |
-| `Total frames` (123) | frames | Last row's cumulative `totalFrames` column (line 112). |
-| `Max gap` (124) | milliseconds (3 decimals) | Maximum `gapMs` over non-error rows via `Measure-Object -Maximum` (line 85). **Includes the first row's startup latency** — for the first row of a source, `gap_ms` equals its own `t_rel_ms`, not a real gap (verified in the committed CSVs, e.g. `run-20260822` first microphone row: `t_rel_ms=14.339, gap_ms=14.339`). |
-| `Gap histogram (normal <=250 ms / sparse <=1 s / gap >1 s)` (125) | counts | Counts of the `gap_class` **string** per row (lines 100–102): `normal` / `sparse` / `gap`. The analyzer trusts the classification written by the spike binary; it does **not** recompute class boundaries from `gap_ms`. |
-| `Time in sparse gaps` (126) | seconds (3 decimals) | Sum of `gapMs` over `sparse` rows ÷ 1000 (lines 105–107). |
-| `Time in long gaps (>1 s)` (127) | seconds (3 decimals) | Sum of `gapMs` over `gap` rows ÷ 1000 (lines 108–110). |
-| `Drift at end` (128) | frames (1 decimal) and ms (3 decimals) | Last row's `drift` (line 86); ms conversion `drift / sampleRate × 1000` (line 113). Negative = source clock lags wall clock. |
-| `Drift range` (129) | frames (1 decimal) | `min .. max` of `drift` over non-error rows (lines 87–91). |
-| `Drift trend (stable window >10 s)` (130) | frames (1 decimal) and frames/h (1 decimal) | Over rows with `t_rel_ms > 10000` (line 93): first stable `drift` → last `drift` (lines 94, emit 130); rate = `(last_drift − first_drift) / Δt_hours` with `Δt` between first and last stable row (lines 95–99). With fewer than two stable rows the rate is `0` (line 96) — the fixture shows this degenerate case for the loopback source. |
-| `Silent fraction (callbacks)` (131) | percent (2 decimals) + raw fraction | Count of rows with `silent == 'true'` (line 103) ÷ non-error row count (line 104). The analyzer reads the `silent` column; it does not re-evaluate `peak` against the threshold. |
+| SUMMARY row (emit line)                                           | Unit                                        | Computation source                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Callbacks` (119)                                                 | count                                       | Number of non-error rows for the source (line 79).                                                                                                                                                                                                                                                                                           |
+| `Stream errors` (120)                                             | count                                       | Rows of the source with non-empty `error` column (line 80).                                                                                                                                                                                                                                                                                  |
+| `Config` (121)                                                    | Hz / channels / format                      | `sampleRate`, `channels`, `sampleFormat` copied from the **first** non-error row (lines 82–83). Not re-derived.                                                                                                                                                                                                                              |
+| `Measurement span (last callback)` (122)                          | seconds (1 decimal)                         | Last non-error row's `t_rel_ms` ÷ 1000 (line 84, emit 122).                                                                                                                                                                                                                                                                                  |
+| `Total frames` (123)                                              | frames                                      | Last row's cumulative `totalFrames` column (line 112).                                                                                                                                                                                                                                                                                       |
+| `Max gap` (124)                                                   | milliseconds (3 decimals)                   | Maximum `gapMs` over non-error rows via `Measure-Object -Maximum` (line 85). **Includes the first row's startup latency** — for the first row of a source, `gap_ms` equals its own `t_rel_ms`, not a real gap (verified in the committed CSVs, e.g. `run-20260822` first microphone row: `t_rel_ms=14.339, gap_ms=14.339`).                  |
+| `Gap histogram (normal <=250 ms / sparse <=1 s / gap >1 s)` (125) | counts                                      | Counts of the `gap_class` **string** per row (lines 100–102): `normal` / `sparse` / `gap`. The analyzer trusts the classification written by the spike binary; it does **not** recompute class boundaries from `gap_ms`.                                                                                                                     |
+| `Time in sparse gaps` (126)                                       | seconds (3 decimals)                        | Sum of `gapMs` over `sparse` rows ÷ 1000 (lines 105–107).                                                                                                                                                                                                                                                                                    |
+| `Time in long gaps (>1 s)` (127)                                  | seconds (3 decimals)                        | Sum of `gapMs` over `gap` rows ÷ 1000 (lines 108–110).                                                                                                                                                                                                                                                                                       |
+| `Drift at end` (128)                                              | frames (1 decimal) and ms (3 decimals)      | Last row's `drift` (line 86); ms conversion `drift / sampleRate × 1000` (line 113). Negative = source clock lags wall clock.                                                                                                                                                                                                                 |
+| `Drift range` (129)                                               | frames (1 decimal)                          | `min .. max` of `drift` over non-error rows (lines 87–91).                                                                                                                                                                                                                                                                                   |
+| `Drift trend (stable window >10 s)` (130)                         | frames (1 decimal) and frames/h (1 decimal) | Over rows with `t_rel_ms > 10000` (line 93): first stable `drift` → last `drift` (lines 94, emit 130); rate = `(last_drift − first_drift) / Δt_hours` with `Δt` between first and last stable row (lines 95–99). With fewer than two stable rows the rate is `0` (line 96) — the fixture shows this degenerate case for the loopback source. |
+| `Silent fraction (callbacks)` (131)                               | percent (2 decimals) + raw fraction         | Count of rows with `silent == 'true'` (line 103) ÷ non-error row count (line 104). The analyzer reads the `silent` column; it does not re-evaluate `peak` against the threshold.                                                                                                                                                             |
 
 ### 2.3 Conditional sections
 
-| Section | Emitted when | Content |
-| --- | --- | --- |
-| `### Stream errors` (133–140) | ≥ 1 error row | Table of `t_rel_ms` + verbatim `error` text per error row. |
-| `### Top 10 largest gaps` (141–148) | any `gap`-class row, **or** the largest gap > 250 ms (line 141) | Top 10 rows by `gapMs` descending (line 111): `t_rel_ms`, `gap_ms`, class, `silent`. |
-| `## Cross-source comparison` (151–168) | both sources have non-error rows | `Relative drift loopback vs microphone at end`: last-row drift difference in frames and ms — ms uses the **loopback** sample rate (lines 157, 159); `after <span> s` uses the **minimum** of the two sources' last `t_rel_ms` (line 158). `Relative drift rate`: drift difference ÷ (min-span in hours) (lines 161–163). **Caution:** with unequal spans (one source dying early) this rate is inflated by construction — the fixture demonstrates an extreme value (7,674,480 frames/h from a 0.5 s overlap). `Max gap microphone / loopback` (164–166). |
-| `## Event log (scenario markers)` (171–178) | `-EventsPath` given **and** file exists (line 171) | The events file is embedded **verbatim** inside a fenced `text` block (lines 174–176). No parsing, filtering, or correlation happens — correlation is done by the human reader. |
+| Section                                     | Emitted when                                                    | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `### Stream errors` (133–140)               | ≥ 1 error row                                                   | Table of `t_rel_ms` + verbatim `error` text per error row.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `### Top 10 largest gaps` (141–148)         | any `gap`-class row, **or** the largest gap > 250 ms (line 141) | Top 10 rows by `gapMs` descending (line 111): `t_rel_ms`, `gap_ms`, class, `silent`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `## Cross-source comparison` (151–168)      | both sources have non-error rows                                | `Relative drift loopback vs microphone at end`: last-row drift difference in frames and ms — ms uses the **loopback** sample rate (lines 157, 159); `after <span> s` uses the **minimum** of the two sources' last `t_rel_ms` (line 158). `Relative drift rate`: drift difference ÷ (min-span in hours) (lines 161–163). **Caution:** with unequal spans (one source dying early) this rate is inflated by construction — the fixture demonstrates an extreme value (7,674,480 frames/h from a 0.5 s overlap). `Max gap microphone / loopback` (164–166). |
+| `## Event log (scenario markers)` (171–178) | `-EventsPath` given **and** file exists (line 171)              | The events file is embedded **verbatim** inside a fenced `text` block (lines 174–176). No parsing, filtering, or correlation happens — correlation is done by the human reader.                                                                                                                                                                                                                                                                                                                                                                           |
 
 Numeric parsing note: unparseable numeric fields silently become `0` /
 `0.0` (`ToD`/`ToI`, lines 16–17) — a corrupted row degrades quietly instead
@@ -131,31 +131,31 @@ format: `yyyy-MM-dd HH:mm:ss.fffzzz <MESSAGE>` (run-120min.ps1:19–23).
 
 Every marker the three tools can emit, with its definition site:
 
-| Marker | Tool | Defined at |
-| --- | --- | --- |
-| `RUN_LAUNCH` | run-120min.ps1 | line 28 |
-| `RUN_STARTED` | run-120min.ps1 | line 33 |
-| `TONE_START` | run-120min.ps1 | line 71 |
-| `SILENCE_START` | run-120min.ps1 | line 76 |
-| `TONE_KILLED_AFTER_TIMEOUT` | run-120min.ps1 | line 83 |
-| `TONE_END` | run-120min.ps1 | line 86 |
-| `RUN_WAIT_EXIT` | run-120min.ps1 | line 98 |
-| `RUN_DID_NOT_EXIT_AFTER_TIMEOUT` | run-120min.ps1 | line 99 |
-| `RUN_FINISHED` | run-120min.ps1 | line 100 |
-| `DEVICE_LOSS_ABORT` | device-loss-test.ps1 | line 24 |
-| `DEVICE_LOSS_START` | device-loss-test.ps1 | line 25 |
-| `DEVICE_DISABLE_FAILED` | device-loss-test.ps1 | line 28 |
-| `DEVICE_DISABLED` | device-loss-test.ps1 | line 30 |
-| `DEVICE_ENABLE_FAILED` | device-loss-test.ps1 | line 35 |
-| `DEVICE_REENABLED` | device-loss-test.ps1 | line 37 |
-| `DEVICE_RECONNECT_CONFIRMED` / `DEVICE_RECONNECT_TIMEOUT` | device-loss-test.ps1 | line 47 |
-| `RESUMED_FROM_SLEEP` | sleep-wake-test.ps1 | line 24 |
-| `SLEEP_TEST_PREP` | sleep-wake-test.ps1 | line 40 |
-| `SLEEP_ARMED` | sleep-wake-test.ps1 | line 51 |
-| `SLEEP_ENTER` | sleep-wake-test.ps1 | line 53 |
-| `SLEEP_SCRIPT_RESUMED` | sleep-wake-test.ps1 | line 56 |
-| `SLEEP_TEST_DONE` | sleep-wake-test.ps1 | lines 62, 64 |
-| *(free-form message)* | log-event.ps1 | line 9 (`-Message` passed through) |
+| Marker                                                    | Tool                 | Defined at                         |
+| --------------------------------------------------------- | -------------------- | ---------------------------------- |
+| `RUN_LAUNCH`                                              | run-120min.ps1       | line 28                            |
+| `RUN_STARTED`                                             | run-120min.ps1       | line 33                            |
+| `TONE_START`                                              | run-120min.ps1       | line 71                            |
+| `SILENCE_START`                                           | run-120min.ps1       | line 76                            |
+| `TONE_KILLED_AFTER_TIMEOUT`                               | run-120min.ps1       | line 83                            |
+| `TONE_END`                                                | run-120min.ps1       | line 86                            |
+| `RUN_WAIT_EXIT`                                           | run-120min.ps1       | line 98                            |
+| `RUN_DID_NOT_EXIT_AFTER_TIMEOUT`                          | run-120min.ps1       | line 99                            |
+| `RUN_FINISHED`                                            | run-120min.ps1       | line 100                           |
+| `DEVICE_LOSS_ABORT`                                       | device-loss-test.ps1 | line 24                            |
+| `DEVICE_LOSS_START`                                       | device-loss-test.ps1 | line 25                            |
+| `DEVICE_DISABLE_FAILED`                                   | device-loss-test.ps1 | line 28                            |
+| `DEVICE_DISABLED`                                         | device-loss-test.ps1 | line 30                            |
+| `DEVICE_ENABLE_FAILED`                                    | device-loss-test.ps1 | line 35                            |
+| `DEVICE_REENABLED`                                        | device-loss-test.ps1 | line 37                            |
+| `DEVICE_RECONNECT_CONFIRMED` / `DEVICE_RECONNECT_TIMEOUT` | device-loss-test.ps1 | line 47                            |
+| `RESUMED_FROM_SLEEP`                                      | sleep-wake-test.ps1  | line 24                            |
+| `SLEEP_TEST_PREP`                                         | sleep-wake-test.ps1  | line 40                            |
+| `SLEEP_ARMED`                                             | sleep-wake-test.ps1  | line 51                            |
+| `SLEEP_ENTER`                                             | sleep-wake-test.ps1  | line 53                            |
+| `SLEEP_SCRIPT_RESUMED`                                    | sleep-wake-test.ps1  | line 56                            |
+| `SLEEP_TEST_DONE`                                         | sleep-wake-test.ps1  | lines 62, 64                       |
+| _(free-form message)_                                     | log-event.ps1        | line 9 (`-Message` passed through) |
 
 ### 4.2 Audit: markers actually present in the four committed runs
 
@@ -166,12 +166,12 @@ the root `.gitignore` rule `*.log` (line 3, verified with
 `git check-ignore -v`). The committed marker count per run is therefore
 **zero for every marker in the table above**:
 
-| Run directory | Committed files | TONE_START | DEVICE_LOSS* | SLEEP/WAKE* | RUN_FINISHED | Any marker |
-| --- | --- | --- | --- | --- | --- | --- |
-| `run-20260822` | CSV only | 0 | 0 | 0 | 0 | **0** |
-| `run-20260822-r2` | CSV only | 0 | 0 | 0 | 0 | **0** |
-| `run-20260822-r2-attempt1-reaped` | CSV only | 0 | 0 | 0 | 0 | **0** |
-| `run-20260822-r3` | CSV only | 0 | 0 | 0 | 0 | **0** |
+| Run directory                     | Committed files | TONE_START | DEVICE_LOSS\* | SLEEP/WAKE\* | RUN_FINISHED | Any marker |
+| --------------------------------- | --------------- | ---------- | ------------- | ------------ | ------------ | ---------- |
+| `run-20260822`                    | CSV only        | 0          | 0             | 0            | 0            | **0**      |
+| `run-20260822-r2`                 | CSV only        | 0          | 0             | 0            | 0            | **0**      |
+| `run-20260822-r2-attempt1-reaped` | CSV only        | 0          | 0             | 0            | 0            | **0**      |
+| `run-20260822-r3`                 | CSV only        | 0          | 0             | 0            | 0            | **0**      |
 
 Working-copy cross-check (verified inside the isolated task worktree): no
 `events.log` exists **anywhere on disk** in the worktree either — a recursive
@@ -195,12 +195,12 @@ moved into its own directory.
 120-minute acceptance criterion.** Evidence, per run (measured from the
 committed CSVs; requested duration is `# duration_s=7200` in every file):
 
-| Run directory | Requested | Actual capture span (last `t_rel_ms`, both sources) | `# run_finished` line | `# SUMMARY` blocks |
-| --- | --- | --- | --- | --- |
-| `run-20260822` | 7200 s | **97.4 s** | absent | absent |
-| `run-20260822-r2` | 7200 s | **179.7 s** | absent | absent |
-| `run-20260822-r2-attempt1-reaped` | 7200 s | **10.9 s** | absent | absent |
-| `run-20260822-r3` | 7200 s | **146.6 s** | absent | absent |
+| Run directory                     | Requested | Actual capture span (last `t_rel_ms`, both sources) | `# run_finished` line | `# SUMMARY` blocks |
+| --------------------------------- | --------- | --------------------------------------------------- | --------------------- | ------------------ |
+| `run-20260822`                    | 7200 s    | **97.4 s**                                          | absent                | absent             |
+| `run-20260822-r2`                 | 7200 s    | **179.7 s**                                         | absent                | absent             |
+| `run-20260822-r2-attempt1-reaped` | 7200 s    | **10.9 s**                                          | absent                | absent             |
+| `run-20260822-r3`                 | 7200 s    | **146.6 s**                                         | absent                | absent             |
 
 In the spike binary (`src-tauri/src/bin/meeting_loopback_spike.rs`),
 `# run_finished elapsed_s=…` and both per-source `# SUMMARY` blocks are

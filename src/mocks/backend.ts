@@ -65,7 +65,9 @@ export class MockBackend {
   }
 }
 
-const mergeSettings = (config: SpeakMockConfig): typeof DEFAULT_MOCK_SETTINGS => ({
+const mergeSettings = (
+  config: SpeakMockConfig,
+): typeof DEFAULT_MOCK_SETTINGS => ({
   ...DEFAULT_MOCK_SETTINGS,
   ...config.settings,
 });
@@ -92,7 +94,11 @@ export const handleCommand = (
   if (meetingHandler !== undefined) return meetingHandler;
 
   // --- meeting session lifecycle (mirror of the planned MeetingManager) ---
-  const lifecycleHandler = handleMeetingLifecycleCommand(backend, command, args);
+  const lifecycleHandler = handleMeetingLifecycleCommand(
+    backend,
+    command,
+    args,
+  );
   if (lifecycleHandler !== undefined) return lifecycleHandler;
 
   switch (command) {
@@ -294,14 +300,11 @@ const handleMeetingCommand = (
       // insertion order.
       return alive()
         .map((m, idx) => ({ m, idx }))
-        .filter(({ m }) =>
-          query === "" || m.title.toLowerCase().includes(query.toLowerCase()),
+        .filter(
+          ({ m }) =>
+            query === "" || m.title.toLowerCase().includes(query.toLowerCase()),
         )
-        .sort(
-          (a, b) =>
-            b.m.created_at - a.m.created_at ||
-            b.idx - a.idx,
-        )
+        .sort((a, b) => b.m.created_at - a.m.created_at || b.idx - a.idx)
         .map(({ m }) => {
           const { deleted_at: _deleted, ...visible } = m as MockMeetingRow;
           return { ...visible };

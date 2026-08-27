@@ -1,0 +1,70 @@
+name: "supply chain"
+
+# Why: ~600 transitive crates and a full npm tree, with zero advisory
+# monitoring before this. Runs on dependency-manifest changes and on a weekly
+# schedule, because an advisory published against an unchanged dependency is
+# exactly the case a push-triggered job would never catch.
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays 05:00 UTC, before the working week.
+    - cron: "0 5 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - "src-tauri/Cargo.toml"
+      - "src-tauri/Cargo.lock"
+      - "src-tauri/deny.toml"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/supply-chain.yml"
+  pull_request:
+    paths:
+      - "src-tauri/Cargo.toml"
+      - "src-tauri/Cargo.lock"
+      - "src-tauri/deny.toml"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/supply-chain.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # cargo-deny reads Cargo.lock and deny.toml only — no compilation, so this
+      # job stays fast and needs none of the native audio/Vulkan dependencies the
+      # build jobs install.
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: src-tauri/Cargo.toml
+          command: check advisories licenses sources bans
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # `bun audit` reports advisories against the installed tree. Restricted to
+      # high/critical: the frontend runs inside a Tauri webview with a strict
+      # CSP and no remote code, so a moderate advisory in a build-time dev
+      # dependency is not worth blocking a release on.
+      #
+      # The tree is clean at high as of this commit (469 packages, 0 findings),
+      # so this gate starts green — a gate that is red on day one is a gate
+      # someone disables in week two.
+      - name: Audit npm dependencies
+        run: bun audit --audit-level=high

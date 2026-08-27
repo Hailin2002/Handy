@@ -28,7 +28,9 @@ test.describe("Meeting recording journey (mocked Tauri IPC)", () => {
     page,
   }) => {
     await openMeetings(page);
-    await page.getByRole("button", { name: tEn("meetings.newMeeting") }).click();
+    await page
+      .getByRole("button", { name: tEn("meetings.newMeeting") })
+      .click();
 
     // --- start validation ("Startvalidierung") ---------------------------
     const startButton = page.getByRole("button", {
@@ -38,7 +40,9 @@ test.describe("Meeting recording journey (mocked Tauri IPC)", () => {
     // Every check renders a plain label and a status word, never a code.
     const micRow = page.locator("[data-preflight-row='microphone']");
     await expect(
-      micRow.getByText(tEn("meeting.preflight.row.microphone"), { exact: true }),
+      micRow.getByText(tEn("meeting.preflight.row.microphone"), {
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
       micRow.getByText(tEn("meeting.preflight.status.ok"), { exact: true }),
@@ -55,7 +59,9 @@ test.describe("Meeting recording journey (mocked Tauri IPC)", () => {
 
     // Consent is required before the first byte is captured (plan 12 / P1).
     await expect(startButton).toBeDisabled();
-    await page.getByLabel(tEn("meeting.consent.beforeStart.acknowledge")).check();
+    await page
+      .getByLabel(tEn("meeting.consent.beforeStart.acknowledge"))
+      .check();
     await expect(startButton).toBeEnabled();
 
     await startButton.click();
@@ -64,13 +70,17 @@ test.describe("Meeting recording journey (mocked Tauri IPC)", () => {
     await expect(
       page.getByText(tEn("meeting.consent.indicator.label")),
     ).toBeVisible();
-    await expect(page.locator("[data-meeting-badge='recording']")).toBeVisible();
+    await expect(
+      page.locator("[data-meeting-badge='recording']"),
+    ).toBeVisible();
     await expect(
       page.getByText(tEn("meeting.session.recording.saved")),
     ).toBeVisible();
 
     // The duration clock runs off the backend-provided start time.
-    await expect(page.locator("[aria-label^='Recording duration']")).toBeVisible();
+    await expect(
+      page.locator("[aria-label^='Recording duration']"),
+    ).toBeVisible();
 
     // Separate microphone and system meters, each with a text label, moving
     // off zero once level events arrive.
@@ -92,12 +102,20 @@ test.describe("Meeting recording journey (mocked Tauri IPC)", () => {
     ).toBeVisible();
 
     // --- pause / resume (plan "Pause") -----------------------------------
-    await page.getByRole("button", { name: tEn("meeting.actions.pause") }).click();
+    await page
+      .getByRole("button", { name: tEn("meeting.actions.pause") })
+      .click();
     await expect(page.locator("[data-meeting-badge='paused']")).toBeVisible();
-    await expect(page.getByText(tEn("meeting.session.paused.body"))).toBeVisible();
+    await expect(
+      page.getByText(tEn("meeting.session.paused.body")),
+    ).toBeVisible();
 
-    await page.getByRole("button", { name: tEn("meeting.actions.resume") }).click();
-    await expect(page.locator("[data-meeting-badge='recording']")).toBeVisible();
+    await page
+      .getByRole("button", { name: tEn("meeting.actions.resume") })
+      .click();
+    await expect(
+      page.locator("[data-meeting-badge='recording']"),
+    ).toBeVisible();
 
     // --- stop behind an explicit confirmation (6.15 release gate) --------
     await page
@@ -172,8 +190,12 @@ test.describe("Meeting recording journey (mocked Tauri IPC)", () => {
     page,
   }) => {
     await openMeetings(page);
-    await page.getByRole("button", { name: tEn("meetings.newMeeting") }).click();
-    await page.getByLabel(tEn("meeting.consent.beforeStart.acknowledge")).check();
+    await page
+      .getByRole("button", { name: tEn("meetings.newMeeting") })
+      .click();
+    await page
+      .getByLabel(tEn("meeting.consent.beforeStart.acknowledge"))
+      .check();
     await page
       .getByRole("button", { name: tEn("meeting.actions.startMeeting") })
       .click();
@@ -181,7 +203,9 @@ test.describe("Meeting recording journey (mocked Tauri IPC)", () => {
     // Plan 6.2 rule 9: the recording state is consistent across surfaces.
     // The pinned nav entry is derived from the same store as the recorder.
     await expect(
-      page.getByRole("navigation").getByRole("button", { name: /Recording . / }),
+      page
+        .getByRole("navigation")
+        .getByRole("button", { name: /Recording . / }),
     ).toBeVisible();
   });
 });

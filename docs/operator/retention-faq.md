@@ -93,14 +93,14 @@ unabhängig von jeder Regel (AS-§8.1; RQC §4.1 R1, §5.1 `completed_at_unix_ms
 
 Es gibt zwei Arten von Schutz: dauerhafte Befreiungen und Laufzeit-Blocker.
 
-**Dauerhafte Befreiungen** (ein Meeting mit einem davon kommt für R1 *und* R2
+**Dauerhafte Befreiungen** (ein Meeting mit einem davon kommt für R1 _und_ R2
 nie infrage, RQC §4.3):
 
-| Flag | Bedeutung |
-| --- | --- |
-| `Unanswered` (keine beantwortete Aufbewahrungsregel) | Es wurde nichts versprochen, also wird nichts angetastet (F3). |
-| `KeepPermanent` („dauerhaft behalten“ gewählt) | Ein gegebenes Versprechen. Quotadruck hebt Versprechen nicht auf (RQC §4.3 Punkt 1). |
-| `projects.protect_meeting_audio` | Projektschutz-Schalter: Solange gesetzt, ist das Audio jedes Meetings dieses Projekts nicht löschbar (RQC §4.3 Punkt 2). Reichere Formen (Projekt-Quoten, Projekt-Zeitfenster) sind bewusst abgelehnt (RQC §11 NG-2). |
+| Flag                                                 | Bedeutung                                                                                                                                                                                                             |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Unanswered` (keine beantwortete Aufbewahrungsregel) | Es wurde nichts versprochen, also wird nichts angetastet (F3).                                                                                                                                                        |
+| `KeepPermanent` („dauerhaft behalten“ gewählt)       | Ein gegebenes Versprechen. Quotadruck hebt Versprechen nicht auf (RQC §4.3 Punkt 1).                                                                                                                                  |
+| `projects.protect_meeting_audio`                     | Projektschutz-Schalter: Solange gesetzt, ist das Audio jedes Meetings dieses Projekts nicht löschbar (RQC §4.3 Punkt 2). Reichere Formen (Projekt-Quoten, Projekt-Zeitfenster) sind bewusst abgelehnt (RQC §11 NG-2). |
 
 **Laufzeit-Blocker** (zustandsabhängig; ein blockiertes Meeting wird
 übersprungen und im nächsten Durchlauf erneut geprüft):

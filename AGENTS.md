@@ -154,6 +154,33 @@ src/i18n/
 
 For translation contribution guidelines, see [CONTRIBUTING_TRANSLATIONS.md](CONTRIBUTING_TRANSLATIONS.md).
 
+## Concurrency
+
+The codebase uses OS threads and Tokio tasks in roughly equal numbers, which
+looks inconsistent until you see the split. It is not arbitrary:
+
+- **`std::thread::spawn` — blocking or platform-bound work that owns its thread
+  for the session.** Audio capture and playback callbacks, the `paste_tx`
+  Windows worker (clipboard ownership and delayed rendering are per-thread and
+  need a message pump), the macOS secure-input poller, the global-shortcut
+  listener, tray and overlay handling. These must not share an executor with
+  anything else.
+- **`tokio::spawn` / `tauri::async_runtime::spawn` — async I/O.** HTTP in
+  `llm_client` and the model downloader, and command handlers that await.
+- **`spawn_blocking` — the bridge.** Blocking work reached from an async
+  context, so it does not stall the runtime.
+
+Two consequences worth knowing before changing this:
+
+- `std::sync::Mutex` is the default and `tokio::sync::Mutex` is used nowhere.
+  That is correct _because_ of the split: no async task holds a lock across an
+  `.await`. `cargo clippy` enforces it — `await_holding_lock` currently fires
+  only in tests, where a guard is deliberately held to serialize them.
+- Locks are taken through `crate::sync::MutexExt::lock_recover`, not
+  `.lock().unwrap()`. A panic while holding a guard poisons the mutex forever,
+  which would turn one local panic into a permanently dead capture path. See
+  `src/sync.rs` for the full reasoning.
+
 ## Code Style
 
 **Rust:**

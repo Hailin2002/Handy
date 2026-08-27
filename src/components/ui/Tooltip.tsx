@@ -11,7 +11,9 @@ interface TooltipCoords {
 }
 
 interface TooltipProps {
-  targetRef: React.RefObject<HTMLElement>;
+  /** React 19 types `useRef<T>(null)` as `RefObject<T | null>`; the component
+   *  already guards `.current`, so accept the nullable form. */
+  targetRef: React.RefObject<HTMLElement | null>;
   position?: TooltipPosition;
   /**
    * Stable DOM id applied to the tooltip node. Triggers should reference it

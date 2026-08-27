@@ -1392,7 +1392,6 @@ e.g. 28:1 28:0 means pressing on the Enter button on a standard US keyboard.
                     .find(|(pattern, remaining)| *pattern == text && *remaining > 0)
                     .map(|entry| {
                         entry.1 -= 1;
-                        ()
                     })
                     .is_some()
             };

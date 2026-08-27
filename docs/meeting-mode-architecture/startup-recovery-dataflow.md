@@ -227,14 +227,14 @@ is therefore exhaustive over the product.
 
 Dimension A — chunk residue (drives S1):
 
-| Case | Situation                                                | S1 outcome                                                     |
-| ---- | -------------------------------------------------------- | -------------------------------------------------------------- |
-| A1   | no chunk files, no `writing` rows                        | no-op                                                          |
+| Case | Situation                                               | S1 outcome                                                     |
+| ---- | ------------------------------------------------------- | -------------------------------------------------------------- |
+| A1   | no chunk files, no `writing` rows                       | no-op                                                          |
 | A2   | `.wav` present, no `ready` row (crash rename↔DB commit) | row inserted/updated to `ready`, `recovered=true` (§8 step 3)  |
-| A3   | parseable `.part` with `writing` row                     | truncated, finalized to `ready`, `recovered=true` (§8 step 2a) |
-| A4   | unparseable/headerless/<44-byte `.part` with row         | row → `damaged`, file to `recovery/` (§8 step 2b)              |
-| A5   | `writing` row, file missing                              | row → `damaged` (§8 step 2c)                                   |
-| A6   | orphan `.part` with no row                               | quarantined to `recovery/` (§8 step 3)                         |
+| A3   | parseable `.part` with `writing` row                    | truncated, finalized to `ready`, `recovered=true` (§8 step 2a) |
+| A4   | unparseable/headerless/<44-byte `.part` with row        | row → `damaged`, file to `recovery/` (§8 step 2b)              |
+| A5   | `writing` row, file missing                             | row → `damaged` (§8 step 2c)                                   |
+| A6   | orphan `.part` with no row                              | quarantined to `recovery/` (§8 step 3)                         |
 
 Dimension B — STT job residue (drives S3):
 

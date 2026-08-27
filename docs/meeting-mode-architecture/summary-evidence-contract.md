@@ -44,18 +44,18 @@ Both services share one architectural skeleton — **stage pipeline +
 persisted intermediates + idempotent publication + evidence-backed claims** —
 but differ in scope and cadence:
 
-| | `MeetingSummaryService` | `ProjectIntelligenceService` |
-| --- | --- | --- |
-| Input | full sorted transcript of exactly one meeting (`meeting_transcript_segments`) | changed/new `source_items` of one project since last run (`change_log`-driven) |
-| Output | one `meeting_summaries` row (markdown + structured JSON) | one new `project_snapshots` version + `tasks` suggestions |
-| Trigger | after transcription completes; explicit re-summarize (plan line 1417) | incremental after source changes (plan lines 1382–1390) |
-| Provider freedom | independent of STT choice (plan lines 1340–1347) | local/cloud per project run (plan line 1703) |
+|                  | `MeetingSummaryService`                                                       | `ProjectIntelligenceService`                                                   |
+| ---------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Input            | full sorted transcript of exactly one meeting (`meeting_transcript_segments`) | changed/new `source_items` of one project since last run (`change_log`-driven) |
+| Output           | one `meeting_summaries` row (markdown + structured JSON)                      | one new `project_snapshots` version + `tasks` suggestions                      |
+| Trigger          | after transcription completes; explicit re-summarize (plan line 1417)         | incremental after source changes (plan lines 1382–1390)                        |
+| Provider freedom | independent of STT choice (plan lines 1340–1347)                              | local/cloud per project run (plan line 1703)                                   |
 
 ### 0.2 Explicitly out of scope (non-goals)
 
 - STT job semantics, audio chunking, engine leases — owned by STT-§3.
 - SQLite schema ownership and migration layering — owned by RB-§0/§3; this
-  contract *consumes* RB seams and proposes two additional tables (§2.3).
+  contract _consumes_ RB seams and proposes two additional tables (§2.3).
 - Concrete prompt texts, model recommendations, cost estimates — product
   decisions outside an architecture contract.
 - Discovery-cycle feature additions: this contract implements no capability
@@ -196,26 +196,26 @@ only hashes and identifiers.
 
 ### 2.1 Run-level keys
 
-| Run | Key derivation |
-| --- | --- |
-| Meeting summary run | `SHA-256("meeting-summary", meeting_id, transcript_basis_hash, summary_provider_id, provider_settings_snapshot, prompt_version, rerun_generation)` where `transcript_basis_hash = SHA-256(sorted (segment_id, content-hash) pairs of all segments included)`. A plain retry after failure/crash keeps the key (`rerun_generation` unchanged); an explicit "erneute Zusammenfassung" (plan line 1417) increments it — same distinction as STT-§3.3 rule 1. |
-| Project intelligence run | `SHA-256("project-intelligence", project_id, delta_basis, provider_id, provider_settings_snapshot, prompt_version, rerun_generation)` where `delta_basis = SHA-256(sorted (source_id, source_revision, per-source item-content-hash-set))` of everything P0 selected. |
+| Run                      | Key derivation                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Meeting summary run      | `SHA-256("meeting-summary", meeting_id, transcript_basis_hash, summary_provider_id, provider_settings_snapshot, prompt_version, rerun_generation)` where `transcript_basis_hash = SHA-256(sorted (segment_id, content-hash) pairs of all segments included)`. A plain retry after failure/crash keeps the key (`rerun_generation` unchanged); an explicit "erneute Zusammenfassung" (plan line 1417) increments it — same distinction as STT-§3.3 rule 1. |
+| Project intelligence run | `SHA-256("project-intelligence", project_id, delta_basis, provider_id, provider_settings_snapshot, prompt_version, rerun_generation)` where `delta_basis = SHA-256(sorted (source_id, source_revision, per-source item-content-hash-set))` of everything P0 selected.                                                                                                                                                                                     |
 
 `UNIQUE(idempotency_key)` on `processing_jobs` prevents double-enqueue of the
 same logical run (analog of STT-§3.3 rule 6).
 
 ### 2.2 Stage-level keys
 
-| Stage | Key derivation | Duplicate guard |
-| --- | --- | --- |
-| M0 window | `SHA-256(run_key, "window", window_ordinal, first_segment_id, last_segment_id)` | `UNIQUE(job_id, stage, ordinal)` |
-| M1 map | `SHA-256(run_key, "map", window_id)` | `UNIQUE(idempotency_key)`; pre-insert existence check makes a replayed provider response a no-op (analog of STT-§3.3 rule 5) |
-| M2 reduce | `SHA-256(run_key, "reduce", reduce_ordinal, sorted child-stage keys)` | as above; recursive reduces chain deterministically |
-| M3 publish | `SHA-256(run_key, "publish")` | success is booked atomically with the summary row (§1.1 rule 4); a post-commit crash finds the job `succeeded` and does nothing (STT-§3.3 rules 3–4) |
-| P0 delta | `SHA-256(run_key, "delta", covered_through_cursor_value)` | as above |
-| P1 excerpt | `SHA-256(run_key, "excerpt", source_id, source_revision, sorted item content-hashes of the batch)` | as above — re-imports that produce identical item hashes reuse, not duplicate (plan line 1687 analog) |
-| P2 reconcile | `SHA-256(run_key, "reconcile", sorted excerpt-stage keys, current_snapshot_id)` | as above |
-| P3 publish | `SHA-256(run_key, "publish", conflict_scan_result_hash)` | atomic with snapshot insert; `UNIQUE(project_id, idempotency_key)` on snapshots prevents two "current" versions from one logical run |
+| Stage        | Key derivation                                                                                     | Duplicate guard                                                                                                                                      |
+| ------------ | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0 window    | `SHA-256(run_key, "window", window_ordinal, first_segment_id, last_segment_id)`                    | `UNIQUE(job_id, stage, ordinal)`                                                                                                                     |
+| M1 map       | `SHA-256(run_key, "map", window_id)`                                                               | `UNIQUE(idempotency_key)`; pre-insert existence check makes a replayed provider response a no-op (analog of STT-§3.3 rule 5)                         |
+| M2 reduce    | `SHA-256(run_key, "reduce", reduce_ordinal, sorted child-stage keys)`                              | as above; recursive reduces chain deterministically                                                                                                  |
+| M3 publish   | `SHA-256(run_key, "publish")`                                                                      | success is booked atomically with the summary row (§1.1 rule 4); a post-commit crash finds the job `succeeded` and does nothing (STT-§3.3 rules 3–4) |
+| P0 delta     | `SHA-256(run_key, "delta", covered_through_cursor_value)`                                          | as above                                                                                                                                             |
+| P1 excerpt   | `SHA-256(run_key, "excerpt", source_id, source_revision, sorted item content-hashes of the batch)` | as above — re-imports that produce identical item hashes reuse, not duplicate (plan line 1687 analog)                                                |
+| P2 reconcile | `SHA-256(run_key, "reconcile", sorted excerpt-stage keys, current_snapshot_id)`                    | as above                                                                                                                                             |
+| P3 publish   | `SHA-256(run_key, "publish", conflict_scan_result_hash)`                                           | atomic with snapshot insert; `UNIQUE(project_id, idempotency_key)` on snapshots prevents two "current" versions from one logical run                 |
 
 ### 2.3 Task-suggestion deduplication (Phase 10 line 1709)
 
@@ -223,8 +223,8 @@ A retry must not create duplicate task suggestions (plan lines 1393–1394).
 Rules:
 
 1. Each suggestion carries `dedupe_fingerprint =
-   SHA-256(project_id, normalized_title, normalized_assignee_or_null,
-   due_date_or_null, semantic_feature_set_hash)` computed by P2 from the
+SHA-256(project_id, normalized_title, normalized_assignee_or_null,
+due_date_or_null, semantic_feature_set_hash)` computed by P2 from the
    merged evidence.
 2. Before insert, P3 resolves the fingerprint against existing tasks:
    - match on a previous **AI suggestion** (same fingerprint, still
@@ -246,10 +246,10 @@ This is the intelligence-side counterpart of STT's
 
 ### 3.1 Principle
 
-Plan line 135: *"Jede KI-generierte Statusaussage und Aufgabe verweist auf
-Meeting-Zeitstempel, Chatnachricht oder Datei."* Plan line 1300:
-*"ein KI-Vorschlag ohne mindestens einen gültigen Beleg wird nicht als
-Aufgabe veröffentlicht."* This contract generalizes that rule from tasks to
+Plan line 135: _"Jede KI-generierte Statusaussage und Aufgabe verweist auf
+Meeting-Zeitstempel, Chatnachricht oder Datei."_ Plan line 1300:
+_"ein KI-Vorschlag ohne mindestens einen gültigen Beleg wird nicht als
+Aufgabe veröffentlicht."_ This contract generalizes that rule from tasks to
 all publishable AI claims of both services.
 
 ### 3.2 Required fields
@@ -258,18 +258,18 @@ An evidence pointer (`task_evidence`, plan lines 1295–1301;
 `snapshot_evidence`, plan lines 1303–1311; summary-item evidence below) MUST
 contain:
 
-| Field | Requirement |
-| --- | --- |
-| `subject` | entity-ID of the claim carrier (task ID, snapshot-statement ID, summary-item ID) |
-| `source_id` | FK to `sources`; always required |
-| `locator` | exactly one of `source_item_id` OR `meeting_transcript_segment_id` (plan line 1297) |
-| `time_range` | optional `[start_ms, end_ms]`; REQUIRED when locator is a transcript segment, must lie within that segment's `[start_ms, end_ms]` |
-| `quote_excerpt` | short verbatim excerpt from the located source text |
-| `rationale` | why this location supports the claim (plan line 1299 "Erklärungsgrund") |
+| Field           | Requirement                                                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `subject`       | entity-ID of the claim carrier (task ID, snapshot-statement ID, summary-item ID)                                                  |
+| `source_id`     | FK to `sources`; always required                                                                                                  |
+| `locator`       | exactly one of `source_item_id` OR `meeting_transcript_segment_id` (plan line 1297)                                               |
+| `time_range`    | optional `[start_ms, end_ms]`; REQUIRED when locator is a transcript segment, must lie within that segment's `[start_ms, end_ms]` |
+| `quote_excerpt` | short verbatim excerpt from the located source text                                                                               |
+| `rationale`     | why this location supports the claim (plan line 1299 "Erklärungsgrund")                                                           |
 
 ### 3.3 Resolution invariant (service-boundary rejection)
 
-**Definition (valid pointer):** a pointer is *valid* iff at publish time:
+**Definition (valid pointer):** a pointer is _valid_ iff at publish time:
 
 1. the referenced `sources` row exists and is not tombstoned
    (`deleted_at IS NULL`);
@@ -280,9 +280,9 @@ contain:
    source changed underneath the run and the pointer is invalid;
 4. if `time_range` is given, it lies within the segment bounds.
 
-**Invariant E1:** *The publish transaction of every stage M3/P3 rejects the
+**Invariant E1:** _The publish transaction of every stage M3/P3 rejects the
 whole publication if any AI claim it would make public carries zero valid
-evidence pointers.* Rejection is at the service boundary (inside the
+evidence pointers._ Rejection is at the service boundary (inside the
 KnowledgeStore unit-of-work, extending RB-§4 operation K8
 `attach_task_evidence`, which already enforces "an AI task without ≥1 valid
 evidence is never published" per RB-§4 K8 and plan lines 1300–1301). A
@@ -290,12 +290,12 @@ rejected publication marks the job `failed` with a distinct error class
 (`evidence_validation_failed`) so the UI can explain it; it never silently
 strips individual claims.
 
-**Invariant E2:** *Search and UI jump targets resolve.* Consistent with plan
+**Invariant E2:** _Search and UI jump targets resolve._ Consistent with plan
 lines 1329–1332 ("Suchtreffer liefern immer Entity-ID und Belegposition"),
 every stored pointer must be resolvable to a UI navigation target
 (meeting time position while audio exists, chat message, file region).
 
-**Invariant E3:** *Contradiction is preserved, not resolved.* Where P2 finds
+**Invariant E3:** _Contradiction is preserved, not resolved._ Where P2 finds
 conflicting sources, the snapshot records BOTH positions with their pointers
 as a conflict entry (plan lines 1397–1398); a conflict entry needs valid
 pointers like any claim and must never be collapsed into one invented truth.
@@ -324,12 +324,12 @@ Abschlussstatus noch Priorität unbemerkt zurücksetzen"), 1709–1710.
 
 Protected column set:
 
-| Table | Protected columns (when touched by a human) |
-| --- | --- |
-| `tasks` | `title`, text/description, `state`, `priority`, due date, assignee — flagged by `origin='human'` OR `human_edited_at IS NOT NULL` (columns exist per plan lines 1286–1287) |
-| `projects` | manually maintained status note (plan lines 1224–1225) |
-| `project_sources` | manual assignment/confirmation (`origin='manual'`, `confirmed_at`) |
-| meeting summaries | anything the user edited after publication is a UI-layer annotation, not an AI-writable surface; AI re-runs create NEW summary rows and never mutate user annotations |
+| Table             | Protected columns (when touched by a human)                                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tasks`           | `title`, text/description, `state`, `priority`, due date, assignee — flagged by `origin='human'` OR `human_edited_at IS NOT NULL` (columns exist per plan lines 1286–1287) |
+| `projects`        | manually maintained status note (plan lines 1224–1225)                                                                                                                     |
+| `project_sources` | manual assignment/confirmation (`origin='manual'`, `confirmed_at`)                                                                                                         |
+| meeting summaries | anything the user edited after publication is a UI-layer annotation, not an AI-writable surface; AI re-runs create NEW summary rows and never mutate user annotations      |
 
 ### 4.2 Precedence rules
 
@@ -376,7 +376,7 @@ user-facing edits at all.
 ## 5. Data-privacy rule: local mode sends nothing off-device
 
 Plan line 1644 (Phase 7) and line 1711 (Phase 10):
-*"lokale Verarbeitung sendet nachweislich keine Nutzdaten an Cloud-Provider."*
+_"lokale Verarbeitung sendet nachweislich keine Nutzdaten an Cloud-Provider."_
 "Nachweislich" makes this an architectural property, not a configuration
 promise:
 
@@ -411,13 +411,13 @@ promise:
 Phase 10 line 1703 demands "persistierte Prompt-/Modellversion". Every run
 (M1/M2 resp. P1/P2 model-touching stages, plus M3/P3 publications) persists:
 
-| Field | Meaning | Anchor |
-| --- | --- | --- |
-| `provider` | provider identifier + non-secret settings snapshot | plan lines 1196, 1213, 1308 |
-| `model` | exact model identifier sent to the endpoint | plan lines 1213, 1286 |
-| `prompt_version` | human-meaningful template version (e.g. `meeting-map@3`) | plan lines 1213, 1286, 1308 |
-| `prompt_content_hash` | SHA-256 of the exact rendered instruction block | strengthens reproducibility beyond the plan minimum |
-| `payload_schema_version` | version of the structured-output schema used | plan line 1154 (schema/parser versions) |
+| Field                    | Meaning                                                  | Anchor                                              |
+| ------------------------ | -------------------------------------------------------- | --------------------------------------------------- |
+| `provider`               | provider identifier + non-secret settings snapshot       | plan lines 1196, 1213, 1308                         |
+| `model`                  | exact model identifier sent to the endpoint              | plan lines 1213, 1286                               |
+| `prompt_version`         | human-meaningful template version (e.g. `meeting-map@3`) | plan lines 1213, 1286, 1308                         |
+| `prompt_content_hash`    | SHA-256 of the exact rendered instruction block          | strengthens reproducibility beyond the plan minimum |
+| `payload_schema_version` | version of the structured-output schema used             | plan line 1154 (schema/parser versions)             |
 
 Storage locations: `meeting_summaries` (plan lines 1210–1217),
 `project_snapshots` (plan lines 1305–1308), `tasks` origin metadata
@@ -444,10 +444,10 @@ never among these fields (plan lines 1334–1336).
 
 ## 7. Prompt-injection boundary: transcripts and imports are untrusted input
 
-Normative basis: plan lines 1360–1362 (*"Transkripttext wird als nicht
+Normative basis: plan lines 1360–1362 (_"Transkripttext wird als nicht
 vertrauenswürdiger Inhalt klar vom Systemprompt getrennt. Gesprochene Sätze
 wie ‚Ignoriere alle vorherigen Anweisungen' dürfen die Summary-Anweisungen
-nicht überschreiben"*), plan lines 1399–1401 (imported text/files/metadata
+nicht überschreiben"_), plan lines 1399–1401 (imported text/files/metadata
 must not trigger tools, provider switches or data sharing), §12 line 1463
 (WhatsApp archives and imported files are untrusted input).
 
@@ -481,20 +481,20 @@ not re-derive them. Their citation status is disclosed in §8.
 
 ## 8. External-citation disclosure (gate G5)
 
-| Citation | Status at authoring time |
-| --- | --- |
-| task-0052 (prompt-injection mitigation research) | **NOT-LIVE-VERIFIED.** The task-0052 output artifact was not present in this workspace at authoring time (searched: no file matching `*0052*`; no `docs/` hit besides unrelated matches). §7 cites it by reference only. Nothing from task-0052 is relied upon normatively here; implementers must locate and verify the artifact before using it. |
-| `src-tauri/src/llm_client.rs` (existing provider/secret infrastructure, §5.1) | **LIVE-VERIFIED** — file read in this workspace: `send_chat_completion_with_schema(provider, api_key, model, user_content, system_prompt, json_schema, disable_reasoning)` exists; API key is passed per-call, never persisted. |
-| All other claims | Derived solely from `docs/meeting-mode-plan.md` (line-numbered quotes above) and sibling architecture contracts in this repository. No new external (web/vendor) claims are made. |
+| Citation                                                                      | Status at authoring time                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| task-0052 (prompt-injection mitigation research)                              | **NOT-LIVE-VERIFIED.** The task-0052 output artifact was not present in this workspace at authoring time (searched: no file matching `*0052*`; no `docs/` hit besides unrelated matches). §7 cites it by reference only. Nothing from task-0052 is relied upon normatively here; implementers must locate and verify the artifact before using it. |
+| `src-tauri/src/llm_client.rs` (existing provider/secret infrastructure, §5.1) | **LIVE-VERIFIED** — file read in this workspace: `send_chat_completion_with_schema(provider, api_key, model, user_content, system_prompt, json_schema, disable_reasoning)` exists; API key is passed per-call, never persisted.                                                                                                                    |
+| All other claims                                                              | Derived solely from `docs/meeting-mode-plan.md` (line-numbered quotes above) and sibling architecture contracts in this repository. No new external (web/vendor) claims are made.                                                                                                                                                                  |
 
 ---
 
 ## 9. Gate verification checklist
 
-| Gate | Requirement | Where satisfied |
-| --- | --- | --- |
-| G1 | Stage diagram covers map/reduce/snapshot with persisted-intermediate record + per-stage idempotency-key derivation | §1.1 (M0–M3), §1.2 (P0–P3), §1.3 (record), §2.2 (derivations) |
-| G2 | Evidence pointer fields + boundary rejection invariant citing plan line 1300 | §3.2 (fields), §3.3 (invariant E1, plan lines 1300–1301, RB-§4 K8) |
-| G3 | Protected-manual-edit detection/preservation with named columns/seam | §4.1 (columns), §4.3 (`manual_change_guard` seam, transactional revision compare) |
-| G4 | Prompt/model version fields persisted per run + §12 retention tie-in | §6.1 (fields, plan line 1703), §6.2 (retention, plan lines 1444–1452, 1645, 1470–1476) |
-| G5 | task-0052 citations marked not-live-verified; no new unverified external claims | §8 (disclosure table) |
+| Gate | Requirement                                                                                                        | Where satisfied                                                                        |
+| ---- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| G1   | Stage diagram covers map/reduce/snapshot with persisted-intermediate record + per-stage idempotency-key derivation | §1.1 (M0–M3), §1.2 (P0–P3), §1.3 (record), §2.2 (derivations)                          |
+| G2   | Evidence pointer fields + boundary rejection invariant citing plan line 1300                                       | §3.2 (fields), §3.3 (invariant E1, plan lines 1300–1301, RB-§4 K8)                     |
+| G3   | Protected-manual-edit detection/preservation with named columns/seam                                               | §4.1 (columns), §4.3 (`manual_change_guard` seam, transactional revision compare)      |
+| G4   | Prompt/model version fields persisted per run + §12 retention tie-in                                               | §6.1 (fields, plan line 1703), §6.2 (retention, plan lines 1444–1452, 1645, 1470–1476) |
+| G5   | task-0052 citations marked not-live-verified; no new unverified external claims                                    | §8 (disclosure table)                                                                  |

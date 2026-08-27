@@ -13,6 +13,7 @@ use tauri::Emitter;
 
 use super::info::{canonicalize_supported_languages, DownloadProgress, ModelInfo};
 use crate::managers::model_capabilities::CapabilityProbe;
+use crate::sync::MutexExt;
 use hf_hub::api::tokio::CancellationToken;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -112,7 +113,7 @@ impl HfDownloadProgress {
 
     /// Instant of the most recent sign of life from the transfer.
     pub(super) fn last_activity(&self) -> Instant {
-        self.state.lock().unwrap().last_activity
+        self.state.lock_recover().last_activity
     }
 
     pub(super) fn emit(&self, downloaded: u64, total: u64) {
@@ -122,7 +123,7 @@ impl HfDownloadProgress {
             0.0
         };
         let _ = self.app_handle.emit(
-            "model-download-progress",
+            crate::events::MODEL_DOWNLOAD_PROGRESS,
             &DownloadProgress {
                 model_id: self.model_id.clone(),
                 downloaded,
@@ -136,7 +137,7 @@ impl HfDownloadProgress {
 impl Progress for HfDownloadProgress {
     async fn init(&mut self, size: usize, _filename: &str) {
         {
-            let mut st = self.state.lock().unwrap();
+            let mut st = self.state.lock_recover();
             st.total = size as u64;
             st.downloaded = 0;
             st.last_emit = Instant::now();
@@ -147,7 +148,7 @@ impl Progress for HfDownloadProgress {
 
     async fn update(&mut self, size: usize) {
         let (downloaded, total, emit) = {
-            let mut st = self.state.lock().unwrap();
+            let mut st = self.state.lock_recover();
             st.downloaded = st.downloaded.saturating_add(size as u64);
             let now = Instant::now();
             st.last_activity = now;
@@ -166,7 +167,7 @@ impl Progress for HfDownloadProgress {
 
     async fn finish(&mut self) {
         let total = {
-            let st = self.state.lock().unwrap();
+            let st = self.state.lock_recover();
             st.total.max(st.downloaded)
         };
         self.emit(total, total);
@@ -201,11 +202,11 @@ impl<'a> Drop for DownloadCleanup<'a> {
             return;
         }
         {
-            let mut models = self.available_models.lock().unwrap();
+            let mut models = self.available_models.lock_recover();
             if let Some(model) = models.get_mut(self.model_id.as_str()) {
                 model.is_downloading = false;
             }
         }
-        self.cancel_flags.lock().unwrap().remove(&self.model_id);
+        self.cancel_flags.lock_recover().remove(&self.model_id);
     }
 }

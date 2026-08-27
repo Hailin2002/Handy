@@ -525,6 +525,14 @@ jobs:
           AZURE_CLIENT_ID: ${{ inputs.sign-binaries && secrets.AZURE_CLIENT_ID || '' }}
           AZURE_CLIENT_SECRET: ${{ inputs.sign-binaries && secrets.AZURE_CLIENT_SECRET || '' }}
           AZURE_TENANT_ID: ${{ inputs.sign-binaries && secrets.AZURE_TENANT_ID || '' }}
+          # Consumed by scripts/sign-windows.ps1, which tauri-bundler invokes
+          # through bundle.windows.signCommand. Without these three the script
+          # leaves binaries unsigned; the "verify Windows signing" step below
+          # turns that into a build failure rather than an unsigned release.
+          AZURE_SIGNING_ENDPOINT: ${{ inputs.sign-binaries && secrets.AZURE_SIGNING_ENDPOINT || '' }}
+          AZURE_SIGNING_ACCOUNT: ${{ inputs.sign-binaries && secrets.AZURE_SIGNING_ACCOUNT || '' }}
+          AZURE_SIGNING_CERT_PROFILE: ${{ inputs.sign-binaries && secrets.AZURE_SIGNING_CERT_PROFILE || '' }}
+          SPEAK_SIGN_RECEIPT: ${{ (contains(inputs.platform, 'windows') && inputs.sign-binaries) && format('{0}/speak-signed-files.txt', runner.temp) || '' }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.sign-binaries && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.sign-binaries && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
           # The Vulkan loader and Wayland client library must come from the host
@@ -543,6 +551,27 @@ jobs:
           releaseId: ${{ inputs.release-id }}
           assetNamePattern: ${{ steps.patch-release-name.outputs.platform }}
           args: ${{ inputs.build-args }}
+
+      # scripts/sign-windows.ps1 deliberately no-ops when AZURE_SIGNING_* is
+      # absent, so a local build still works. That would also let a rotated or
+      # misnamed secret publish an unsigned release, which every Windows user
+      # would meet as a SmartScreen "unknown publisher" block. The receipt makes
+      # the no-op observable: if the bundler produced binaries but nothing was
+      # signed, fail here rather than at the user's download.
+      - name: Verify Windows signing
+        if: contains(inputs.platform, 'windows') && inputs.sign-binaries
+        shell: pwsh
+        run: |
+          $receipt = "${{ runner.temp }}/speak-signed-files.txt"
+          if (-not (Test-Path -LiteralPath $receipt)) {
+            throw "No signing receipt at $receipt — signCommand never signed anything. Check the AZURE_SIGNING_ENDPOINT / AZURE_SIGNING_ACCOUNT / AZURE_SIGNING_CERT_PROFILE secrets."
+          }
+          $signed = @(Get-Content -LiteralPath $receipt | Where-Object { $_.Trim() })
+          if ($signed.Count -eq 0) {
+            throw "Signing receipt at $receipt is empty — no artifact was signed."
+          }
+          Write-Host "Signed $($signed.Count) artifact(s):"
+          $signed | ForEach-Object { Write-Host "  $_" }
 
       # tauri-action uploads release assets before returning. All AppImage
       # filtering therefore happens inside linuxdeploy above; this verifies the

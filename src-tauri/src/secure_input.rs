@@ -24,6 +24,10 @@ use specta::Type;
 #[cfg(target_os = "macos")]
 use tauri::Emitter;
 use tauri::{AppHandle, Manager};
+// Every lock in this module sits behind the macOS implementation; the trait
+// would be an unused import everywhere else.
+#[cfg(target_os = "macos")]
+use crate::sync::MutexExt;
 
 #[derive(Debug, Clone, Serialize, Type)]
 pub struct SecureInputStatus {
@@ -209,7 +213,7 @@ mod imp {
             if !self.is_sustained() {
                 return false;
             }
-            let fallback = self.fallback.lock().unwrap();
+            let fallback = self.fallback.lock_recover();
             !fallback.degraded.is_empty() || !fallback.uncovered.is_empty()
         }
     }
@@ -257,8 +261,8 @@ mod imp {
         // Culprit discovery shells out to ioreg and is intentionally performed
         // only by the monitor (or the blocking diagnostic), never by this
         // synchronous Tauri command.
-        let culprit = state.culprit.lock().unwrap().clone();
-        let fallback = state.fallback.lock().unwrap();
+        let culprit = state.culprit.lock_recover().clone();
+        let fallback = state.fallback.lock_recover();
         SecureInputStatus {
             enabled,
             sustained: state.sustained.load(Ordering::SeqCst),
@@ -283,7 +287,7 @@ mod imp {
 
     fn emit_status(app: &AppHandle) {
         let payload = status(app);
-        if let Err(e) = app.emit("secure-input-changed", &payload) {
+        if let Err(e) = app.emit(crate::events::SECURE_INPUT_CHANGED, &payload) {
             error!("Failed to emit secure-input-changed: {e}");
         }
     }
@@ -318,8 +322,8 @@ mod imp {
                         }
                         None => info!("SecureInput ENABLED (no visible holder)"),
                     }
-                    *state.enabled_since.lock().unwrap() = Some(Instant::now());
-                    *state.culprit.lock().unwrap() = culprit;
+                    *state.enabled_since.lock_recover() = Some(Instant::now());
+                    *state.culprit.lock_recover() = culprit;
                 }
 
                 if !now_enabled {
@@ -334,8 +338,8 @@ mod imp {
                     let was_blocked = state.recorder_blocked.swap(false, Ordering::SeqCst);
                     if was_enabled {
                         info!("SecureInput DISABLED");
-                        *state.enabled_since.lock().unwrap() = None;
-                        *state.culprit.lock().unwrap() = None;
+                        *state.enabled_since.lock_recover() = None;
+                        *state.culprit.lock_recover() = None;
                     }
 
                     if state.sustained.swap(false, Ordering::SeqCst) {
@@ -490,11 +494,11 @@ mod imp {
     /// global-shortcut plugin call to avoid lock-order inversion with callbacks.
     pub fn reconcile_fallback(app: &AppHandle) {
         let state = app.state::<SecureInputState>();
-        let _operation = state.fallback_operation.lock().unwrap();
+        let _operation = state.fallback_operation.lock_recover();
         let warning_was_active = state.warning_active();
 
         let previous = {
-            let mut fallback = state.fallback.lock().unwrap();
+            let mut fallback = state.fallback.lock_recover();
             std::mem::take(&mut *fallback)
         };
 
@@ -552,7 +556,7 @@ mod imp {
             debug!("SecureInput fallback deferred until shortcuts are initialized");
         }
 
-        *state.fallback.lock().unwrap() = next;
+        *state.fallback.lock_recover() = next;
         let warning_is_active = state.warning_active();
         drop(_operation);
 

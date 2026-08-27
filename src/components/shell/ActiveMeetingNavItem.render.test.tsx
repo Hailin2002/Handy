@@ -96,7 +96,6 @@ const loadHarness = async (flag: string): Promise<Harness> => {
   if (!i18next.isInitialized) {
     await i18next.use(initReactI18next).init({
       lng: "en",
-      initImmediate: false,
       resources: TRANSLATION_RESOURCES,
     });
   }

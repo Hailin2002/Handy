@@ -3,7 +3,7 @@
 **Audience:** operators and support staff. No development environment or Rust
 knowledge is required to follow this guide.
 
-**Scope:** the *current* dictation data footprint only — where it lives, how to
+**Scope:** the _current_ dictation data footprint only — where it lives, how to
 back it up safely, how to restore it, and what any future migration must not
 break. This guide describes the application as it exists today.
 
@@ -16,10 +16,10 @@ Handy stores all dictation history in a single SQLite database file named
 The folder containing them depends on whether the installation runs in
 **portable mode**:
 
-| Install type | History database location |
-| --- | --- |
-| Normal install | `%APPDATA%\com.haeni.speak\history.db` (i.e. `C:\Users\<you>\AppData\Roaming\com.haeni.speak\history.db`) |
-| Portable install | `<exe folder>\Data\history.db` |
+| Install type     | History database location                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| Normal install   | `%APPDATA%\com.haeni.speak\history.db` (i.e. `C:\Users\<you>\AppData\Roaming\com.haeni.speak\history.db`) |
+| Portable install | `<exe folder>\Data\history.db`                                                                            |
 
 How this is decided, verified in the current source tree:
 
@@ -47,16 +47,16 @@ How this is decided, verified in the current source tree:
 
 ### Related files in the same folder
 
-| File | What it is |
-| --- | --- |
-| `history.db` | The transcription-history database itself. |
-| `history.db-journal` | SQLite rollback journal; only present while a write transaction is in flight or after a crash mid-write. |
-| `recordings\*.wav` | The audio files referenced by `transcription_history.file_name` rows. |
-| `settings.json`, other files | App settings and models — separate from history; back up separately if you want a full machine restore. |
+| File                         | What it is                                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `history.db`                 | The transcription-history database itself.                                                               |
+| `history.db-journal`         | SQLite rollback journal; only present while a write transaction is in flight or after a crash mid-write. |
+| `recordings\*.wav`           | The audio files referenced by `transcription_history.file_name` rows.                                    |
+| `settings.json`, other files | App settings and models — separate from history; back up separately if you want a full machine restore.  |
 
 ### About WAL / `-shm` sidecar files
 
-SQLite can run in different *journal modes*. In **WAL mode** two extra sidecar
+SQLite can run in different _journal modes_. In **WAL mode** two extra sidecar
 files appear next to the database: `history.db-wal` (pending write-ahead log)
 and `history.db-shm` (shared-memory index for the log).
 
@@ -215,7 +215,7 @@ Use this when `history.db` is lost, corrupted, or a user moved machines.
                (Join-Path $dataDir 'history.db-shm') -ErrorAction SilentlyContinue
    ```
    Never delete `history.db` itself here, and never delete a `-journal` that
-   came *from* the backup.
+   came _from_ the backup.
 4. **Verify before letting the user rely on it:** run
    `sqlite3 (Join-Path $dataDir 'history.db') 'PRAGMA integrity_check;'` —
    expected output `ok`.
@@ -231,7 +231,7 @@ Use this when `history.db` is lost, corrupted, or a user moved machines.
    row's `file_name` column to exist there
    (`src-tauri/src/managers/history.rs:584-586`).
 
-Rolling back to a *newer* backup after having already started the app on an
+Rolling back to a _newer_ backup after having already started the app on an
 older one is safe as long as the app is closed during the copy (Step 1).
 
 ---

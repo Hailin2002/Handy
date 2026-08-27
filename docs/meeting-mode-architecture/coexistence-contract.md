@@ -11,7 +11,7 @@ ausgelöst".
 Sibling contracts this document builds on:
 [recorder-contract.md](recorder-contract.md) (capture → chunks → events) and
 [stt-provider-contract.md](stt-provider-contract.md) (queue ↔ providers). This
-document defines the seams *between* those contracts and the untouched dictation
+document defines the seams _between_ those contracts and the untouched dictation
 path.
 
 Planned implementation homes (interface notes only, see §8):
@@ -25,13 +25,13 @@ Planned implementation homes (interface notes only, see §8):
 
 This contract fixes exactly four concurrency/configuration seams:
 
-| # | Seam | Owner after implementation | Section |
-| --- | --- | --- | --- |
-| S1 | Engine-lease extension (meeting-STT worker vs. interactive dictation on the single shared engine) | `TranscriptionManager` (extended) | §3 |
-| S2 | Microphone tap (dictation reusing the meeting's open mic stream) + single-device-open invariant | `AudioRecordingManager` + `MeetingRecorder` tap handle | §4 |
-| S3 | Mutual exclusion of simultaneous start attempts | `MeetingManager` (decider) consulting `AudioRecordingManager` | §5 |
-| S4 | Settings separation + per-session snapshot isolation | `settings::schema` + `MeetingManager` | §6 |
-| S5 | Shortcut namespace + availability pre-check | `shortcut` module | §7 |
+| #   | Seam                                                                                              | Owner after implementation                                    | Section |
+| --- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------- |
+| S1  | Engine-lease extension (meeting-STT worker vs. interactive dictation on the single shared engine) | `TranscriptionManager` (extended)                             | §3      |
+| S2  | Microphone tap (dictation reusing the meeting's open mic stream) + single-device-open invariant   | `AudioRecordingManager` + `MeetingRecorder` tap handle        | §4      |
+| S3  | Mutual exclusion of simultaneous start attempts                                                   | `MeetingManager` (decider) consulting `AudioRecordingManager` | §5      |
+| S4  | Settings separation + per-session snapshot isolation                                              | `settings::schema` + `MeetingManager`                         | §6      |
+| S5  | Shortcut namespace + availability pre-check                                                       | `shortcut` module                                             | §7      |
 
 Explicitly **not** owned here (and therefore non-goals for any implementer of
 this contract):
@@ -52,13 +52,13 @@ exception path; **may** = permitted option.
 
 ## 2. Baseline: the existing engine protocol (verified code, HEAD)
 
-All statements in this section describe *current* dictation-path code and are
+All statements in this section describe _current_ dictation-path code and are
 cited so the extension in §3 can be reviewed against reality.
 
 `src-tauri/src/managers/transcription.rs` (HEAD, read in full for this task):
 
 1. **Single engine slot.** `TranscriptionManager.engine:
-   Arc<Mutex<Option<LoadedEngine>>>` (line ~249) holds at most one loaded model.
+Arc<Mutex<Option<LoadedEngine>>>` (line ~249) holds at most one loaded model.
    Batch runs `take()` the engine out of the mutex under `lock_engine()`
    (line ~1245-1260) and put it back via `return_engine()` (line ~1087), which
    **drops a stale engine** if `current_model_id` changed mid-run.
@@ -102,10 +102,10 @@ lines ~627/739), and gates starts through `try_start_recording`
 
 Exactly two lease clients exist:
 
-| Client | Priority class | Typical hold |
-| --- | --- | --- |
-| Dictation (batch `transcribe()` or streaming worker) | `Interactive` | < a few seconds (batch), seconds-to-minutes (live stream) |
-| `LocalMeetingProvider` worker (one per app, per stt-provider-contract §4.1) | `Background` | one VAD segment per acquisition |
+| Client                                                                      | Priority class | Typical hold                                              |
+| --------------------------------------------------------------------------- | -------------- | --------------------------------------------------------- |
+| Dictation (batch `transcribe()` or streaming worker)                        | `Interactive`  | < a few seconds (batch), seconds-to-minutes (live stream) |
+| `LocalMeetingProvider` worker (one per app, per stt-provider-contract §4.1) | `Background`   | one VAD segment per acquisition                           |
 
 There is **no third client** and **no second engine instance**, ever (plan §3
 item 3). Cloud meeting jobs (Azure/Custom) never touch this lease
@@ -187,6 +187,7 @@ worker honor `BgPauseRequested`.
   ```
 
   is asserted in tests with a mocked engine.
+
 - If the deadline passes (pathological slow inference), the Interactive
   requester **does not preempt and does not double-load**: it surfaces a
   recoverable error to the dictation UI ("Spracherkennung durch Meeting
@@ -203,7 +204,7 @@ After the dictation client releases (its `return_engine` /
 1. Re-acquires (rule §3.3-3).
 2. If the loaded model differs from the session's snapshotted
    `meeting_model_id`, triggers exactly one model switch through the shared
-   loader (this switch is *allowed* to evict the dictation model — dictation is
+   loader (this switch is _allowed_ to evict the dictation model — dictation is
    idle by definition at this point).
 3. Resumes draining its persistent queue oldest-first; no queued segment is
    dropped or reordered by the pause (queue semantics owned by
@@ -220,11 +221,11 @@ The claim "Aufnahme-Threads warten niemals auf Inferenz" (plan §8) holds
 structurally because the capture path and the lease share **no synchronization
 object**:
 
-| Path | Objects touched | Blocking primitives on path |
-| --- | --- | --- |
-| Meeting capture callbacks → rolling WAV chunks | recorder-internal channels, disk writer thread | none on the callback (bounded channel send; recorder-contract §1 makes the recorder the single writer) |
-| Dictation capture callback → frames | `StreamRouter`-style atomic + mpsc send (§2 item 5) or tap fan-out (§4.3) | none; a slow consumer drops/lags, it never back-pressures the device callback |
-| Lease acquire/pause/resume | lease ticket, engine mutex, loading Condvar | confined to the two **worker threads** (dictation runner, meeting-STT worker) |
+| Path                                           | Objects touched                                                           | Blocking primitives on path                                                                            |
+| ---------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Meeting capture callbacks → rolling WAV chunks | recorder-internal channels, disk writer thread                            | none on the callback (bounded channel send; recorder-contract §1 makes the recorder the single writer) |
+| Dictation capture callback → frames            | `StreamRouter`-style atomic + mpsc send (§2 item 5) or tap fan-out (§4.3) | none; a slow consumer drops/lags, it never back-pressures the device callback                          |
+| Lease acquire/pause/resume                     | lease ticket, engine mutex, loading Condvar                               | confined to the two **worker threads** (dictation runner, meeting-STT worker)                          |
 
 Every blocking primitive in the lease extension lives on worker threads that
 consume already-persisted chunks/segments. The device callback chain reaches
@@ -241,11 +242,11 @@ neither the engine mutex nor the loading Condvar. Verification requirements
 
 ### 3.7 Timeout summary table
 
-| Timer | Value (initial, testable constant) | On expiry |
-| --- | --- | --- |
-| `MEETING_LEASE_PAUSE_DEADLINE` | 60 s (§3.4) | Dictation acquisition fails with recoverable busy error; meeting job unaffected |
-| Segment inference watchdog | 3 × real-time factor budget of the segment (constant, benchmark-derived per plan §8) | Job marked `failed` per stt-provider-contract §3 retry rules; lease released via guard drop even on panic (pattern of §2 items 1–2: panicked engines are dropped, not returned) |
-| Idle-model unload grace | existing `model_unload_timeout`, refreshed by both clients' activity | unchanged behavior |
+| Timer                          | Value (initial, testable constant)                                                   | On expiry                                                                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MEETING_LEASE_PAUSE_DEADLINE` | 60 s (§3.4)                                                                          | Dictation acquisition fails with recoverable busy error; meeting job unaffected                                                                                                 |
+| Segment inference watchdog     | 3 × real-time factor budget of the segment (constant, benchmark-derived per plan §8) | Job marked `failed` per stt-provider-contract §3 retry rules; lease released via guard drop even on panic (pattern of §2 items 1–2: panicked engines are dropped, not returned) |
+| Idle-model unload grace        | existing `model_unload_timeout`, refreshed by both clients' activity                 | unchanged behavior                                                                                                                                                              |
 
 ---
 
@@ -266,7 +267,7 @@ neither the engine mutex nor the loading Condvar. Verification requirements
 The invariant covers three potential openers: the meeting recorder's mic
 source, the dictation `AudioRecorder`, and the always-on dictation stream
 (`start_microphone_stream`, §2). The system-audio loopback stream is a
-*render-device* capture and is outside this invariant.
+_render-device_ capture and is outside this invariant.
 
 ### 4.2 Ownership registry
 
@@ -278,7 +279,7 @@ programming error (assert in debug builds, logged fallback in release).
 ### 4.3 Tap mechanism
 
 `MeetingRecorder` exposes a tap handle alongside its chunk-writing sink
-(recorder-contract §1 keeps it the single *writer*; a tap is a reader, which
+(recorder-contract §1 keeps it the single _writer_; a tap is a reader, which
 does not violate that role):
 
 ```rust
@@ -297,7 +298,7 @@ impl MicTapHandle {
 }
 ```
 
-Dictation integration: `AudioRecorder` gains a *frame-source* abstraction with
+Dictation integration: `AudioRecorder` gains a _frame-source_ abstraction with
 two producers behind the identical `AudioFrameCallback` consumer surface it
 already has (§2): `DeviceSource` (today's cpal path, unchanged) and
 `TapSource(MicTapHandle)`. Everything downstream — VAD policy, level meter,
@@ -307,11 +308,11 @@ own `VadPolicy` on tapped frames exactly as on device frames.
 
 ### 4.4 Case analysis (normative)
 
-| Case | Meeting state | Dictation mic path | Device opens |
-| --- | --- | --- | --- |
-| **C1 meeting-active** | `recording` | `TapSource` subscribed for the dictation's lifetime | **0 additional** (invariant trivially preserved) |
-| **C2 meeting-paused** | `paused` (mic stream closed per pause semantics, recorder-contract/pause) | Tap unavailable → fallback: dictation uses its normal `DeviceSource` (plan §6.10: "Ist das Meeting pausiert, verwendet Diktat seinen normalen Recorder") | **exactly 1** (dictation's own) |
-| **C3 no-meeting** | absent | normal `DeviceSource` (unchanged legacy behavior) | **exactly 1** |
+| Case                  | Meeting state                                                             | Dictation mic path                                                                                                                                       | Device opens                                     |
+| --------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **C1 meeting-active** | `recording`                                                               | `TapSource` subscribed for the dictation's lifetime                                                                                                      | **0 additional** (invariant trivially preserved) |
+| **C2 meeting-paused** | `paused` (mic stream closed per pause semantics, recorder-contract/pause) | Tap unavailable → fallback: dictation uses its normal `DeviceSource` (plan §6.10: "Ist das Meeting pausiert, verwendet Diktat seinen normalen Recorder") | **exactly 1** (dictation's own)                  |
+| **C3 no-meeting**     | absent                                                                    | normal `DeviceSource` (unchanged legacy behavior)                                                                                                        | **exactly 1**                                    |
 
 Additional rules:
 
@@ -340,7 +341,7 @@ Additional rules:
   meeting records, if implemented that way — implementer's choice, invariant is
   what is normative).
 - **R4 — device mismatch.** The tap carries the meeting's mic device. If the
-  dictation setting names a *different* microphone than the meeting's, the tap
+  dictation setting names a _different_ microphone than the meeting's, the tap
   is not applicable: dictation opens its own device (which is a different
   physical device, so the invariant is untouched). Same-device comparison uses
   the same device-identity string the arbiter registers.
@@ -365,12 +366,12 @@ Additional rules:
 
 ### 5.1 Decision matrix
 
-| Situation | Behavior |
-| --- | --- |
-| Dictation recording, user starts meeting | **No automatic action.** `MeetingManager.start()` detects `is_recording()` (via `AudioRecordingManager`, §2) and returns a `RequiresUserDecision` outcome; the frontend shows the plan §6.10 choice "`Diktat abschließen`" / "`Meetingstart abbrechen`". The backend never force-cancels a dictation (plan §6.2 rule 6, §6.10). Choosing "abschließen" means: dictation finalizes normally, then meeting start is retried and revalidated. |
-| Meeting recording, user starts dictation | Always allowed; routed through the tap (§4.4 C1). No prompt, no countdown interference: the meeting countdown overlay and the dictation overlay are independent states. |
-| Meeting `starting` (countdown running), dictation starts | Allowed; dictation uses `DeviceSource` if the meeting hasn't opened the mic yet, else tap — decided by the arbiter at dictation start, not pre-declared. |
-| Meeting recording, user starts meeting (again) | Single-active-meeting invariant (MeetingManager state machine); second start rejected with the standard busy message. Out of scope beyond this sentence. |
+| Situation                                                | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Dictation recording, user starts meeting                 | **No automatic action.** `MeetingManager.start()` detects `is_recording()` (via `AudioRecordingManager`, §2) and returns a `RequiresUserDecision` outcome; the frontend shows the plan §6.10 choice "`Diktat abschließen`" / "`Meetingstart abbrechen`". The backend never force-cancels a dictation (plan §6.2 rule 6, §6.10). Choosing "abschließen" means: dictation finalizes normally, then meeting start is retried and revalidated. |
+| Meeting recording, user starts dictation                 | Always allowed; routed through the tap (§4.4 C1). No prompt, no countdown interference: the meeting countdown overlay and the dictation overlay are independent states.                                                                                                                                                                                                                                                                    |
+| Meeting `starting` (countdown running), dictation starts | Allowed; dictation uses `DeviceSource` if the meeting hasn't opened the mic yet, else tap — decided by the arbiter at dictation start, not pre-declared.                                                                                                                                                                                                                                                                                   |
+| Meeting recording, user starts meeting (again)           | Single-active-meeting invariant (MeetingManager state machine); second start rejected with the standard busy message. Out of scope beyond this sentence.                                                                                                                                                                                                                                                                                   |
 
 ### 5.2 Race discipline
 
@@ -383,7 +384,7 @@ Both start paths converge on the same two state machines. Rules:
    Between the user decision and the retry, conditions may have changed; the
    retry re-runs the full Startvalidierung (plan §6) — decisions are never
    cached.
-3. If a dictation stops *by itself* while the decision dialog is open, the
+3. If a dictation stops _by itself_ while the decision dialog is open, the
    dialog self-dismisses and the pending start proceeds through normal
    validation (no stale "conflict" state).
 4. The dictation side needs no new lock: `try_start_recording` already
@@ -403,15 +404,15 @@ guarantees forward-compatible loads per schema.rs lines ~14-20, so no schema-
 version bump is strictly required for additions — but the version increments if
 any migration logic accompanies them):
 
-| Key | Type | Default | Purpose |
-| --- | --- | --- | --- |
-| `meeting_selected_microphone` | `Option<String>` | `None` | Meeting mic device. `None` = fall back to the dictation `selected_microphone` resolution at meeting start (displayed as such in the UI), never a silent alias at runtime. |
-| `meeting_selected_output_device` | `Option<String>` | `None` | Loopback **capture** target (WASAPI loopback of this render endpoint, plan §7). `None` = system default output at meeting start. |
-| `meeting_follow_default_output` | `bool` | `false` | Opt-in "Standardgerät folgen" (plan §6 Fehlerverhalten); when false the snapshotted device stays binding. |
-| `meeting_stt_provider` | `MeetingSttProvider` enum `{Local, Azure, Custom}` | `Local` | Per-default provider; each meeting may override (snapshot, §6.3). |
-| `meeting_model_id` | `String` | `""` (empty = unset → Startvalidierung prompts) | Local meeting model, independent of dictation `selected_model` (plan §8). |
-| `meeting_language` | `String` | `"auto"` (mirrors `default_selected_language`, schema.rs line ~229) | Independent language intent for meetings; coerced per model exactly like `selected_language` (capability-aware, never written back). |
-| `meeting_shortcut_binding` | carried in the existing `bindings` map under id `"meeting_toggle"` (§7.1) | platform candidate (§7.2) | Meeting start/stop shortcut; no new settings field, reuse of the `HashMap<String, ShortcutBinding>` mechanism. |
+| Key                              | Type                                                                      | Default                                                             | Purpose                                                                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting_selected_microphone`    | `Option<String>`                                                          | `None`                                                              | Meeting mic device. `None` = fall back to the dictation `selected_microphone` resolution at meeting start (displayed as such in the UI), never a silent alias at runtime. |
+| `meeting_selected_output_device` | `Option<String>`                                                          | `None`                                                              | Loopback **capture** target (WASAPI loopback of this render endpoint, plan §7). `None` = system default output at meeting start.                                          |
+| `meeting_follow_default_output`  | `bool`                                                                    | `false`                                                             | Opt-in "Standardgerät folgen" (plan §6 Fehlerverhalten); when false the snapshotted device stays binding.                                                                 |
+| `meeting_stt_provider`           | `MeetingSttProvider` enum `{Local, Azure, Custom}`                        | `Local`                                                             | Per-default provider; each meeting may override (snapshot, §6.3).                                                                                                         |
+| `meeting_model_id`               | `String`                                                                  | `""` (empty = unset → Startvalidierung prompts)                     | Local meeting model, independent of dictation `selected_model` (plan §8).                                                                                                 |
+| `meeting_language`               | `String`                                                                  | `"auto"` (mirrors `default_selected_language`, schema.rs line ~229) | Independent language intent for meetings; coerced per model exactly like `selected_language` (capability-aware, never written back).                                      |
+| `meeting_shortcut_binding`       | carried in the existing `bindings` map under id `"meeting_toggle"` (§7.1) | platform candidate (§7.2)                                           | Meeting start/stop shortcut; no new settings field, reuse of the `HashMap<String, ShortcutBinding>` mechanism.                                                            |
 
 Deliberately **not** introduced by this contract (belongs to other contracts /
 phases, listed to prevent drift): summary-provider keys (summary contract),
@@ -463,13 +464,13 @@ retention policy):
 
 ### 6.4 Independence test matrix (required when implemented)
 
-| Change during recording | Effect on running meeting | Effect on dictation |
-| --- | --- | --- |
-| `selected_model` | none (snapshot) | next dictation uses it (existing behavior) |
-| `meeting_model_id` | none (snapshot); applied at next start | none |
-| `selected_output_device` | none — feedback sounds move (intended legacy semantics) | feedback sounds move |
-| `meeting_selected_output_device` | none (snapshot) | none |
-| `meeting_toggle` binding | none (session-start snapshot, §7.5) | n/a |
+| Change during recording          | Effect on running meeting                               | Effect on dictation                        |
+| -------------------------------- | ------------------------------------------------------- | ------------------------------------------ |
+| `selected_model`                 | none (snapshot)                                         | next dictation uses it (existing behavior) |
+| `meeting_model_id`               | none (snapshot); applied at next start                  | none                                       |
+| `selected_output_device`         | none — feedback sounds move (intended legacy semantics) | feedback sounds move                       |
+| `meeting_selected_output_device` | none (snapshot)                                         | none                                       |
+| `meeting_toggle` binding         | none (session-start snapshot, §7.5)                     | n/a                                        |
 
 ---
 
@@ -478,7 +479,7 @@ retention policy):
 ### 7.1 Namespace rules
 
 1. All meeting binding ids live in the existing flat `bindings:
-   HashMap<String, ShortcutBinding>` and **must** carry the reserved prefix
+HashMap<String, ShortcutBinding>` and **must** carry the reserved prefix
    `meeting_`. Initial ids: `meeting_toggle` (start/stop). `meeting_pause` is
    reserved for the opt-in power-user binding (plan §6.9) and may remain
    unassigned by default.
@@ -500,13 +501,13 @@ Recommended candidate per plan §6.6/§6.9: **`Ctrl+Alt+Space`** on Windows
 analogues follow the existing `get_default_settings()` pattern
 (schema.rs lines ~551-600: mac uses `option+…`):
 
-| Platform | Candidate | Known-risk neighbors checked by the pre-check |
-| --- | --- | --- |
-| Windows | `ctrl+alt+space` | IME/language switchers on some layouts |
-| macOS | `option+cmd+space` | Spotlight family (`cmd+space`) — avoided by construction |
-| Linux | `ctrl+alt+space` | desktop-environment workspace shortcuts |
+| Platform | Candidate          | Known-risk neighbors checked by the pre-check            |
+| -------- | ------------------ | -------------------------------------------------------- |
+| Windows  | `ctrl+alt+space`   | IME/language switchers on some layouts                   |
+| macOS    | `option+cmd+space` | Spotlight family (`cmd+space`) — avoided by construction |
+| Linux    | `ctrl+alt+space`   | desktop-environment workspace shortcuts                  |
 
-The candidate is a *recommendation*, never silently forced: it is only offered
+The candidate is a _recommendation_, never silently forced: it is only offered
 if it survives §7.3, otherwise conflict-free alternatives from an ordered
 candidate list are offered (plan §6.6: "andernfalls werden konfliktfrei
 registrierbare Alternativen angeboten").
@@ -521,7 +522,7 @@ suggestion), the following check runs, in order:
    `handy_keys.rs` line ~413) and compare against every Speak binding,
    including the virtual `cancel` binding. Identical normalized string ⇒
    conflict (see §7.4), candidate not offered.
-2. **OS-level probe.** Register the candidate through the *active* keyboard
+2. **OS-level probe.** Register the candidate through the _active_ keyboard
    implementation (`KeyboardImplementation::Tauri` →
    `app.global_shortcut().register`, which already rejects already-registered
    combos — tauri_impl.rs line ~97; `HandyKeys` → its manager register path),
@@ -569,7 +570,7 @@ running take effect only after that meeting ends (plan §6.9). Implementation
 note: `MeetingManager` snapshots the relevant binding ids at session start
 (§6.3 last bullet); the shortcut module remains free to rebind globally, but
 the running session's stop/countdown handlers resolve through the snapshot.
-Edge rule: if the *old* meeting binding is deleted mid-meeting, the running
+Edge rule: if the _old_ meeting binding is deleted mid-meeting, the running
 meeting's stop remains reachable via UI and tray (which are always available),
 and the new binding activates for the next session.
 
@@ -580,20 +581,20 @@ and the new binding activates for the next session.
 **Zero edits were made to any of these files in this task.** Every row is
 future-phase work; the "Seam" column links the change to this contract.
 
-| File (exists at HEAD) | Existing interface involved (verified) | Future change (phase) | Seam |
-| --- | --- | --- | --- |
-| `src-tauri/src/managers/transcription.rs` | `active_engine_lease` CAS protocol; `try_start_loading`/`LoadingGuard`; `return_engine` staleness drop; idle watcher activity refresh | Add priority-class lease tickets + `BgPauseRequested`/auto-resume; export lease status for diagnostics (Phase 5) | S1 |
-| `src-tauri/src/managers/audio.rs` | `try_start_recording`, `start_/stop_microphone_stream`, device resolution w/ `unavailable_selected_microphone`, `RecordingReadiness` generations | Owner registry for the single-device-open invariant; tap-aware dictation start; always-on suspension hook (Phases 4–5) | S2, S3 |
-| `src-tauri/src/audio_toolkit/audio/recorder.rs` | `AudioFrameCallback`, `Cmd` worker, `VadPolicy`, `config_cache` | `DeviceSource`/`TapSource` frame-source abstraction behind the unchanged callback surface (Phase 5) | S2 |
-| `src-tauri/src/managers/meeting.rs` *(planned new, plan §5)* | — | `MicTapHandle` exposure lives in `meeting_recorder.rs` (planned new, plan §5); `MeetingManager` consumes it (Phase 4) | S2 |
-| `src-tauri/src/settings/schema.rs` (+ `types.rs`, `tests.rs`) | `AppSettings` serde-default pattern; container `#[serde(default)]` partial-store tolerance; `get_default_settings()` | Add §6.1 keys + `MeetingSttProvider` type + independence tests (Phase 4) | S4 |
-| `src-tauri/src/commands/audio.rs` | `set_/get_selected_output_device` | Parallel meeting-device getters/setters operating **only** on the new keys (Phase 4) | S4 |
-| `src-tauri/src/shortcut/mod.rs` | `change_binding` + `restore_registration`, `suspend_all_shortcuts`/`resume_all_shortcuts`, implementation dispatch | Meeting binding init; conflict-check command returning both conflict sites (Phase 4) | S5 |
-| `src-tauri/src/shortcut/handler.rs` | `handle_shortcut_event`, `ACTION_MAP` | Route `meeting_*` ids to `MeetingManager` actions (Phase 4) | S5 |
-| `src-tauri/src/shortcut/tauri_impl.rs`, `handy_keys.rs` | `validate_shortcut`, register-with-duplicate-rejection (tauri_impl.rs line ~97), `start_recording` suspend behavior | Availability probe primitive per implementation (Phase 4) | S5 |
-| `src-tauri/src/lib.rs` | manager construction/state registration | Wire `MeetingManager`, pass tap/arbitration handles (Phase 4) | S2, S3 |
-| `src-tauri/src/audio_feedback.rs` | reads `selected_output_device` (line ~93) | **None.** Listed as the preserved-semantics anchor; must not gain any meeting branch | S4 |
-| `src-tauri/src/speech_pipeline.rs` | Azure short-audio dictation path | **None.** Untouched by this contract | — |
+| File (exists at HEAD)                                         | Existing interface involved (verified)                                                                                                           | Future change (phase)                                                                                                  | Seam   |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------ |
+| `src-tauri/src/managers/transcription.rs`                     | `active_engine_lease` CAS protocol; `try_start_loading`/`LoadingGuard`; `return_engine` staleness drop; idle watcher activity refresh            | Add priority-class lease tickets + `BgPauseRequested`/auto-resume; export lease status for diagnostics (Phase 5)       | S1     |
+| `src-tauri/src/managers/audio.rs`                             | `try_start_recording`, `start_/stop_microphone_stream`, device resolution w/ `unavailable_selected_microphone`, `RecordingReadiness` generations | Owner registry for the single-device-open invariant; tap-aware dictation start; always-on suspension hook (Phases 4–5) | S2, S3 |
+| `src-tauri/src/audio_toolkit/audio/recorder.rs`               | `AudioFrameCallback`, `Cmd` worker, `VadPolicy`, `config_cache`                                                                                  | `DeviceSource`/`TapSource` frame-source abstraction behind the unchanged callback surface (Phase 5)                    | S2     |
+| `src-tauri/src/managers/meeting.rs` _(planned new, plan §5)_  | —                                                                                                                                                | `MicTapHandle` exposure lives in `meeting_recorder.rs` (planned new, plan §5); `MeetingManager` consumes it (Phase 4)  | S2     |
+| `src-tauri/src/settings/schema.rs` (+ `types.rs`, `tests.rs`) | `AppSettings` serde-default pattern; container `#[serde(default)]` partial-store tolerance; `get_default_settings()`                             | Add §6.1 keys + `MeetingSttProvider` type + independence tests (Phase 4)                                               | S4     |
+| `src-tauri/src/commands/audio.rs`                             | `set_/get_selected_output_device`                                                                                                                | Parallel meeting-device getters/setters operating **only** on the new keys (Phase 4)                                   | S4     |
+| `src-tauri/src/shortcut/mod.rs`                               | `change_binding` + `restore_registration`, `suspend_all_shortcuts`/`resume_all_shortcuts`, implementation dispatch                               | Meeting binding init; conflict-check command returning both conflict sites (Phase 4)                                   | S5     |
+| `src-tauri/src/shortcut/handler.rs`                           | `handle_shortcut_event`, `ACTION_MAP`                                                                                                            | Route `meeting_*` ids to `MeetingManager` actions (Phase 4)                                                            | S5     |
+| `src-tauri/src/shortcut/tauri_impl.rs`, `handy_keys.rs`       | `validate_shortcut`, register-with-duplicate-rejection (tauri_impl.rs line ~97), `start_recording` suspend behavior                              | Availability probe primitive per implementation (Phase 4)                                                              | S5     |
+| `src-tauri/src/lib.rs`                                        | manager construction/state registration                                                                                                          | Wire `MeetingManager`, pass tap/arbitration handles (Phase 4)                                                          | S2, S3 |
+| `src-tauri/src/audio_feedback.rs`                             | reads `selected_output_device` (line ~93)                                                                                                        | **None.** Listed as the preserved-semantics anchor; must not gain any meeting branch                                   | S4     |
+| `src-tauri/src/speech_pipeline.rs`                            | Azure short-audio dictation path                                                                                                                 | **None.** Untouched by this contract                                                                                   | —      |
 
 Verification of this inventory: each "existing interface" cell was read at
 HEAD in this worktree (files listed in §2 and the greps cited inline); no
@@ -626,10 +627,10 @@ contract:
 
 ## 10. Gate coverage
 
-| Gate | Where satisfied |
-| --- | --- |
-| G1 acquire/pause-at-segment/resume/timeout + capture-never-waits-on-inference proof | §3.2–§3.7 (proof structure §3.6, tests mandated there) |
-| G2 mic-tap three cases + exact single-device-open invariant | §4.1 (exact invariant), §4.3 (mechanism), §4.4 (C1/C2/C3 table), §5 (mutual exclusion co-rule) |
-| G3 settings keys + `selected_output_device` preservation per plan §6 Startvalidierung | §6.1 (key enumeration), §6.2 (preservation with code citations + required test), §6.3–§6.4 (snapshot isolation) |
-| G4 shortcut availability pre-registration check + identical-binding blocking showing both conflict sites | §7.3 (ordered pre-check incl. OS probe), §7.4 (blocking + both sites), §7.1/§7.2 (namespace, candidate) |
-| G5 touch-point inventory, future-phase marked, zero edits | §8 (every row marked; header states zero source edits; index-table update disclosed) |
+| Gate                                                                                                     | Where satisfied                                                                                                 |
+| -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| G1 acquire/pause-at-segment/resume/timeout + capture-never-waits-on-inference proof                      | §3.2–§3.7 (proof structure §3.6, tests mandated there)                                                          |
+| G2 mic-tap three cases + exact single-device-open invariant                                              | §4.1 (exact invariant), §4.3 (mechanism), §4.4 (C1/C2/C3 table), §5 (mutual exclusion co-rule)                  |
+| G3 settings keys + `selected_output_device` preservation per plan §6 Startvalidierung                    | §6.1 (key enumeration), §6.2 (preservation with code citations + required test), §6.3–§6.4 (snapshot isolation) |
+| G4 shortcut availability pre-registration check + identical-binding blocking showing both conflict sites | §7.3 (ordered pre-check incl. OS probe), §7.4 (blocking + both sites), §7.1/§7.2 (namespace, candidate)         |
+| G5 touch-point inventory, future-phase marked, zero edits                                                | §8 (every row marked; header states zero source edits; index-table update disclosed)                            |

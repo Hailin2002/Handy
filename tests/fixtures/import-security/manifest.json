@@ -238,9 +238,7 @@
       "expected": {
         "decision": "ACCEPT",
         "primary_code": null,
-        "warnings": [
-          "unparsable_lines=all"
-        ]
+        "warnings": ["unparsable_lines=all"]
       },
       "bytes": 60,
       "sha256": "656485909994e98280558ad83c326f650a16badbd4b0d5becac6ba621c85a646"
@@ -273,9 +271,7 @@
       "expected": {
         "decision": "ACCEPT",
         "primary_code": null,
-        "warnings": [
-          "name_decoded_cp437"
-        ]
+        "warnings": ["name_decoded_cp437"]
       },
       "bytes": 147,
       "sha256": "2325ae8d776f503a304297a25e76b7fac611d8551e6732e486069737a8f92e06"
@@ -319,9 +315,7 @@
       "expected": {
         "decision": "ACCEPT",
         "primary_code": null,
-        "warnings": [
-          "inner_archives_are_opaque"
-        ]
+        "warnings": ["inner_archives_are_opaque"]
       },
       "bytes": 810,
       "sha256": "5b08ea4b858c4060f76880ca4197878176ae6559df320897fd14f02ecca1c543"

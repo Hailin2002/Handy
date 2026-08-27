@@ -45,13 +45,18 @@ interface UseSettingsReturn {
 
 export const useSettings = (): UseSettingsReturn => {
   const store = useSettingsStore();
+  // Read through selectors rather than off `store`: calling useSettingsStore()
+  // without one returns a fresh object identity on every state change, so an
+  // effect depending on `store` would re-run on every unrelated update.
+  const initialize = useSettingsStore((state) => state.initialize);
+  const isLoading = useSettingsStore((state) => state.isLoading);
 
   // Initialize on first mount
   useEffect(() => {
-    if (store.isLoading) {
-      store.initialize();
+    if (isLoading) {
+      initialize();
     }
-  }, [store.initialize, store.isLoading]);
+  }, [initialize, isLoading]);
 
   return {
     settings: store.settings,

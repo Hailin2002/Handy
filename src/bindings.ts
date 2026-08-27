@@ -1308,7 +1308,7 @@ async projectInboxMeetingIds() : Promise<Result<string[], string>> {
  * Imports a WhatsApp chat text. `date_order` is only needed when the preview
  * cannot disambiguate day/month; pass `dateOrderAmbiguous` handling in UI.
  */
-async whatsappImportText(title: string, content: string, dateOrder: string | null) : Promise<Result<WhatsappImportResult, string>> {
+async whatsappImportText(title: string, content: string, dateOrder: string | null) : Promise<Result<WhatsappImportResult, ImportError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("whatsapp_import_text", { title, content, dateOrder }) };
 } catch (e) {
@@ -1341,7 +1341,7 @@ async sourceItems(sourceId: string) : Promise<Result<SourceItem[], string>> {
 /**
  * Phase 9 wizard preview: parse stats without persisting anything.
  */
-async whatsappPreviewText(content: string, dateOrder: string | null) : Promise<Result<ChatPreviewDto, string>> {
+async whatsappPreviewText(content: string, dateOrder: string | null) : Promise<Result<ChatPreviewDto, ImportError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("whatsapp_preview_text", { content, dateOrder }) };
 } catch (e) {
@@ -1352,7 +1352,7 @@ async whatsappPreviewText(content: string, dateOrder: string | null) : Promise<R
 /**
  * Phase 9 wizard step 2 for `.zip`: inspect without extracting or persisting.
  */
-async whatsappPreviewZip(path: string, dateOrder: string | null) : Promise<Result<ZipPreviewDto, string>> {
+async whatsappPreviewZip(path: string, dateOrder: string | null) : Promise<Result<ZipPreviewDto, ImportError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("whatsapp_preview_zip", { path, dateOrder }) };
 } catch (e) {
@@ -1363,7 +1363,7 @@ async whatsappPreviewZip(path: string, dateOrder: string | null) : Promise<Resul
 /**
  * Phase 9 wizard step 4 for `.zip`: import the chat plus its media.
  */
-async whatsappImportZip(path: string, title: string, dateOrder: string | null) : Promise<Result<ZipIngestResult, string>> {
+async whatsappImportZip(path: string, title: string, dateOrder: string | null) : Promise<Result<ZipIngestResult, ImportError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("whatsapp_import_zip", { path, title, dateOrder }) };
 } catch (e) {
@@ -1811,6 +1811,33 @@ export type ImplementationChangeResult = { success: boolean;
  * List of binding IDs that were reset to defaults due to incompatibility
  */
 reset_bindings: string[] }
+/**
+ * A failed import, as a code the UI can act on plus English specifics.
+ * 
+ * # Why this is not a `String`
+ * 
+ * These commands already had error *codes* — `dateOrderAmbiguous`,
+ * `noChatFileInArchive`, `archiveRejected: <detail>` — they were just smuggled
+ * inside the message. Two things followed. The frontend piped `result.error`
+ * straight into a toast, so a German user read the literal text
+ * `archiveRejected: entry name contains ..` in a UI where ESLint otherwise
+ * forbids untranslated strings. And Rust had to parse its own message back
+ * (`if message.contains("dateOrderAmbiguous")`) to recover what it had just
+ * formatted.
+ * 
+ * Splitting the two makes the code translatable and the detail diagnostic.
+ */
+export type ImportError = { 
+/**
+ * Stable and machine-readable. The frontend maps it to a translated
+ * message; unknown codes fall back to `detail`.
+ */
+code: string; 
+/**
+ * English specifics for diagnostics — a rejected ZIP entry name, an IO
+ * error. Absent when the code says everything.
+ */
+detail: string | null }
 export type KeyboardDiagnosticReport = { secure_input_enabled: boolean; culprit_pid: number | null; culprit_name: string | null; 
 /**
  * Counts only — key identity is deliberately never captured.

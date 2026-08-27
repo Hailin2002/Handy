@@ -22,14 +22,14 @@ cases.
 
 `MeetingRecorder` owns exactly one concern: **turning two live capture streams into
 a pair of crash-safe, timeline-consistent PCM16 WAV chunk files plus a stream of
-level/state/error events.** It does *not* own:
+level/state/error events.** It does _not_ own:
 
-| Concern | Owner | Interaction |
-| --- | --- | --- |
-| Session state machine, Tauri commands/events | `MeetingManager` | consumes recorder events, drives `open_source`/`pause`/`resume`/`stop` |
-| Chunk/job/segment persistence (SQL) | `MeetingStore` | recorder reports chunk transitions through a `ChunkStateStore` trait so the recorder itself stays storage-agnostic |
-| STT segmentation, queues, providers | `MeetingTranscriptionQueue`, provider clients | consume only chunks in state `ready` |
-| Free-disk policy, provider/model/retention validation | `MeetingManager` (Startvalidierung) | recorder surfaces device- and disk-related failures only |
+| Concern                                               | Owner                                         | Interaction                                                                                                        |
+| ----------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Session state machine, Tauri commands/events          | `MeetingManager`                              | consumes recorder events, drives `open_source`/`pause`/`resume`/`stop`                                             |
+| Chunk/job/segment persistence (SQL)                   | `MeetingStore`                                | recorder reports chunk transitions through a `ChunkStateStore` trait so the recorder itself stays storage-agnostic |
+| STT segmentation, queues, providers                   | `MeetingTranscriptionQueue`, provider clients | consume only chunks in state `ready`                                                                               |
+| Free-disk policy, provider/model/retention validation | `MeetingManager` (Startvalidierung)           | recorder surfaces device- and disk-related failures only                                                           |
 
 The recorder is the **single writer** of the session's `audio/` directory. No other
 component creates, renames or deletes files under
@@ -63,8 +63,8 @@ impl SourceKind {
 
 The two sources are technically independent streams with independent failure,
 independent rollover counters and independent gap/drift bookkeeping. Nothing in
-the recorder assumes that chunk *N* of microphone covers the same wall time as
-chunk *N* of system.
+the recorder assumes that chunk _N_ of microphone covers the same wall time as
+chunk _N_ of system.
 
 ### 2.2 Timeline model
 
@@ -105,8 +105,8 @@ Timeline rules (normative):
    `timeline_ms = stamp.duration_since(timeline_origin).as_secs_f64() * 1000.0`.
    Wall-clock timestamps are metadata only and never drive audio alignment.
 2. **Per-source sample counting.** Each source additionally maintains a monotonically
-   increasing counter of *delivered device frames* (`total_frames` in spike terms)
-   and its native `sample_rate`. Expected frames at time *t* are
+   increasing counter of _delivered device frames_ (`total_frames` in spike terms)
+   and its native `sample_rate`. Expected frames at time _t_ are
    `expected(t) = (t - t_first_callback_ms) / 1000.0 * native_sample_rate`,
    mirroring the spike harness columns `frames`, `total_frames`, `expected_frames`.
 3. **Capture-time timeline, not wall-time.** Paused intervals are removed from the
@@ -664,29 +664,29 @@ pub trait MeetingRecorder: Send {
 ### 5.1 Tolerance constants
 
 Values are **not guessed**: each constant either cites the spike harness or is
-explicitly marked *pending task-0008 measurement*, naming the CSV column(s) of
+explicitly marked _pending task-0008 measurement_, naming the CSV column(s) of
 `docs/phase1-spike/run-*/meeting_loopback_spike_120min.csv` that decide it. The
 spike CSV schema (header row) is:
 `source, cb_index, t_rel_ms, gap_ms, frames, total_frames, sample_rate, channels,
 sample_format, expected_frames, drift_frames, gap_class, silent, peak, rms, error`.
 
-| Constant | Provisional value | Status | Decided by (spike column / source) |
-| --- | --- | --- | --- |
-| `TIMELINE_SAMPLE_RATE_HZ` | 16 000 | fixed by plan §7 | — |
-| `TIMELINE_CHANNELS` | 1 | fixed by plan §7 | — |
-| `CHUNK_ROLLOVER_TARGET_MS` | 60 000 | initial value fixed by plan §7 ("Phase 1 prüft, ob ein anderer Wert messbar besser ist"); revisitable after Phase 1 | — |
-| `LEVEL_EVENT_INTERVAL_MS` | 100 | UI constant | — |
-| `GAP_CLASS_NORMAL_MAX_MS` | 250.0 | **fixed by spike harness** (class boundary implemented in `analyze-spike-csv.ps1`, column `gap_class`) | `gap_class` |
-| `GAP_CLASS_SPARSE_MAX_MS` | 1000.0 | **fixed by spike harness** (same) | `gap_class` |
-| `SILENCE_PEAK_THRESHOLD` | 0.0001 | taken from spike run metadata `# silence_threshold`; cross-device confirmation pending task-0008 measurement | `peak`, `rms`, `silent`, meta line `# silence_threshold` |
-| `GAP_EVENT_MIN_MS` | — | **pending task-0008 measurement**: smallest gap worth surfacing as `TimelineGap` to the UI | `gap_ms`, `gap_class` |
-| `SEGMENT_DEGRADED_GAP_MS` | — | **pending task-0008 measurement**: gap above which a source segment is flagged `Degraded` | `gap_ms`, `gap_class` (`gap` rows) |
-| `CALLBACK_JITTER_NORMAL_MAX_MS` | — | **pending task-0008 measurement**: upper bound of `gap_ms` among `normal`-class callbacks; below this no gap bookkeeping is emitted | `gap_ms` filtered by `gap_class='normal'` |
-| `INITIAL_OFFSET_FILL_TOLERANCE_MS` | — | **pending task-0008 measurement**: max leading offset between the two first callbacks that is silently filled; above it a startup warning is raised | `t_rel_ms` of `cb_index=1` rows per `source` |
-| `DRIFT_CORRECTION_MAX_PPM` | — | **pending task-0008 measurement**: maximum resampler-ratio offset applied for slow-clock compensation | `drift_frames`, `t_rel_ms` (trend slope) |
-| `DRIFT_WARN_FRAMES` | — | **pending task-0008 measurement**: drift magnitude that flips a source to `Degraded` | `drift_frames` |
-| `DRIFT_EXCEEDED_FRAMES` | — | **pending task-0008 measurement**: drift magnitude that emits `DriftToleranceExceeded` | `drift_frames`, `expected_frames`, `total_frames` |
-| `DISK_LOW_WATERMARK_BYTES` | — | product constant, not spike-derived; proposal: ≥ 2 × hourly two-track budget (≈ 230 MB/h, plan §12); pending product decision | — |
+| Constant                           | Provisional value | Status                                                                                                                                              | Decided by (spike column / source)                       |
+| ---------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `TIMELINE_SAMPLE_RATE_HZ`          | 16 000            | fixed by plan §7                                                                                                                                    | —                                                        |
+| `TIMELINE_CHANNELS`                | 1                 | fixed by plan §7                                                                                                                                    | —                                                        |
+| `CHUNK_ROLLOVER_TARGET_MS`         | 60 000            | initial value fixed by plan §7 ("Phase 1 prüft, ob ein anderer Wert messbar besser ist"); revisitable after Phase 1                                 | —                                                        |
+| `LEVEL_EVENT_INTERVAL_MS`          | 100               | UI constant                                                                                                                                         | —                                                        |
+| `GAP_CLASS_NORMAL_MAX_MS`          | 250.0             | **fixed by spike harness** (class boundary implemented in `analyze-spike-csv.ps1`, column `gap_class`)                                              | `gap_class`                                              |
+| `GAP_CLASS_SPARSE_MAX_MS`          | 1000.0            | **fixed by spike harness** (same)                                                                                                                   | `gap_class`                                              |
+| `SILENCE_PEAK_THRESHOLD`           | 0.0001            | taken from spike run metadata `# silence_threshold`; cross-device confirmation pending task-0008 measurement                                        | `peak`, `rms`, `silent`, meta line `# silence_threshold` |
+| `GAP_EVENT_MIN_MS`                 | —                 | **pending task-0008 measurement**: smallest gap worth surfacing as `TimelineGap` to the UI                                                          | `gap_ms`, `gap_class`                                    |
+| `SEGMENT_DEGRADED_GAP_MS`          | —                 | **pending task-0008 measurement**: gap above which a source segment is flagged `Degraded`                                                           | `gap_ms`, `gap_class` (`gap` rows)                       |
+| `CALLBACK_JITTER_NORMAL_MAX_MS`    | —                 | **pending task-0008 measurement**: upper bound of `gap_ms` among `normal`-class callbacks; below this no gap bookkeeping is emitted                 | `gap_ms` filtered by `gap_class='normal'`                |
+| `INITIAL_OFFSET_FILL_TOLERANCE_MS` | —                 | **pending task-0008 measurement**: max leading offset between the two first callbacks that is silently filled; above it a startup warning is raised | `t_rel_ms` of `cb_index=1` rows per `source`             |
+| `DRIFT_CORRECTION_MAX_PPM`         | —                 | **pending task-0008 measurement**: maximum resampler-ratio offset applied for slow-clock compensation                                               | `drift_frames`, `t_rel_ms` (trend slope)                 |
+| `DRIFT_WARN_FRAMES`                | —                 | **pending task-0008 measurement**: drift magnitude that flips a source to `Degraded`                                                                | `drift_frames`                                           |
+| `DRIFT_EXCEEDED_FRAMES`            | —                 | **pending task-0008 measurement**: drift magnitude that emits `DriftToleranceExceeded`                                                              | `drift_frames`, `expected_frames`, `total_frames`        |
+| `DISK_LOW_WATERMARK_BYTES`         | —                 | product constant, not spike-derived; proposal: ≥ 2 × hourly two-track budget (≈ 230 MB/h, plan §12); pending product decision                       | —                                                        |
 
 Until task-0008 lands, the recorder implementation must compile these constants
 from a single `tolerances.rs` module carrying the same table so that replacing
@@ -698,7 +698,7 @@ pending values later is a one-file change plus test updates.
    against the delivery schedule implied by previously delivered frames
    (`expected_frames` vs. `total_frames`, exactly the spike computation).
    A gap exists when the inter-callback delta exceeds
-   `CALLBACK_JITTER_NORMAL_MAX_MS` *(pending task-0008)*.
+   `CALLBACK_JITTER_NORMAL_MAX_MS` _(pending task-0008)_.
 2. **Classification.** Gaps are classified with the spike harness classes
    (`Normal`/`Sparse`/`Long` via `GAP_CLASS_*_MAX_MS`), so recorder telemetry and
    spike analysis remain directly comparable.
@@ -707,12 +707,12 @@ pending values later is a one-file change plus test updates.
    The track length always equals elapsed timeline time; the invariant
    `next_write_position == last_written_position + silence_len` holds at every
    chunk write. Tracks are never shortened and audio is never re-timestamped.
-4. **Reporting.** Gaps ≥ `GAP_EVENT_MIN_MS` *(pending task-0008)* emit
-   `RecorderEvent::TimelineGap`. Gaps ≥ `SEGMENT_DEGRADED_GAP_MS` *(pending
-   task-0008)* flip the source to `SourceState::Degraded` and are recorded in the
+4. **Reporting.** Gaps ≥ `GAP_EVENT_MIN_MS` _(pending task-0008)_ emit
+   `RecorderEvent::TimelineGap`. Gaps ≥ `SEGMENT_DEGRADED_GAP_MS` _(pending
+   task-0008)_ flip the source to `SourceState::Degraded` and are recorded in the
    chunk's `gap_stats` and in `SessionSummary::degraded_ranges`.
 5. **Exclusions.** Paused intervals are excluded by construction (timeline is
-   frozen across pause). A device-loss interval is *not* gap-filled indefinitely:
+   frozen across pause). A device-loss interval is _not_ gap-filled indefinitely:
    `close_source` ends the segment, and the hole between segments remains as
    timeline silence with segment-boundary metadata instead of a growing gap.
 6. **Cross-source independence.** A gap in one source never inserts silence into
@@ -724,22 +724,22 @@ pending values later is a one-file change plus test updates.
    computed identically to the spike `drift_frames` column, evaluated over the
    stable window (>10 s runtime) used by `analyze-spike-csv.ps1`.
 2. **Correction mechanism.** The per-source resampler ratio is modulated by
-   `ratio = 1 + ppm/1e6`, with `|ppm| ≤ DRIFT_CORRECTION_MAX_PPM` *(pending
-   task-0008)*, steering cumulative drift toward zero slowly. Correction acts on
+   `ratio = 1 + ppm/1e6`, with `|ppm| ≤ DRIFT_CORRECTION_MAX_PPM` _(pending
+   task-0008)_, steering cumulative drift toward zero slowly. Correction acts on
    the writer path only; capture callbacks are never blocked, resized, or
    dropped for drift reasons.
 3. **Deadband and hysteresis.** Correction applies only outside a deadband
-   proportional to measurement noise observed in the spike data *(deadband width
+   proportional to measurement noise observed in the spike data _(deadband width
    pending task-0008, derived from the `drift_frames` scatter of `normal`
-   callbacks)*, and ratio changes are rate-limited so the resampler is retuned at
+   callbacks)_, and ratio changes are rate-limited so the resampler is retuned at
    most once per second per source.
-4. **Escape hatch.** When |drift| exceeds `DRIFT_EXCEEDED_FRAMES` *(pending
-   task-0008)* the recorder stops correcting, continues capturing uncorrected,
+4. **Escape hatch.** When |drift| exceeds `DRIFT_EXCEEDED_FRAMES` _(pending
+   task-0008)_ the recorder stops correcting, continues capturing uncorrected,
    emits `DriftToleranceExceeded`, and marks the source `Degraded`. It never
    drops samples or truncates the track to "fix" drift.
 5. **Startup offset.** Whichever source opens first defines timeline position of
    the other's first frame; the difference up to
-   `INITIAL_OFFSET_FILL_TOLERANCE_MS` *(pending task-0008)* is pre-filled with
+   `INITIAL_OFFSET_FILL_TOLERANCE_MS` _(pending task-0008)_ is pre-filled with
    leading silence (plan task 1 of "Gemeinsame Zeitachse"). Beyond that, a
    startup warning event is raised but capture proceeds.
 
@@ -788,29 +788,29 @@ must react visibly.
 
 ### 7.1 Laufende Aufnahme (Fehlerverhalten)
 
-| Plan case | Recorder surface | Consumer & required reaction |
-| --- | --- | --- |
-| Mikrofon fällt aus | `RecorderEvent::MicDeviceLost`, then `SourceStateChanged { Microphone, Lost }`; open mic chunk finalized to `ready` first | `MeetingManager` keeps system source running; `MeetingRecorderView` shows orange warning with actions *Wiederverbinden* / *Gerät wechseln*; Tray/Overlay reflect degraded state via `snapshot()` |
-| Systemgerät fällt aus | `RecorderEvent::SystemDeviceLost`, `SourceStateChanged { System, Lost }` | Same as above mirrored; UI offers *Loopback neu öffnen* or *Ohne Systemaudio fortführen*; choosing the latter calls `close_source(System, …)` and sets `has_system_audio=false` from that point |
-| Standardgerät wechselt | `RecorderEvent::DefaultDeviceChanged` always; plus `SourceSegmentStarted` **only if** follow-default option enabled | `MeetingSettings` owns the option; `MeetingRecorderView` shows a non-blocking notice either way; binding mode (option off) changes nothing about capture |
-| Keine Systemlautstärke | **No error.** Silence is legitimate: `LevelUpdate { peak ≈ 0 }` only; `SILENCE_PEAK_THRESHOLD` classifies callbacks as silent for telemetry | Setup test flow (`MeetingPreflight` "Systemaudio testen") distinguishes wrong-device vs. truly-silent, per plan |
-| Datenträger fast voll | `RecorderEvent::DiskSpaceLow` at watermark; if the next chunk temp file cannot be created safely: finalize current chunk(s), emit `ControlledStopInitiated { reason: DiskFull }`, then `stop()` semantics automatically | `MeetingRecorderView` warns early; on controlled stop shows green "Audio gesichert" plus explanation; no data loss (all finalized chunks stay usable) |
-| Azure/Custom nicht erreichbar | **Outside recorder scope** — capture continues untouched. Boundary: recorder never blocks on network; queue sets jobs to `retry_wait` | `MeetingProcessingView` checklist + retry controls; `MeetingRecorderView` shows growing backlog count from `snapshot().sources[*].backlog_chunks_ready` |
-| Lokales Modell zu langsam | **Outside recorder scope** — backlog grows on disk only, RAM bounded by chunk rotation | `MeetingRecorderView` "Verarbeitung liegt zurück" state from backlog count |
-| App-Absturz | Recovery protocol §8; results consumed at next startup | `MeetingRecoveryBanner` offers processing of recovered chunks; session never stays stuck in `recording` |
-| Sleep/wake (spike scenario) | `RecorderEvent::SleepWake { gap_ranges }` with silence-filled spans; sources re-validated, drift counters reset at wake | `MeetingRecorderView` brief notice; gaps visible in transcript as filled ranges |
+| Plan case                     | Recorder surface                                                                                                                                                                                                        | Consumer & required reaction                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Mikrofon fällt aus            | `RecorderEvent::MicDeviceLost`, then `SourceStateChanged { Microphone, Lost }`; open mic chunk finalized to `ready` first                                                                                               | `MeetingManager` keeps system source running; `MeetingRecorderView` shows orange warning with actions _Wiederverbinden_ / _Gerät wechseln_; Tray/Overlay reflect degraded state via `snapshot()` |
+| Systemgerät fällt aus         | `RecorderEvent::SystemDeviceLost`, `SourceStateChanged { System, Lost }`                                                                                                                                                | Same as above mirrored; UI offers _Loopback neu öffnen_ or _Ohne Systemaudio fortführen_; choosing the latter calls `close_source(System, …)` and sets `has_system_audio=false` from that point  |
+| Standardgerät wechselt        | `RecorderEvent::DefaultDeviceChanged` always; plus `SourceSegmentStarted` **only if** follow-default option enabled                                                                                                     | `MeetingSettings` owns the option; `MeetingRecorderView` shows a non-blocking notice either way; binding mode (option off) changes nothing about capture                                         |
+| Keine Systemlautstärke        | **No error.** Silence is legitimate: `LevelUpdate { peak ≈ 0 }` only; `SILENCE_PEAK_THRESHOLD` classifies callbacks as silent for telemetry                                                                             | Setup test flow (`MeetingPreflight` "Systemaudio testen") distinguishes wrong-device vs. truly-silent, per plan                                                                                  |
+| Datenträger fast voll         | `RecorderEvent::DiskSpaceLow` at watermark; if the next chunk temp file cannot be created safely: finalize current chunk(s), emit `ControlledStopInitiated { reason: DiskFull }`, then `stop()` semantics automatically | `MeetingRecorderView` warns early; on controlled stop shows green "Audio gesichert" plus explanation; no data loss (all finalized chunks stay usable)                                            |
+| Azure/Custom nicht erreichbar | **Outside recorder scope** — capture continues untouched. Boundary: recorder never blocks on network; queue sets jobs to `retry_wait`                                                                                   | `MeetingProcessingView` checklist + retry controls; `MeetingRecorderView` shows growing backlog count from `snapshot().sources[*].backlog_chunks_ready`                                          |
+| Lokales Modell zu langsam     | **Outside recorder scope** — backlog grows on disk only, RAM bounded by chunk rotation                                                                                                                                  | `MeetingRecorderView` "Verarbeitung liegt zurück" state from backlog count                                                                                                                       |
+| App-Absturz                   | Recovery protocol §8; results consumed at next startup                                                                                                                                                                  | `MeetingRecoveryBanner` offers processing of recovered chunks; session never stays stuck in `recording`                                                                                          |
+| Sleep/wake (spike scenario)   | `RecorderEvent::SleepWake { gap_ranges }` with silence-filled spans; sources re-validated, drift counters reset at wake                                                                                                 | `MeetingRecorderView` brief notice; gaps visible in transcript as filled ranges                                                                                                                  |
 
 ### 7.2 Startvalidierung
 
-| Plan case | Named variant | Consumer |
-| --- | --- | --- |
-| Mikrofon nicht verfügbar/öffnbar | `preflight` check `Missing` or `RecorderError::MicDeviceUnavailable` | Start-dialog status row "Mikrofon" + focused repair dialog (device picker) |
-| Systemausgabegerät nicht verfügbar | `preflight` check `Missing` or `RecorderError::SystemOutputUnavailable` | Status row "Systemaudio"; repair dialog |
-| Loopback exclusive-mode conflict | `RecorderError::LoopbackSharedModeRequired` | Repair dialog explains closing exclusive-mode apps / switching device |
-| Loopback grundsätzlich nicht möglich | `RecorderError::LoopbackUnavailable` | Start dialog offers explicit fallback *"Nur Mikrofon aufnehmen"*; choice stored visibly in the session |
-| Berechtigungen fehlen | `preflight` check `PermissionDenied` / `RecorderError::CapturePermissionDenied` | OS-permission repair instructions in dialog |
-| Freier Speicherplatz zu gering | `RecorderError::InsufficientDiskSpace` (checked by MeetingManager using the §12 budget; recorder enforces nothing extra at start) | Start button disabled + storage hint with per-hour estimate |
-| STT-Provider/Sprache, Modell, Azure-/Custom-Konfiguration, Summary-Provider, Aufbewahrungsregel | **Not recorder variants** (validated by `MeetingManager` against settings/providers) | Focused repair dialogs per plan §6.x Startvalidierung; recorder receives an already-validated `SourceDeviceSet` |
+| Plan case                                                                                       | Named variant                                                                                                                     | Consumer                                                                                                        |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Mikrofon nicht verfügbar/öffnbar                                                                | `preflight` check `Missing` or `RecorderError::MicDeviceUnavailable`                                                              | Start-dialog status row "Mikrofon" + focused repair dialog (device picker)                                      |
+| Systemausgabegerät nicht verfügbar                                                              | `preflight` check `Missing` or `RecorderError::SystemOutputUnavailable`                                                           | Status row "Systemaudio"; repair dialog                                                                         |
+| Loopback exclusive-mode conflict                                                                | `RecorderError::LoopbackSharedModeRequired`                                                                                       | Repair dialog explains closing exclusive-mode apps / switching device                                           |
+| Loopback grundsätzlich nicht möglich                                                            | `RecorderError::LoopbackUnavailable`                                                                                              | Start dialog offers explicit fallback _"Nur Mikrofon aufnehmen"_; choice stored visibly in the session          |
+| Berechtigungen fehlen                                                                           | `preflight` check `PermissionDenied` / `RecorderError::CapturePermissionDenied`                                                   | OS-permission repair instructions in dialog                                                                     |
+| Freier Speicherplatz zu gering                                                                  | `RecorderError::InsufficientDiskSpace` (checked by MeetingManager using the §12 budget; recorder enforces nothing extra at start) | Start button disabled + storage hint with per-hour estimate                                                     |
+| STT-Provider/Sprache, Modell, Azure-/Custom-Konfiguration, Summary-Provider, Aufbewahrungsregel | **Not recorder variants** (validated by `MeetingManager` against settings/providers)                                              | Focused repair dialogs per plan §6.x Startvalidierung; recorder receives an already-validated `SourceDeviceSet` |
 
 Rule (G2): every recorder-visible failure has exactly one named variant, and
 every variant appears in exactly one consumer row above. Variants without a
@@ -828,22 +828,22 @@ Protocol, in order:
 
 1. **Enumerate from the database.** Read all chunk rows in state `writing` for
    the session (`ChunkStateStore::open_chunks`). The DB row list is authoritative
-   for *what was attempted*; the filesystem is authoritative for *what survived*.
+   for _what was attempted_; the filesystem is authoritative for _what survived_.
 2. **For each `writing` row**, locate `<seq>-<tag>.wav.part` in `audio/`:
    a. **File present and parseable:** read the RIFF/WAV structure; take
-      `min(declared_data_size, actual_file_bytes_after_header)` truncated down to
-      a whole PCM16 frame (even byte count); patch the header sizes to the
-      truncated length; fsync; **atomic rename** to the final `.wav` name; fsync
-      directory; compute checksum; transition `writing → ready` with
-      `recovered=true`, `sample_count = truncated_bytes / 2`,
-      `timeline_end_ms = timeline_start_ms + sample_count / 16000 * 1000`. The
-      resulting silence-to-next-chunk continuation is handled by ordinary gap
-      bookkeeping, because the crash simply ends the captured range early.
+   `min(declared_data_size, actual_file_bytes_after_header)` truncated down to
+   a whole PCM16 frame (even byte count); patch the header sizes to the
+   truncated length; fsync; **atomic rename** to the final `.wav` name; fsync
+   directory; compute checksum; transition `writing → ready` with
+   `recovered=true`, `sample_count = truncated_bytes / 2`,
+   `timeline_end_ms = timeline_start_ms + sample_count / 16000 * 1000`. The
+   resulting silence-to-next-chunk continuation is handled by ordinary gap
+   bookkeeping, because the crash simply ends the captured range early.
    b. **File present but unparseable/headerless/too short (<44 bytes or no valid
-      RIFF):** transition `writing → damaged`, move the file to `recovery/`
-      keeping its name for forensics.
+   RIFF):** transition `writing → damaged`, move the file to `recovery/`
+   keeping its name for forensics.
    c. **Row exists, file missing:** transition `writing → damaged` (empty
-      `storage_key` note); nothing else existed to lose.
+   `storage_key` note); nothing else existed to lose.
 3. **Reverse reconciliation.** Scan `audio/` for `.wav` files without a `ready`
    row (crash between rename and DB commit): verify parseability + checksum-less
    integrity (frame alignment), then insert/update the row to `ready` with
@@ -902,5 +902,5 @@ are recorded in the mission report; re-run with:
 pwsh -File docs/meeting-mode-architecture/verify-sketch.ps1
 ```
 
-*(helper script extracts fenced ```rust blocks from this file, wraps them in
-`#![allow(dead_code)]` and runs `rustc --edition 2021 --crate-type lib`.)*
+_(helper script extracts fenced ```rust blocks from this file, wraps them in
+`#![allow(dead_code)]`and runs`rustc --edition 2021 --crate-type lib`.)_

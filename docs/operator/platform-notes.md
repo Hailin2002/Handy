@@ -24,21 +24,21 @@ Anwendungsbereich jedes Knopfes auf einen Blick. „—“ = ohne Wirkung
 (nicht gelesen bzw. nicht kompiliert); Details und Belege in den genannten
 Abschnitten.
 
-| Knopf | Art | Windows | macOS | Linux X11 | Linux Wayland |
-|---|---|---|---|---|---|
-| `HANDY_NO_GTK_LAYER_SHELL` | Laufzeit | — | — | wirkt¹ | wirkt¹ |
-| `HANDY_METAL_RESIDENCY` / `GGML_METAL_NO_RESIDENCY` | Laufzeit (Weitergabe an ggml) | —² | wirkt² | — | — |
-| `RUST_LOG` | Laufzeit | wirkt | wirkt | wirkt | wirkt |
-| `HANDY_FORCE_TRANSCRIPTION_FAILURE` | Laufzeit, nur Debug-Builds | wirkt³ | wirkt³ | wirkt³ | wirkt³ |
-| `HANDY_DEBUG_MIC_READY_DELAY_MS` | Laufzeit, nur Debug-Builds | wirkt³ | wirkt³ | wirkt³ | wirkt³ |
-| `ORT_LIB_LOCATION` + `ORT_PREFER_DYNAMIC_LINK` | Build-Zeit | wirkt⁴ | wirkt⁵ | — | — |
-| `HANDY_VC_REDIST_DIRS` | Build-Zeit | wirkt⁴ | — | — | — |
-| `HANDY_FORCE_AI_STUB` | Build-Zeit | — | wirkt⁶ | — | — |
-| Whisper-GPU-Backend (Feature-Flag, nicht zur Laufzeit wählbar) | Build fest verdrahtet | Vulkan (x86_64) / CPU-only (ARM) | Metal | Vulkan + CPU-Dynamik-Backends | Vulkan + CPU-Dynamik-Backends |
-| Wayland-Erkennung (`WAYLAND_DISPLAY`, `XDG_SESSION_TYPE`, KDE-Variablen) | Laufzeit, nur Auswertung | — | — | — | wirkt |
-| Paste-/Clipboard-Hilfswerkzeuge (`wtype`, `kwtype`, `dotool`, `ydotool`, `xdotool`, `wl-copy`) | Laufzeit, extern binär | — | — | wirkt | wirkt |
-| `WEBKIT_DISABLE_DMABUF_RENDERER` | Laufzeit, von WebKitGTK gelesen; von Handy auf Linux hart gesetzt | — | — | — | von Handy gesetzt (`main.rs:10-15`) |
-| Autostart-Einstellung (`autostart_enabled`) | Laufzeit/Einstellung | Login-Eintrag via Plugin | SMAppService (macOS 13+) | Login-Eintrag via Plugin | Login-Eintrag via Plugin |
+| Knopf                                                                                          | Art                                                               | Windows                          | macOS                    | Linux X11                     | Linux Wayland                       |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------- | ------------------------ | ----------------------------- | ----------------------------------- |
+| `HANDY_NO_GTK_LAYER_SHELL`                                                                     | Laufzeit                                                          | —                                | —                        | wirkt¹                        | wirkt¹                              |
+| `HANDY_METAL_RESIDENCY` / `GGML_METAL_NO_RESIDENCY`                                            | Laufzeit (Weitergabe an ggml)                                     | —²                               | wirkt²                   | —                             | —                                   |
+| `RUST_LOG`                                                                                     | Laufzeit                                                          | wirkt                            | wirkt                    | wirkt                         | wirkt                               |
+| `HANDY_FORCE_TRANSCRIPTION_FAILURE`                                                            | Laufzeit, nur Debug-Builds                                        | wirkt³                           | wirkt³                   | wirkt³                        | wirkt³                              |
+| `HANDY_DEBUG_MIC_READY_DELAY_MS`                                                               | Laufzeit, nur Debug-Builds                                        | wirkt³                           | wirkt³                   | wirkt³                        | wirkt³                              |
+| `ORT_LIB_LOCATION` + `ORT_PREFER_DYNAMIC_LINK`                                                 | Build-Zeit                                                        | wirkt⁴                           | wirkt⁵                   | —                             | —                                   |
+| `HANDY_VC_REDIST_DIRS`                                                                         | Build-Zeit                                                        | wirkt⁴                           | —                        | —                             | —                                   |
+| `HANDY_FORCE_AI_STUB`                                                                          | Build-Zeit                                                        | —                                | wirkt⁶                   | —                             | —                                   |
+| Whisper-GPU-Backend (Feature-Flag, nicht zur Laufzeit wählbar)                                 | Build fest verdrahtet                                             | Vulkan (x86_64) / CPU-only (ARM) | Metal                    | Vulkan + CPU-Dynamik-Backends | Vulkan + CPU-Dynamik-Backends       |
+| Wayland-Erkennung (`WAYLAND_DISPLAY`, `XDG_SESSION_TYPE`, KDE-Variablen)                       | Laufzeit, nur Auswertung                                          | —                                | —                        | —                             | wirkt                               |
+| Paste-/Clipboard-Hilfswerkzeuge (`wtype`, `kwtype`, `dotool`, `ydotool`, `xdotool`, `wl-copy`) | Laufzeit, extern binär                                            | —                                | —                        | wirkt                         | wirkt                               |
+| `WEBKIT_DISABLE_DMABUF_RENDERER`                                                               | Laufzeit, von WebKitGTK gelesen; von Handy auf Linux hart gesetzt | —                                | —                        | —                             | von Handy gesetzt (`main.rs:10-15`) |
+| Autostart-Einstellung (`autostart_enabled`)                                                    | Laufzeit/Einstellung                                              | Login-Eintrag via Plugin         | SMAppService (macOS 13+) | Login-Eintrag via Plugin      | Login-Eintrag via Plugin            |
 
 ¹ Der Code-Pfad existiert nur in Linux-Builds (`#[cfg(target_os = "linux")]`,
 `src-tauri/src/overlay.rs:119,132`); unter X11 initialisiert gtk-layer-shell
@@ -166,12 +166,12 @@ vom Code gelesenen Knöpfe.
 Es gibt **keine Laufzeit-Auswahl** des GPU-Backends; die Auswahl geschieht
 über Cargo-Target-Features (`src-tauri/Cargo.toml`):
 
-| Target | transcribe-cpp-Features | Beleg |
-|---|---|---|
-| Windows x86_64 | `dynamic-backends` + `vulkan` (per-ISA-CPU-Module + `ggml-vulkan.dll` werden geladen) | `Cargo.toml:150-154` |
-| Windows ARM64 | statisch, CPU-only (keine Vulkan-Features; Adreno-Treiber + shader-generator-Begründung im Kommentar) | `Cargo.toml:156-157`, Begründung `141-149` |
-| macOS (beide Archs) | `metal`, statisch | `Cargo.toml:159-161` |
-| Linux | `dynamic-backends` + `vulkan` | `Cargo.toml:169-176` |
+| Target              | transcribe-cpp-Features                                                                               | Beleg                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Windows x86_64      | `dynamic-backends` + `vulkan` (per-ISA-CPU-Module + `ggml-vulkan.dll` werden geladen)                 | `Cargo.toml:150-154`                       |
+| Windows ARM64       | statisch, CPU-only (keine Vulkan-Features; Adreno-Treiber + shader-generator-Begründung im Kommentar) | `Cargo.toml:156-157`, Begründung `141-149` |
+| macOS (beide Archs) | `metal`, statisch                                                                                     | `Cargo.toml:159-161`                       |
+| Linux               | `dynamic-backends` + `vulkan`                                                                         | `Cargo.toml:169-176`                       |
 
 Operator-relevante Konsequenzen:
 

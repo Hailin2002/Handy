@@ -49,12 +49,12 @@ Komponentenfolge. Die möglichen Schritte sind genau drei, in dieser Reihenfolge
 `accessibility` → `model` → Hauptapp (`OnboardingStep`-Typ
 `src/App.tsx:33`; Renderverzweigung `src/App.tsx:327-332`).
 
-| Startsituation | Ablauf | Beleg |
-|---|---|---|
-| Neuer Nutzer (`onboarding_completed !== true`) | Vollständiges Onboarding: zuerst Berechtigungen, dann Modellwahl | `src/App.tsx:274-278` |
-| Rückkehrer mit vollständigem Onboarding, Berechtigungen intakt | Direkt Hauptapp, kein Onboarding | `src/App.tsx:234-273` |
-| Rückkehrer, aber macOS-Berechtigungen (Mikrofon/Accessibility) oder Windows-Mikrofonfreigabe inzwischen entzogen | Erneut nur der Berechtigungs-Schritt, dann Hauptapp | `src/App.tsx:238-271` |
-| Prüffehler beim Lesen der Einstellungen | Sicherungskurs: volles Onboarding | `src/App.tsx:279-282` |
+| Startsituation                                                                                                   | Ablauf                                                           | Beleg                 |
+| ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------- |
+| Neuer Nutzer (`onboarding_completed !== true`)                                                                   | Vollständiges Onboarding: zuerst Berechtigungen, dann Modellwahl | `src/App.tsx:274-278` |
+| Rückkehrer mit vollständigem Onboarding, Berechtigungen intakt                                                   | Direkt Hauptapp, kein Onboarding                                 | `src/App.tsx:234-273` |
+| Rückkehrer, aber macOS-Berechtigungen (Mikrofon/Accessibility) oder Windows-Mikrofonfreigabe inzwischen entzogen | Erneut nur der Berechtigungs-Schritt, dann Hauptapp              | `src/App.tsx:238-271` |
+| Prüffehler beim Lesen der Einstellungen                                                                          | Sicherungskurs: volles Onboarding                                | `src/App.tsx:279-282` |
 
 ### Schritt 3 — Berechtigungen erteilen (nur wo nötig)
 
@@ -99,11 +99,11 @@ Die Standardbindings sind plattformabhängig fest verdrahtet
 (`src-tauri/src/settings/schema.rs:551-601`) und lassen sich später in den
 Einstellungen ändern:
 
-| Aktion | Windows/Linux | macOS | Default Push-to-Talk? |
-|---|---|---|---|
-| Diktieren | `Ctrl+Leertaste` | `Option+Leertaste` | ja — gedrückt halten, sprechen, loslassen |
-| Diktat mit Nachbearbeitung | `Ctrl+Shift+Leertaste` | `Option+Shift+Leertaste` | ja |
-| Aufnahme abbrechen | `Escape` | `Escape` | — |
+| Aktion                     | Windows/Linux          | macOS                    | Default Push-to-Talk?                     |
+| -------------------------- | ---------------------- | ------------------------ | ----------------------------------------- |
+| Diktieren                  | `Ctrl+Leertaste`       | `Option+Leertaste`       | ja — gedrückt halten, sprechen, loslassen |
+| Diktat mit Nachbearbeitung | `Ctrl+Shift+Leertaste` | `Option+Shift+Leertaste` | ja                                        |
+| Aufnahme abbrechen         | `Escape`               | `Escape`                 | —                                         |
 
 Push-to-Talk ist ab Werk aktiviert (`default_push_to_talk() -> true`,
 `schema.rs:197-199`): Shortcut **halten**, sprechen, loslassen.
@@ -130,11 +130,11 @@ Symptom-Matrizen; diese hier wiederholt keine Ursachen, sondern ordnet nur zu.
 Log-Evidenz immer mit `--debug` sammeln (CLI-Flag, Definition in
 `src-tauri/src/cli.rs`).
 
-| Symptom im Quickstart | Zuständige Matrix | Einstieg |
-|---|---|---|
-| Kein Mikrofon gefunden, falsches Gerät, Aufnahme bleibt stumm, Gerät wechselt mitten im Diktat, Mikrofonberechtigung | [troubleshooting-audio-devices.md](troubleshooting-audio-devices.md) | Symptom-Matrix §2 (R-Fälle je Unterabschnitt 2.1–2.5), Diagnose-Schnellpfad §3 |
-| Modell-Download startet nicht / bricht ab / friert ein, Prüfsummen- oder Größenfehler, Offline-/Drop-in-Setup, Speicherplatz | [troubleshooting-models.md](troubleshooting-models.md) | Symptom-Matrix §3 (R1–R15), Diagnose-Schnellpfad §4 |
-| Shortcut reagiert nicht oder doppelt belegt, PTT-Eigenheiten, CLI-Flags wirkungslos, Tray-/Hidden-Start-Sonderfälle | [troubleshooting-shortcuts-cli.md](troubleshooting-shortcuts-cli.md) | Symptom-Matrizen §4 (R1–R20), Diagnose-Schnellpfad §5 |
+| Symptom im Quickstart                                                                                                        | Zuständige Matrix                                                    | Einstieg                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Kein Mikrofon gefunden, falsches Gerät, Aufnahme bleibt stumm, Gerät wechselt mitten im Diktat, Mikrofonberechtigung         | [troubleshooting-audio-devices.md](troubleshooting-audio-devices.md) | Symptom-Matrix §2 (R-Fälle je Unterabschnitt 2.1–2.5), Diagnose-Schnellpfad §3 |
+| Modell-Download startet nicht / bricht ab / friert ein, Prüfsummen- oder Größenfehler, Offline-/Drop-in-Setup, Speicherplatz | [troubleshooting-models.md](troubleshooting-models.md)               | Symptom-Matrix §3 (R1–R15), Diagnose-Schnellpfad §4                            |
+| Shortcut reagiert nicht oder doppelt belegt, PTT-Eigenheiten, CLI-Flags wirkungslos, Tray-/Hidden-Start-Sonderfälle          | [troubleshooting-shortcuts-cli.md](troubleshooting-shortcuts-cli.md) | Symptom-Matrizen §4 (R1–R20), Diagnose-Schnellpfad §5                          |
 
 Sonderfälle, die bewusst **nicht** in diesen Quickstart gehören:
 

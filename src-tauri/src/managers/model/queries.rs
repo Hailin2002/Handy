@@ -8,11 +8,12 @@ use tauri::Emitter;
 use super::info::canonicalize_supported_languages;
 use super::support::RescanGuard;
 use super::*;
+use crate::sync::MutexExt;
 
 impl ModelManager {
     pub fn get_available_models(&self) -> Vec<ModelInfo> {
         let mut list: Vec<ModelInfo> = {
-            let models = self.available_models.lock().unwrap();
+            let models = self.available_models.lock_recover();
             models.values().cloned().collect()
         };
         // Stable, reasonable order: catalog editorial rank first (lower = higher
@@ -86,7 +87,7 @@ impl ModelManager {
         // Snapshot the current registry and discover against the copy off-lock.
         // The discover_* helpers are purely additive (they skip ids already in
         // the map), so the snapshot ends up as {current} ∪ {newly-found}.
-        let mut snapshot = self.available_models.lock().unwrap().clone();
+        let mut snapshot = self.available_models.lock_recover().clone();
         if let Err(e) = Self::discover_custom_transcribe_models(&self.models_dir, &mut snapshot) {
             warn!("Rescan: failed to discover custom models: {}", e);
         }
@@ -96,7 +97,7 @@ impl ModelManager {
         // leaves every existing entry exactly as it was.
         let mut added = 0usize;
         {
-            let mut live = self.available_models.lock().unwrap();
+            let mut live = self.available_models.lock_recover();
             for (id, info) in snapshot {
                 if let std::collections::hash_map::Entry::Vacant(entry) = live.entry(id) {
                     entry.insert(info);
@@ -110,12 +111,12 @@ impl ModelManager {
         if added > 0 {
             info!("Model rescan discovered {} new model(s)", added);
         }
-        let _ = self.app_handle.emit("models-updated", ());
+        let _ = self.app_handle.emit(crate::events::MODELS_UPDATED, ());
         Ok(())
     }
 
     pub fn get_model_info(&self, model_id: &str) -> Option<ModelInfo> {
-        let models = self.available_models.lock().unwrap();
+        let models = self.available_models.lock_recover();
         models.get(model_id).cloned()
     }
 
@@ -141,7 +142,7 @@ impl ModelManager {
         supported_languages: Vec<String>,
     ) {
         let supported_languages = canonicalize_supported_languages(supported_languages);
-        let mut models = self.available_models.lock().unwrap();
+        let mut models = self.available_models.lock_recover();
         if let Some(model) = models.get_mut(model_id) {
             model.supports_streaming = supports_streaming;
             model.supports_translation = supports_translation;

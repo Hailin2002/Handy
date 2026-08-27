@@ -578,7 +578,7 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, state: &str) {
             );
         }
 
-        let _ = overlay_window.emit("show-overlay", state);
+        let _ = overlay_window.emit(crate::events::SHOW_OVERLAY, state);
     }
 }
 
@@ -595,7 +595,7 @@ pub fn emit_recording_ready(app_handle: &AppHandle) {
     // and then get reset back to the arming state by the frontend.
     let handle = app_handle.clone();
     let _ = app_handle.run_on_main_thread(move || {
-        let _ = handle.emit_to("recording_overlay", "recording-ready", ());
+        let _ = handle.emit_to("recording_overlay", crate::events::RECORDING_READY, ());
     });
 }
 
@@ -691,7 +691,7 @@ pub fn hide_recording_overlay(app_handle: &AppHandle) {
     // we still want to hide it properly
     if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
         // Emit event to trigger fade-out animation
-        let _ = overlay_window.emit("hide-overlay", ());
+        let _ = overlay_window.emit(crate::events::HIDE_OVERLAY, ());
         // Hide the window after a short delay to allow animation to complete
         let window_clone = overlay_window.clone();
         std::thread::spawn(move || {
@@ -755,7 +755,7 @@ pub fn emit_levels(app_handle: &AppHandle, levels: &[f32]) {
     // `emit_to` with the overlay's window label produces a single
     // eval_script call per callback, cutting the per-callback WebKit
     // dispatch work in half.
-    let _ = app_handle.emit_to("recording_overlay", "mic-level", levels);
+    let _ = app_handle.emit_to("recording_overlay", crate::events::MIC_LEVEL, levels);
 }
 
 #[cfg(test)]

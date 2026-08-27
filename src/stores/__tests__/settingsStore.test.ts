@@ -15,6 +15,7 @@ vi.mock("@/bindings", () => ({
     getAvailableOutputDevices: vi.fn(),
     checkCustomSounds: vi.fn(),
     changeAudioFeedbackSetting: vi.fn(),
+    changeBinding: vi.fn(),
   },
 }));
 
@@ -22,8 +23,11 @@ import type { AppSettings } from "@/bindings";
 import { commands } from "@/bindings";
 import { useSettingsStore } from "../settingsStore";
 
-const mockedChangeAudioFeedback = vi.mocked(commands.changeAudioFeedbackSetting);
+const mockedChangeAudioFeedback = vi.mocked(
+  commands.changeAudioFeedbackSetting,
+);
 const mockedGetAppSettings = vi.mocked(commands.getAppSettings);
+const mockedChangeBinding = vi.mocked(commands.changeBinding);
 
 const makeSettings = (overrides: Partial<AppSettings> = {}): AppSettings => ({
   push_to_talk: true,
@@ -185,6 +189,68 @@ describe("settingsStore.refreshSettings (persisted-field hydration)", () => {
 
     expect(useSettingsStore.getState().isLoading).toBe(false);
     expect(useSettingsStore.getState().settings).toBeNull();
+    expect(errorSpy).toHaveBeenCalled();
+  });
+});
+
+describe("settingsStore.updateBinding", () => {
+  const binding = {
+    id: "transcribe",
+    name: "Transcribe",
+    description: "Start or stop dictation",
+    default_binding: "ctrl+space",
+    current_binding: "ctrl+space",
+  };
+
+  it("updates the existing binding optimistically and persists it", async () => {
+    seedStore(makeSettings({ bindings: { transcribe: binding } }));
+    mockedChangeBinding.mockResolvedValue({
+      status: "ok",
+      data: { success: true, binding: null, error: null },
+    });
+
+    const pending = useSettingsStore
+      .getState()
+      .updateBinding("transcribe", "alt+space");
+
+    expect(useSettingsStore.getState().settings?.bindings?.transcribe).toEqual({
+      ...binding,
+      current_binding: "alt+space",
+    });
+
+    await pending;
+    expect(mockedChangeBinding).toHaveBeenCalledWith("transcribe", "alt+space");
+  });
+
+  // Regression: the optimistic update used to spread `bindings?.[id]!`, so an
+  // unknown id produced an entry holding only `current_binding` — a
+  // ShortcutBinding missing every other required field, written into state and
+  // rendered by the settings UI.
+  it("leaves state untouched when the binding does not exist", async () => {
+    seedStore(makeSettings({ bindings: {} }));
+    mockedChangeBinding.mockResolvedValue({
+      status: "ok",
+      data: { success: true, binding: null, error: null },
+    });
+
+    await useSettingsStore.getState().updateBinding("unknown", "alt+space");
+
+    expect(useSettingsStore.getState().settings?.bindings).toEqual({});
+  });
+
+  it("rolls back to the original binding when the command throws", async () => {
+    seedStore(makeSettings({ bindings: { transcribe: binding } }));
+    mockedChangeBinding.mockRejectedValue(new Error("shortcut in use"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      useSettingsStore.getState().updateBinding("transcribe", "alt+space"),
+    ).rejects.toThrow("shortcut in use");
+
+    expect(
+      useSettingsStore.getState().settings?.bindings?.transcribe
+        ?.current_binding,
+    ).toBe("ctrl+space");
     expect(errorSpy).toHaveBeenCalled();
   });
 });

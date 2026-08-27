@@ -7,7 +7,8 @@
 //! stays data.
 
 use speak_app_lib::managers::meeting_store::{
-    MeetingRepository, NewProject, NewWhatsappSource, SqliteMeetingStore, Uuid,
+    MeetingRepository, NewChatSource, NewProject, ProjectRepository, SearchRepository,
+    SourceRepository, SqliteMeetingStore, TaskRepository, Uuid,
 };
 use speak_app_lib::managers::meeting_summary::SummaryLlm;
 use speak_app_lib::managers::project_intelligence::{
@@ -73,7 +74,8 @@ fn fixture(messages: Vec<(&str, &str)>) -> Fixture {
         .expect("project");
 
     let (source, _) = store
-        .create_whatsapp_source(NewWhatsappSource {
+        .create_chat_source(NewChatSource {
+            source_type: "whatsapp_export".to_string(),
             title: "Chat".into(),
             parser_version: "v1".into(),
             content_hash: "hash-e2e".into(),

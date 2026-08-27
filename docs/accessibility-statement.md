@@ -3,8 +3,8 @@
 - **Status:** Honest current-state statement — **not** a conformance claim.
 - **Date:** 2026-08-22
 - **Verified against:** HEAD commit `e8278628d30e59408ca9b80d1dea35d2c3502f1b` (clean worktree, `git status --porcelain` empty).
-- **Scope:** the *shipped* dictation application as it exists today, plus the
-  *planned* meeting-mode accessibility targets. This document makes no claim
+- **Scope:** the _shipped_ dictation application as it exists today, plus the
+  _planned_ meeting-mode accessibility targets. This document makes no claim
   about any meeting-mode feature, because meeting mode is not implemented
   (see `docs/meeting-mode-documentation-index.md`, section 1).
 
@@ -184,14 +184,14 @@ dedicated accessibility team, SLA, or separate contact address.
 
 ## 4. Claim-to-evidence verification table
 
-| Claim in this statement | Evidence |
-|---|---|
-| No WCAG conformance claimed; only internal code-level audit exists | Absence of any audit artifacts besides `docs/a11y-baseline-meeting-mode.md` (HEAD-pinned in its header) |
-| Contrast gap open (task D6 pending) | Baseline §1 6.14.6 FAIL + §2 item 6; `src/styles/theme.css:28` (#808080), no `--color-text-muted` match in `src/styles/theme.css`, live `text-mid-gray` text usages cited above |
-| Reduced-motion gap open (task D7 pending) | Baseline §1 6.14.7 FAIL + §2 item 7; grep `prefers-reduced-motion\|motion-reduce` over `src/` → 0 matches at HEAD `e8278628` |
-| SR-naming gap open (task D10 pending) | Baseline §1 6.14.4 PARTIAL + §2 item 10; `ModelStatusButton.tsx:55`, `ProgressBar.tsx:46–50,83` read directly at HEAD `e8278628` |
-| Partial remediation happened post-audit | `HistorySettings.tsx:430–480` aria-labels; `aria-live` matches in `ModelSelector.tsx:293`, `GlobalShortcutInput.tsx:311`, `HandyKeysShortcutInput.tsx:360`, `RecordingOverlay.tsx:258` |
-| Meeting-mode targets are plans, not features | `docs/meeting-mode-plan.md` §6.14 (lines 683–695), §6.15 (697–721), §6.21 (854–875); index section 1 "no implementation yet" |
-| Feedback channels | `.github/ISSUE_TEMPLATE/config.yml`, `AGENTS.md` GitHub workflow section |
+| Claim in this statement                                            | Evidence                                                                                                                                                                               |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No WCAG conformance claimed; only internal code-level audit exists | Absence of any audit artifacts besides `docs/a11y-baseline-meeting-mode.md` (HEAD-pinned in its header)                                                                                |
+| Contrast gap open (task D6 pending)                                | Baseline §1 6.14.6 FAIL + §2 item 6; `src/styles/theme.css:28` (#808080), no `--color-text-muted` match in `src/styles/theme.css`, live `text-mid-gray` text usages cited above        |
+| Reduced-motion gap open (task D7 pending)                          | Baseline §1 6.14.7 FAIL + §2 item 7; grep `prefers-reduced-motion\|motion-reduce` over `src/` → 0 matches at HEAD `e8278628`                                                           |
+| SR-naming gap open (task D10 pending)                              | Baseline §1 6.14.4 PARTIAL + §2 item 10; `ModelStatusButton.tsx:55`, `ProgressBar.tsx:46–50,83` read directly at HEAD `e8278628`                                                       |
+| Partial remediation happened post-audit                            | `HistorySettings.tsx:430–480` aria-labels; `aria-live` matches in `ModelSelector.tsx:293`, `GlobalShortcutInput.tsx:311`, `HandyKeysShortcutInput.tsx:360`, `RecordingOverlay.tsx:258` |
+| Meeting-mode targets are plans, not features                       | `docs/meeting-mode-plan.md` §6.14 (lines 683–695), §6.15 (697–721), §6.21 (854–875); index section 1 "no implementation yet"                                                           |
+| Feedback channels                                                  | `.github/ISSUE_TEMPLATE/config.yml`, `AGENTS.md` GitHub workflow section                                                                                                               |
 
-*End of statement.*
+_End of statement._

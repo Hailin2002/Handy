@@ -7,10 +7,7 @@ import {
   SETTINGS_TAB_ORDER,
   type SettingsSectionId,
 } from "./settingsSections";
-import {
-  buildSettingsHash,
-  settingsSectionFromHash,
-} from "./settingsDeepLink";
+import { buildSettingsHash, settingsSectionFromHash } from "./settingsDeepLink";
 
 /**
  * Einstellungen page (plan §6.3): a dedicated settings view with secondary

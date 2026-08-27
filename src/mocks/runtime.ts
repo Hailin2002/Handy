@@ -1,4 +1,8 @@
-import type { MockTauriInternals, RegisteredCallback, SpeakMockBridge } from "./types";
+import type {
+  MockTauriInternals,
+  RegisteredCallback,
+  SpeakMockBridge,
+} from "./types";
 import { LISTEN_SENTINEL, MockBackend, handleCommand } from "./backend";
 import type { SpeakMockConfig } from "./types";
 

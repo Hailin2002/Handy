@@ -1,73 +1,73 @@
 {
-    "schemaVersion":  1,
-    "capturedAt":  "2026-08-22T19:36:11.560Z",
-    "generator":  "scripts/verify/capture-env-fingerprint.ps1",
-    "host":  {
-                 "label":  "V33"
-             },
-    "os":  {
-               "caption":  "Windows 11 Pro",
-               "version":  "10.0.26200",
-               "buildNumber":  "26200",
-               "updateBuildRevision":  9168,
-               "fullBuild":  "26200.9168",
-               "displayVersion":  "25H2",
-               "editionId":  "Professional",
-               "architecture":  "64-bit"
-           },
-    "cpu":  {
-                "name":  "12th Gen Intel(R) Core(TM) i7-12700K",
-                "physicalCores":  null,
-                "logicalCores":  20,
-                "maxClockSpeedMhz":  3610
-            },
-    "memory":  {
-                   "totalPhysicalBytes":  34120851456
-               },
-    "gpu":  [
-                {
-                    "name":  "Intel(R) UHD Graphics 770",
-                    "driverVersion":  "32.0.101.6129"
-                },
-                {
-                    "name":  "NVIDIA GeForce RTX 2080",
-                    "driverVersion":  "32.0.15.9186"
-                }
-            ],
-    "audio":  {
-                  "backend":  "wasapi-mmdevice-active-endpoints",
-                  "render":  [
-                                 {
-                                     "id":  "{5a57e8a4-0df9-4efb-ab16-fcfb859ccb6e}",
-                                     "name":  "Speakers (Focusrite USB Audio)"
-                                 },
-                                 {
-                                     "id":  "{99414897-54c4-4e4b-bea0-3271d8d0e9f6}",
-                                     "name":  "LG HDR 4K (NVIDIA High Definition Audio)"
-                                 },
-                                 {
-                                     "id":  "{0f85b8de-7d1b-4f58-a21a-211f90b18a5d}",
-                                     "name":  "Digital Output (Realtek USB2.0 Audio)"
-                                 },
-                                 {
-                                     "id":  "{3ecca533-0a34-4556-9dbc-a5ac46687ac9}",
-                                     "name":  "27MP55 (NVIDIA High Definition Audio)"
-                                 }
-                             ],
-                  "capture":  [
-                                  {
-                                      "id":  "{8efa098b-c6dc-4e6d-ad4b-c46015a966e5}",
-                                      "name":  "Analogue 1 + 2 (Focusrite USB Audio)"
-                                  }
-                              ]
-              },
-    "toolchain":  {
-                      "bun":  null,
-                      "node":  "v24.19.0",
-                      "cargo":  "cargo 1.98.0 (797e8a9bc 2026-08-05)",
-                      "rustc":  "rustc 1.98.0 (88d9e12ae 2026-08-18)",
-                      "cmake":  "cmake version 3.29.2",
-                      "git":  "git version 2.55.0.windows.5",
-                      "python":  "Python 3.14.7"
-                  }
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-22T19:36:11.560Z",
+  "generator": "scripts/verify/capture-env-fingerprint.ps1",
+  "host": {
+    "label": "V33"
+  },
+  "os": {
+    "caption": "Windows 11 Pro",
+    "version": "10.0.26200",
+    "buildNumber": "26200",
+    "updateBuildRevision": 9168,
+    "fullBuild": "26200.9168",
+    "displayVersion": "25H2",
+    "editionId": "Professional",
+    "architecture": "64-bit"
+  },
+  "cpu": {
+    "name": "12th Gen Intel(R) Core(TM) i7-12700K",
+    "physicalCores": null,
+    "logicalCores": 20,
+    "maxClockSpeedMhz": 3610
+  },
+  "memory": {
+    "totalPhysicalBytes": 34120851456
+  },
+  "gpu": [
+    {
+      "name": "Intel(R) UHD Graphics 770",
+      "driverVersion": "32.0.101.6129"
+    },
+    {
+      "name": "NVIDIA GeForce RTX 2080",
+      "driverVersion": "32.0.15.9186"
+    }
+  ],
+  "audio": {
+    "backend": "wasapi-mmdevice-active-endpoints",
+    "render": [
+      {
+        "id": "{5a57e8a4-0df9-4efb-ab16-fcfb859ccb6e}",
+        "name": "Speakers (Focusrite USB Audio)"
+      },
+      {
+        "id": "{99414897-54c4-4e4b-bea0-3271d8d0e9f6}",
+        "name": "LG HDR 4K (NVIDIA High Definition Audio)"
+      },
+      {
+        "id": "{0f85b8de-7d1b-4f58-a21a-211f90b18a5d}",
+        "name": "Digital Output (Realtek USB2.0 Audio)"
+      },
+      {
+        "id": "{3ecca533-0a34-4556-9dbc-a5ac46687ac9}",
+        "name": "27MP55 (NVIDIA High Definition Audio)"
+      }
+    ],
+    "capture": [
+      {
+        "id": "{8efa098b-c6dc-4e6d-ad4b-c46015a966e5}",
+        "name": "Analogue 1 + 2 (Focusrite USB Audio)"
+      }
+    ]
+  },
+  "toolchain": {
+    "bun": null,
+    "node": "v24.19.0",
+    "cargo": "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+    "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+    "cmake": "cmake version 3.29.2",
+    "git": "git version 2.55.0.windows.5",
+    "python": "Python 3.14.7"
+  }
 }

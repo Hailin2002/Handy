@@ -323,7 +323,7 @@ impl HandyKeysState {
                 };
 
                 // Emit to frontend
-                if let Err(e) = app.emit("handy-keys-event", &frontend_event) {
+                if let Err(e) = app.emit(crate::events::HANDY_KEYS_EVENT, &frontend_event) {
                     error!("Failed to emit key event: {}", e);
                 }
             } else {

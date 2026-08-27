@@ -1,5 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
-import { installTauriMock, readBridge, tEn, wasInvokedWith } from "./helpers/tauri-mock";
+import {
+  installTauriMock,
+  readBridge,
+  tEn,
+  wasInvokedWith,
+} from "./helpers/tauri-mock";
 
 test.describe("Model selector (mocked Tauri IPC)", () => {
   // The footer status button's accessible name is the translated model name.
@@ -14,9 +19,7 @@ test.describe("Model selector (mocked Tauri IPC)", () => {
   test("displays the active model name in the footer", async ({ page }) => {
     const status = statusButton(page, "onboarding.models.small.name");
     await expect(status).toBeVisible();
-    await expect(status).toContainText(
-      tEn("onboarding.models.small.name"),
-    );
+    await expect(status).toContainText(tEn("onboarding.models.small.name"));
   });
 
   test("dropdown lists the downloaded models with the active one marked", async ({
@@ -33,10 +36,14 @@ test.describe("Model selector (mocked Tauri IPC)", () => {
     await expect(dropdown.getByText(parakeetName)).toBeVisible();
 
     // ...the not-downloaded model is not offered.
-    expect(dropdown.getByText(tEn("onboarding.models.large.name"))).toHaveCount(0);
+    expect(dropdown.getByText(tEn("onboarding.models.large.name"))).toHaveCount(
+      0,
+    );
 
     // The current model carries the "Active" badge.
-    await expect(dropdown.getByText(tEn("modelSelector.active"))).toHaveCount(1);
+    await expect(dropdown.getByText(tEn("modelSelector.active"))).toHaveCount(
+      1,
+    );
   });
 
   test("selecting another model persists the choice via set_active_model", async ({
@@ -44,10 +51,7 @@ test.describe("Model selector (mocked Tauri IPC)", () => {
   }) => {
     await statusButton(page, "onboarding.models.small.name").click();
     const parakeetName = tEn("onboarding.models.parakeet-tdt-0.6b-v3.name");
-    await page
-      .locator(".absolute.bottom-full")
-      .getByText(parakeetName)
-      .click();
+    await page.locator(".absolute.bottom-full").getByText(parakeetName).click();
 
     // Optimistic switch: footer now shows the new model.
     await expect(

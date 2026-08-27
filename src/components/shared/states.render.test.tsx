@@ -19,7 +19,6 @@ let errorWarningHtml: string;
 beforeAll(async () => {
   await i18next.use(initReactI18next).init({
     lng: "en",
-    initImmediate: false,
     resources: {
       en: {
         translation: {

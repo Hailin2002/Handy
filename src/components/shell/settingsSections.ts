@@ -1,4 +1,5 @@
-import React from "react";
+import type React from "react";
+import type { AppSettings } from "@/bindings";
 import {
   AudioLines,
   Mic,
@@ -7,10 +8,7 @@ import {
   Cpu,
   FlaskConical,
 } from "lucide-react";
-import {
-  AdvancedSettings,
-  DebugSettings,
-} from "../settings";
+import { AdvancedSettings, DebugSettings } from "../settings";
 import {
   AppGeneralTab,
   DictationSettingsTab,
@@ -44,7 +42,7 @@ export interface SettingsSectionConfig {
     className?: string;
   }>;
   component: React.ComponentType;
-  enabled: (settings: any) => boolean;
+  enabled: (settings: AppSettings | null | undefined) => boolean;
 }
 
 export const SECTIONS_CONFIG = {

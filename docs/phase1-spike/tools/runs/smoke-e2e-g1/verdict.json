@@ -1,55 +1,55 @@
 {
-    "schema":  "smoke-suite-verdict/1",
-    "mode":  "live",
-    "status":  "fail",
-    "run_id":  "smoke-e2e-g1",
-    "started_utc":  "2026-08-24T06:50:13.3565235Z",
-    "finished_utc":  "2026-08-24T06:51:58.5394559Z",
-    "duration_s":  90,
-    "tone_seconds":  30,
-    "spike_exe":  "C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\src-tauri\\target\\debug\\meeting_loopback_spike.exe",
-    "spike_exit_code":  null,
-    "artifacts":  {
-                      "csv":  "C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\docs\\phase1-spike\\tools\\runs\\smoke-e2e-g1\\meeting_loopback_spike_smoke.csv",
-                      "summary_md":  "C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\docs\\phase1-spike\\tools\\runs\\smoke-e2e-g1\\SUMMARY.md",
-                      "events_log":  "C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\docs\\phase1-spike\\tools\\runs\\smoke-e2e-g1\\events.log"
-                  },
-    "checks":  [
-                   {
-                       "expected":  "\u003e= 60 s",
-                       "pass":  false,
-                       "name":  "capture_span_at_least_60s",
-                       "actual":  "36.2 s"
-                   },
-                   {
-                       "expected":  "\u003e 0 non-error rows",
-                       "pass":  true,
-                       "name":  "microphone_source_present",
-                       "actual":  "8988 rows"
-                   },
-                   {
-                       "expected":  "\u003e 0 non-error rows",
-                       "pass":  true,
-                       "name":  "loopback_source_present",
-                       "actual":  "3029 rows"
-                   },
-                   {
-                       "expected":  "0 error rows",
-                       "pass":  true,
-                       "name":  "no_stream_errors",
-                       "actual":  "mic=0 loopback=0"
-                   },
-                   {
-                       "expected":  "\u003e 0 non-silent loopback callbacks",
-                       "pass":  true,
-                       "name":  "loopback_heard_tone",
-                       "actual":  "2990 non-silent rows"
-                   },
-                   {
-                       "expected":  "SUMMARY.md exists",
-                       "pass":  true,
-                       "name":  "analyzer_summary_written",
-                       "actual":  "True"
-                   }
-               ]
+  "schema": "smoke-suite-verdict/1",
+  "mode": "live",
+  "status": "fail",
+  "run_id": "smoke-e2e-g1",
+  "started_utc": "2026-08-24T06:50:13.3565235Z",
+  "finished_utc": "2026-08-24T06:51:58.5394559Z",
+  "duration_s": 90,
+  "tone_seconds": 30,
+  "spike_exe": "C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\src-tauri\\target\\debug\\meeting_loopback_spike.exe",
+  "spike_exit_code": null,
+  "artifacts": {
+    "csv": "C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\docs\\phase1-spike\\tools\\runs\\smoke-e2e-g1\\meeting_loopback_spike_smoke.csv",
+    "summary_md": "C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\docs\\phase1-spike\\tools\\runs\\smoke-e2e-g1\\SUMMARY.md",
+    "events_log": "C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\docs\\phase1-spike\\tools\\runs\\smoke-e2e-g1\\events.log"
+  },
+  "checks": [
+    {
+      "expected": "\u003e= 60 s",
+      "pass": false,
+      "name": "capture_span_at_least_60s",
+      "actual": "36.2 s"
+    },
+    {
+      "expected": "\u003e 0 non-error rows",
+      "pass": true,
+      "name": "microphone_source_present",
+      "actual": "8988 rows"
+    },
+    {
+      "expected": "\u003e 0 non-error rows",
+      "pass": true,
+      "name": "loopback_source_present",
+      "actual": "3029 rows"
+    },
+    {
+      "expected": "0 error rows",
+      "pass": true,
+      "name": "no_stream_errors",
+      "actual": "mic=0 loopback=0"
+    },
+    {
+      "expected": "\u003e 0 non-silent loopback callbacks",
+      "pass": true,
+      "name": "loopback_heard_tone",
+      "actual": "2990 non-silent rows"
+    },
+    {
+      "expected": "SUMMARY.md exists",
+      "pass": true,
+      "name": "analyzer_summary_written",
+      "actual": "True"
+    }
+  ]
 }
