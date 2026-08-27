@@ -136,6 +136,12 @@ test.describe("Einstellungen page tabs", () => {
   test("deep links open the mapped tab, including legacy section hashes", async ({
     page,
   }) => {
+    // Eight full navigations, each a complete page load and React mount. That
+    // does not fit Playwright's 30s default on a dev server, especially in
+    // Firefox where React's development-mode double-invoked effects make each
+    // mount measurably slower. `slow()` triples the budget rather than the test
+    // being flaky about how busy the machine is.
+    test.slow();
     // Canonical tab ids.
     await gotoSettings(page, "#/settings/modelsProviders");
     await expect(activeTabId(page)).resolves.toBe("modelsProviders");

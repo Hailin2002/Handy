@@ -67,7 +67,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Two of the three projects (dev-chromium and firefox) share a single
+  // `vite dev` server. Left uncapped, Playwright spawns one worker per core and
+  // they overload it — route handlers fail with ECONNRESET and navigations time
+  // out, in whichever test happens to be running. Capping keeps local runs
+  // deterministic while staying well above serial. CI already runs serially.
+  workers: process.env.CI ? 1 : 4,
   reporter: "html",
   use: {
     baseURL: DEV_BASE_URL,
