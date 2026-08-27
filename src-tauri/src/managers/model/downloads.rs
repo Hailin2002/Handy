@@ -13,6 +13,7 @@ use tauri::Emitter;
 use super::download::{HttpDownloadOutcome, DOWNLOAD_STALL_TIMEOUT};
 use super::support::{hf_cached_path, DownloadCleanup, HfDownloadProgress};
 use super::*;
+use crate::sync::MutexExt;
 
 /// Download a Hugging Face-sourced model into the shared HF cache via
 /// hf-hub, reporting progress through the same `model-download-progress`
@@ -40,7 +41,7 @@ impl ModelManager {
 
         // Mark downloading; the guard resets the flag on any error path.
         {
-            let mut models = self.available_models.lock().unwrap();
+            let mut models = self.available_models.lock_recover();
             if let Some(model) = models.get_mut(&model_id) {
                 model.is_downloading = true;
             }
@@ -50,7 +51,7 @@ impl ModelManager {
         // transfer promptly. The guard removes it on every exit path.
         let cancel_token = CancellationToken::new();
         {
-            let mut flags = self.cancel_flags.lock().unwrap();
+            let mut flags = self.cancel_flags.lock_recover();
             flags.insert(model_id.clone(), cancel_token.clone());
         }
 
@@ -272,7 +273,7 @@ impl ModelManager {
 
         cleanup.disarmed = true;
         self.update_download_status()?;
-        self.cancel_flags.lock().unwrap().remove(&model_id);
+        self.cancel_flags.lock_recover().remove(&model_id);
         let _ = self.app_handle.emit("model-download-complete", &model_id);
         info!("HF model {} downloaded", model_id);
         Ok(())
@@ -321,7 +322,7 @@ impl ModelManager {
 
     pub async fn download_model(&self, model_id: &str) -> Result<()> {
         let model_info = {
-            let models = self.available_models.lock().unwrap();
+            let models = self.available_models.lock_recover();
             models.get(model_id).cloned()
         };
 
@@ -356,7 +357,7 @@ impl ModelManager {
 
         // Mark as downloading
         {
-            let mut models = self.available_models.lock().unwrap();
+            let mut models = self.available_models.lock_recover();
             if let Some(model) = models.get_mut(model_id) {
                 model.is_downloading = true;
             }
@@ -365,7 +366,7 @@ impl ModelManager {
         // Create cancellation token for this download
         let cancel_token = CancellationToken::new();
         {
-            let mut flags = self.cancel_flags.lock().unwrap();
+            let mut flags = self.cancel_flags.lock_recover();
             flags.insert(model_id.to_string(), cancel_token.clone());
         }
 
@@ -404,7 +405,7 @@ impl ModelManager {
         if model_info.is_directory {
             // Track that this model is being extracted
             {
-                let mut extracting = self.extracting_models.lock().unwrap();
+                let mut extracting = self.extracting_models.lock_recover();
                 extracting.insert(model_id.to_string());
             }
 
@@ -441,7 +442,7 @@ impl ModelManager {
                 let _ = fs::remove_file(&partial_path);
                 // Remove from extracting set
                 {
-                    let mut extracting = self.extracting_models.lock().unwrap();
+                    let mut extracting = self.extracting_models.lock_recover();
                     extracting.remove(model_id);
                 }
                 let _ = self.app_handle.emit(
@@ -480,7 +481,7 @@ impl ModelManager {
             info!("Successfully extracted archive for model: {}", model_id);
             // Remove from extracting set
             {
-                let mut extracting = self.extracting_models.lock().unwrap();
+                let mut extracting = self.extracting_models.lock_recover();
                 extracting.remove(model_id);
             }
             // Emit extraction completed event
@@ -497,14 +498,14 @@ impl ModelManager {
         // additionally sets is_downloaded = true.
         cleanup.disarmed = true;
         {
-            let mut models = self.available_models.lock().unwrap();
+            let mut models = self.available_models.lock_recover();
             if let Some(model) = models.get_mut(model_id) {
                 model.is_downloading = false;
                 model.is_downloaded = true;
                 model.partial_size = 0;
             }
         }
-        self.cancel_flags.lock().unwrap().remove(model_id);
+        self.cancel_flags.lock_recover().remove(model_id);
 
         // Emit completion event
         let _ = self.app_handle.emit("model-download-complete", model_id);
@@ -521,7 +522,7 @@ impl ModelManager {
         debug!("ModelManager: delete_model called for: {}", model_id);
 
         let model_info = {
-            let models = self.available_models.lock().unwrap();
+            let models = self.available_models.lock_recover();
             models.get(model_id).cloned()
         };
 
@@ -575,7 +576,7 @@ impl ModelManager {
             // seeds defaults), so deleting one un-discovers it rather than
             // leaving a permanent "(Q4_K_M)" row in the list.
             if is_alternate_quant {
-                self.available_models.lock().unwrap().remove(model_id);
+                self.available_models.lock_recover().remove(model_id);
             }
             self.update_download_status()?;
             let _ = self.app_handle.emit("model-deleted", model_id);
@@ -624,7 +625,7 @@ impl ModelManager {
         // Custom models should be removed from the list entirely since they
         // have no download URL and can't be re-downloaded
         if model_info.is_custom {
-            let mut models = self.available_models.lock().unwrap();
+            let mut models = self.available_models.lock_recover();
             models.remove(model_id);
             debug!("ModelManager: removed custom model from available models");
         } else {
@@ -715,7 +716,7 @@ impl ModelManager {
         // aborts its in-flight chunk tasks and unwinds promptly; the URL path
         // observes it on the next chunk of its stream loop.
         {
-            let flags = self.cancel_flags.lock().unwrap();
+            let flags = self.cancel_flags.lock_recover();
             if let Some(token) = flags.get(model_id) {
                 token.cancel();
                 info!("Cancellation token triggered for: {}", model_id);
@@ -726,7 +727,7 @@ impl ModelManager {
 
         // Update state immediately for UI responsiveness
         {
-            let mut models = self.available_models.lock().unwrap();
+            let mut models = self.available_models.lock_recover();
             if let Some(model) = models.get_mut(model_id) {
                 model.is_downloading = false;
             }

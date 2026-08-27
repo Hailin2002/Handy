@@ -567,11 +567,12 @@ pub trait MeetingRecorder: Send {
 /// The recorder must never abort a running meeting because an unrelated thread
 /// panicked while holding a lock; the protected state is always either
 /// append-only bookkeeping or a status snapshot, both of which stay usable.
+///
+/// Thin wrapper over [`crate::sync::MutexExt::lock_recover`], kept as a free
+/// function because this module's call sites read `lock_recover(&self.x)`
+/// throughout.
 fn lock_recover<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    match m.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    }
+    crate::sync::MutexExt::lock_recover(m)
 }
 
 /// Timeline milliseconds → whole timeline samples (16 samples per ms, exact).

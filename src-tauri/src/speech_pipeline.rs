@@ -2,6 +2,7 @@ use crate::audio_toolkit::{
     apply_custom_words, normalize_transcription_output, remove_filler_words, OutputLanguageEvidence,
 };
 use crate::settings::{AppSettings, SpeechInputProvider};
+use crate::sync::MutexExt;
 use anyhow::{anyhow, bail, Context, Result};
 use base64::Engine as _;
 use log::{debug, warn};
@@ -113,8 +114,8 @@ impl AzureSpeechStreamManager {
 
         self.cancel();
         let session_id = self.next_session_id.fetch_add(1, Ordering::Relaxed);
-        *self.audio_buffer.lock().unwrap() = Vec::with_capacity(AZURE_AUDIO_EVENT_BYTES * 2);
-        *self.state.lock().unwrap() = Some(AzureSessionState {
+        *self.audio_buffer.lock_recover() = Vec::with_capacity(AZURE_AUDIO_EVENT_BYTES * 2);
+        *self.state.lock_recover() = Some(AzureSessionState {
             session_id,
             deepl_enabled: settings.deepl_translation_enabled,
             source_segments: Vec::new(),
@@ -150,7 +151,7 @@ impl AzureSpeechStreamManager {
 
         let mut ready = None;
         {
-            let mut buffer = self.audio_buffer.lock().unwrap();
+            let mut buffer = self.audio_buffer.lock_recover();
             for sample in frame {
                 let pcm = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                 buffer.extend_from_slice(&pcm.to_le_bytes());
@@ -183,12 +184,12 @@ impl AzureSpeechStreamManager {
     }
 
     fn flush_audio(&self) {
-        let bytes = std::mem::take(&mut *self.audio_buffer.lock().unwrap());
+        let bytes = std::mem::take(&mut *self.audio_buffer.lock_recover());
         self.emit_audio(bytes);
     }
 
     pub fn set_interim(&self, session_id: u64, text: String) {
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.state.lock_recover();
         let Some(state) = guard
             .as_mut()
             .filter(|state| state.session_id == session_id)
@@ -209,7 +210,7 @@ impl AzureSpeechStreamManager {
             return;
         }
 
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.state.lock_recover();
         let Some(state) = guard
             .as_mut()
             .filter(|state| state.session_id == session_id)
@@ -234,7 +235,7 @@ impl AzureSpeechStreamManager {
     pub async fn translate_pending(&self, session_id: u64) -> Result<()> {
         let _gate = self.translation_gate.lock().await;
         let source = {
-            let mut guard = self.state.lock().unwrap();
+            let mut guard = self.state.lock_recover();
             let Some(state) = guard
                 .as_mut()
                 .filter(|state| state.session_id == session_id)
@@ -253,7 +254,7 @@ impl AzureSpeechStreamManager {
 
         let settings = crate::settings::get_settings(&self.app);
         let translated = maybe_translate_with_deepl(&source, &settings).await;
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.state.lock_recover();
         let Some(state) = guard
             .as_mut()
             .filter(|state| state.session_id == session_id)
@@ -292,7 +293,7 @@ impl AzureSpeechStreamManager {
             "Azure continuous STT session {session_id} completed (error={})",
             status.is_err()
         );
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.state.lock_recover();
         let state = guard
             .as_mut()
             .filter(|state| state.session_id == session_id)
@@ -314,7 +315,7 @@ impl AzureSpeechStreamManager {
         self.flush_audio();
         let session_id = self.current_session_id.load(Ordering::Acquire);
         let rx = {
-            let mut guard = self.state.lock().unwrap();
+            let mut guard = self.state.lock_recover();
             let state = guard
                 .as_mut()
                 .filter(|state| state.session_id == session_id)
@@ -359,7 +360,7 @@ impl AzureSpeechStreamManager {
     }
 
     fn take_result(&self, session_id: u64) -> Result<AzureStreamingResult> {
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.state.lock_recover();
         let state = guard
             .take()
             .filter(|state| state.session_id == session_id)
@@ -386,8 +387,8 @@ impl AzureSpeechStreamManager {
 
     pub fn cancel(&self) {
         self.active.store(false, Ordering::Release);
-        self.audio_buffer.lock().unwrap().clear();
-        let session = self.state.lock().unwrap().take();
+        self.audio_buffer.lock_recover().clear();
+        let session = self.state.lock_recover().take();
         if let Some(state) = session {
             let _ = self.app.emit_to(
                 "main",

@@ -9,6 +9,7 @@ use std::path::Path;
 
 use super::support::{local_caps, probed_display_name};
 use super::*;
+use crate::sync::MutexExt;
 
 impl ModelManager {
     pub(super) fn auto_select_model_if_needed(&self) -> Result<()> {
@@ -17,7 +18,7 @@ impl ModelManager {
         // Clear stale selection: selected model is set but doesn't exist
         // in available_models (e.g. deleted custom model file)
         if !settings.selected_model.is_empty() {
-            let models = self.available_models.lock().unwrap();
+            let models = self.available_models.lock_recover();
             let exists = models.contains_key(&settings.selected_model);
             drop(models);
 

@@ -2,6 +2,7 @@ use crate::managers::history::{HistoryEntry, HistoryManager};
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::TranscriptionManager;
 use crate::settings;
+use crate::sync::MutexExt;
 use crate::tray_i18n::get_tray_translations;
 use log::{debug, error, info, warn};
 use std::path::PathBuf;
@@ -28,11 +29,11 @@ impl CurrentTrayIconState {
     }
 
     pub fn get(&self) -> TrayIconState {
-        *self.0.lock().unwrap()
+        *self.0.lock_recover()
     }
 
     fn set(&self, state: TrayIconState) {
-        *self.0.lock().unwrap() = state;
+        *self.0.lock_recover() = state;
     }
 }
 

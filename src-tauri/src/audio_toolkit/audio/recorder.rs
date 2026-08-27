@@ -18,6 +18,7 @@ use crate::audio_toolkit::{
     vad::{self, VadFrame},
     VoiceActivityDetector,
 };
+use crate::sync::MutexExt;
 
 enum Cmd {
     /// Begin capturing. Carries the send timestamp so the consumer can log how
@@ -302,7 +303,7 @@ impl AudioRecorder {
                 // The device accepted this config; remember it so the next
                 // open skips the HAL property queries entirely.
                 if !config_was_cached && !device_name.is_empty() {
-                    *config_cache.lock().unwrap() = Some((device_name, config));
+                    *config_cache.lock_recover() = Some((device_name, config));
                 }
 
                 Ok((stream, sample_rate))
@@ -331,7 +332,7 @@ impl AudioRecorder {
                     // A failed open may mean the cached config went stale
                     // (device re-plugged, rate/format changed in the OS).
                     // Drop it so the next attempt re-queries the device.
-                    *config_cache.lock().unwrap() = None;
+                    *config_cache.lock_recover() = None;
                     log::error!("{error_message}");
                     let _ = init_tx.send(Err(error_message));
                 }
@@ -639,7 +640,7 @@ fn run_consumer(
         }
 
         if let Some(cfg) = vad {
-            let mut det = cfg.detector.lock().unwrap();
+            let mut det = cfg.detector.lock_recover();
             match det.push_frame(samples).unwrap_or(VadFrame::Speech(samples)) {
                 VadFrame::Speech(buf) => emit(buf),
                 VadFrame::Noise => {}
@@ -687,7 +688,7 @@ fn run_consumer(
                     // any frames.
                     if vad_policy != VadPolicy::Disabled {
                         if let Some(cfg) = &vad {
-                            let mut det = cfg.detector.lock().unwrap();
+                            let mut det = cfg.detector.lock_recover();
                             det.set_hangover_frames(cfg.hangover_for(vad_policy));
                             det.reset();
                         }

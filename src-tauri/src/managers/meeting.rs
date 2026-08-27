@@ -1226,8 +1226,12 @@ fn now_ms() -> i64 {
 
 /// Locks a mutex, recovering from poisoning instead of panicking: a poisoned
 /// lock must not take the recording path down (no `unwrap` in production code).
+///
+/// Thin wrapper over [`crate::sync::MutexExt::lock_recover`], kept as a free
+/// function because this module's call sites read `lock(&self.x)` throughout.
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    use crate::sync::MutexExt;
+    m.lock_recover()
 }
 
 /// Neutral fallback title when the caller supplies none.

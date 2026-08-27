@@ -27,6 +27,7 @@ mod shortcut;
 mod signal_handle;
 // Persistence seam (plan §5, module-placement-map B11/E3); scaffold only.
 mod storage;
+mod sync;
 // Public for integration tests (src-tauri/tests): negative-path STT tests call
 // `transcribe_cloud` against a local mock HTTP server.
 pub mod speech_pipeline;

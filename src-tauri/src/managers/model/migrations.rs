@@ -7,6 +7,7 @@ use tauri::Manager;
 
 use super::support::hf_cached_path;
 use super::*;
+use crate::sync::MutexExt;
 
 impl ModelManager {
     pub(super) fn migrate_bundled_models(&self) -> Result<()> {
@@ -84,8 +85,8 @@ impl ModelManager {
         // Snapshot in-flight download ids before taking the registry lock (the
         // two locks are never nested) so a mid-download entry is never dropped.
         let downloading_ids: HashSet<String> =
-            self.cancel_flags.lock().unwrap().keys().cloned().collect();
-        let mut models = self.available_models.lock().unwrap();
+            self.cancel_flags.lock_recover().keys().cloned().collect();
+        let mut models = self.available_models.lock_recover();
         let mut vanished_alternates: Vec<String> = Vec::new();
 
         for model in models.values_mut() {
@@ -121,7 +122,7 @@ impl ModelManager {
                 // Clean up any leftover .extracting directories from interrupted extractions
                 // But only if this model is NOT currently being extracted
                 let is_currently_extracting = {
-                    let extracting = self.extracting_models.lock().unwrap();
+                    let extracting = self.extracting_models.lock_recover();
                     extracting.contains(&model.id)
                 };
                 if extracting_path.exists() && !is_currently_extracting {
