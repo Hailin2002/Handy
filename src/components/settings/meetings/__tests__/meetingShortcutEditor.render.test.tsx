@@ -34,7 +34,6 @@ const initI18n = async () => {
     await i18next.use(initReactI18next).init({
       lng: "en",
       fallbackLng: "en",
-      initImmediate: false,
       resources: { en: { translation: enTranslation } },
     });
   }
