@@ -76,6 +76,17 @@ interface ModelCardProps {
   showRecommended?: boolean;
 }
 
+/**
+ * Score (0..1) as a CSS width, clamped.
+ *
+ * `ProgressBar` already clamps its input; these inline bars did not, so a score
+ * outside the contract rendered a fill wider than its track. The parent's
+ * `overflow-hidden` hid that, which is exactly why an out-of-range mock fixture
+ * survived unnoticed — the bar simply looked full.
+ */
+const scoreWidth = (score: number): string =>
+  `${Math.max(0, Math.min(1, score)) * 100}%`;
+
 const ModelCard: React.FC<ModelCardProps> = ({
   model,
   variant = "default",
@@ -205,7 +216,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                 <div className="w-16 h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-logo-primary rounded-full"
-                    style={{ width: `${model.accuracy_score * 100}%` }}
+                    style={{ width: scoreWidth(model.accuracy_score) }}
                   />
                 </div>
               </div>
@@ -216,7 +227,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                 <div className="w-16 h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-logo-primary rounded-full"
-                    style={{ width: `${model.speed_score * 100}%` }}
+                    style={{ width: scoreWidth(model.speed_score) }}
                   />
                 </div>
               </div>
@@ -293,7 +304,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
           <div className="w-full h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
             <div
               className="h-full bg-logo-primary rounded-full transition-all duration-300"
-              style={{ width: `${downloadProgress}%` }}
+              style={{ width: scoreWidth(downloadProgress / 100) }}
             />
           </div>
           <div className="flex items-center justify-between text-xs mt-1">

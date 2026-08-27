@@ -131,6 +131,11 @@ export const handleCommand = (
       // page must render that as an empty membership list, not as a failure.
       return [];
 
+    case "task_list":
+      // No task store in the mock; the page must render an empty task list
+      // rather than surfacing a failure.
+      return [];
+
     case "project_create": {
       const name = typeof args.name === "string" ? args.name.trim() : "";
       const now = Date.now();

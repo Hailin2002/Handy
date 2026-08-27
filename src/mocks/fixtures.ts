@@ -95,8 +95,13 @@ const baseModel = {
   is_downloading: false,
   partial_size: 0,
   is_directory: false,
-  accuracy_score: 4,
-  speed_score: 3,
+  // 0..1, matching the contract catalog/mod.rs enforces
+  // (`assert!((0.0..=1.0).contains(&d.accuracy_score))`) after dividing the
+  // catalog's 0..100 figure by 100. The fixture used a 0..10 scale, so the
+  // score bars rendered at 400% width — clipped by the parent, and therefore
+  // invisible, but wrong.
+  accuracy_score: 0.8,
+  speed_score: 0.6,
   supports_translation: false,
   is_recommended: false,
   supports_language_selection: true,

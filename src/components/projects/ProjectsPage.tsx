@@ -290,10 +290,17 @@ export const ProjectsPage: React.FC = () => {
 
       <ul className="mt-3 space-y-1">
         {projects.map((project) => (
-          <li key={project.id} className="flex items-center gap-1">
+          <li key={project.id} className="flex min-w-0 items-center gap-1">
+            {/* `min-w-0` and `truncate` together, and both are needed: a flex
+                item will not shrink below its content, so a long unbroken name
+                pushed the row — and the delete button with it — off the right
+                edge of the window. The name is arbitrary user input of unknown
+                length, so it truncates with the full text on hover, unlike the
+                sidebar's fixed labels which wrap. */}
             <button
               type="button"
-              className={`flex-1 rounded-md px-2 py-1.5 text-left text-sm ${
+              title={project.name}
+              className={`min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-sm ${
                 project.id === selectedId
                   ? "bg-logo-primary/10 font-medium"
                   : "hover:bg-mid-gray/10"
@@ -305,6 +312,7 @@ export const ProjectsPage: React.FC = () => {
             <Button
               size="sm"
               variant="ghost"
+              className="shrink-0"
               aria-label={t("common.delete")}
               onClick={() => void handleDelete(project.id)}
             >
