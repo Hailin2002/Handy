@@ -90,6 +90,15 @@ jobs:
       # are flagged, that clean samples are not, and that both suppression paths
       # work. If the guard silently misbehaves on Linux, this fails loudly
       # instead of reporting a clean scan that checked nothing.
+      # Frontend counterpart to the PowerShell guard below. Its own self-test
+      # runs first for the same reason: a guard that silently stops detecting
+      # is worse than no guard, because it reads as a passing check.
+      - name: Self-test the frontend log-hygiene guard
+        run: node scripts/verify/check-frontend-log-hygiene.ts --self-test
+
+      - name: Check frontend log hygiene
+        run: bun run check:log-hygiene:frontend
+
       - name: Self-test the log-hygiene guard
         shell: pwsh
         run: ./scripts/verify/check-log-hygiene.ps1 -SelfTest
