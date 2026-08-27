@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "Đang chuyển đổi...",
     "processing": "Đang xử lý...",
-    "cancel": "Hủy"
+    "cancel": "Hủy",
+    "meetingRecording": "Đang ghi cuộc họp",
+    "meetingPaused": "Cuộc họp đang tạm dừng"
   },
   "whatsNew": {
     "title": "Điểm mới trong Handy v{{version}}"

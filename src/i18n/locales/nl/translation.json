@@ -1285,7 +1285,9 @@
   "overlay": {
     "transcribing": "Transcriberen...",
     "processing": "Verwerken...",
-    "cancel": "Annuleren"
+    "cancel": "Annuleren",
+    "meetingRecording": "Vergadering wordt opgenomen",
+    "meetingPaused": "Vergadering gepauzeerd"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokkeert mogelijk 1 sneltoets",

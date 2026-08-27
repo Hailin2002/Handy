@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "Transkribiere...",
     "processing": "Verarbeite...",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "meetingRecording": "Meeting-Aufnahme läuft",
+    "meetingPaused": "Meeting pausiert"
   },
   "whatsNew": {
     "title": "Neu in Handy v{{version}}"

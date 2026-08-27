@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "Přepisuji...",
     "processing": "Zpracovávám...",
-    "cancel": "Zrušit"
+    "cancel": "Zrušit",
+    "meetingRecording": "Probíhá nahrávání schůzky",
+    "meetingPaused": "Schůzka pozastavena"
   },
   "whatsNew": {
     "title": "Novinky v Handy v{{version}}"

@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "...جاري التفريغ",
     "processing": "...جاري المعالجة",
-    "cancel": "إلغاء"
+    "cancel": "إلغاء",
+    "meetingRecording": "جارٍ تسجيل الاجتماع",
+    "meetingPaused": "الاجتماع متوقف مؤقتًا"
   },
   "whatsNew": {
     "title": "الجديد في Handy v{{version}}"

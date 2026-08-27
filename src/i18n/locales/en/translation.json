@@ -1285,7 +1285,9 @@
   "overlay": {
     "transcribing": "Transcribing...",
     "processing": "Processing...",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "meetingRecording": "Meeting recording",
+    "meetingPaused": "Meeting paused"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} may be blocking 1 shortcut",

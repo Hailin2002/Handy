@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "Transkrypcja...",
     "processing": "Przetwarzanie...",
-    "cancel": "Anuluj"
+    "cancel": "Anuluj",
+    "meetingRecording": "Trwa nagrywanie spotkania",
+    "meetingPaused": "Spotkanie wstrzymane"
   },
   "whatsNew": {
     "title": "Nowości w Handy v{{version}}"

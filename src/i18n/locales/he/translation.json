@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "מתמלל...",
     "processing": "מעבד...",
-    "cancel": "ביטול"
+    "cancel": "ביטול",
+    "meetingRecording": "הפגישה מוקלטת",
+    "meetingPaused": "הפגישה מושהית"
   },
   "whatsNew": {
     "title": "חדש ב-Handy v{{version}}"

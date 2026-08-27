@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "텍스트로 변환 중...",
     "processing": "처리 중...",
-    "cancel": "취소"
+    "cancel": "취소",
+    "meetingRecording": "회의 녹음 중",
+    "meetingPaused": "회의 일시정지됨"
   },
   "whatsNew": {
     "title": "Handy v{{version}}의 새 소식"

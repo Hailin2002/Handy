@@ -609,6 +609,25 @@ pub fn show_streaming_overlay(app_handle: &AppHandle) {
     show_overlay_state(app_handle, "streaming");
 }
 
+/// Shows the meeting overlay: status and duration while a meeting records.
+///
+/// Plan §6.20 requires the small overlay to keep reporting a meeting even with
+/// the main window closed. It carries status and duration only — pause and stop
+/// live in the tray and the window, because the overlay is deliberately
+/// non-focusable and must not become a second, competing control surface that
+/// could be confused with dictation (§6.10).
+pub fn show_meeting_overlay(app_handle: &AppHandle, paused: bool) {
+    show_overlay_state(
+        app_handle,
+        if paused { "meeting_paused" } else { "meeting" },
+    );
+}
+
+/// Hides the meeting overlay again once capture ended.
+pub fn hide_meeting_overlay(app_handle: &AppHandle) {
+    hide_recording_overlay(app_handle);
+}
+
 /// Shows the transcribing overlay window
 pub fn show_transcribing_overlay(app_handle: &AppHandle) {
     show_overlay_state(app_handle, "transcribing");

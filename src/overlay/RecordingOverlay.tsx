@@ -12,7 +12,16 @@ import type {
 import i18n, { syncLanguageFromSettings } from "@/i18n";
 import { getLanguageDirection } from "@/lib/utils/rtl";
 
-type OverlayState = "recording" | "streaming" | "transcribing" | "processing";
+type OverlayState =
+  | "recording"
+  | "streaming"
+  | "transcribing"
+  | "processing"
+  // Meetings get their own states rather than reusing "recording": the two
+  // tools must never be confusable (plan §6.10), and the meeting form shows a
+  // duration where dictation shows a waveform.
+  | "meeting"
+  | "meeting_paused";
 
 // Number of reactive bars in the waveform (the simple, smoothed style shared by
 // every overlay form). Mic levels arrive as 16 FFT buckets; we take the first N.
@@ -215,6 +224,27 @@ const RecordingOverlay: React.FC = () => {
     </div>
   );
 
+  // dot (left) | label (center) | timer (right) — the meeting form.
+  //
+  // Deliberately different from the dictation rows: no waveform, no cancel
+  // button. A meeting is stopped from the tray or the window, never from a
+  // non-focusable overlay where a stray click could end a two-hour recording
+  // (plan §6.9). The label plus the dot carry the state, so paused and
+  // recording never differ by colour alone (§6.8).
+  const meetingRow = (paused: boolean) => (
+    <div className="sbase">
+      <div className="sbase-l">
+        <span className={`sdot ${paused ? "arming" : "ready"}`} />
+      </div>
+      <span className="swork-label" role="status">
+        {paused ? t("overlay.meetingPaused") : t("overlay.meetingRecording")}
+      </span>
+      <div className="sbase-r">
+        <span className="stimer">{fmtTime(elapsed)}</span>
+      </div>
+    </div>
+  );
+
   // spinner (left) | label (center) | cancel (right) — same 3-zone grid as the
   // listening row, so the label is centered.
   const workingRow = (label: string, showCancel: boolean) => (
@@ -286,10 +316,17 @@ const RecordingOverlay: React.FC = () => {
   // spinner + label (transcribing / processing). Never both. The pill animates its
   // width between them; the cancel button is in both rows so it stays put.
   const working = state === "transcribing" || state === "processing";
+  const meeting = state === "meeting" || state === "meeting_paused";
   const workLabel =
     state === "processing"
       ? t("overlay.processing")
       : t("overlay.transcribing");
+
+  const row = meeting
+    ? meetingRow(state === "meeting_paused")
+    : working
+      ? workingRow(workLabel, true)
+      : listeningRow(false, true);
 
   return (
     <div
@@ -297,9 +334,9 @@ const RecordingOverlay: React.FC = () => {
       className={`ov-stage ${position} ov-fade ${isVisible ? "show" : ""}`}
     >
       <div
-        className={`scard compact ${working && isVisible ? "cworking" : ""}`}
+        className={`scard compact ${(working || meeting) && isVisible ? "cworking" : ""}`}
       >
-        {working ? workingRow(workLabel, true) : listeningRow(false, true)}
+        {row}
       </div>
     </div>
   );

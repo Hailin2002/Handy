@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "Transkribe ediliyor...",
     "processing": "İşleniyor...",
-    "cancel": "İptal"
+    "cancel": "İptal",
+    "meetingRecording": "Toplantı kaydediliyor",
+    "meetingPaused": "Toplantı duraklatıldı"
   },
   "whatsNew": {
     "title": "Handy v{{version}} yenilikleri"

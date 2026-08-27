@@ -751,6 +751,13 @@ pub trait MeetingEnvironment: Send + Sync {
     fn summary_llm(&self) -> Option<SummaryLlmConfig> {
         None
     }
+    /// App handle for surfaces the manager drives directly (the overlay).
+    ///
+    /// `None` in tests and headless runs, which is why every caller treats a
+    /// missing handle as "there is no overlay to update" rather than an error.
+    fn app_handle(&self) -> Option<AppHandle> {
+        None
+    }
 }
 
 /// True when a provider base URL points at this machine.
@@ -1016,6 +1023,10 @@ impl MeetingEnvironment for AppEnvironment {
             return true;
         }
         settings.meeting_summary_cloud_consent
+    }
+
+    fn app_handle(&self) -> Option<AppHandle> {
+        Some(self.app.clone())
     }
 
     fn summary_llm(&self) -> Option<SummaryLlmConfig> {
@@ -1800,6 +1811,7 @@ impl MeetingManager {
         }
 
         let microphone_only = runtime.microphone_only.then_some(true);
+        self.sync_overlay(to);
         self.publish(
             TOPIC_SESSION_STATE,
             &MeetingSessionStateEvent {
@@ -1829,6 +1841,25 @@ impl MeetingManager {
             TOPIC_STOP_CONFIRM,
             &serde_json::json!({ "meeting_id": meeting_id, "armed": armed }),
         );
+    }
+
+    /// Mirrors capture state onto the small always-on-top overlay.
+    ///
+    /// Kept next to the state machine rather than in the views, so the overlay
+    /// cannot disagree with the window and the tray about whether a meeting is
+    /// running (plan §6.2 principle 9).
+    fn sync_overlay(&self, state: MeetingState) {
+        let Some(app) = self.env.app_handle() else {
+            return;
+        };
+        match state {
+            MeetingState::Recording => crate::overlay::show_meeting_overlay(&app, false),
+            MeetingState::Paused => crate::overlay::show_meeting_overlay(&app, true),
+            // Any non-capturing state means the meeting no longer owns the
+            // overlay; a dictation may legitimately claim it right after.
+            _ if !state.is_capturing() => crate::overlay::hide_meeting_overlay(&app),
+            _ => {}
+        }
     }
 
     fn publish<T: Serialize>(&self, topic: &'static str, payload: &T) {

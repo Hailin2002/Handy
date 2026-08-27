@@ -1282,7 +1282,9 @@
   "overlay": {
     "transcribing": "正在轉錄...",
     "processing": "處理中...",
-    "cancel": "取消"
+    "cancel": "取消",
+    "meetingRecording": "正在錄製會議",
+    "meetingPaused": "會議已暫停"
   },
   "whatsNew": {
     "title": "Handy v{{version}} 新功能"
