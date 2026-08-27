@@ -62,5 +62,9 @@ jobs:
       # high/critical: the frontend runs inside a Tauri webview with a strict
       # CSP and no remote code, so a moderate advisory in a build-time dev
       # dependency is not worth blocking a release on.
+      #
+      # The tree is clean at high as of this commit (469 packages, 0 findings),
+      # so this gate starts green — a gate that is red on day one is a gate
+      # someone disables in week two.
       - name: Audit npm dependencies
         run: bun audit --audit-level=high
