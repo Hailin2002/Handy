@@ -79,11 +79,21 @@
 - **Partial evidence 2026-08-27 (stays open):** the _local model_ leg of §3.1 was
   executed on this hardware for the first time, headlessly via
   `speak.exe --transcribe-file <wav> --model <id>`:
-  - `whisper-tiny.en-Q8_0` — bound to Vulkan0 (NVIDIA GeForce RTX 2080), load
-    372 ms, 0.58 s audio, transcript returned.
-  - `whisper-large-v3-turbo-Q8_0` — same backend, load 1173 ms, 0.52 s audio,
-    transcript returned; `supports_language_detect` correctly differs from the
-    tiny model.
+  All three installed models, in a **release** build (the shipping profile:
+  LTO, codegen-units=1, stripped), each bound to Vulkan0 / NVIDIA GeForce
+  RTX 2080:
+
+  | model                         | load   | decode | speed           |
+  | ----------------------------- | ------ | ------ | --------------- |
+  | `whisper-tiny.en-Q8_0`        | 129 ms | 63 ms  | 9.21× real time |
+  | `whisper-base-Q8_0`           | 385 ms | 110 ms | 4.73× real time |
+  | `whisper-large-v3-turbo-Q8_0` | 669 ms | 321 ms | 1.62× real time |
+
+  The clips are ~0.5 s, so these ratios carry the fixed per-call overhead and
+  understate throughput on real dictation. `supports_language_detect` correctly
+  differs between tiny and turbo, so capability probing reads the model rather
+  than guessing. For scale: the same run in a debug build is 0.06× real time —
+  any performance number taken from a debug binary is meaningless.
 
   So model registry, model load, GPU binding, decode, resampling and the
   transcription manager are known to work on this machine. This does **not**
