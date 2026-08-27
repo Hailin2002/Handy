@@ -76,6 +76,23 @@
   - Same file, §5 item 4: "Diktier-Baseline manuell nach Abschnitt 3 auf der Zielhardware ausführen und Ergebnisse ergänzen (**in dieser Baseline nicht ausgeführt**) — **offen**, Owner: task-0009."
   - Same file, §4: the entire manual Windows test matrix M1–M20 is marked `pending` with empty result columns ("es liegt kein Testergebnis vor").
 - **Current impact:** the guarantee that the existing short-dictation path keeps working unchanged through Meeting Mode work (plan line 1734: "der bestehende Diktierpfad besteht seine Baseline erneut") has no recorded starting point — there is no before-state against which regressions from meeting-mode changes could be detected.
+- **Partial evidence 2026-08-27 (stays open):** the _local model_ leg of §3.1 was
+  executed on this hardware for the first time, headlessly via
+  `speak.exe --transcribe-file <wav> --model <id>`:
+  - `whisper-tiny.en-Q8_0` — bound to Vulkan0 (NVIDIA GeForce RTX 2080), load
+    372 ms, 0.58 s audio, transcript returned.
+  - `whisper-large-v3-turbo-Q8_0` — same backend, load 1173 ms, 0.52 s audio,
+    transcript returned; `supports_language_detect` correctly differs from the
+    tiny model.
+
+  So model registry, model load, GPU binding, decode, resampling and the
+  transcription manager are known to work on this machine. This does **not**
+  close L6: §3.1 is a _dictation_ checkpoint, and microphone capture, the
+  shortcut path and paste delivery were not exercised. Azure (§3.2) and Custom
+  (§3.3) remain untouched. The value here is that a failure in the remaining
+  legs can now be localised — the model and inference half is no longer a
+  suspect.
+
 - **Recheck / expiry condition:** expires when §3 checkpoints and/or §4 matrix rows in `docs/meeting-mode-phase0-baseline.md` are filled with observed `pass`/`fail` results and a date.
 
 ## L7 — No meeting-mode runtime capability exists beyond the Phase-1 spike binary (production code: spike binary + compile-only repository seam + flag-gated placeholder UI)
