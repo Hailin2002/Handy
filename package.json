@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "eslint src",
@@ -19,8 +20,9 @@
     "test:unit": "vitest run",
     "check:translations": "node scripts/check-translations.ts",
     "check:log-hygiene": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify/check-log-hygiene.ps1",
-    "check": "node scripts/check-translations.ts && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify/check-log-hygiene.ps1",
-    "postinstall": "bun scripts/check-nix-deps.ts"
+    "check": "node scripts/check-translations.ts && node scripts/verify/check-bindings-sync.ts && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify/check-log-hygiene.ps1",
+    "postinstall": "bun scripts/check-nix-deps.ts",
+    "check:bindings": "node scripts/verify/check-bindings-sync.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.16",
