@@ -67,6 +67,11 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
       }
       updateUnlisten.then((fn) => fn());
     };
+    // `checkForUpdates` and `handleManualUpdateCheck` are declared below this
+    // effect, so naming them here would evaluate the dependency array during
+    // render and hit their temporal dead zone. Both close only over state this
+    // effect already re-runs on, so the current list is complete in practice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsLoaded, updateChecksEnabled]);
 
   // Update checking functions

@@ -1,4 +1,3 @@
-/* eslint-disable i18next/no-literal-string -- test fixture markup, not UI copy */
 // Keyboard contract + ARIA wiring of the §6.13 detail tabs. The navigation
 // rules are pure functions, so they are asserted directly; the markup is
 // checked through static rendering (the repo has no DOM test environment).

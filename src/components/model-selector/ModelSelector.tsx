@@ -12,7 +12,7 @@ import {
   getStatusAnnouncementText,
 } from "./useModelStatusAnnouncer";
 
-import { ModelStateEvent } from "@/lib/types/events";
+import { type ModelStateEvent } from "@/lib/types/events";
 
 type ModelStatus =
   | "ready"

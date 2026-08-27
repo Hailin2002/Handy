@@ -7,7 +7,10 @@ import {
   checkAccessibilityPermission,
   checkMicrophonePermission,
 } from "tauri-plugin-macos-permissions-api";
-import { ModelStateEvent, RecordingErrorEvent } from "./lib/types/events";
+import {
+  type ModelStateEvent,
+  type RecordingErrorEvent,
+} from "./lib/types/events";
 import "./App.css";
 import AccessibilityPermissions from "./components/AccessibilityPermissions";
 import SecureInputWarning from "./components/SecureInputWarning";
@@ -20,7 +23,6 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
 import {
   MEETING_MODE_ENABLED,
-  ProductPlaceholder,
   SettingsPage,
   hashTargetsSettingsView,
   type ProductViewId,
@@ -87,8 +89,15 @@ function App() {
   );
   const hasCompletedPostOnboardingInit = useRef(false);
 
+  // Mount-only by design: the onboarding decision is taken once, from the
+  // persisted settings, before the user sees anything. Re-running it on any
+  // later render would re-open onboarding mid-session.
+  // `checkOnboardingStatus` is declared further down this component body, so
+  // naming it here would evaluate the dependency array during render and hit
+  // its temporal dead zone.
   useEffect(() => {
     checkOnboardingStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Initialize RTL direction when language changes

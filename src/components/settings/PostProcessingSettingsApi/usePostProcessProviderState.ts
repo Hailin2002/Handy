@@ -42,8 +42,14 @@ export const usePostProcessProviderState = (): PostProcessProviderState => {
     postProcessModelOptions,
   } = useSettings();
 
-  // Settings are guaranteed to have providers after migration
-  const providers = settings?.post_process_providers || [];
+  // Settings are guaranteed to have providers after migration.
+  // Memoized because the `?? []` fallback would otherwise hand out a fresh
+  // array identity on every render, which silently defeats every useMemo and
+  // useCallback below that lists `providers` as a dependency.
+  const providers = useMemo(
+    () => settings?.post_process_providers ?? [],
+    [settings?.post_process_providers],
+  );
 
   const selectedProviderId = useMemo(() => {
     return settings?.post_process_provider_id || providers[0]?.id || "openai";
@@ -168,7 +174,12 @@ export const usePostProcessProviderState = (): PostProcessProviderState => {
     void fetchPostProcessModels(selectedProviderId);
   }, [fetchPostProcessModels, isAppleProvider, selectedProviderId]);
 
-  const availableModelsRaw = postProcessModelOptions[selectedProviderId] || [];
+  // Same identity trap as `providers` above: a fresh `[]` per render would make
+  // `modelOptions` recompute on every render instead of when the models change.
+  const availableModelsRaw = useMemo(
+    () => postProcessModelOptions[selectedProviderId] ?? [],
+    [postProcessModelOptions, selectedProviderId],
+  );
 
   const modelOptions = useMemo<ModelOption[]>(() => {
     const seen = new Set<string>();

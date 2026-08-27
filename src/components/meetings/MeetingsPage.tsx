@@ -330,6 +330,14 @@ const MeetingDetailLoader: React.FC<{
     undefined,
   );
 
+  // The fetch below must fire once per `id`, not whenever the parent re-renders
+  // and hands down a fresh `onLoaded` identity. Keeping the callback in a ref
+  // lets the effect depend on `id` alone while still calling the current one.
+  const onLoadedRef = useRef(onLoaded);
+  useEffect(() => {
+    onLoadedRef.current = onLoaded;
+  });
+
   useEffect(() => {
     let cancelled = false;
     commands
@@ -338,7 +346,7 @@ const MeetingDetailLoader: React.FC<{
         if (cancelled) return;
         if (result.status === "ok" && result.data) {
           setSession(result.data);
-          onLoaded(result.data);
+          onLoadedRef.current(result.data);
         } else {
           setSession(null);
         }

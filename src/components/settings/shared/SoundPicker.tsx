@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { Button } from "../../ui/Button";
-import { Dropdown, DropdownOption } from "../../ui/Dropdown";
+import { Dropdown, type DropdownOption } from "../../ui/Dropdown";
 import { PlayIcon } from "lucide-react";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { useSettingsStore } from "../../../stores/settingsStore";
