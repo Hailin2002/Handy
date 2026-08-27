@@ -206,6 +206,12 @@ fn validated_endpoint(endpoint: &str) -> Result<String, CloudJobError> {
     if trimmed.is_empty() {
         return Err(CloudJobError::Permanent("endpoint is empty".to_string()));
     }
+    // `azure_speech_endpoint` holds a *region* ("germanywestcentral") in every
+    // other consumer — the dictation path expands it the same way. Demanding a
+    // full URL here meant a perfectly configured Azure account still could not
+    // be used for meetings: registration failed at startup with "relative URL
+    // without a base", and the per-meeting Azure choice was unreachable.
+    let trimmed = &expand_region(trimmed);
     let url = reqwest::Url::parse(trimmed)
         .map_err(|e| CloudJobError::Permanent(format!("invalid endpoint: {e}")))?;
     match url.scheme() {
@@ -220,6 +226,28 @@ fn validated_endpoint(endpoint: &str) -> Result<String, CloudJobError> {
         return Err(CloudJobError::Permanent("endpoint has no host".to_string()));
     }
     Ok(trimmed.trim_end_matches('/').to_string())
+}
+
+/// Turns a bare Azure region into its Fast Transcription base URL.
+///
+/// Anything that already looks like a URL is left untouched, so a custom or
+/// sovereign-cloud endpoint still works. A region is accepted only when it
+/// consists of the characters Azure actually uses, which keeps a typo from
+/// being silently turned into a request to an attacker-chosen host.
+fn expand_region(configured: &str) -> String {
+    if configured.contains("://") {
+        return configured.to_string();
+    }
+    let looks_like_region = !configured.is_empty()
+        && configured
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-');
+    if looks_like_region {
+        return format!("https://{configured}.api.cognitive.microsoft.com");
+    }
+    // Not a region and not a URL: hand it to the parser, which produces the
+    // precise error the user needs to see.
+    configured.to_string()
 }
 
 /// Strips an endpoint down to its host so diagnostics never leak paths,
@@ -714,6 +742,41 @@ impl MeetingSttEngine for CustomMeetingEngine {
 
     fn model_label(&self) -> String {
         "custom-endpoint".to_string()
+    }
+}
+
+#[cfg(test)]
+mod endpoint_tests {
+    use super::*;
+
+    /// Regression: the shared setting holds a region, so meetings must accept
+    /// one. Requiring a URL left a configured Azure account unusable.
+    #[test]
+    fn a_bare_region_becomes_the_fast_transcription_endpoint() {
+        assert_eq!(
+            validated_endpoint("germanywestcentral").unwrap(),
+            "https://germanywestcentral.api.cognitive.microsoft.com"
+        );
+    }
+
+    #[test]
+    fn an_explicit_endpoint_is_left_alone() {
+        assert_eq!(
+            validated_endpoint("https://my-speech.cognitiveservices.azure.com/").unwrap(),
+            "https://my-speech.cognitiveservices.azure.com"
+        );
+    }
+
+    /// A value that is neither a region nor a URL must fail loudly rather than
+    /// be coerced into a request to somewhere unexpected.
+    #[test]
+    fn nonsense_endpoints_are_still_rejected() {
+        for value in ["   ", "not a region", "ftp://example.com", "https://"] {
+            assert!(
+                validated_endpoint(value).is_err(),
+                "{value:?} must be rejected"
+            );
+        }
     }
 }
 
