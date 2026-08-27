@@ -228,6 +228,15 @@ tao-macros = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08
 # Windows because MSBuild worker nodes (/m) fail the transcribe-cpp-sys build
 # silently; .cargo/config.toml pins CMAKE_BUILD_PARALLEL_LEVEL=1 so the native
 # build runs serially. See docs/meeting-mode-phase0-baseline.md section 2.3.
+# Status checked 2026-08-27: still required. Upstream cmake-rs at HEAD (v0.1.58;
+# this fork is 0.1.57) reads only NUM_JOBS for `--parallel`, and cargo
+# overwrites NUM_JOBS for build scripts, so there is still no way to pin native
+# parallelism from `[env]` without this patch.
+#
+# Drop condition: upstream honouring CMAKE_BUILD_PARALLEL_LEVEL ahead of
+# NUM_JOBS. Check with
+#   gh api repos/rust-lang/cmake-rs/contents/src/lib.rs -H "Accept: application/vnd.github.raw" | grep CMAKE_BUILD_PARALLEL_LEVEL
+# and if it matches, replace this with a plain version requirement.
 cmake = { path = "../vendor/cmake" }
 
 [dev-dependencies]

@@ -1,5 +1,20 @@
 //! Persistence: loading, salvaging, migrating, and writing the settings
 //! store (tauri-plugin-store JSON).
+//!
+//! # Why this layer exists on top of the plugin
+//!
+//! tauri-plugin-store handles the file; it does not handle any of what this
+//! module is actually for. Settings are written from the global-shortcut
+//! thread, from Tauri command handlers and from the tray simultaneously, so
+//! read-modify-write needs serializing — see `concurrency_tests.rs`, which
+//! exists because concurrent updates used to lose each other. On top of that:
+//! a corrupt or partially written JSON file is salvaged rather than surfacing
+//! as a failed start, schema migrations run on load, and `SecretMap` fields are
+//! written empty so API keys live in the OS credential store instead
+//! (`secret_store.rs`).
+//!
+//! None of that belongs in a general-purpose key-value plugin, which is why it
+//! is here rather than being a thin wrapper worth deleting.
 
 use log::{debug, error, warn};
 use tauri::{AppHandle, Runtime};
