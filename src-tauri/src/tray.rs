@@ -290,14 +290,35 @@ pub fn update_tray_menu(app: &AppHandle, locale: Option<&str>) {
         .try_state::<Arc<crate::managers::meeting::MeetingManager>>()
         .and_then(|manager| manager.active_capture_state());
     // Any active state (starting/recording/paused/stopping) offers the stop
-    // action; only a session-less tray offers the start entry.
+    // action; only a session-less tray offers the start entry. A paused
+    // meeting says so, because "Pausiert" and "Aufnahme läuft" must never look
+    // alike (plan §6.8: colour is never the only carrier of a state).
     let meeting_label = match meeting_active {
+        Some(crate::managers::meeting::MeetingState::Paused) => "Stop Meeting (paused)",
         Some(_) => "Stop Meeting",
         None => "Start Meeting...",
     };
     let meeting_i = MenuItem::with_id(app, "meeting_toggle", meeting_label, true, None::<&str>)
         .map_err(|e| error!("Failed to create meeting tray item: {}", e))
         .ok();
+
+    // Pause/resume belongs in the tray as well (plan §6.11: the running
+    // meeting is controllable without the main window). It only appears while
+    // a meeting can actually be paused or resumed, so the menu never offers a
+    // no-op.
+    let meeting_pause_i = match meeting_active {
+        Some(crate::managers::meeting::MeetingState::Recording) => {
+            MenuItem::with_id(app, "meeting_pause", "Pause Meeting", true, None::<&str>)
+                .map_err(|e| error!("Failed to create meeting pause item: {}", e))
+                .ok()
+        }
+        Some(crate::managers::meeting::MeetingState::Paused) => {
+            MenuItem::with_id(app, "meeting_pause", "Resume Meeting", true, None::<&str>)
+                .map_err(|e| error!("Failed to create meeting resume item: {}", e))
+                .ok()
+        }
+        _ => None,
+    };
 
     let menu = match state {
         TrayIconState::Recording | TrayIconState::Transcribing => {
@@ -342,6 +363,11 @@ pub fn update_tray_menu(app: &AppHandle, locale: Option<&str>) {
     // Both layouts start with [version, separator, ...]; slot the warning in
     // right below the version line so it's the first actionable thing seen.
     let mut tooltip = version_label;
+    if let Some(pause_item) = meeting_pause_i {
+        // Inserted first so it ends up *below* the toggle after the toggle is
+        // inserted at the same index.
+        let _ = menu.insert(&pause_item, 2);
+    }
     if let Some(meeting_item) = meeting_i {
         let _ = menu.insert(&meeting_item, 2);
         let _ = menu.insert(&separator(), 3);
@@ -451,6 +477,12 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
                 Ok(()) => log::info!("Model unloaded via tray."),
                 Err(e) => log::error!("Failed to unload model via tray: {}", e),
             }
+        }
+        "meeting_pause" => {
+            crate::shortcut::dispatch_meeting_action(
+                app,
+                crate::shortcut::MeetingShortcutAction::PauseResume,
+            );
         }
         "meeting_toggle" => {
             // Same dispatch the meeting shortcut uses, so tray and shortcut
