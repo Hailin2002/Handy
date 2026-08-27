@@ -19,3 +19,12 @@ src-tauri/src/catalog/catalog.json
 # Misc
 .DS_Store
 *.log
+
+# Vendored third-party sources — a patched copy of cmake-rs. Reformatting it
+# would make the local patch impossible to diff against upstream.
+vendor
+
+# Test/CI output artifacts
+playwright-report
+test-results
+logs

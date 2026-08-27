@@ -1,0 +1,41 @@
+# Line endings
+#
+# Why this file exists: `.prettierrc` pins `endOfLine: "lf"`, but Windows
+# checkouts default to `core.autocrlf=true`, which rewrites every text file to
+# CRLF on the way out of git. `bun run format:check` then reports every single
+# file as unformatted (~1000 of them) even though the committed blobs are
+# already LF — the check can never pass on Windows, and `bun run format` would
+# rewrite the whole tree with CRLF and bury any real diff.
+#
+# `eol=lf` overrides core.autocrlf per-repository, so every platform checks out
+# the same bytes prettier and rustfmt expect.
+* text=auto eol=lf
+
+# Binary assets — never touch these, regardless of what git's heuristics guess.
+*.png   binary
+*.ico   binary
+*.icns  binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.wav   binary
+*.mp3   binary
+*.ogg   binary
+*.onnx  binary
+*.bin   binary
+*.gguf  binary
+*.dll   binary
+*.dylib binary
+*.so    binary
+*.exe   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+
+# Generated — keep out of diffs and language stats.
+src/bindings.ts linguist-generated=true
+bun.lock        linguist-generated=true
