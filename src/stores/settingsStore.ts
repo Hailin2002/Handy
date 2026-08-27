@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { listen } from "@tauri-apps/api/event";
 import type {
+  LogLevel,
   AppSettings as Settings,
   AudioDevice,
   TranscribeAcceleratorSetting,
@@ -28,7 +29,7 @@ interface SettingsStore {
     key: K,
     value: Settings[K],
   ) => Promise<void>;
-  resetSetting: (key: keyof Settings) => Promise<void>;
+  resetSetting: <K extends keyof Settings>(key: K) => Promise<void>;
   refreshSettings: () => Promise<void>;
   refreshAudioDevices: () => Promise<void>;
   refreshOutputDevices: () => Promise<void>;
@@ -201,7 +202,7 @@ const settingUpdaters: {
     commands.changeMuteWhileRecordingSetting(value as boolean),
   append_trailing_space: (value) =>
     commands.changeAppendTrailingSpaceSetting(value as boolean),
-  log_level: (value) => commands.setLogLevel(value as any),
+  log_level: (value) => commands.setLogLevel(value as LogLevel),
   app_language: (value) => commands.changeAppLanguageSetting(value as string),
   theme: (value) => commands.changeThemeSetting(value as string),
   experimental_enabled: (value) =>
@@ -385,13 +386,11 @@ export const useSettingsStore = create<SettingsStore>()(
     },
 
     // Reset a setting to its default value
-    resetSetting: async (key) => {
+    resetSetting: async <K extends keyof Settings>(key: K) => {
       const { defaultSettings } = get();
-      if (defaultSettings) {
-        const defaultValue = defaultSettings[key];
-        if (defaultValue !== undefined) {
-          await get().updateSetting(key, defaultValue as any);
-        }
+      const defaultValue = defaultSettings?.[key];
+      if (defaultValue !== undefined) {
+        await get().updateSetting(key, defaultValue);
       }
     },
 
@@ -404,21 +403,25 @@ export const useSettingsStore = create<SettingsStore>()(
       setUpdating(updateKey, true);
 
       try {
-        // Optimistic update
-        set((state) => ({
-          settings: state.settings
-            ? {
-                ...state.settings,
-                bindings: {
-                  ...state.settings.bindings,
-                  [id]: {
-                    ...state.settings.bindings?.[id]!,
-                    current_binding: binding,
-                  },
-                },
-              }
-            : null,
-        }));
+        // Optimistic update.
+        // The non-null assertion this replaces was hiding a real case: with no
+        // existing entry for `id`, the spread produced `{ current_binding }`
+        // alone — a Binding missing every other required field, which the UI
+        // would then render. There is nothing to optimistically update for a
+        // binding that does not exist, so leave the state alone.
+        set((state) => {
+          const existing = state.settings?.bindings?.[id];
+          if (!state.settings || !existing) return state;
+          return {
+            settings: {
+              ...state.settings,
+              bindings: {
+                ...state.settings.bindings,
+                [id]: { ...existing, current_binding: binding },
+              },
+            },
+          };
+        });
 
         const result = await commands.changeBinding(id, binding);
 
@@ -435,21 +438,20 @@ export const useSettingsStore = create<SettingsStore>()(
         console.error(`Failed to update binding ${id}:`, error);
 
         // Rollback on error
-        if (originalBinding && get().settings) {
-          set((state) => ({
-            settings: state.settings
-              ? {
-                  ...state.settings,
-                  bindings: {
-                    ...state.settings.bindings,
-                    [id]: {
-                      ...state.settings.bindings?.[id]!,
-                      current_binding: originalBinding,
-                    },
-                  },
-                }
-              : null,
-          }));
+        if (originalBinding) {
+          set((state) => {
+            const existing = state.settings?.bindings?.[id];
+            if (!state.settings || !existing) return state;
+            return {
+              settings: {
+                ...state.settings,
+                bindings: {
+                  ...state.settings.bindings,
+                  [id]: { ...existing, current_binding: originalBinding },
+                },
+              },
+            };
+          });
         }
 
         // Re-throw to let the caller know it failed

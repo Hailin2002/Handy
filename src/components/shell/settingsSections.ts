@@ -1,4 +1,5 @@
 import type React from "react";
+import type { AppSettings } from "@/bindings";
 import {
   AudioLines,
   Mic,
@@ -41,7 +42,7 @@ export interface SettingsSectionConfig {
     className?: string;
   }>;
   component: React.ComponentType;
-  enabled: (settings: any) => boolean;
+  enabled: (settings: AppSettings | null | undefined) => boolean;
 }
 
 export const SECTIONS_CONFIG = {
