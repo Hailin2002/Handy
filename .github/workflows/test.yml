@@ -55,6 +55,22 @@ jobs:
         working-directory: src-tauri
         run: cargo fmt --all -- --check
 
+      # The heuristic guard in the code-quality job compares command *names*.
+      # This regenerates the bindings from the same specta_builder() the app
+      # uses and diffs the result, so parameter and return *types* are covered
+      # too. Possible at all only because the builder is no longer buried
+      # inside `run()` behind a GUI launch.
+      - name: Verify src/bindings.ts is regenerated
+        working-directory: src-tauri
+        run: cargo run --quiet --example export_bindings
+
+      - name: Fail if the bindings drifted
+        run: |
+          if ! git diff --exit-code -- src/bindings.ts; then
+            echo "::error::src/bindings.ts is out of date. Run 'bun run bindings:generate' and commit the result."
+            exit 1
+          fi
+
       - name: Run Rust tests
         working-directory: src-tauri
         run: cargo test
