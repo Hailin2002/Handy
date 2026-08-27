@@ -51,6 +51,18 @@ serde_json = "1"
 # to the upstream branch silently changes what `cargo update` pulls into a
 # binary that injects synthetic keystrokes.
 rdev = { git = "https://github.com/rustdesk-org/rdev", rev = "a90dbe1172f8832f54c97c62e823c5a34af5fdfe" }
+# Held at 0.16 by the rodio fork, not by our own code. `cjpais/rodio` (pinned
+# below) depends on cpal 0.16, so moving the app to 0.17 puts two incompatible
+# cpal versions in the graph and audio_feedback.rs then hands a `cpal::Device`
+# across that boundary into rodio's `OutputStreamBuilder::from_device` — a type
+# mismatch the compiler catches immediately.
+#
+# Bumping this means bumping the rodio fork first. Once that happens, expect
+# deprecation warnings too: 0.17 deprecates `DeviceTrait::name()` in favour of
+# `description()` (human-readable) and `id()` (stable across reboots and
+# reconnects), which affects audio_feedback.rs and audio_toolkit/audio/device.rs.
+# The `id()` migration is worth doing on its own merits — device identity today
+# is a display name, which is neither stable nor unique.
 cpal = "0.16.0"
 anyhow = "1.0.95"
 base64 = "0.22"
