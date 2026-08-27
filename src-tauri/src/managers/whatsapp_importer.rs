@@ -781,7 +781,7 @@ Eure Datei";
         };
         // A crafted central directory claiming 2 GB uncompressed is rejected
         // before any decompression attempt. Build via the parser's own path:
-        let archive = build_zip(&[("bomb.bin", &vec![0u8; 10])]);
+        let archive = build_zip(&[("bomb.bin", &[0u8; 10])]);
         // Patch declared uncompressed size (offset 24 in the local header is
         // mirrored at cd_offset+24); simplest reliable check: limit logic.
         let entries = inspect_zip(&archive, &limits).expect("small passes");

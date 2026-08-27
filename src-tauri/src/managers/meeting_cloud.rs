@@ -903,7 +903,9 @@ mod tests {
         assert_eq!(encoded.len(), 44 + 8);
         let pcm = &encoded[44..];
         let ints: Vec<i16> = pcm
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| i16::from_le_bytes([c[0], c[1]]))
             .collect();
         assert_eq!(ints[0], 0, "NaN maps to silence");

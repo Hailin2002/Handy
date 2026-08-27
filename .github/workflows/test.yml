@@ -28,9 +28,32 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libasound2-dev libssl-dev libgtk-layer-shell-dev \
             libvulkan-dev glslc spirv-headers
 
+      - name: Install Rust toolchain with clippy and rustfmt
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
+
+      # Nothing in CI had ever run clippy across the ~55k lines of Rust here.
+      # `-D warnings` is affordable because the tree is already clean: the first
+      # full run surfaced 12 warnings, 7 of them mechanical (chunks_exact ->
+      # as_chunks, a stray vec!, a unit expression) and 5 deliberate
+      # (serial_guard held across .await, now carrying a justified allow).
+      # Gating at zero keeps it that way instead of letting a warning backlog
+      # accumulate until the lint is worthless.
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      # rustfmt is checked by `bun run format:check` in the code-quality job,
+      # but that job only triggers on frontend paths — a backend-only PR never
+      # reached it.
+      - name: Rustfmt
+        working-directory: src-tauri
+        run: cargo fmt --all -- --check
 
       - name: Run Rust tests
         working-directory: src-tauri

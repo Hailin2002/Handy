@@ -33,6 +33,13 @@ use tokio::net::TcpStream;
 // release checks deterministic even under --test-threads=1 reordering.
 // ---------------------------------------------------------------------------
 
+/// Serializes tests that mutate process-global state (environment variables and
+/// the shared log buffer). The returned guard is deliberately held for the whole
+/// test body, `.await` points included — that is precisely what serializes them,
+/// and it is why the call sites carry `#[allow(clippy::await_holding_lock)]`.
+/// The lint is right in general (a std guard across an await can deadlock a
+/// single-threaded executor); here the guard is the test harness, not a
+/// resource contended by the code under test.
 fn serial_guard() -> std::sync::MutexGuard<'static, ()> {
     static SERIAL: Mutex<()> = Mutex::new(());
     let guard = match SERIAL.lock() {
@@ -482,6 +489,7 @@ async fn spawn_mock(behavior: Behavior) -> MockSttServer {
 // Fault class 1: rejected API key (401)
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::await_holding_lock)] // serial_guard is held across .await on purpose: see its definition
 #[tokio::test]
 async fn rejected_api_key_yields_typed_error_without_retry() {
     let _serial = serial_guard();
@@ -513,6 +521,7 @@ async fn rejected_api_key_yields_typed_error_without_retry() {
 // Fault class 2: server error (500)
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::await_holding_lock)] // serial_guard is held across .await on purpose: see its definition
 #[tokio::test]
 async fn http_500_yields_typed_error_without_retry() {
     let _serial = serial_guard();
@@ -544,6 +553,7 @@ async fn http_500_yields_typed_error_without_retry() {
 // Fault class 3a: connection refused (endpoint down)
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::await_holding_lock)] // serial_guard is held across .await on purpose: see its definition
 #[tokio::test]
 async fn connection_refusal_yields_contact_failure_typed_error() {
     let _serial = serial_guard();
@@ -597,6 +607,7 @@ async fn connection_refusal_yields_contact_failure_typed_error() {
 // built-in reqwest client configures no timeout of its own.
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::await_holding_lock)] // serial_guard is held across .await on purpose: see its definition
 #[tokio::test]
 async fn stalled_endpoint_performs_single_attempt_and_never_retries() {
     let _serial = serial_guard();
@@ -631,6 +642,7 @@ async fn stalled_endpoint_performs_single_attempt_and_never_retries() {
 // not spuriously failed; the transcript still comes back intact.
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::await_holding_lock)] // serial_guard is held across .await on purpose: see its definition
 #[tokio::test]
 async fn slowed_endpoint_still_returns_transcript_after_delay() {
     let _serial = serial_guard();
