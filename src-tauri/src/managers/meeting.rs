@@ -33,9 +33,9 @@
 //!   disposition instead, which is the same outcome the column would produce.
 
 use super::meeting_store::{
-    meeting_db_path, open_meeting_database, ChunkFacts, ChunkState as StoreChunkState,
-    MeetingRepository, NewAudioChunk, NewSttJob, SessionPatch, SqliteMeetingStore, StoreError,
-    Uuid as StoreUuid,
+    meeting_db_path, open_meeting_database, CaptureRepository, ChunkFacts,
+    ChunkState as StoreChunkState, NewAudioChunk, NewSttJob, ProjectRepository, SessionPatch,
+    SessionRepository, SqliteMeetingStore, StoreError, Uuid as StoreUuid,
 };
 use super::meeting_transcription::{
     MeetingSttEngine, MeetingTranscriptionQueue, QueueConfig, QueueDelegate,
@@ -3499,7 +3499,7 @@ fn row_to_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<MeetingSession> {
 mod tests {
     use super::*;
     use crate::managers::meeting_store::{
-        NewProjectTask, NewTranscriptSegment, SttJobState, Uuid, WorkerId,
+        NewProjectTask, NewTranscriptSegment, SttJobState, TaskRepository, Uuid, WorkerId,
     };
     use std::sync::atomic::{AtomicBool, Ordering};
 

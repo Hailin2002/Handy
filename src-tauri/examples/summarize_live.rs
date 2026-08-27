@@ -3,7 +3,7 @@
 //! OpenAI-compatible endpoint (a local mock keeps everything on-machine).
 
 use speak_app_lib::managers::meeting_store::{
-    MeetingRepository, NewMeetingSummary, SqliteMeetingStore, Uuid,
+    NewMeetingSummary, SessionRepository, SqliteMeetingStore, Uuid,
 };
 use speak_app_lib::managers::meeting_summary as summarize;
 

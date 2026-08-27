@@ -599,102 +599,45 @@ pub struct SttJobClaim {
 /// below — none of its parameter or return types can embed a
 /// `rusqlite::Connection`, because every seam type is `Send + Sync` while
 /// `Connection` is `!Sync`.
-pub trait MeetingRepository: Send + Sync {
+///
+/// # Split by entity
+///
+/// This was one 40-method interface. That is too large to hold in mind, and
+/// it made every implementation — including the in-memory test double — a
+/// 40-method obligation even when a change touched one entity. The five
+/// traits below carry the methods; `MeetingRepository` is now the umbrella
+/// that composes them, so existing `Arc<dyn MeetingRepository>` callers and
+/// every call site keep working unchanged.
+pub trait MeetingRepository:
+    SessionRepository
+    + CaptureRepository
+    + ProjectRepository
+    + SourceRepository
+    + TaskRepository
+    + Send
+    + Sync
+{
+}
+
+/// Anything implementing all five parts is a `MeetingRepository`.
+impl<T> MeetingRepository for T where
+    T: SessionRepository
+        + CaptureRepository
+        + ProjectRepository
+        + SourceRepository
+        + TaskRepository
+        + Send
+        + Sync
+{
+}
+
+/// Meetings themselves: sessions, their transcript segments and summaries.
+pub trait SessionRepository: Send + Sync {
     /// Read: fetch one alive session (read-only list in §4.2).
     fn get_session(&self, id: Uuid) -> Result<Option<MeetingSession>, StoreError>;
 
     /// Read: paginated session list.
     fn list_sessions(&self, page: Page) -> Result<PageOf<MeetingSession>, StoreError>;
-
-    /// Read: transcript segments of a meeting, timeline-ordered.
-    fn segments_for_meeting(&self, meeting_id: Uuid) -> Result<Vec<TranscriptSegment>, StoreError>;
-
-    /// Read: highest segment `sequence` of a meeting (`-1` when none), so the
-    /// queue can allocate the next slot without materializing every row.
-    fn max_segment_sequence(&self, meeting_id: Uuid) -> Result<i64, StoreError>;
-
-    /// Controlled deletion (plan §11): tombstones the chunk rows of a meeting
-    /// (raw recording metadata) while keeping transcript and summary.
-    fn delete_meeting_audio_rows(&self, meeting_id: Uuid) -> Result<(), StoreError>;
-
-    /// Controlled deletion: tombstones chunk, transcript and summary rows of
-    /// a meeting. The session row itself is soft-deleted separately.
-    fn purge_meeting_content(&self, meeting_id: Uuid) -> Result<(), StoreError>;
-
-    // -- projects (Phase 8) -------------------------------------------------
-
-    fn create_project(&self, draft: NewProject) -> Result<Project, StoreError>;
-    fn list_projects(&self) -> Result<Vec<Project>, StoreError>;
-    fn rename_project(&self, id: Uuid, name: String) -> Result<Project, StoreError>;
-    fn soft_delete_project(&self, id: Uuid) -> Result<(), StoreError>;
-    /// Idempotent: re-assigning an already-linked pair succeeds silently.
-    fn assign_meeting_to_project(
-        &self,
-        project_id: Uuid,
-        meeting_id: Uuid,
-    ) -> Result<(), StoreError>;
-    fn unassign_meeting_from_project(
-        &self,
-        project_id: Uuid,
-        meeting_id: Uuid,
-    ) -> Result<(), StoreError>;
-    fn list_meeting_ids_for_project(&self, project_id: Uuid) -> Result<Vec<String>, StoreError>;
-    /// The "Eingang": alive sessions with no project link.
-    fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError>;
-
-    /// Removes all project links of one meeting — used when the meeting
-    /// itself is fully deleted, so projects keep no dangling members.
-    fn delete_project_links_for_meeting(&self, meeting_id: Uuid) -> Result<(), StoreError>;
-
-    // -- sources (Phase 9) ---------------------------------------------------
-
-    /// Idempotent import: a repeated `content_hash` returns the existing
-    /// source without duplicating anything (plan §13 Phase 9 acceptance).
-    fn create_chat_source(&self, draft: NewChatSource) -> Result<(Source, bool), StoreError>;
-    fn list_sources(&self) -> Result<Vec<Source>, StoreError>;
-    fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError>;
-    /// Records extracted media. Insert-only and idempotent per content hash,
-    /// so a repeated import of the same archive adds nothing.
-    fn attach_source_assets(
-        &self,
-        source_id: Uuid,
-        assets: Vec<NewSourceAsset>,
-    ) -> Result<Vec<SourceAsset>, StoreError>;
-    fn list_source_assets(&self, source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError>;
-
-    // -- project tasks & snapshots (Phase 10) --------------------------------
-
-    /// Manual task creation (origin `manual`, state `accepted`).
-    fn create_manual_task(&self, draft: NewProjectTask) -> Result<ProjectTask, StoreError>;
-    /// AI suggestion: insert-only and idempotent on the content hash, so a
-    /// human-edited or rejected twin is never overwritten or duplicated.
-    fn suggest_task(&self, draft: NewProjectTask) -> Result<(ProjectTask, bool), StoreError>;
-    fn list_tasks(&self, project_id: Uuid) -> Result<Vec<ProjectTask>, StoreError>;
-    /// Applies a user decision (`accepted | edited | rejected`) plus optional
-    /// edited title/description; stamps human_edited_at.
-    fn decide_task(
-        &self,
-        id: Uuid,
-        state: &str,
-        title: Option<String>,
-        description: Option<String>,
-    ) -> Result<ProjectTask, StoreError>;
-    fn create_snapshot(
-        &self,
-        project_id: Uuid,
-        summary_markdown: String,
-        prompt_version: String,
-        model: Option<String>,
-        source_marker: String,
-    ) -> Result<ProjectSnapshot, StoreError>;
-    fn list_snapshots(&self, project_id: Uuid) -> Result<Vec<ProjectSnapshot>, StoreError>;
-
-    /// Read: current summary of a meeting, if any.
-    fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError>;
-
-    /// Read (passive inspection): due STT jobs for the queue feed (STT-§3);
-    /// claiming happens in U4.
-    fn due_stt_jobs(&self, now: DateTime<Utc>, limit: u32) -> Result<Vec<SttJob>, StoreError>;
 
     /// U1 — INSERT `meeting_sessions` (rev = 1) + `change_log`(create).
     fn create_session(&self, draft: NewMeetingSession) -> Result<MeetingSession, StoreError>;
@@ -705,6 +648,38 @@ pub trait MeetingRepository: Send + Sync {
     /// U3 — soft delete: `deleted_at` + rev++ + tombstone log row (W3).
     fn soft_delete_session(&self, id: Uuid) -> Result<(), StoreError>;
 
+    /// Read: transcript segments of a meeting, timeline-ordered.
+    fn segments_for_meeting(&self, meeting_id: Uuid) -> Result<Vec<TranscriptSegment>, StoreError>;
+
+    /// Read: highest segment `sequence` of a meeting (`-1` when none), so the
+    /// queue can allocate the next slot without materializing every row.
+    fn max_segment_sequence(&self, meeting_id: Uuid) -> Result<i64, StoreError>;
+
+    /// U8 — batched segment INSERT + one log row per inserted segment, single
+    /// transaction.
+    fn insert_segments(
+        &self,
+        job_id: Uuid,
+        segments: Vec<NewTranscriptSegment>,
+    ) -> Result<Vec<TranscriptSegment>, StoreError>;
+
+    /// Read: current summary of a meeting, if any.
+    fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError>;
+
+    /// U9 — INSERT or UPDATE `meeting_summaries` + rev++ + log row.
+    fn upsert_summary(&self, summary: NewMeetingSummary) -> Result<MeetingSummary, StoreError>;
+
+    /// Controlled deletion: tombstones chunk, transcript and summary rows of
+    /// a meeting. The session row itself is soft-deleted separately.
+    fn purge_meeting_content(&self, meeting_id: Uuid) -> Result<(), StoreError>;
+
+    /// Controlled deletion (plan §11): tombstones the chunk rows of a meeting
+    /// (raw recording metadata) while keeping transcript and summary.
+    fn delete_meeting_audio_rows(&self, meeting_id: Uuid) -> Result<(), StoreError>;
+}
+
+/// The recording pipeline: audio chunks and the speech-to-text job queue.
+pub trait CaptureRepository: Send + Sync {
     /// U5 — INSERT chunk in state [`ChunkState::Writing`] (rev = 1) + log row.
     fn append_chunk(&self, chunk: NewAudioChunk) -> Result<AudioChunk, StoreError>;
 
@@ -719,6 +694,10 @@ pub trait MeetingRepository: Send + Sync {
         state: ChunkState,
         reason: Option<String>,
     ) -> Result<(), StoreError>;
+
+    /// Read (passive inspection): due STT jobs for the queue feed (STT-§3);
+    /// claiming happens in U4.
+    fn due_stt_jobs(&self, now: DateTime<Utc>, limit: u32) -> Result<Vec<SttJob>, StoreError>;
 
     /// U4 — atomically claim the next due STT job for `worker` (tier B, no log).
     fn claim_due_stt_job(
@@ -748,17 +727,93 @@ pub trait MeetingRepository: Send + Sync {
     /// Read — chunks referenced by one job, in consumption order
     /// (`meeting_stt_job_chunks.position`). Input side of the STT queue.
     fn chunks_for_job(&self, job_id: Uuid) -> Result<Vec<AudioChunk>, StoreError>;
+}
 
-    /// U8 — batched segment INSERT + one log row per inserted segment, single
-    /// transaction.
-    fn insert_segments(
+/// Projects and the meeting-to-project assignments.
+pub trait ProjectRepository: Send + Sync {
+    fn create_project(&self, draft: NewProject) -> Result<Project, StoreError>;
+
+    fn list_projects(&self) -> Result<Vec<Project>, StoreError>;
+
+    fn rename_project(&self, id: Uuid, name: String) -> Result<Project, StoreError>;
+
+    fn soft_delete_project(&self, id: Uuid) -> Result<(), StoreError>;
+
+    /// Idempotent: re-assigning an already-linked pair succeeds silently.
+    fn assign_meeting_to_project(
         &self,
-        job_id: Uuid,
-        segments: Vec<NewTranscriptSegment>,
-    ) -> Result<Vec<TranscriptSegment>, StoreError>;
+        project_id: Uuid,
+        meeting_id: Uuid,
+    ) -> Result<(), StoreError>;
 
-    /// U9 — INSERT or UPDATE `meeting_summaries` + rev++ + log row.
-    fn upsert_summary(&self, summary: NewMeetingSummary) -> Result<MeetingSummary, StoreError>;
+    fn unassign_meeting_from_project(
+        &self,
+        project_id: Uuid,
+        meeting_id: Uuid,
+    ) -> Result<(), StoreError>;
+
+    fn list_meeting_ids_for_project(&self, project_id: Uuid) -> Result<Vec<String>, StoreError>;
+
+    /// The "Eingang": alive sessions with no project link.
+    fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError>;
+
+    /// Removes all project links of one meeting — used when the meeting
+    /// itself is fully deleted, so projects keep no dangling members.
+    fn delete_project_links_for_meeting(&self, meeting_id: Uuid) -> Result<(), StoreError>;
+}
+
+/// Imported chat exports and their items and media assets.
+pub trait SourceRepository: Send + Sync {
+    /// Idempotent import: a repeated `content_hash` returns the existing
+    /// source without duplicating anything (plan §13 Phase 9 acceptance).
+    fn create_chat_source(&self, draft: NewChatSource) -> Result<(Source, bool), StoreError>;
+
+    fn list_sources(&self) -> Result<Vec<Source>, StoreError>;
+
+    fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError>;
+
+    /// Records extracted media. Insert-only and idempotent per content hash,
+    /// so a repeated import of the same archive adds nothing.
+    fn attach_source_assets(
+        &self,
+        source_id: Uuid,
+        assets: Vec<NewSourceAsset>,
+    ) -> Result<Vec<SourceAsset>, StoreError>;
+
+    fn list_source_assets(&self, source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError>;
+}
+
+/// Derived project tasks and the snapshots they are decided against.
+pub trait TaskRepository: Send + Sync {
+    /// Manual task creation (origin `manual`, state `accepted`).
+    fn create_manual_task(&self, draft: NewProjectTask) -> Result<ProjectTask, StoreError>;
+
+    /// AI suggestion: insert-only and idempotent on the content hash, so a
+    /// human-edited or rejected twin is never overwritten or duplicated.
+    fn suggest_task(&self, draft: NewProjectTask) -> Result<(ProjectTask, bool), StoreError>;
+
+    fn list_tasks(&self, project_id: Uuid) -> Result<Vec<ProjectTask>, StoreError>;
+
+    /// Applies a user decision (`accepted | edited | rejected`) plus optional
+    /// edited title/description; stamps human_edited_at.
+    fn decide_task(
+        &self,
+        id: Uuid,
+        state: &str,
+        title: Option<String>,
+        description: Option<String>,
+    ) -> Result<ProjectTask, StoreError>;
+
+    fn create_snapshot(
+        &self,
+        project_id: Uuid,
+        summary_markdown: String,
+        prompt_version: String,
+        model: Option<String>,
+        source_marker: String,
+    ) -> Result<ProjectSnapshot, StoreError>;
+
+    fn list_snapshots(&self, project_id: Uuid) -> Result<Vec<ProjectSnapshot>, StoreError>;
 }
 
 // ---------------------------------------------------------------------------
@@ -1947,9 +2002,7 @@ pub struct ProjectSnapshot {
     pub created_at: i64,
 }
 
-impl MeetingRepository for SqliteMeetingStore {
-    // -- Read side ---------------------------------------------------------
-
+impl SessionRepository for SqliteMeetingStore {
     fn get_session(&self, id: Uuid) -> Result<Option<MeetingSession>, StoreError> {
         let op = "get_session";
         let conn = self.locked(op)?;
@@ -1995,6 +2048,178 @@ impl MeetingRepository for SqliteMeetingStore {
         })
     }
 
+    fn create_session(&self, draft: NewMeetingSession) -> Result<MeetingSession, StoreError> {
+        let op = "U1 create_session";
+        let id = self.uuids.new_uuid();
+        let now = self.now();
+        let now_ms = to_ms(now);
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+        tx.execute(
+            "INSERT INTO meeting_sessions (
+                id, title, state, stt_provider, provider_config_snapshot, meeting_model_id,
+                language, microphone_device, output_device, has_microphone_audio,
+                has_system_audio, recording_retention_policy, summary_provider, summary_state,
+                last_error, started_at, ended_at, revision, created_at, updated_at, deleted_at
+             ) VALUES (
+                ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10,
+                ?11, ?12, ?13, 'none', NULL, ?14, NULL, 1, ?15, ?15, NULL
+             )",
+            params![
+                id.0,
+                draft.title,
+                crate::managers::meeting::SESSION_STATE_DRAFT,
+                draft.stt_provider,
+                json_text(&draft.provider_config_snapshot),
+                draft.meeting_model_id,
+                draft.language,
+                draft.microphone_device,
+                draft.output_device,
+                draft.has_microphone_audio,
+                draft.has_system_audio,
+                draft.recording_retention_policy,
+                draft.summary_provider,
+                to_ms(draft.started_at),
+                now_ms,
+            ],
+        )
+        .map_err(classify(ENTITY_SESSIONS, &id, op))?;
+
+        change_log::append(
+            &tx,
+            ChangeLogEntry {
+                entity: ENTITY_SESSIONS,
+                entity_id: id.clone(),
+                revision: 1,
+                occurred_at: now,
+                operation: ChangeOperation::Create,
+            },
+        )
+        .map_err(sql_err(op))?;
+
+        let created = read_session(&tx, &id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_SESSIONS,
+                id: id.clone(),
+            })?;
+        tx.commit().map_err(sql_err(op))?;
+        Ok(created)
+    }
+
+    fn update_session(&self, id: Uuid, patch: SessionPatch) -> Result<MeetingSession, StoreError> {
+        let op = "U2 update_session";
+        let now = self.now();
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        // Read-modify-write inside the transaction rather than assembling a
+        // dynamic SET clause: `None` means "leave unchanged" for every patch
+        // field, and this keeps that rule in one place instead of in six
+        // SQL fragments. `ended_at`/`last_error` therefore cannot be *cleared*
+        // through the patch — clearing is not a modelled operation.
+        let current = read_session(&tx, &id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_SESSIONS,
+                id: id.clone(),
+            })?;
+
+        let title = patch.title.unwrap_or(current.title);
+        let state = patch.state.unwrap_or(current.state);
+        let ended_at = patch.ended_at.or(current.ended_at);
+        let summary_state = patch.summary_state.unwrap_or(current.summary_state);
+        let last_error = patch.last_error.or(current.last_error);
+        let retention = patch
+            .recording_retention_policy
+            .unwrap_or(current.recording_retention_policy);
+        let revision = current.envelope.revision + 1;
+
+        tx.execute(
+            "UPDATE meeting_sessions
+             SET title = ?2, state = ?3, ended_at = ?4, summary_state = ?5, last_error = ?6,
+                 recording_retention_policy = ?7, revision = ?8, updated_at = ?9
+             WHERE id = ?1 AND deleted_at IS NULL",
+            params![
+                id.0,
+                title,
+                state,
+                ended_at.map(to_ms),
+                summary_state,
+                last_error,
+                retention,
+                revision,
+                to_ms(now),
+            ],
+        )
+        .map_err(classify(ENTITY_SESSIONS, &id, op))?;
+
+        change_log::append(
+            &tx,
+            ChangeLogEntry {
+                entity: ENTITY_SESSIONS,
+                entity_id: id.clone(),
+                revision,
+                occurred_at: now,
+                operation: ChangeOperation::Update,
+            },
+        )
+        .map_err(sql_err(op))?;
+
+        let updated = read_session(&tx, &id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_SESSIONS,
+                id: id.clone(),
+            })?;
+        tx.commit().map_err(sql_err(op))?;
+        Ok(updated)
+    }
+
+    fn soft_delete_session(&self, id: Uuid) -> Result<(), StoreError> {
+        let op = "U3 soft_delete_session";
+        let now = self.now();
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        let current = read_session(&tx, &id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_SESSIONS,
+                id: id.clone(),
+            })?;
+        let revision = current.envelope.revision + 1;
+
+        // Tombstone, never DELETE: hard deletion of tier-A rows does not exist
+        // in v1 (contract §5.4). Chunks, segments and summaries of the meeting
+        // keep their rows too — the FK cascades exist for integrity, but no
+        // code path in this store ever triggers them.
+        tx.execute(
+            "UPDATE meeting_sessions
+             SET deleted_at = ?2, revision = ?3, updated_at = ?2
+             WHERE id = ?1 AND deleted_at IS NULL",
+            params![id.0, to_ms(now), revision],
+        )
+        .map_err(classify(ENTITY_SESSIONS, &id, op))?;
+
+        change_log::append(
+            &tx,
+            ChangeLogEntry {
+                entity: ENTITY_SESSIONS,
+                entity_id: id.clone(),
+                revision,
+                occurred_at: now,
+                operation: ChangeOperation::Tombstone,
+            },
+        )
+        .map_err(sql_err(op))?;
+
+        tx.commit().map_err(sql_err(op))
+    }
+
     fn segments_for_meeting(&self, meeting_id: Uuid) -> Result<Vec<TranscriptSegment>, StoreError> {
         let op = "segments_for_meeting";
         let conn = self.locked(op)?;
@@ -2028,6 +2253,222 @@ impl MeetingRepository for SqliteMeetingStore {
         .map_err(sql_err(op))
     }
 
+    fn insert_segments(
+        &self,
+        job_id: Uuid,
+        segments: Vec<NewTranscriptSegment>,
+    ) -> Result<Vec<TranscriptSegment>, StoreError> {
+        let op = "U8 insert_segments";
+        let now = self.now();
+        let now_ms = to_ms(now);
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        // The meeting is taken from the job rather than from the caller: the
+        // job already fixes which session its output belongs to, and letting a
+        // caller supply it again would allow the two to disagree.
+        let job = read_job(&tx, &job_id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: "meeting_stt_jobs",
+                id: job_id.clone(),
+            })?;
+
+        // Idempotent resume (plan §13 Phase 6: saved responses are never
+        // duplicated): if a previous attempt of this job already committed its
+        // segments (crash between insert and the Succeeded transition), return
+        // them instead of writing a second copy.
+        let existing = load_job_segments(&tx, &job_id.0).map_err(sql_err(op))?;
+        if !existing.is_empty() {
+            log::debug!(
+                "Job {} already has {} persisted segment(s); skipping re-insert",
+                job_id.0,
+                existing.len()
+            );
+            tx.commit().map_err(sql_err(op))?;
+            return Ok(existing);
+        }
+
+        let mut inserted = Vec::with_capacity(segments.len());
+        for segment in segments {
+            let id = self.uuids.new_uuid();
+            tx.execute(
+                "INSERT INTO meeting_transcript_segments (
+                    id, meeting_id, job_id, source, start_ms, end_ms, text, word_timestamps,
+                    confidence, provider, model_id, sequence, revision, created_at,
+                    updated_at, deleted_at
+                 ) VALUES (
+                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?13, NULL
+                 )",
+                params![
+                    id.0,
+                    job.meeting_id.0,
+                    job_id.0,
+                    segment.source,
+                    segment.start_ms,
+                    segment.end_ms,
+                    segment.text,
+                    segment.word_timestamps.as_ref().map(json_text),
+                    segment.confidence.map(f64::from),
+                    segment.provider,
+                    segment.model_id,
+                    segment.sequence,
+                    now_ms,
+                ],
+            )
+            .map_err(classify(ENTITY_SEGMENTS, &id, op))?;
+
+            // One log row per segment (U8), all in this single transaction.
+            change_log::append(
+                &tx,
+                ChangeLogEntry {
+                    entity: ENTITY_SEGMENTS,
+                    entity_id: id.clone(),
+                    revision: 1,
+                    occurred_at: now,
+                    operation: ChangeOperation::Create,
+                },
+            )
+            .map_err(sql_err(op))?;
+
+            let stored = tx
+                .query_row(
+                    &format!(
+                        "SELECT {SEGMENT_COLUMNS} FROM meeting_transcript_segments WHERE id = ?1"
+                    ),
+                    params![id.0],
+                    segment_from_row,
+                )
+                .map_err(sql_err(op))?;
+            inserted.push(stored);
+        }
+
+        tx.commit().map_err(sql_err(op))?;
+        Ok(inserted)
+    }
+
+    fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError> {
+        let op = "summary_for_meeting";
+        let conn = self.locked(op)?;
+        read_summary_by_meeting(&conn, &meeting_id.0).map_err(sql_err(op))
+    }
+
+    fn upsert_summary(&self, summary: NewMeetingSummary) -> Result<MeetingSummary, StoreError> {
+        let op = "U9 upsert_summary";
+        let now = self.now();
+        let now_ms = to_ms(now);
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        // INSERT-vs-UPDATE is decided from the meeting id (U9 semantics); the
+        // UNIQUE constraint on `meeting_id` makes that the only possible
+        // outcome even under a race.
+        let existing = read_summary_by_meeting(&tx, &summary.meeting_id.0).map_err(sql_err(op))?;
+
+        let (id, revision, operation) = match &existing {
+            Some(row) => (
+                row.envelope.id.clone(),
+                row.envelope.revision + 1,
+                ChangeOperation::Update,
+            ),
+            None => (self.uuids.new_uuid(), 1, ChangeOperation::Create),
+        };
+
+        if existing.is_some() {
+            tx.execute(
+                "UPDATE meeting_summaries
+                 SET provider = ?2, model = ?3, prompt_version = ?4, state = ?5,
+                     summary_markdown = ?6, decisions = ?7, action_items = ?8,
+                     open_questions = ?9, last_error = ?10, revision = ?11, updated_at = ?12
+                 WHERE id = ?1",
+                params![
+                    id.0,
+                    summary.provider,
+                    summary.model,
+                    summary.prompt_version,
+                    summary.state,
+                    summary.summary_markdown,
+                    json_text(&summary.decisions),
+                    json_text(&summary.action_items),
+                    json_text(&summary.open_questions),
+                    summary.last_error,
+                    revision,
+                    now_ms,
+                ],
+            )
+            .map_err(classify(ENTITY_SUMMARIES, &id, op))?;
+        } else {
+            tx.execute(
+                "INSERT INTO meeting_summaries (
+                    id, meeting_id, provider, model, prompt_version, state, summary_markdown,
+                    decisions, action_items, open_questions, last_error, revision,
+                    created_at, updated_at, deleted_at
+                 ) VALUES (
+                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 1, ?12, ?12, NULL
+                 )",
+                params![
+                    id.0,
+                    summary.meeting_id.0,
+                    summary.provider,
+                    summary.model,
+                    summary.prompt_version,
+                    summary.state,
+                    summary.summary_markdown,
+                    json_text(&summary.decisions),
+                    json_text(&summary.action_items),
+                    json_text(&summary.open_questions),
+                    summary.last_error,
+                    now_ms,
+                ],
+            )
+            .map_err(classify(ENTITY_SUMMARIES, &id, op))?;
+        }
+
+        change_log::append(
+            &tx,
+            ChangeLogEntry {
+                entity: ENTITY_SUMMARIES,
+                entity_id: id.clone(),
+                revision,
+                occurred_at: now,
+                operation,
+            },
+        )
+        .map_err(sql_err(op))?;
+
+        let stored = read_summary_by_meeting(&tx, &summary.meeting_id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_SUMMARIES,
+                id: id.clone(),
+            })?;
+        tx.commit().map_err(sql_err(op))?;
+        Ok(stored)
+    }
+
+    fn purge_meeting_content(&self, meeting_id: Uuid) -> Result<(), StoreError> {
+        let op = "purge_meeting_content";
+        let now = chrono::Utc::now().timestamp_millis();
+        let conn = self.locked(op)?;
+        for entity in [
+            "meeting_audio_chunks",
+            "meeting_transcript_segments",
+            "meeting_summaries",
+        ] {
+            conn.execute(
+                &format!(
+                    "UPDATE {entity} SET deleted_at = ?2, revision = revision + 1,
+                     updated_at = ?2 WHERE meeting_id = ?1 AND deleted_at IS NULL"
+                ),
+                params![meeting_id.0, now],
+            )
+            .map_err(classify(entity, &meeting_id, op))?;
+        }
+        Ok(())
+    }
+
     fn delete_meeting_audio_rows(&self, meeting_id: Uuid) -> Result<(), StoreError> {
         self.tombstone_rows(
             "delete_meeting_audio_rows",
@@ -2035,7 +2476,472 @@ impl MeetingRepository for SqliteMeetingStore {
             "meeting_audio_chunks",
         )
     }
+}
 
+impl CaptureRepository for SqliteMeetingStore {
+    fn append_chunk(&self, chunk: NewAudioChunk) -> Result<AudioChunk, StoreError> {
+        let op = "U5 append_chunk";
+        let id = self.uuids.new_uuid();
+        let now = self.now();
+        let now_ms = to_ms(now);
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        tx.execute(
+            "INSERT INTO meeting_audio_chunks (
+                id, meeting_id, sequence, source, timeline_start_ms, timeline_end_ms,
+                storage_key, sample_rate, sample_count, file_size, checksum, state,
+                state_reason, device_id, gap_drift_metadata, revision, created_at,
+                updated_at, deleted_at
+             ) VALUES (
+                ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, NULL, 'writing',
+                NULL, ?10, NULL, 1, ?11, ?11, NULL
+             )",
+            params![
+                id.0,
+                chunk.meeting_id.0,
+                chunk.sequence,
+                chunk.source,
+                chunk.timeline_start_ms,
+                chunk.timeline_end_ms,
+                chunk.storage_key,
+                chunk.sample_rate as i64,
+                chunk.sample_count,
+                chunk.device_id,
+                now_ms,
+            ],
+        )
+        .map_err(classify(ENTITY_CHUNKS, &id, op))?;
+
+        change_log::append(
+            &tx,
+            ChangeLogEntry {
+                entity: ENTITY_CHUNKS,
+                entity_id: id.clone(),
+                revision: 1,
+                occurred_at: now,
+                operation: ChangeOperation::Create,
+            },
+        )
+        .map_err(sql_err(op))?;
+
+        let created = read_chunk(&tx, &id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_CHUNKS,
+                id: id.clone(),
+            })?;
+        tx.commit().map_err(sql_err(op))?;
+        Ok(created)
+    }
+
+    fn finalize_chunk(&self, id: Uuid, facts: ChunkFacts) -> Result<AudioChunk, StoreError> {
+        let op = "U6 finalize_chunk";
+        let now = self.now();
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        let current = read_chunk(&tx, &id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_CHUNKS,
+                id: id.clone(),
+            })?;
+        // Only a chunk still being written can be finalized. Re-finalizing a
+        // `ready` chunk would rewrite its checksum, which is exactly the fact
+        // damage detection relies on (contract §5.5).
+        if current.state != ChunkState::Writing {
+            return Err(StoreError::Conflict {
+                entity: ENTITY_CHUNKS,
+                id,
+                reason: format!(
+                    "chunk is {}, only 'writing' chunks can be finalized",
+                    chunk_state_token(current.state)
+                ),
+            });
+        }
+        let revision = current.envelope.revision + 1;
+
+        tx.execute(
+            // `timeline_end_ms` is derived here, not at insert time: a chunk is
+            // opened empty (start == end) and only its finalized sample count
+            // tells how far along the timeline it actually reaches. Leaving it
+            // at the insert value made every chunk zero-length, which in turn
+            // collapsed every STT job range and every transcript timestamp to
+            // the chunk start (regression: transcript segments all reported
+            // start_ms == end_ms).
+            "UPDATE meeting_audio_chunks
+             SET file_size = ?2, sample_count = ?3, checksum = ?4,
+                 gap_drift_metadata = COALESCE(?5, gap_drift_metadata),
+                 timeline_end_ms = timeline_start_ms
+                     + (?3 * 1000) / MAX(sample_rate, 1),
+                 state = 'ready', revision = ?6, updated_at = ?7
+             WHERE id = ?1",
+            params![
+                id.0,
+                facts.file_size,
+                facts.sample_count,
+                facts.checksum,
+                facts.gap_drift_metadata.as_ref().map(json_text),
+                revision,
+                to_ms(now),
+            ],
+        )
+        .map_err(classify(ENTITY_CHUNKS, &id, op))?;
+
+        // A durably finalized chunk is the only honest proof that a source
+        // actually produced audio, so the session's capability flags are
+        // raised here rather than optimistically at start. Nothing wrote them
+        // before, which left every session claiming "no microphone audio, no
+        // system audio" regardless of what had been captured — so the mic-only
+        // badge could never render correctly.
+        let source_column = match current.source.as_str() {
+            "microphone" => Some("has_microphone_audio"),
+            "system" => Some("has_system_audio"),
+            _ => None,
+        };
+        if let Some(column) = source_column {
+            tx.execute(
+                &format!(
+                    "UPDATE meeting_sessions SET {column} = 1, updated_at = ?2
+                     WHERE id = ?1 AND {column} = 0"
+                ),
+                params![current.meeting_id.0, to_ms(now)],
+            )
+            .map_err(classify(ENTITY_SESSIONS, &id, op))?;
+        }
+
+        change_log::append(
+            &tx,
+            ChangeLogEntry {
+                entity: ENTITY_CHUNKS,
+                entity_id: id.clone(),
+                revision,
+                occurred_at: now,
+                operation: ChangeOperation::Update,
+            },
+        )
+        .map_err(sql_err(op))?;
+
+        let finalized = read_chunk(&tx, &id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_CHUNKS,
+                id: id.clone(),
+            })?;
+        tx.commit().map_err(sql_err(op))?;
+        Ok(finalized)
+    }
+
+    fn mark_chunk(
+        &self,
+        id: Uuid,
+        state: ChunkState,
+        reason: Option<String>,
+    ) -> Result<(), StoreError> {
+        let op = "U7 mark_chunk";
+        // U7 is defined as `damaged`/`deleted` only; `writing` and `ready` are
+        // reached through U5/U6, so accepting them here would create a second,
+        // unlogged path into the chunk lifecycle.
+        if !matches!(state, ChunkState::Damaged | ChunkState::Deleted) {
+            return Err(StoreError::Conflict {
+                entity: ENTITY_CHUNKS,
+                id,
+                reason: format!(
+                    "mark_chunk accepts only 'damaged' or 'deleted', got '{}'",
+                    chunk_state_token(state)
+                ),
+            });
+        }
+        let now = self.now();
+        let now_ms = to_ms(now);
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        let current = read_chunk(&tx, &id.0)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: ENTITY_CHUNKS,
+                id: id.clone(),
+            })?;
+        let revision = current.envelope.revision + 1;
+        let deleting = state == ChunkState::Deleted;
+
+        // `deleted` sets the tombstone marker as well, so the chunk surfaces
+        // as `deleted == true` across the seam (contract §5.4); `damaged`
+        // keeps the row alive for recovery/forensics.
+        tx.execute(
+            "UPDATE meeting_audio_chunks
+             SET state = ?2, state_reason = ?3, revision = ?4, updated_at = ?5,
+                 deleted_at = CASE WHEN ?6 THEN COALESCE(deleted_at, ?5) ELSE deleted_at END
+             WHERE id = ?1",
+            params![
+                id.0,
+                chunk_state_token(state),
+                reason,
+                revision,
+                now_ms,
+                deleting
+            ],
+        )
+        .map_err(classify(ENTITY_CHUNKS, &id, op))?;
+
+        change_log::append(
+            &tx,
+            ChangeLogEntry {
+                entity: ENTITY_CHUNKS,
+                entity_id: id.clone(),
+                revision,
+                occurred_at: now,
+                operation: if deleting {
+                    ChangeOperation::Tombstone
+                } else {
+                    ChangeOperation::Update
+                },
+            },
+        )
+        .map_err(sql_err(op))?;
+
+        tx.commit().map_err(sql_err(op))
+    }
+
+    fn due_stt_jobs(&self, now: DateTime<Utc>, limit: u32) -> Result<Vec<SttJob>, StoreError> {
+        let op = "due_stt_jobs";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT {JOB_COLUMNS} FROM meeting_stt_jobs
+                 WHERE state IN ('queued', 'retry_wait')
+                   AND (next_attempt_at IS NULL OR next_attempt_at <= ?1)
+                 ORDER BY COALESCE(next_attempt_at, created_at) ASC, created_at ASC, rowid ASC
+                 LIMIT ?2"
+            ))
+            .map_err(sql_err(op))?;
+        let mut jobs = stmt
+            .query_map(params![to_ms(now), limit as i64], job_from_row)
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        for job in &mut jobs {
+            job.chunk_ids = load_job_chunk_ids(&conn, &job.id.0).map_err(sql_err(op))?;
+        }
+        Ok(jobs)
+    }
+
+    fn claim_due_stt_job(
+        &self,
+        worker: WorkerId,
+        now: DateTime<Utc>,
+    ) -> Result<Option<SttJobClaim>, StoreError> {
+        let op = "U4 claim_due_stt_job";
+        let now_ms = to_ms(now);
+
+        let mut conn = self.locked(op)?;
+        // IMMEDIATE takes the write lock up front, so the candidate SELECT and
+        // the claiming UPDATE cannot interleave with another process doing the
+        // same. Tier B: no envelope, no change_log (rule W6).
+        let tx = conn
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(sql_err(op))?;
+
+        let candidate: Option<String> = tx
+            .query_row(
+                "SELECT id FROM meeting_stt_jobs
+                 WHERE state IN ('queued', 'retry_wait')
+                   AND (next_attempt_at IS NULL OR next_attempt_at <= ?1)
+                 ORDER BY COALESCE(next_attempt_at, created_at) ASC, created_at ASC, rowid ASC
+                 LIMIT 1",
+                params![now_ms],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(sql_err(op))?;
+
+        let Some(job_id) = candidate else {
+            tx.commit().map_err(sql_err(op))?;
+            return Ok(None);
+        };
+
+        // The state predicate is repeated in the UPDATE so the claim is a
+        // compare-and-set: if anything moved the job since the SELECT, zero
+        // rows change and nobody hands out a duplicate lease.
+        let claimed = tx
+            .execute(
+                "UPDATE meeting_stt_jobs
+                 SET state = 'running', attempt_count = attempt_count + 1,
+                     claimed_by = ?2, claimed_at = ?3, updated_at = ?3
+                 WHERE id = ?1 AND state IN ('queued', 'retry_wait')",
+                params![job_id, worker.0, now_ms],
+            )
+            .map_err(sql_err(op))?;
+        if claimed == 0 {
+            tx.commit().map_err(sql_err(op))?;
+            return Ok(None);
+        }
+
+        let job = read_job(&tx, &job_id)
+            .map_err(sql_err(op))?
+            .ok_or_else(|| StoreError::NotFound {
+                entity: "meeting_stt_jobs",
+                id: Uuid(job_id.clone()),
+            })?;
+        tx.commit().map_err(sql_err(op))?;
+
+        Ok(Some(SttJobClaim {
+            job,
+            worker,
+            claimed_at: now,
+        }))
+    }
+
+    fn transition_stt_job(
+        &self,
+        id: Uuid,
+        to: SttJobState,
+        err: Option<String>,
+    ) -> Result<(), StoreError> {
+        let op = "U4 transition_stt_job";
+        let now = self.now();
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        let current =
+            read_job(&tx, &id.0)
+                .map_err(sql_err(op))?
+                .ok_or_else(|| StoreError::NotFound {
+                    entity: "meeting_stt_jobs",
+                    id: id.clone(),
+                })?;
+
+        // Terminal states are terminal (plan §9 line 1197): a succeeded job
+        // that could be moved back to `queued` would re-emit its segments.
+        if job_state_is_terminal(current.state) {
+            return Err(StoreError::Conflict {
+                entity: "meeting_stt_jobs",
+                id,
+                reason: format!(
+                    "job is in terminal state '{}' and cannot move to '{}'",
+                    job_state_token(current.state),
+                    job_state_token(to)
+                ),
+            });
+        }
+
+        // Leaving `running` releases the worker lease. `next_attempt_at` is
+        // deliberately NOT computed here: retry backoff is the queue's policy
+        // (stt-provider-contract §3), and inventing a schedule in the store
+        // would make two components disagree about when a job is due.
+        let releasing = to != SttJobState::Running;
+        tx.execute(
+            "UPDATE meeting_stt_jobs
+             SET state = ?2,
+                 last_error = COALESCE(?3, last_error),
+                 claimed_by = CASE WHEN ?4 THEN NULL ELSE claimed_by END,
+                 claimed_at = CASE WHEN ?4 THEN NULL ELSE claimed_at END,
+                 updated_at = ?5
+             WHERE id = ?1",
+            params![id.0, job_state_token(to), err, releasing, to_ms(now)],
+        )
+        .map_err(classify("meeting_stt_jobs", &id, op))?;
+
+        tx.commit().map_err(sql_err(op))
+    }
+
+    fn reschedule_stt_job(
+        &self,
+        id: Uuid,
+        next_attempt_at: DateTime<Utc>,
+        err: Option<String>,
+    ) -> Result<(), StoreError> {
+        let op = "U4 reschedule_stt_job";
+        let now = self.now();
+
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+
+        let current =
+            read_job(&tx, &id.0)
+                .map_err(sql_err(op))?
+                .ok_or_else(|| StoreError::NotFound {
+                    entity: "meeting_stt_jobs",
+                    id: id.clone(),
+                })?;
+        if job_state_is_terminal(current.state) {
+            return Err(StoreError::Conflict {
+                entity: "meeting_stt_jobs",
+                id,
+                reason: format!(
+                    "job is in terminal state '{}' and cannot be rescheduled",
+                    job_state_token(current.state)
+                ),
+            });
+        }
+        // Only a held lease can be pushed back; anything else means two
+        // workers disagree about who owns the job.
+        if current.state != SttJobState::Running {
+            return Err(StoreError::Conflict {
+                entity: "meeting_stt_jobs",
+                id,
+                reason: format!(
+                    "job is '{}', only a 'running' lease can move to 'retry_wait'",
+                    job_state_token(current.state)
+                ),
+            });
+        }
+
+        tx.execute(
+            "UPDATE meeting_stt_jobs
+             SET state = 'retry_wait', next_attempt_at = ?2,
+                 last_error = COALESCE(?3, last_error),
+                 claimed_by = NULL, claimed_at = NULL, updated_at = ?4
+             WHERE id = ?1",
+            params![id.0, to_ms(next_attempt_at), err, to_ms(now)],
+        )
+        .map_err(classify("meeting_stt_jobs", &id, op))?;
+
+        tx.commit().map_err(sql_err(op))
+    }
+
+    fn chunks_for_job(&self, job_id: Uuid) -> Result<Vec<AudioChunk>, StoreError> {
+        let op = "read chunks_for_job";
+        let conn = self.locked(op)?;
+
+        let ids: Vec<String> = {
+            let mut stmt = conn
+                .prepare(
+                    "SELECT chunk_id FROM meeting_stt_job_chunks
+                     WHERE job_id = ?1 ORDER BY position ASC, chunk_id ASC",
+                )
+                .map_err(sql_err(op))?;
+            let mapped = stmt
+                .query_map(params![job_id.0], |row| row.get(0))
+                .map_err(sql_err(op))?;
+            mapped
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(sql_err(op))?
+        };
+
+        let mut chunks = Vec::with_capacity(ids.len());
+        for chunk_id in ids {
+            match read_chunk(&conn, &chunk_id).map_err(sql_err(op))? {
+                Some(chunk) => chunks.push(chunk),
+                None => {
+                    return Err(StoreError::NotFound {
+                        entity: ENTITY_CHUNKS,
+                        id: Uuid(chunk_id),
+                    })
+                }
+            }
+        }
+        Ok(chunks)
+    }
+}
+
+impl ProjectRepository for SqliteMeetingStore {
     fn create_project(&self, draft: NewProject) -> Result<Project, StoreError> {
         let op = "create_project";
         let now = chrono::Utc::now().timestamp_millis();
@@ -2202,7 +3108,9 @@ impl MeetingRepository for SqliteMeetingStore {
         .map_err(sql_err(op))?;
         Ok(())
     }
+}
 
+impl SourceRepository for SqliteMeetingStore {
     fn create_chat_source(&self, draft: NewChatSource) -> Result<(Source, bool), StoreError> {
         let op = "create_chat_source";
         let now = chrono::Utc::now().timestamp_millis();
@@ -2274,6 +3182,119 @@ impl MeetingRepository for SqliteMeetingStore {
         }
     }
 
+    fn list_sources(&self) -> Result<Vec<Source>, StoreError> {
+        let op = "list_sources";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT {SOURCE_COLUMNS} FROM sources
+                 WHERE deleted_at IS NULL ORDER BY created_at DESC"
+            ))
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map([], source_from_row)
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
+    fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError> {
+        let op = "list_source_items";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, source_id, author_label, occurred_at, sequence, text, is_media
+                 FROM source_items WHERE source_id = ?1 AND deleted_at IS NULL ORDER BY sequence ASC",
+            )
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![source_id.0], |row| {
+                Ok(SourceItem {
+                    id: row.get(0)?,
+                    source_id: row.get(1)?,
+                    author_label: row.get(2)?,
+                    occurred_at: row.get(3)?,
+                    sequence: row.get(4)?,
+                    text: row.get(5)?,
+                    is_media: row.get::<_, i64>(6)? != 0,
+                })
+            })
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+
+    fn attach_source_assets(
+        &self,
+        source_id: Uuid,
+        assets: Vec<NewSourceAsset>,
+    ) -> Result<Vec<SourceAsset>, StoreError> {
+        let op = "attach_source_assets";
+        let now = to_ms(self.now());
+        let mut conn = self.locked(op)?;
+        let tx = conn.transaction().map_err(sql_err(op))?;
+        for asset in &assets {
+            // `OR IGNORE` against the (source_id, content_hash) index: a
+            // repeated import of the same archive must add nothing rather
+            // than fail (plan §6.19 idempotent re-import).
+            tx.execute(
+                "INSERT OR IGNORE INTO source_assets
+                   (id, source_id, storage_key, original_name, mime, size_bytes,
+                    content_hash, analysis_state, revision, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'not_analysed', 1, ?8, ?8)",
+                params![
+                    self.uuids.new_uuid().0,
+                    source_id.0,
+                    asset.storage_key,
+                    asset.original_name,
+                    asset.mime,
+                    asset.size_bytes,
+                    asset.content_hash,
+                    now,
+                ],
+            )
+            .map_err(classify("source_assets", &source_id, op))?;
+        }
+        tx.commit().map_err(sql_err(op))?;
+        drop(conn);
+        self.list_source_assets(source_id)
+    }
+
+    fn list_source_assets(&self, source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError> {
+        let op = "list_source_assets";
+        let conn = self.locked(op)?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, source_id, storage_key, original_name, mime, size_bytes,
+                        content_hash, analysis_state
+                 FROM source_assets
+                 WHERE source_id = ?1 AND deleted_at IS NULL
+                 ORDER BY original_name ASC",
+            )
+            .map_err(sql_err(op))?;
+        let rows = stmt
+            .query_map(params![source_id.0], |row| {
+                Ok(SourceAsset {
+                    id: row.get(0)?,
+                    source_id: row.get(1)?,
+                    storage_key: row.get(2)?,
+                    original_name: row.get(3)?,
+                    mime: row.get(4)?,
+                    size_bytes: row.get(5)?,
+                    content_hash: row.get(6)?,
+                    analysis_state: row.get(7)?,
+                })
+            })
+            .map_err(sql_err(op))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(sql_err(op))?;
+        Ok(rows)
+    }
+}
+
+impl TaskRepository for SqliteMeetingStore {
     fn create_manual_task(&self, draft: NewProjectTask) -> Result<ProjectTask, StoreError> {
         insert_task_impl(self, draft, "accepted", None)
     }
@@ -2409,990 +3430,6 @@ impl MeetingRepository for SqliteMeetingStore {
             .map_err(sql_err(op))?;
         Ok(rows)
     }
-
-    fn list_sources(&self) -> Result<Vec<Source>, StoreError> {
-        let op = "list_sources";
-        let conn = self.locked(op)?;
-        let mut stmt = conn
-            .prepare(&format!(
-                "SELECT {SOURCE_COLUMNS} FROM sources
-                 WHERE deleted_at IS NULL ORDER BY created_at DESC"
-            ))
-            .map_err(sql_err(op))?;
-        let rows = stmt
-            .query_map([], source_from_row)
-            .map_err(sql_err(op))?
-            .collect::<rusqlite::Result<Vec<_>>>()
-            .map_err(sql_err(op))?;
-        Ok(rows)
-    }
-
-    fn list_source_items(&self, source_id: Uuid) -> Result<Vec<SourceItem>, StoreError> {
-        let op = "list_source_items";
-        let conn = self.locked(op)?;
-        let mut stmt = conn
-            .prepare(
-                "SELECT id, source_id, author_label, occurred_at, sequence, text, is_media
-                 FROM source_items WHERE source_id = ?1 AND deleted_at IS NULL ORDER BY sequence ASC",
-            )
-            .map_err(sql_err(op))?;
-        let rows = stmt
-            .query_map(params![source_id.0], |row| {
-                Ok(SourceItem {
-                    id: row.get(0)?,
-                    source_id: row.get(1)?,
-                    author_label: row.get(2)?,
-                    occurred_at: row.get(3)?,
-                    sequence: row.get(4)?,
-                    text: row.get(5)?,
-                    is_media: row.get::<_, i64>(6)? != 0,
-                })
-            })
-            .map_err(sql_err(op))?
-            .collect::<rusqlite::Result<Vec<_>>>()
-            .map_err(sql_err(op))?;
-        Ok(rows)
-    }
-
-    fn attach_source_assets(
-        &self,
-        source_id: Uuid,
-        assets: Vec<NewSourceAsset>,
-    ) -> Result<Vec<SourceAsset>, StoreError> {
-        let op = "attach_source_assets";
-        let now = to_ms(self.now());
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-        for asset in &assets {
-            // `OR IGNORE` against the (source_id, content_hash) index: a
-            // repeated import of the same archive must add nothing rather
-            // than fail (plan §6.19 idempotent re-import).
-            tx.execute(
-                "INSERT OR IGNORE INTO source_assets
-                   (id, source_id, storage_key, original_name, mime, size_bytes,
-                    content_hash, analysis_state, revision, created_at, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'not_analysed', 1, ?8, ?8)",
-                params![
-                    self.uuids.new_uuid().0,
-                    source_id.0,
-                    asset.storage_key,
-                    asset.original_name,
-                    asset.mime,
-                    asset.size_bytes,
-                    asset.content_hash,
-                    now,
-                ],
-            )
-            .map_err(classify("source_assets", &source_id, op))?;
-        }
-        tx.commit().map_err(sql_err(op))?;
-        drop(conn);
-        self.list_source_assets(source_id)
-    }
-
-    fn list_source_assets(&self, source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError> {
-        let op = "list_source_assets";
-        let conn = self.locked(op)?;
-        let mut stmt = conn
-            .prepare(
-                "SELECT id, source_id, storage_key, original_name, mime, size_bytes,
-                        content_hash, analysis_state
-                 FROM source_assets
-                 WHERE source_id = ?1 AND deleted_at IS NULL
-                 ORDER BY original_name ASC",
-            )
-            .map_err(sql_err(op))?;
-        let rows = stmt
-            .query_map(params![source_id.0], |row| {
-                Ok(SourceAsset {
-                    id: row.get(0)?,
-                    source_id: row.get(1)?,
-                    storage_key: row.get(2)?,
-                    original_name: row.get(3)?,
-                    mime: row.get(4)?,
-                    size_bytes: row.get(5)?,
-                    content_hash: row.get(6)?,
-                    analysis_state: row.get(7)?,
-                })
-            })
-            .map_err(sql_err(op))?
-            .collect::<rusqlite::Result<Vec<_>>>()
-            .map_err(sql_err(op))?;
-        Ok(rows)
-    }
-
-    fn purge_meeting_content(&self, meeting_id: Uuid) -> Result<(), StoreError> {
-        let op = "purge_meeting_content";
-        let now = chrono::Utc::now().timestamp_millis();
-        let conn = self.locked(op)?;
-        for entity in [
-            "meeting_audio_chunks",
-            "meeting_transcript_segments",
-            "meeting_summaries",
-        ] {
-            conn.execute(
-                &format!(
-                    "UPDATE {entity} SET deleted_at = ?2, revision = revision + 1,
-                     updated_at = ?2 WHERE meeting_id = ?1 AND deleted_at IS NULL"
-                ),
-                params![meeting_id.0, now],
-            )
-            .map_err(classify(entity, &meeting_id, op))?;
-        }
-        Ok(())
-    }
-
-    fn summary_for_meeting(&self, meeting_id: Uuid) -> Result<Option<MeetingSummary>, StoreError> {
-        let op = "summary_for_meeting";
-        let conn = self.locked(op)?;
-        read_summary_by_meeting(&conn, &meeting_id.0).map_err(sql_err(op))
-    }
-
-    fn due_stt_jobs(&self, now: DateTime<Utc>, limit: u32) -> Result<Vec<SttJob>, StoreError> {
-        let op = "due_stt_jobs";
-        let conn = self.locked(op)?;
-        let mut stmt = conn
-            .prepare(&format!(
-                "SELECT {JOB_COLUMNS} FROM meeting_stt_jobs
-                 WHERE state IN ('queued', 'retry_wait')
-                   AND (next_attempt_at IS NULL OR next_attempt_at <= ?1)
-                 ORDER BY COALESCE(next_attempt_at, created_at) ASC, created_at ASC, rowid ASC
-                 LIMIT ?2"
-            ))
-            .map_err(sql_err(op))?;
-        let mut jobs = stmt
-            .query_map(params![to_ms(now), limit as i64], job_from_row)
-            .map_err(sql_err(op))?
-            .collect::<rusqlite::Result<Vec<_>>>()
-            .map_err(sql_err(op))?;
-        for job in &mut jobs {
-            job.chunk_ids = load_job_chunk_ids(&conn, &job.id.0).map_err(sql_err(op))?;
-        }
-        Ok(jobs)
-    }
-
-    // -- U1: create_session ------------------------------------------------
-
-    fn create_session(&self, draft: NewMeetingSession) -> Result<MeetingSession, StoreError> {
-        let op = "U1 create_session";
-        let id = self.uuids.new_uuid();
-        let now = self.now();
-        let now_ms = to_ms(now);
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-        tx.execute(
-            "INSERT INTO meeting_sessions (
-                id, title, state, stt_provider, provider_config_snapshot, meeting_model_id,
-                language, microphone_device, output_device, has_microphone_audio,
-                has_system_audio, recording_retention_policy, summary_provider, summary_state,
-                last_error, started_at, ended_at, revision, created_at, updated_at, deleted_at
-             ) VALUES (
-                ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10,
-                ?11, ?12, ?13, 'none', NULL, ?14, NULL, 1, ?15, ?15, NULL
-             )",
-            params![
-                id.0,
-                draft.title,
-                crate::managers::meeting::SESSION_STATE_DRAFT,
-                draft.stt_provider,
-                json_text(&draft.provider_config_snapshot),
-                draft.meeting_model_id,
-                draft.language,
-                draft.microphone_device,
-                draft.output_device,
-                draft.has_microphone_audio,
-                draft.has_system_audio,
-                draft.recording_retention_policy,
-                draft.summary_provider,
-                to_ms(draft.started_at),
-                now_ms,
-            ],
-        )
-        .map_err(classify(ENTITY_SESSIONS, &id, op))?;
-
-        change_log::append(
-            &tx,
-            ChangeLogEntry {
-                entity: ENTITY_SESSIONS,
-                entity_id: id.clone(),
-                revision: 1,
-                occurred_at: now,
-                operation: ChangeOperation::Create,
-            },
-        )
-        .map_err(sql_err(op))?;
-
-        let created = read_session(&tx, &id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_SESSIONS,
-                id: id.clone(),
-            })?;
-        tx.commit().map_err(sql_err(op))?;
-        Ok(created)
-    }
-
-    // -- U2: update_session ------------------------------------------------
-
-    fn update_session(&self, id: Uuid, patch: SessionPatch) -> Result<MeetingSession, StoreError> {
-        let op = "U2 update_session";
-        let now = self.now();
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        // Read-modify-write inside the transaction rather than assembling a
-        // dynamic SET clause: `None` means "leave unchanged" for every patch
-        // field, and this keeps that rule in one place instead of in six
-        // SQL fragments. `ended_at`/`last_error` therefore cannot be *cleared*
-        // through the patch — clearing is not a modelled operation.
-        let current = read_session(&tx, &id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_SESSIONS,
-                id: id.clone(),
-            })?;
-
-        let title = patch.title.unwrap_or(current.title);
-        let state = patch.state.unwrap_or(current.state);
-        let ended_at = patch.ended_at.or(current.ended_at);
-        let summary_state = patch.summary_state.unwrap_or(current.summary_state);
-        let last_error = patch.last_error.or(current.last_error);
-        let retention = patch
-            .recording_retention_policy
-            .unwrap_or(current.recording_retention_policy);
-        let revision = current.envelope.revision + 1;
-
-        tx.execute(
-            "UPDATE meeting_sessions
-             SET title = ?2, state = ?3, ended_at = ?4, summary_state = ?5, last_error = ?6,
-                 recording_retention_policy = ?7, revision = ?8, updated_at = ?9
-             WHERE id = ?1 AND deleted_at IS NULL",
-            params![
-                id.0,
-                title,
-                state,
-                ended_at.map(to_ms),
-                summary_state,
-                last_error,
-                retention,
-                revision,
-                to_ms(now),
-            ],
-        )
-        .map_err(classify(ENTITY_SESSIONS, &id, op))?;
-
-        change_log::append(
-            &tx,
-            ChangeLogEntry {
-                entity: ENTITY_SESSIONS,
-                entity_id: id.clone(),
-                revision,
-                occurred_at: now,
-                operation: ChangeOperation::Update,
-            },
-        )
-        .map_err(sql_err(op))?;
-
-        let updated = read_session(&tx, &id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_SESSIONS,
-                id: id.clone(),
-            })?;
-        tx.commit().map_err(sql_err(op))?;
-        Ok(updated)
-    }
-
-    // -- U3: soft_delete_session -------------------------------------------
-
-    fn soft_delete_session(&self, id: Uuid) -> Result<(), StoreError> {
-        let op = "U3 soft_delete_session";
-        let now = self.now();
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        let current = read_session(&tx, &id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_SESSIONS,
-                id: id.clone(),
-            })?;
-        let revision = current.envelope.revision + 1;
-
-        // Tombstone, never DELETE: hard deletion of tier-A rows does not exist
-        // in v1 (contract §5.4). Chunks, segments and summaries of the meeting
-        // keep their rows too — the FK cascades exist for integrity, but no
-        // code path in this store ever triggers them.
-        tx.execute(
-            "UPDATE meeting_sessions
-             SET deleted_at = ?2, revision = ?3, updated_at = ?2
-             WHERE id = ?1 AND deleted_at IS NULL",
-            params![id.0, to_ms(now), revision],
-        )
-        .map_err(classify(ENTITY_SESSIONS, &id, op))?;
-
-        change_log::append(
-            &tx,
-            ChangeLogEntry {
-                entity: ENTITY_SESSIONS,
-                entity_id: id.clone(),
-                revision,
-                occurred_at: now,
-                operation: ChangeOperation::Tombstone,
-            },
-        )
-        .map_err(sql_err(op))?;
-
-        tx.commit().map_err(sql_err(op))
-    }
-
-    // -- U5: append_chunk --------------------------------------------------
-
-    fn append_chunk(&self, chunk: NewAudioChunk) -> Result<AudioChunk, StoreError> {
-        let op = "U5 append_chunk";
-        let id = self.uuids.new_uuid();
-        let now = self.now();
-        let now_ms = to_ms(now);
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        tx.execute(
-            "INSERT INTO meeting_audio_chunks (
-                id, meeting_id, sequence, source, timeline_start_ms, timeline_end_ms,
-                storage_key, sample_rate, sample_count, file_size, checksum, state,
-                state_reason, device_id, gap_drift_metadata, revision, created_at,
-                updated_at, deleted_at
-             ) VALUES (
-                ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, NULL, 'writing',
-                NULL, ?10, NULL, 1, ?11, ?11, NULL
-             )",
-            params![
-                id.0,
-                chunk.meeting_id.0,
-                chunk.sequence,
-                chunk.source,
-                chunk.timeline_start_ms,
-                chunk.timeline_end_ms,
-                chunk.storage_key,
-                chunk.sample_rate as i64,
-                chunk.sample_count,
-                chunk.device_id,
-                now_ms,
-            ],
-        )
-        .map_err(classify(ENTITY_CHUNKS, &id, op))?;
-
-        change_log::append(
-            &tx,
-            ChangeLogEntry {
-                entity: ENTITY_CHUNKS,
-                entity_id: id.clone(),
-                revision: 1,
-                occurred_at: now,
-                operation: ChangeOperation::Create,
-            },
-        )
-        .map_err(sql_err(op))?;
-
-        let created = read_chunk(&tx, &id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_CHUNKS,
-                id: id.clone(),
-            })?;
-        tx.commit().map_err(sql_err(op))?;
-        Ok(created)
-    }
-
-    // -- U6: finalize_chunk ------------------------------------------------
-
-    fn finalize_chunk(&self, id: Uuid, facts: ChunkFacts) -> Result<AudioChunk, StoreError> {
-        let op = "U6 finalize_chunk";
-        let now = self.now();
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        let current = read_chunk(&tx, &id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_CHUNKS,
-                id: id.clone(),
-            })?;
-        // Only a chunk still being written can be finalized. Re-finalizing a
-        // `ready` chunk would rewrite its checksum, which is exactly the fact
-        // damage detection relies on (contract §5.5).
-        if current.state != ChunkState::Writing {
-            return Err(StoreError::Conflict {
-                entity: ENTITY_CHUNKS,
-                id,
-                reason: format!(
-                    "chunk is {}, only 'writing' chunks can be finalized",
-                    chunk_state_token(current.state)
-                ),
-            });
-        }
-        let revision = current.envelope.revision + 1;
-
-        tx.execute(
-            // `timeline_end_ms` is derived here, not at insert time: a chunk is
-            // opened empty (start == end) and only its finalized sample count
-            // tells how far along the timeline it actually reaches. Leaving it
-            // at the insert value made every chunk zero-length, which in turn
-            // collapsed every STT job range and every transcript timestamp to
-            // the chunk start (regression: transcript segments all reported
-            // start_ms == end_ms).
-            "UPDATE meeting_audio_chunks
-             SET file_size = ?2, sample_count = ?3, checksum = ?4,
-                 gap_drift_metadata = COALESCE(?5, gap_drift_metadata),
-                 timeline_end_ms = timeline_start_ms
-                     + (?3 * 1000) / MAX(sample_rate, 1),
-                 state = 'ready', revision = ?6, updated_at = ?7
-             WHERE id = ?1",
-            params![
-                id.0,
-                facts.file_size,
-                facts.sample_count,
-                facts.checksum,
-                facts.gap_drift_metadata.as_ref().map(json_text),
-                revision,
-                to_ms(now),
-            ],
-        )
-        .map_err(classify(ENTITY_CHUNKS, &id, op))?;
-
-        // A durably finalized chunk is the only honest proof that a source
-        // actually produced audio, so the session's capability flags are
-        // raised here rather than optimistically at start. Nothing wrote them
-        // before, which left every session claiming "no microphone audio, no
-        // system audio" regardless of what had been captured — so the mic-only
-        // badge could never render correctly.
-        let source_column = match current.source.as_str() {
-            "microphone" => Some("has_microphone_audio"),
-            "system" => Some("has_system_audio"),
-            _ => None,
-        };
-        if let Some(column) = source_column {
-            tx.execute(
-                &format!(
-                    "UPDATE meeting_sessions SET {column} = 1, updated_at = ?2
-                     WHERE id = ?1 AND {column} = 0"
-                ),
-                params![current.meeting_id.0, to_ms(now)],
-            )
-            .map_err(classify(ENTITY_SESSIONS, &id, op))?;
-        }
-
-        change_log::append(
-            &tx,
-            ChangeLogEntry {
-                entity: ENTITY_CHUNKS,
-                entity_id: id.clone(),
-                revision,
-                occurred_at: now,
-                operation: ChangeOperation::Update,
-            },
-        )
-        .map_err(sql_err(op))?;
-
-        let finalized = read_chunk(&tx, &id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_CHUNKS,
-                id: id.clone(),
-            })?;
-        tx.commit().map_err(sql_err(op))?;
-        Ok(finalized)
-    }
-
-    // -- U7: mark_chunk ----------------------------------------------------
-
-    fn mark_chunk(
-        &self,
-        id: Uuid,
-        state: ChunkState,
-        reason: Option<String>,
-    ) -> Result<(), StoreError> {
-        let op = "U7 mark_chunk";
-        // U7 is defined as `damaged`/`deleted` only; `writing` and `ready` are
-        // reached through U5/U6, so accepting them here would create a second,
-        // unlogged path into the chunk lifecycle.
-        if !matches!(state, ChunkState::Damaged | ChunkState::Deleted) {
-            return Err(StoreError::Conflict {
-                entity: ENTITY_CHUNKS,
-                id,
-                reason: format!(
-                    "mark_chunk accepts only 'damaged' or 'deleted', got '{}'",
-                    chunk_state_token(state)
-                ),
-            });
-        }
-        let now = self.now();
-        let now_ms = to_ms(now);
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        let current = read_chunk(&tx, &id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_CHUNKS,
-                id: id.clone(),
-            })?;
-        let revision = current.envelope.revision + 1;
-        let deleting = state == ChunkState::Deleted;
-
-        // `deleted` sets the tombstone marker as well, so the chunk surfaces
-        // as `deleted == true` across the seam (contract §5.4); `damaged`
-        // keeps the row alive for recovery/forensics.
-        tx.execute(
-            "UPDATE meeting_audio_chunks
-             SET state = ?2, state_reason = ?3, revision = ?4, updated_at = ?5,
-                 deleted_at = CASE WHEN ?6 THEN COALESCE(deleted_at, ?5) ELSE deleted_at END
-             WHERE id = ?1",
-            params![
-                id.0,
-                chunk_state_token(state),
-                reason,
-                revision,
-                now_ms,
-                deleting
-            ],
-        )
-        .map_err(classify(ENTITY_CHUNKS, &id, op))?;
-
-        change_log::append(
-            &tx,
-            ChangeLogEntry {
-                entity: ENTITY_CHUNKS,
-                entity_id: id.clone(),
-                revision,
-                occurred_at: now,
-                operation: if deleting {
-                    ChangeOperation::Tombstone
-                } else {
-                    ChangeOperation::Update
-                },
-            },
-        )
-        .map_err(sql_err(op))?;
-
-        tx.commit().map_err(sql_err(op))
-    }
-
-    // -- U4: claim_due_stt_job ---------------------------------------------
-
-    fn claim_due_stt_job(
-        &self,
-        worker: WorkerId,
-        now: DateTime<Utc>,
-    ) -> Result<Option<SttJobClaim>, StoreError> {
-        let op = "U4 claim_due_stt_job";
-        let now_ms = to_ms(now);
-
-        let mut conn = self.locked(op)?;
-        // IMMEDIATE takes the write lock up front, so the candidate SELECT and
-        // the claiming UPDATE cannot interleave with another process doing the
-        // same. Tier B: no envelope, no change_log (rule W6).
-        let tx = conn
-            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
-            .map_err(sql_err(op))?;
-
-        let candidate: Option<String> = tx
-            .query_row(
-                "SELECT id FROM meeting_stt_jobs
-                 WHERE state IN ('queued', 'retry_wait')
-                   AND (next_attempt_at IS NULL OR next_attempt_at <= ?1)
-                 ORDER BY COALESCE(next_attempt_at, created_at) ASC, created_at ASC, rowid ASC
-                 LIMIT 1",
-                params![now_ms],
-                |row| row.get(0),
-            )
-            .optional()
-            .map_err(sql_err(op))?;
-
-        let Some(job_id) = candidate else {
-            tx.commit().map_err(sql_err(op))?;
-            return Ok(None);
-        };
-
-        // The state predicate is repeated in the UPDATE so the claim is a
-        // compare-and-set: if anything moved the job since the SELECT, zero
-        // rows change and nobody hands out a duplicate lease.
-        let claimed = tx
-            .execute(
-                "UPDATE meeting_stt_jobs
-                 SET state = 'running', attempt_count = attempt_count + 1,
-                     claimed_by = ?2, claimed_at = ?3, updated_at = ?3
-                 WHERE id = ?1 AND state IN ('queued', 'retry_wait')",
-                params![job_id, worker.0, now_ms],
-            )
-            .map_err(sql_err(op))?;
-        if claimed == 0 {
-            tx.commit().map_err(sql_err(op))?;
-            return Ok(None);
-        }
-
-        let job = read_job(&tx, &job_id)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: "meeting_stt_jobs",
-                id: Uuid(job_id.clone()),
-            })?;
-        tx.commit().map_err(sql_err(op))?;
-
-        Ok(Some(SttJobClaim {
-            job,
-            worker,
-            claimed_at: now,
-        }))
-    }
-
-    // -- U4: transition_stt_job --------------------------------------------
-
-    fn transition_stt_job(
-        &self,
-        id: Uuid,
-        to: SttJobState,
-        err: Option<String>,
-    ) -> Result<(), StoreError> {
-        let op = "U4 transition_stt_job";
-        let now = self.now();
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        let current =
-            read_job(&tx, &id.0)
-                .map_err(sql_err(op))?
-                .ok_or_else(|| StoreError::NotFound {
-                    entity: "meeting_stt_jobs",
-                    id: id.clone(),
-                })?;
-
-        // Terminal states are terminal (plan §9 line 1197): a succeeded job
-        // that could be moved back to `queued` would re-emit its segments.
-        if job_state_is_terminal(current.state) {
-            return Err(StoreError::Conflict {
-                entity: "meeting_stt_jobs",
-                id,
-                reason: format!(
-                    "job is in terminal state '{}' and cannot move to '{}'",
-                    job_state_token(current.state),
-                    job_state_token(to)
-                ),
-            });
-        }
-
-        // Leaving `running` releases the worker lease. `next_attempt_at` is
-        // deliberately NOT computed here: retry backoff is the queue's policy
-        // (stt-provider-contract §3), and inventing a schedule in the store
-        // would make two components disagree about when a job is due.
-        let releasing = to != SttJobState::Running;
-        tx.execute(
-            "UPDATE meeting_stt_jobs
-             SET state = ?2,
-                 last_error = COALESCE(?3, last_error),
-                 claimed_by = CASE WHEN ?4 THEN NULL ELSE claimed_by END,
-                 claimed_at = CASE WHEN ?4 THEN NULL ELSE claimed_at END,
-                 updated_at = ?5
-             WHERE id = ?1",
-            params![id.0, job_state_token(to), err, releasing, to_ms(now)],
-        )
-        .map_err(classify("meeting_stt_jobs", &id, op))?;
-
-        tx.commit().map_err(sql_err(op))
-    }
-
-    // -- U4: reschedule_stt_job --------------------------------------------
-
-    fn reschedule_stt_job(
-        &self,
-        id: Uuid,
-        next_attempt_at: DateTime<Utc>,
-        err: Option<String>,
-    ) -> Result<(), StoreError> {
-        let op = "U4 reschedule_stt_job";
-        let now = self.now();
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        let current =
-            read_job(&tx, &id.0)
-                .map_err(sql_err(op))?
-                .ok_or_else(|| StoreError::NotFound {
-                    entity: "meeting_stt_jobs",
-                    id: id.clone(),
-                })?;
-        if job_state_is_terminal(current.state) {
-            return Err(StoreError::Conflict {
-                entity: "meeting_stt_jobs",
-                id,
-                reason: format!(
-                    "job is in terminal state '{}' and cannot be rescheduled",
-                    job_state_token(current.state)
-                ),
-            });
-        }
-        // Only a held lease can be pushed back; anything else means two
-        // workers disagree about who owns the job.
-        if current.state != SttJobState::Running {
-            return Err(StoreError::Conflict {
-                entity: "meeting_stt_jobs",
-                id,
-                reason: format!(
-                    "job is '{}', only a 'running' lease can move to 'retry_wait'",
-                    job_state_token(current.state)
-                ),
-            });
-        }
-
-        tx.execute(
-            "UPDATE meeting_stt_jobs
-             SET state = 'retry_wait', next_attempt_at = ?2,
-                 last_error = COALESCE(?3, last_error),
-                 claimed_by = NULL, claimed_at = NULL, updated_at = ?4
-             WHERE id = ?1",
-            params![id.0, to_ms(next_attempt_at), err, to_ms(now)],
-        )
-        .map_err(classify("meeting_stt_jobs", &id, op))?;
-
-        tx.commit().map_err(sql_err(op))
-    }
-
-    // -- read: chunks_for_job ----------------------------------------------
-
-    fn chunks_for_job(&self, job_id: Uuid) -> Result<Vec<AudioChunk>, StoreError> {
-        let op = "read chunks_for_job";
-        let conn = self.locked(op)?;
-
-        let ids: Vec<String> = {
-            let mut stmt = conn
-                .prepare(
-                    "SELECT chunk_id FROM meeting_stt_job_chunks
-                     WHERE job_id = ?1 ORDER BY position ASC, chunk_id ASC",
-                )
-                .map_err(sql_err(op))?;
-            let mapped = stmt
-                .query_map(params![job_id.0], |row| row.get(0))
-                .map_err(sql_err(op))?;
-            mapped
-                .collect::<rusqlite::Result<Vec<_>>>()
-                .map_err(sql_err(op))?
-        };
-
-        let mut chunks = Vec::with_capacity(ids.len());
-        for chunk_id in ids {
-            match read_chunk(&conn, &chunk_id).map_err(sql_err(op))? {
-                Some(chunk) => chunks.push(chunk),
-                None => {
-                    return Err(StoreError::NotFound {
-                        entity: ENTITY_CHUNKS,
-                        id: Uuid(chunk_id),
-                    })
-                }
-            }
-        }
-        Ok(chunks)
-    }
-
-    // -- U8: insert_segments -----------------------------------------------
-
-    fn insert_segments(
-        &self,
-        job_id: Uuid,
-        segments: Vec<NewTranscriptSegment>,
-    ) -> Result<Vec<TranscriptSegment>, StoreError> {
-        let op = "U8 insert_segments";
-        let now = self.now();
-        let now_ms = to_ms(now);
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        // The meeting is taken from the job rather than from the caller: the
-        // job already fixes which session its output belongs to, and letting a
-        // caller supply it again would allow the two to disagree.
-        let job = read_job(&tx, &job_id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: "meeting_stt_jobs",
-                id: job_id.clone(),
-            })?;
-
-        // Idempotent resume (plan §13 Phase 6: saved responses are never
-        // duplicated): if a previous attempt of this job already committed its
-        // segments (crash between insert and the Succeeded transition), return
-        // them instead of writing a second copy.
-        let existing = load_job_segments(&tx, &job_id.0).map_err(sql_err(op))?;
-        if !existing.is_empty() {
-            log::debug!(
-                "Job {} already has {} persisted segment(s); skipping re-insert",
-                job_id.0,
-                existing.len()
-            );
-            tx.commit().map_err(sql_err(op))?;
-            return Ok(existing);
-        }
-
-        let mut inserted = Vec::with_capacity(segments.len());
-        for segment in segments {
-            let id = self.uuids.new_uuid();
-            tx.execute(
-                "INSERT INTO meeting_transcript_segments (
-                    id, meeting_id, job_id, source, start_ms, end_ms, text, word_timestamps,
-                    confidence, provider, model_id, sequence, revision, created_at,
-                    updated_at, deleted_at
-                 ) VALUES (
-                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?13, NULL
-                 )",
-                params![
-                    id.0,
-                    job.meeting_id.0,
-                    job_id.0,
-                    segment.source,
-                    segment.start_ms,
-                    segment.end_ms,
-                    segment.text,
-                    segment.word_timestamps.as_ref().map(json_text),
-                    segment.confidence.map(f64::from),
-                    segment.provider,
-                    segment.model_id,
-                    segment.sequence,
-                    now_ms,
-                ],
-            )
-            .map_err(classify(ENTITY_SEGMENTS, &id, op))?;
-
-            // One log row per segment (U8), all in this single transaction.
-            change_log::append(
-                &tx,
-                ChangeLogEntry {
-                    entity: ENTITY_SEGMENTS,
-                    entity_id: id.clone(),
-                    revision: 1,
-                    occurred_at: now,
-                    operation: ChangeOperation::Create,
-                },
-            )
-            .map_err(sql_err(op))?;
-
-            let stored = tx
-                .query_row(
-                    &format!(
-                        "SELECT {SEGMENT_COLUMNS} FROM meeting_transcript_segments WHERE id = ?1"
-                    ),
-                    params![id.0],
-                    segment_from_row,
-                )
-                .map_err(sql_err(op))?;
-            inserted.push(stored);
-        }
-
-        tx.commit().map_err(sql_err(op))?;
-        Ok(inserted)
-    }
-
-    // -- U9: upsert_summary ------------------------------------------------
-
-    fn upsert_summary(&self, summary: NewMeetingSummary) -> Result<MeetingSummary, StoreError> {
-        let op = "U9 upsert_summary";
-        let now = self.now();
-        let now_ms = to_ms(now);
-
-        let mut conn = self.locked(op)?;
-        let tx = conn.transaction().map_err(sql_err(op))?;
-
-        // INSERT-vs-UPDATE is decided from the meeting id (U9 semantics); the
-        // UNIQUE constraint on `meeting_id` makes that the only possible
-        // outcome even under a race.
-        let existing = read_summary_by_meeting(&tx, &summary.meeting_id.0).map_err(sql_err(op))?;
-
-        let (id, revision, operation) = match &existing {
-            Some(row) => (
-                row.envelope.id.clone(),
-                row.envelope.revision + 1,
-                ChangeOperation::Update,
-            ),
-            None => (self.uuids.new_uuid(), 1, ChangeOperation::Create),
-        };
-
-        if existing.is_some() {
-            tx.execute(
-                "UPDATE meeting_summaries
-                 SET provider = ?2, model = ?3, prompt_version = ?4, state = ?5,
-                     summary_markdown = ?6, decisions = ?7, action_items = ?8,
-                     open_questions = ?9, last_error = ?10, revision = ?11, updated_at = ?12
-                 WHERE id = ?1",
-                params![
-                    id.0,
-                    summary.provider,
-                    summary.model,
-                    summary.prompt_version,
-                    summary.state,
-                    summary.summary_markdown,
-                    json_text(&summary.decisions),
-                    json_text(&summary.action_items),
-                    json_text(&summary.open_questions),
-                    summary.last_error,
-                    revision,
-                    now_ms,
-                ],
-            )
-            .map_err(classify(ENTITY_SUMMARIES, &id, op))?;
-        } else {
-            tx.execute(
-                "INSERT INTO meeting_summaries (
-                    id, meeting_id, provider, model, prompt_version, state, summary_markdown,
-                    decisions, action_items, open_questions, last_error, revision,
-                    created_at, updated_at, deleted_at
-                 ) VALUES (
-                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 1, ?12, ?12, NULL
-                 )",
-                params![
-                    id.0,
-                    summary.meeting_id.0,
-                    summary.provider,
-                    summary.model,
-                    summary.prompt_version,
-                    summary.state,
-                    summary.summary_markdown,
-                    json_text(&summary.decisions),
-                    json_text(&summary.action_items),
-                    json_text(&summary.open_questions),
-                    summary.last_error,
-                    now_ms,
-                ],
-            )
-            .map_err(classify(ENTITY_SUMMARIES, &id, op))?;
-        }
-
-        change_log::append(
-            &tx,
-            ChangeLogEntry {
-                entity: ENTITY_SUMMARIES,
-                entity_id: id.clone(),
-                revision,
-                occurred_at: now,
-                operation,
-            },
-        )
-        .map_err(sql_err(op))?;
-
-        let stored = read_summary_by_meeting(&tx, &summary.meeting_id.0)
-            .map_err(sql_err(op))?
-            .ok_or_else(|| StoreError::NotFound {
-                entity: ENTITY_SUMMARIES,
-                id: id.clone(),
-            })?;
-        tx.commit().map_err(sql_err(op))?;
-        Ok(stored)
-    }
 }
 
 #[cfg(test)]
@@ -3406,40 +3443,145 @@ mod tests {
     struct FakeMeetingRepository;
 
     #[allow(unused_variables)]
-    impl MeetingRepository for FakeMeetingRepository {
+    impl SessionRepository for FakeMeetingRepository {
         fn get_session(&self, id: Uuid) -> Result<Option<MeetingSession>, StoreError> {
             unimplemented!("fake")
         }
+
         fn list_sessions(&self, page: Page) -> Result<PageOf<MeetingSession>, StoreError> {
             unimplemented!("fake")
         }
+
+        fn create_session(&self, draft: NewMeetingSession) -> Result<MeetingSession, StoreError> {
+            unimplemented!("fake")
+        }
+
+        fn update_session(
+            &self,
+            id: Uuid,
+            patch: SessionPatch,
+        ) -> Result<MeetingSession, StoreError> {
+            unimplemented!("fake")
+        }
+
+        fn soft_delete_session(&self, id: Uuid) -> Result<(), StoreError> {
+            unimplemented!("fake")
+        }
+
         fn segments_for_meeting(
             &self,
             meeting_id: Uuid,
         ) -> Result<Vec<TranscriptSegment>, StoreError> {
             unimplemented!("fake")
         }
+
         fn max_segment_sequence(&self, _meeting_id: Uuid) -> Result<i64, StoreError> {
             unimplemented!("fake")
         }
-        fn delete_meeting_audio_rows(&self, _meeting_id: Uuid) -> Result<(), StoreError> {
+
+        fn insert_segments(
+            &self,
+            job_id: Uuid,
+            segments: Vec<NewTranscriptSegment>,
+        ) -> Result<Vec<TranscriptSegment>, StoreError> {
             unimplemented!("fake")
         }
+
+        fn summary_for_meeting(
+            &self,
+            meeting_id: Uuid,
+        ) -> Result<Option<MeetingSummary>, StoreError> {
+            unimplemented!("fake")
+        }
+
+        fn upsert_summary(&self, summary: NewMeetingSummary) -> Result<MeetingSummary, StoreError> {
+            unimplemented!("fake")
+        }
+
         fn purge_meeting_content(&self, _meeting_id: Uuid) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
+
+        fn delete_meeting_audio_rows(&self, _meeting_id: Uuid) -> Result<(), StoreError> {
+            unimplemented!("fake")
+        }
+    }
+
+    #[allow(unused_variables)]
+    impl CaptureRepository for FakeMeetingRepository {
+        fn append_chunk(&self, chunk: NewAudioChunk) -> Result<AudioChunk, StoreError> {
+            unimplemented!("fake")
+        }
+
+        fn finalize_chunk(&self, id: Uuid, facts: ChunkFacts) -> Result<AudioChunk, StoreError> {
+            unimplemented!("fake")
+        }
+
+        fn mark_chunk(
+            &self,
+            id: Uuid,
+            state: ChunkState,
+            reason: Option<String>,
+        ) -> Result<(), StoreError> {
+            unimplemented!("fake")
+        }
+
+        fn due_stt_jobs(&self, now: DateTime<Utc>, limit: u32) -> Result<Vec<SttJob>, StoreError> {
+            unimplemented!("fake")
+        }
+
+        fn claim_due_stt_job(
+            &self,
+            worker: WorkerId,
+            now: DateTime<Utc>,
+        ) -> Result<Option<SttJobClaim>, StoreError> {
+            unimplemented!("fake")
+        }
+
+        fn transition_stt_job(
+            &self,
+            id: Uuid,
+            to: SttJobState,
+            err: Option<String>,
+        ) -> Result<(), StoreError> {
+            let _ = (id, to, err);
+            unimplemented!("fake")
+        }
+
+        fn reschedule_stt_job(
+            &self,
+            id: Uuid,
+            next_attempt_at: DateTime<Utc>,
+            err: Option<String>,
+        ) -> Result<(), StoreError> {
+            let _ = (id, next_attempt_at, err);
+            unimplemented!("fake")
+        }
+
+        fn chunks_for_job(&self, job_id: Uuid) -> Result<Vec<AudioChunk>, StoreError> {
+            let _ = job_id;
+            unimplemented!("fake")
+        }
+    }
+
+    #[allow(unused_variables)]
+    impl ProjectRepository for FakeMeetingRepository {
         fn create_project(&self, _draft: NewProject) -> Result<Project, StoreError> {
             unimplemented!("fake")
         }
+
         fn list_projects(&self) -> Result<Vec<Project>, StoreError> {
             unimplemented!("fake")
         }
+
         fn rename_project(&self, _id: Uuid, _name: String) -> Result<Project, StoreError> {
             unimplemented!("fake")
         }
+
         fn soft_delete_project(&self, _id: Uuid) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
+
         fn assign_meeting_to_project(
             &self,
             _project_id: Uuid,
@@ -3447,6 +3589,7 @@ mod tests {
         ) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
+
         fn unassign_meeting_from_project(
             &self,
             _project_id: Uuid,
@@ -3454,27 +3597,37 @@ mod tests {
         ) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
+
         fn list_meeting_ids_for_project(
             &self,
             _project_id: Uuid,
         ) -> Result<Vec<String>, StoreError> {
             unimplemented!("fake")
         }
+
         fn list_unassigned_meeting_ids(&self) -> Result<Vec<String>, StoreError> {
             unimplemented!("fake")
         }
+
         fn delete_project_links_for_meeting(&self, _meeting_id: Uuid) -> Result<(), StoreError> {
             unimplemented!("fake")
         }
+    }
+
+    #[allow(unused_variables)]
+    impl SourceRepository for FakeMeetingRepository {
         fn create_chat_source(&self, _draft: NewChatSource) -> Result<(Source, bool), StoreError> {
             unimplemented!("fake")
         }
+
         fn list_sources(&self) -> Result<Vec<Source>, StoreError> {
             unimplemented!("fake")
         }
+
         fn list_source_items(&self, _source_id: Uuid) -> Result<Vec<SourceItem>, StoreError> {
             unimplemented!("fake")
         }
+
         fn attach_source_assets(
             &self,
             _source_id: Uuid,
@@ -3482,18 +3635,26 @@ mod tests {
         ) -> Result<Vec<SourceAsset>, StoreError> {
             unimplemented!("fake")
         }
+
         fn list_source_assets(&self, _source_id: Uuid) -> Result<Vec<SourceAsset>, StoreError> {
             unimplemented!("fake")
         }
+    }
+
+    #[allow(unused_variables)]
+    impl TaskRepository for FakeMeetingRepository {
         fn create_manual_task(&self, _draft: NewProjectTask) -> Result<ProjectTask, StoreError> {
             unimplemented!("fake")
         }
+
         fn suggest_task(&self, _draft: NewProjectTask) -> Result<(ProjectTask, bool), StoreError> {
             unimplemented!("fake")
         }
+
         fn list_tasks(&self, _project_id: Uuid) -> Result<Vec<ProjectTask>, StoreError> {
             unimplemented!("fake")
         }
+
         fn decide_task(
             &self,
             _id: Uuid,
@@ -3503,6 +3664,7 @@ mod tests {
         ) -> Result<ProjectTask, StoreError> {
             unimplemented!("fake")
         }
+
         fn create_snapshot(
             &self,
             _project_id: Uuid,
@@ -3513,82 +3675,8 @@ mod tests {
         ) -> Result<ProjectSnapshot, StoreError> {
             unimplemented!("fake")
         }
+
         fn list_snapshots(&self, _project_id: Uuid) -> Result<Vec<ProjectSnapshot>, StoreError> {
-            unimplemented!("fake")
-        }
-        fn summary_for_meeting(
-            &self,
-            meeting_id: Uuid,
-        ) -> Result<Option<MeetingSummary>, StoreError> {
-            unimplemented!("fake")
-        }
-        fn due_stt_jobs(&self, now: DateTime<Utc>, limit: u32) -> Result<Vec<SttJob>, StoreError> {
-            unimplemented!("fake")
-        }
-        fn create_session(&self, draft: NewMeetingSession) -> Result<MeetingSession, StoreError> {
-            unimplemented!("fake")
-        }
-        fn update_session(
-            &self,
-            id: Uuid,
-            patch: SessionPatch,
-        ) -> Result<MeetingSession, StoreError> {
-            unimplemented!("fake")
-        }
-        fn soft_delete_session(&self, id: Uuid) -> Result<(), StoreError> {
-            unimplemented!("fake")
-        }
-        fn append_chunk(&self, chunk: NewAudioChunk) -> Result<AudioChunk, StoreError> {
-            unimplemented!("fake")
-        }
-        fn finalize_chunk(&self, id: Uuid, facts: ChunkFacts) -> Result<AudioChunk, StoreError> {
-            unimplemented!("fake")
-        }
-        fn mark_chunk(
-            &self,
-            id: Uuid,
-            state: ChunkState,
-            reason: Option<String>,
-        ) -> Result<(), StoreError> {
-            unimplemented!("fake")
-        }
-        fn claim_due_stt_job(
-            &self,
-            worker: WorkerId,
-            now: DateTime<Utc>,
-        ) -> Result<Option<SttJobClaim>, StoreError> {
-            unimplemented!("fake")
-        }
-        fn transition_stt_job(
-            &self,
-            id: Uuid,
-            to: SttJobState,
-            err: Option<String>,
-        ) -> Result<(), StoreError> {
-            let _ = (id, to, err);
-            unimplemented!("fake")
-        }
-        fn reschedule_stt_job(
-            &self,
-            id: Uuid,
-            next_attempt_at: DateTime<Utc>,
-            err: Option<String>,
-        ) -> Result<(), StoreError> {
-            let _ = (id, next_attempt_at, err);
-            unimplemented!("fake")
-        }
-        fn chunks_for_job(&self, job_id: Uuid) -> Result<Vec<AudioChunk>, StoreError> {
-            let _ = job_id;
-            unimplemented!("fake")
-        }
-        fn insert_segments(
-            &self,
-            job_id: Uuid,
-            segments: Vec<NewTranscriptSegment>,
-        ) -> Result<Vec<TranscriptSegment>, StoreError> {
-            unimplemented!("fake")
-        }
-        fn upsert_summary(&self, summary: NewMeetingSummary) -> Result<MeetingSummary, StoreError> {
             unimplemented!("fake")
         }
     }
