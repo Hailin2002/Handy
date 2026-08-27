@@ -2507,9 +2507,14 @@ impl MeetingRecorderImpl {
         let Some(declared) = parsed else {
             // §8.2b: unparseable/headerless/too short.
             let quarantine = layout.recovery_dir();
-            let _ = fs::create_dir_all(&quarantine);
             let target = quarantine.join(format!("{name}.part"));
-            let _ = fs::rename(&part, &target);
+            // Only report a file as quarantined if it actually moved. Both
+            // results were previously discarded while `target` was pushed into
+            // the report regardless, so a failed move left the caller told a
+            // file sits in recovery/ that is still in place.
+            let quarantined = fs::create_dir_all(&quarantine)
+                .and_then(|()| fs::rename(&part, &target))
+                .is_ok();
             store
                 .transition(
                     descriptor.chunk_id,
@@ -2525,7 +2530,9 @@ impl MeetingRecorderImpl {
                     detail,
                 })?;
             report.damaged.push(descriptor.chunk_id);
-            report.quarantined_files.push(target);
+            if quarantined {
+                report.quarantined_files.push(target);
+            }
             return Ok(());
         };
 
@@ -2535,9 +2542,14 @@ impl MeetingRecorderImpl {
         let usable = actual_payload.min(u64::from(declared)) / BYTES_PER_SAMPLE * BYTES_PER_SAMPLE;
         if usable == 0 {
             let quarantine = layout.recovery_dir();
-            let _ = fs::create_dir_all(&quarantine);
             let target = quarantine.join(format!("{name}.part"));
-            let _ = fs::rename(&part, &target);
+            // Only report a file as quarantined if it actually moved. Both
+            // results were previously discarded while `target` was pushed into
+            // the report regardless, so a failed move left the caller told a
+            // file sits in recovery/ that is still in place.
+            let quarantined = fs::create_dir_all(&quarantine)
+                .and_then(|()| fs::rename(&part, &target))
+                .is_ok();
             store
                 .transition(
                     descriptor.chunk_id,
@@ -2553,7 +2565,9 @@ impl MeetingRecorderImpl {
                     detail,
                 })?;
             report.damaged.push(descriptor.chunk_id);
-            report.quarantined_files.push(target);
+            if quarantined {
+                report.quarantined_files.push(target);
+            }
             return Ok(());
         }
 
