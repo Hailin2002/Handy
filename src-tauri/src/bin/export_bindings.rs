@@ -13,11 +13,20 @@
 //! - The release build regenerates the bindings before compiling, which hid the
 //!   drift from the one job that might have caught it.
 //!
-//! `cargo run --example export_bindings` (or `bun run bindings:generate`) writes
-//! the same file the app would, from the same [`specta_builder`] definition. CI
-//! runs it and fails if the committed file differs, which turns the heuristic
+//! `cargo run --bin export_bindings` (or `bun run bindings:generate`) writes the
+//! same file the app would, from the same [`specta_builder`] definition. CI runs
+//! it and fails if the committed file differs, which turns the heuristic
 //! name-comparison guard in scripts/verify/check-bindings-sync.ts into an exact
 //! check of types as well as names.
+//!
+//! # Why a `[[bin]]` and not an example
+//!
+//! It started as an example and would not run on the maintainer's Windows
+//! machine: every binary that links this crate's *dev*-dependencies dies at load
+//! with STATUS_ENTRYPOINT_NOT_FOUND, which is also why `cargo test` cannot run
+//! there. Examples and tests link dev-dependencies; `[[bin]]` targets do not, so
+//! this one runs exactly like speak.exe does. Keeping it a bin is what makes
+//! regenerating the bindings possible on that machine at all.
 
 use speak_app_lib::specta_builder;
 use specta_typescript::{BigIntExportBehavior, Typescript};

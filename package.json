@@ -23,7 +23,7 @@
     "check": "node scripts/check-translations.ts && node scripts/verify/check-bindings-sync.ts && node scripts/verify/check-frontend-log-hygiene.ts && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify/check-log-hygiene.ps1",
     "postinstall": "bun scripts/check-nix-deps.ts",
     "check:bindings": "node scripts/verify/check-bindings-sync.ts",
-    "bindings:generate": "cd src-tauri && cargo run --quiet --example export_bindings",
+    "bindings:generate": "cd src-tauri && cargo run --quiet --bin export_bindings",
     "check:log-hygiene:frontend": "node scripts/verify/check-frontend-log-hygiene.ts"
   },
   "dependencies": {

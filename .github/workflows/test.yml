@@ -62,7 +62,7 @@ jobs:
       # inside `run()` behind a GUI launch.
       - name: Verify src/bindings.ts is regenerated
         working-directory: src-tauri
-        run: cargo run --quiet --example export_bindings
+        run: cargo run --quiet --bin export_bindings
 
       - name: Fail if the bindings drifted
         run: |
