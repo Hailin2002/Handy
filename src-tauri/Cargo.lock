@@ -2581,7 +2581,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 [[package]]
 name = "hf-hub"
 version = "0.5.0"
-source = "git+https://github.com/cjpais/hf-hub?branch=cancellable-downloads#9918f11ab3473135eb7865aa4a5d79d597e6e810"
+source = "git+https://github.com/cjpais/hf-hub?rev=9918f11ab3473135eb7865aa4a5d79d597e6e810#9918f11ab3473135eb7865aa4a5d79d597e6e810"
 dependencies = [
  "dirs 6.0.0",
  "futures",
@@ -4884,7 +4884,7 @@ checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 [[package]]
 name = "rdev"
 version = "0.5.0-2"
-source = "git+https://github.com/rustdesk-org/rdev#a90dbe1172f8832f54c97c62e823c5a34af5fdfe"
+source = "git+https://github.com/rustdesk-org/rdev?rev=a90dbe1172f8832f54c97c62e823c5a34af5fdfe#a90dbe1172f8832f54c97c62e823c5a34af5fdfe"
 dependencies = [
  "cocoa",
  "core-foundation 0.9.4",
@@ -5170,7 +5170,7 @@ dependencies = [
 [[package]]
 name = "rodio"
 version = "0.20.1"
-source = "git+https://github.com/cjpais/rodio.git#fed30292db417cb95305c118c0e1d804fb74cbff"
+source = "git+https://github.com/cjpais/rodio.git?rev=fed30292db417cb95305c118c0e1d804fb74cbff#fed30292db417cb95305c118c0e1d804fb74cbff"
 dependencies = [
  "cpal",
  "dasp_sample",
@@ -6515,7 +6515,7 @@ dependencies = [
 [[package]]
 name = "tauri-nspanel"
 version = "2.1.0"
-source = "git+https://github.com/ahkohd/tauri-nspanel?branch=v2.1#da9c9a8d4eb7f0524a2508988df1a7d9585b4904"
+source = "git+https://github.com/ahkohd/tauri-nspanel?rev=da9c9a8d4eb7f0524a2508988df1a7d9585b4904#da9c9a8d4eb7f0524a2508988df1a7d9585b4904"
 dependencies = [
  "objc2",
  "objc2-app-kit",
@@ -7593,7 +7593,7 @@ dependencies = [
 [[package]]
 name = "vad-rs"
 version = "0.1.6"
-source = "git+https://github.com/cjpais/vad-rs#2a412ed858695b9251f3f5a1a20d95b59fa7c498"
+source = "git+https://github.com/cjpais/vad-rs?rev=2a412ed858695b9251f3f5a1a20d95b59fa7c498#2a412ed858695b9251f3f5a1a20d95b59fa7c498"
 dependencies = [
  "eyre",
  "ndarray",
