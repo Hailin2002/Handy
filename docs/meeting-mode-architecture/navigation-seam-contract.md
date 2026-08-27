@@ -504,11 +504,11 @@ collapse decisions true to the space content actually has. Three named
 breakpoints, defined once as custom media/container conditions in the shell's
 stylesheet:
 
-| Condition | Content-container width                  | Behavior                                                                                                                                                                                                                                                                  |
-| --------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Condition | Content-container width                  | Behavior                                                                                                                                                                                                                                                                 |
+| --------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `narrow`  | < 720 px (≈ the 680 floor minus sidebar) | Single-column everything. Stacked layers get explicit sequential navigation (§6.20 line 845: "Bei schmalen Fenstern werden diese Ebenen nacheinander gezeigt"): project list ↔ detail swap in place via the R4 back affordance; meeting detail tabs scroll horizontally. |
-| `regular` | 720 – 959 px                             | Default single-pane layout per page; lists gain breathing room; still no side-by-side editing.                                                                                                                                                                            |
-| `wide`    | ≥ 960 px                                 | Project area renders two columns — list/navigation pane and detail pane (plan lines 844–845); meeting detail may offer the opt-in `Geteilte Ansicht` (plan lines 677–681, UX-owned placement).                                                                            |
+| `regular` | 720 – 959 px                             | Default single-pane layout per page; lists gain breathing room; still no side-by-side editing.                                                                                                                                                                           |
+| `wide`    | ≥ 960 px                                 | Project area renders two columns — list/navigation pane and detail pane (plan lines 844–845); meeting detail may offer the opt-in `Geteilte Ansicht` (plan lines 677–681, UX-owned placement).                                                                           |
 
 Collapse rules binding across breakpoints:
 

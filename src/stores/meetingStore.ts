@@ -77,10 +77,7 @@ export interface MeetingErrorState {
 }
 
 export type MeetingPreflightStatus =
-  | "idle"
-  | "running"
-  | "ready"
-  | "unavailable";
+  "idle" | "running" | "ready" | "unavailable";
 
 export interface MeetingStoreState {
   session: MeetingLiveSession | null;

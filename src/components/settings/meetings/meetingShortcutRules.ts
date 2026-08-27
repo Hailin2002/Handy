@@ -114,8 +114,7 @@ export function normalizeHotkey(
 // ---------------------------------------------------------------------------
 
 export type CandidateValidation =
-  | { ok: true; normalized: string }
-  | { ok: false; errorKey: string };
+  { ok: true; normalized: string } | { ok: false; errorKey: string };
 
 /** i18n key of the named single-key rejection message (gate G1). */
 export const SINGLE_KEY_ERROR_KEY =

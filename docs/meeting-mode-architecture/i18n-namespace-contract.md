@@ -497,7 +497,7 @@ konfigurierten `ignoreAttribute`s.
 | Prüfung                        | Mechanismus                                  | Status                                   |
 | ------------------------------ | -------------------------------------------- | ---------------------------------------- |
 | Harcoded JSX-Text              | `i18next/no-literal-string` (`bun run lint`) | existiert, sofort wirksam für neue Bäume |
-| Key-Parität en ↔ 23 Locales   | `bun run check:translations`                 | existiert, CI-pflichtig                  |
+| Key-Parität en ↔ 23 Locales    | `bun run check:translations`                 | existiert, CI-pflichtig                  |
 | Tray-Key-Kopplung              | `build.rs` → `TrayStrings` Compile-Check     | existiert                                |
 | Key-Existenz für `t()`-Aufrufe | Skript-Erweiterung                           | vorgeschlagen (TAX §8.3), offener Punkt  |
 

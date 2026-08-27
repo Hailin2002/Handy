@@ -116,9 +116,7 @@ recovery reconciles manifest + filesystem against the database (§7).
     },
     "system": { "...same shape...": 0 },
   },
-  "chunks": [
-    /* ChunkManifestEntry, one per chunk ever opened */
-  ],
+  "chunks": [/* ChunkManifestEntry, one per chunk ever opened */],
 }
 ```
 

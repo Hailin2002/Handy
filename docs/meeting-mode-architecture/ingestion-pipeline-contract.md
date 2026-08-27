@@ -566,9 +566,9 @@ Rules:
 
 | Concern            | `inspect`                 | `preview`                          | `normalize`   | `deduplicate`                    | `commit`                   |
 | ------------------ | ------------------------- | ---------------------------------- | ------------- | -------------------------------- | -------------------------- |
-| Reads staged bytes | ✔                        | ✔                                 | ✔            | –                                | via sink only              |
-| Reads committed DB | –                         | `sources.content_hash` only        | –             | ✔ via index port                | implicit (K4)              |
-| Writes anything    | ✗                         | ✗                                  | ✗             | ✗                                | ✔ (sole)                  |
+| Reads staged bytes | ✔                         | ✔                                  | ✔             | –                                | via sink only              |
+| Reads committed DB | –                         | `sources.content_hash` only        | –             | ✔ via index port                 | implicit (K4)              |
+| Writes anything    | ✗                         | ✗                                  | ✗             | ✗                                | ✔ (sole)                   |
 | Owner (plan §5)    | service + importer        | importer                           | importer      | service logic, importer-agnostic | service orchestrating sink |
 | Failure class      | `SafetyRejected` terminal | `UnparsableFormat` / `EmptyImport` | warnings only | transport errors only            | rollback + compensation    |
 

@@ -103,10 +103,14 @@ function report(
 
   console.error(colorize(`✗ ${label}: out of sync`, "red"));
   for (const name of onlyInRust) {
-    console.error(`    registered in lib.rs but missing from bindings.ts: ${name}`);
+    console.error(
+      `    registered in lib.rs but missing from bindings.ts: ${name}`,
+    );
   }
   for (const name of onlyInBindings) {
-    console.error(`    present in bindings.ts but not registered in lib.rs: ${name}`);
+    console.error(
+      `    present in bindings.ts but not registered in lib.rs: ${name}`,
+    );
   }
   return false;
 }
@@ -124,11 +128,15 @@ function main(): void {
   }
 
   const bindingCommands = new Set<string>();
-  for (const match of bindingsSource.matchAll(/TAURI_INVOKE\("([a-z0-9_]+)"/g)) {
+  for (const match of bindingsSource.matchAll(
+    /TAURI_INVOKE\("([a-z0-9_]+)"/g,
+  )) {
     bindingCommands.add(match[1]);
   }
   if (bindingCommands.size === 0) {
-    fail("parsed zero TAURI_INVOKE names out of bindings.ts — the guard is broken");
+    fail(
+      "parsed zero TAURI_INVOKE names out of bindings.ts — the guard is broken",
+    );
   }
 
   const commandsOk = report(
@@ -156,18 +164,26 @@ function main(): void {
   const eventsOk =
     missingEvents.length === 0
       ? (console.log(
-          colorize(`✓ events (${rustEvents.length} registered): in sync`, "green"),
+          colorize(
+            `✓ events (${rustEvents.length} registered): in sync`,
+            "green",
+          ),
         ),
         true)
       : (console.error(colorize("✗ events: out of sync", "red")),
         missingEvents.forEach((name) =>
-          console.error(`    registered in lib.rs but missing from bindings.ts: ${name}`),
+          console.error(
+            `    registered in lib.rs but missing from bindings.ts: ${name}`,
+          ),
         ),
         false);
 
   if (commandsOk && eventsOk) {
     console.log(
-      colorize("\n✓ src/bindings.ts is in sync with the Rust command surface", "green"),
+      colorize(
+        "\n✓ src/bindings.ts is in sync with the Rust command surface",
+        "green",
+      ),
     );
     process.exit(0);
   }

@@ -17,8 +17,7 @@ import { Button } from "@/components/ui/Button";
 
 /** Text that supports i18n: a pre-translated string or an i18next key. */
 export type LocalizedText =
-  | string
-  | { key: string; values?: Record<string, unknown> };
+  string | { key: string; values?: Record<string, unknown> };
 
 /**
  * Semantic tone per plan §6.8. Tones always ship with icon + text, so color
