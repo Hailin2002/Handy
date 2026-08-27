@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { toast } from "sonner";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import {
   commands,
+  type ImportError,
   type ChatPreviewDto,
   type ZipIngestResult,
   type ZipPreviewDto,
@@ -27,6 +29,27 @@ type Step = "input" | "preview";
  * ambiguity) and confirm. Ambiguous day/month order is never guessed —
  * the user must choose explicitly before import unlocks.
  */
+/**
+ * Turns an `ImportError` into something a user can read.
+ *
+ * The backend used to return a bare string that carried a code inside it
+ * (`archiveRejected: entry name contains ..`), and this dialog piped it straight
+ * into the toast — so a non-English user read a camelCase identifier in a UI
+ * where ESLint otherwise forbids untranslated strings.
+ *
+ * `defaultValue` is what keeps this honest without inventing translations: a
+ * locale that has `whatsapp.errors.<code>` shows it, and every other locale
+ * falls back to the English detail the backend supplied. Adding the keys later
+ * is purely additive.
+ */
+const importErrorMessage = (
+  error: ImportError,
+  t: TFunction,
+): string | undefined =>
+  t(`whatsapp.errors.${error.code}`, {
+    defaultValue: error.detail ?? error.code,
+  });
+
 export const WhatsAppImportDialog: React.FC<WhatsAppImportDialogProps> = ({
   open,
   onOpenChange,
@@ -94,7 +117,10 @@ export const WhatsAppImportDialog: React.FC<WhatsAppImportDialogProps> = ({
         setStep("preview");
       } else {
         toast.error(t("whatsapp.previewFailed"), {
-          description: result.status === "error" ? result.error : undefined,
+          description:
+            result.status === "error"
+              ? importErrorMessage(result.error, t)
+              : undefined,
         });
       }
     } catch (error) {
@@ -149,7 +175,9 @@ export const WhatsAppImportDialog: React.FC<WhatsAppImportDialogProps> = ({
         reset();
         onOpenChange(false);
       } else {
-        toast.error(t("whatsapp.importFailed"), { description: result.error });
+        toast.error(t("whatsapp.importFailed"), {
+          description: importErrorMessage(result.error, t),
+        });
       }
     } catch (error) {
       console.error("Import failed:", error);

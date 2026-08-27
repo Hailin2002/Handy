@@ -16,21 +16,73 @@ pub struct WhatsappImportResult {
     pub item_count: i64,
 }
 
-fn parse_date_order(order: Option<String>) -> Result<Option<DateOrder>, String> {
+/// A failed import, as a code the UI can act on plus English specifics.
+///
+/// # Why this is not a `String`
+///
+/// These commands already had error *codes* — `dateOrderAmbiguous`,
+/// `noChatFileInArchive`, `archiveRejected: <detail>` — they were just smuggled
+/// inside the message. Two things followed. The frontend piped `result.error`
+/// straight into a toast, so a German user read the literal text
+/// `archiveRejected: entry name contains ..` in a UI where ESLint otherwise
+/// forbids untranslated strings. And Rust had to parse its own message back
+/// (`if message.contains("dateOrderAmbiguous")`) to recover what it had just
+/// formatted.
+///
+/// Splitting the two makes the code translatable and the detail diagnostic.
+#[derive(Debug, Serialize, Type)]
+pub struct ImportError {
+    /// Stable and machine-readable. The frontend maps it to a translated
+    /// message; unknown codes fall back to `detail`.
+    pub code: String,
+    /// English specifics for diagnostics — a rejected ZIP entry name, an IO
+    /// error. Absent when the code says everything.
+    pub detail: Option<String>,
+}
+
+impl ImportError {
+    fn new(code: &str) -> Self {
+        Self {
+            code: code.to_string(),
+            detail: None,
+        }
+    }
+
+    /// Splits the legacy `"code: detail"` convention the ingestion service
+    /// still produces. Once the service returns codes directly this becomes a
+    /// plain constructor.
+    fn from_service(message: String) -> Self {
+        match message.split_once(": ") {
+            Some((code, detail)) if !code.contains(' ') => Self {
+                code: code.to_string(),
+                detail: Some(detail.to_string()),
+            },
+            _ => Self {
+                code: message,
+                detail: None,
+            },
+        }
+    }
+}
+
+fn parse_date_order(order: Option<String>) -> Result<Option<DateOrder>, ImportError> {
     match order.as_deref() {
         None | Some("") => Ok(None),
         Some("dayFirst") => Ok(Some(DateOrder::DayFirst)),
         Some("monthFirst") => Ok(Some(DateOrder::MonthFirst)),
-        Some(other) => Err(format!("unknown dateOrder '{other}'")),
+        Some(other) => Err(ImportError {
+            code: "unknownDateOrder".to_string(),
+            detail: Some(other.to_string()),
+        }),
     }
 }
 
-fn ingestion_error(error: &crate::managers::meeting_store::StoreError) -> String {
+fn ingestion_error(error: &crate::managers::meeting_store::StoreError) -> ImportError {
     let message = error.to_string();
     if message.contains("dateOrderAmbiguous") {
-        "dateOrderAmbiguous".to_string()
+        ImportError::new("dateOrderAmbiguous")
     } else {
-        message
+        ImportError::from_service(message)
     }
 }
 
@@ -43,7 +95,7 @@ pub async fn whatsapp_import_text(
     title: String,
     content: String,
     date_order: Option<String>,
-) -> Result<WhatsappImportResult, String> {
+) -> Result<WhatsappImportResult, ImportError> {
     let order = parse_date_order(date_order)?;
     let result = ingestion
         .ingest_text(&title, &content, order)
@@ -62,9 +114,11 @@ pub async fn whatsapp_preview_text(
     ingestion: State<'_, Arc<SourceIngestionService>>,
     content: String,
     date_order: Option<String>,
-) -> Result<crate::managers::source_ingestion::ChatPreviewDto, String> {
+) -> Result<crate::managers::source_ingestion::ChatPreviewDto, ImportError> {
     let order = parse_date_order(date_order)?;
-    ingestion.preview_text(&content, order)
+    ingestion
+        .preview_text(&content, order)
+        .map_err(ImportError::from_service)
 }
 
 /// Lists imported sources, newest first.
@@ -96,12 +150,16 @@ pub async fn source_items(
 /// validation runs.
 const MAX_ARCHIVE_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
-fn read_archive(path: &str) -> Result<Vec<u8>, String> {
-    let meta = std::fs::metadata(path).map_err(|e| format!("archiveUnreadable: {e}"))?;
+fn read_archive(path: &str) -> Result<Vec<u8>, ImportError> {
+    let unreadable = |e: std::io::Error| ImportError {
+        code: "archiveUnreadable".to_string(),
+        detail: Some(e.to_string()),
+    };
+    let meta = std::fs::metadata(path).map_err(unreadable)?;
     if meta.len() > MAX_ARCHIVE_BYTES {
-        return Err("archiveTooLarge".to_string());
+        return Err(ImportError::new("archiveTooLarge"));
     }
-    std::fs::read(path).map_err(|e| format!("archiveUnreadable: {e}"))
+    std::fs::read(path).map_err(unreadable)
 }
 
 /// Phase 9 wizard step 2 for `.zip`: inspect without extracting or persisting.
@@ -111,10 +169,12 @@ pub async fn whatsapp_preview_zip(
     ingestion: State<'_, Arc<SourceIngestionService>>,
     path: String,
     date_order: Option<String>,
-) -> Result<crate::managers::source_ingestion::ZipPreviewDto, String> {
+) -> Result<crate::managers::source_ingestion::ZipPreviewDto, ImportError> {
     let order = parse_date_order(date_order)?;
     let bytes = read_archive(&path)?;
-    ingestion.preview_zip(&bytes, order)
+    ingestion
+        .preview_zip(&bytes, order)
+        .map_err(ImportError::from_service)
 }
 
 /// Phase 9 wizard step 4 for `.zip`: import the chat plus its media.
@@ -125,10 +185,12 @@ pub async fn whatsapp_import_zip(
     path: String,
     title: String,
     date_order: Option<String>,
-) -> Result<crate::managers::source_ingestion::ZipIngestResult, String> {
+) -> Result<crate::managers::source_ingestion::ZipIngestResult, ImportError> {
     let order = parse_date_order(date_order)?;
     let bytes = read_archive(&path)?;
-    ingestion.ingest_zip(&title, &bytes, order)
+    ingestion
+        .ingest_zip(&title, &bytes, order)
+        .map_err(ImportError::from_service)
 }
 
 /// Media extracted from one imported archive.
