@@ -18,7 +18,7 @@ Planned implementation home: publisher logic inside
 
 This document is a **strict delta to
 [session-state-contract.md](session-state-contract.md) (SSC)**: it specifies
-the event channels that feed the *running meeting view* (plan §6.11) — the
+the event channels that feed the _running meeting view_ (plan §6.11) — the
 streamed appearance of finished transcript segments, per-source job/progress
 aggregates, and audio level meters — with payload schemas, update cadence,
 coalescing rules, worst-case backlog bounds, reload/resubscribe behavior, and
@@ -53,11 +53,11 @@ contract, this contract wins over catalogs, and nothing wins over actual code.
 Three event channels toward the running meeting view, all published by
 `MeetingManager` (the single serialization point of SSC-§1):
 
-| # | Topic *(proposed names — pending `identifier-registry.md` registration, see §8 NG-9)* | Feeds plan §6.11 element | Tier |
-| --- | --- | --- | --- |
-| E1 | `meeting://transcript-delta` | "zuletzt fertiggestellte Transkriptsegmente mit Zeitstempeln" (plan line 624) | tier A data, delta-shaped |
-| E2 | `meeting://jobs-updated` (topic already named in FSC-§3.2; **this contract defines its payload for the first time**) | "klarer Zustand `Hört zu`, `Abschnitt wird transkribiert`, `Verarbeitung liegt zurück`" (plan line 625) and "Anzahl wartender Abschnitte" (plan line 633); also the §6.12 checklist counts (plan line 647) | tier B aggregate |
-| E3 | `meeting://level-update` | "getrennte kleine Mic-/System-Pegel mit Textlabel" (plan line 632) | tier C telemetry |
+| #   | Topic _(proposed names — pending `identifier-registry.md` registration, see §8 NG-9)_                                | Feeds plan §6.11 element                                                                                                                                                                                   | Tier                      |
+| --- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| E1  | `meeting://transcript-delta`                                                                                         | "zuletzt fertiggestellte Transkriptsegmente mit Zeitstempeln" (plan line 624)                                                                                                                              | tier A data, delta-shaped |
+| E2  | `meeting://jobs-updated` (topic already named in FSC-§3.2; **this contract defines its payload for the first time**) | "klarer Zustand `Hört zu`, `Abschnitt wird transkribiert`, `Verarbeitung liegt zurück`" (plan line 625) and "Anzahl wartender Abschnitte" (plan line 633); also the §6.12 checklist counts (plan line 647) | tier B aggregate          |
+| E3  | `meeting://level-update`                                                                                             | "getrennte kleine Mic-/System-Pegel mit Textlabel" (plan line 632)                                                                                                                                         | tier C telemetry          |
 
 The three §6.11 status words are **derived, never published**: the frontend
 computes `Hört zu` (backlog = 0, capture live), `Abschnitt wird
@@ -69,7 +69,7 @@ SSC events. No fourth "view status" event exists (§8).
 
 - **No SSC rule is restated, weakened, or redefined.** O1–O7 apply to the
   session-state events exactly as written; the rules in §5 below (D1–D8) are
-  *additional* guarantees for the new channels, each of which either mirrors
+  _additional_ guarantees for the new channels, each of which either mirrors
   an SSC pattern onto a new stream or states cross-stream independence.
 - **No existing topic changes payload or semantics.**
   `meeting://session-created`, `meeting://session-state`,
@@ -103,35 +103,36 @@ transaction; D1 in §5 ties publication to that commit).
 ```jsonc
 {
   "type": "transcript-delta",
-  "meeting_id": "uuid",            // owning session
-  "segments": [                    // 1..=LV_DELTA_MAX_SEGMENTS entries
+  "meeting_id": "uuid", // owning session
+  "segments": [
+    // 1..=LV_DELTA_MAX_SEGMENTS entries
     {
-      "id": "uuid",                // meeting_transcript_segments.id
-      "job_id": "uuid",            // producing meeting_stt_jobs.id
-      "source": "microphone",      // "microphone" | "system"
-      "start_ms": 0,               // timeline position (plan §9)
+      "id": "uuid", // meeting_transcript_segments.id
+      "job_id": "uuid", // producing meeting_stt_jobs.id
+      "source": "microphone", // "microphone" | "system"
+      "start_ms": 0, // timeline position (plan §9)
       "end_ms": 0,
-      "sequence": 1,               // persisted segment sequence, see D2
-      "text": "…",                 // final segment text (not partial words)
-      "confidence": 0.0            // optional, plan §9 "optional … Confidence"
-    }
+      "sequence": 1, // persisted segment sequence, see D2
+      "text": "…", // final segment text (not partial words)
+      "confidence": 0.0, // optional, plan §9 "optional … Confidence"
+    },
   ],
-  "last_sequence": 1,              // max `sequence` in this batch
-  "state_revision": 7,             // session state_revision at publish time —
-                                   // correlation only, NEVER applied by the
-                                   // consumer's session guard (SSC-O3)
-  "truncated": false               // true ⇒ producer dropped older batches
-                                   // (congestion, §7.3); consumer must resync
+  "last_sequence": 1, // max `sequence` in this batch
+  "state_revision": 7, // session state_revision at publish time —
+  // correlation only, NEVER applied by the
+  // consumer's session guard (SSC-O3)
+  "truncated": false, // true ⇒ producer dropped older batches
+  // (congestion, §7.3); consumer must resync
 }
 ```
 
 Semantics:
 
 - **Append-only.** A delta only ever introduces new segments. Edits or
-  replacements (re-transcription, plan §11) are *not* deltas: they mutate
+  replacements (re-transcription, plan §11) are _not_ deltas: they mutate
   persisted rows and are surfaced by the existing envelope/refetch machinery
   of the detail view, not by the live channel (§8 NG-4).
-- **"Partial transcript" means partially *delivered session transcript*,
+- **"Partial transcript" means partially _delivered session transcript_,
   not partial text.** Every segment in a delta is a finished, persisted
   segment (plan §6.11 shows finished segments with timestamps; word-level
   live output is explicitly out of scope for v1, plan lines 1130–1133).
@@ -147,18 +148,30 @@ exhaustion, cancellation). Aggregates only — never per-job churn
 {
   "type": "jobs-updated",
   "meeting_id": "uuid",
-  "per_source": {                  // one entry per source with eligible jobs
-    "microphone": { "queued": 2, "running": 1, "retry_wait": 0,
-                    "failed": 0, "succeeded": 9 },
-    "system":     { "queued": 1, "running": 0, "retry_wait": 0,
-                    "failed": 1, "succeeded": 8 }
+  "per_source": {
+    // one entry per source with eligible jobs
+    "microphone": {
+      "queued": 2,
+      "running": 1,
+      "retry_wait": 0,
+      "failed": 0,
+      "succeeded": 9,
+    },
+    "system": {
+      "queued": 1,
+      "running": 0,
+      "retry_wait": 0,
+      "failed": 1,
+      "succeeded": 8,
+    },
   },
-  "total_backlog": 4,              // sum of queued + running + retry_wait
-  "oldest_failed": {               // present iff failed > 0 (FSC S1 slice)
+  "total_backlog": 4, // sum of queued + running + retry_wait
+  "oldest_failed": {
+    // present iff failed > 0 (FSC S1 slice)
     "count": 1,
-    "first_failed_at": "2026-08-22T10:00:00Z"
+    "first_failed_at": "2026-08-22T10:00:00Z",
   },
-  "state_revision": 7              // correlation only (§2.1)
+  "state_revision": 7, // correlation only (§2.1)
 }
 ```
 
@@ -176,10 +189,10 @@ no second timer (§8 NG-6).
 {
   "type": "level-update",
   "meeting_id": "uuid",
-  "source": "microphone",          // "microphone" | "system"
-  "peak": 0.0,                     // normalized mono signal, RC scale
+  "source": "microphone", // "microphone" | "system"
+  "peak": 0.0, // normalized mono signal, RC scale
   "rms": 0.0,
-  "at_timeline_ms": 0.0
+  "at_timeline_ms": 0.0,
 }
 ```
 
@@ -195,13 +208,13 @@ last value; the UI renders them from refs/rAF, never from React state
 
 ### 3.1 Constants (testable, UI constants not spike-derived)
 
-| Constant | Value | Applies to |
-| --- | --- | --- |
-| `LV_DELTA_COALESCE_MS` | 250 | E1 trailing-edge coalescing window per meeting |
-| `LV_DELTA_MAX_SEGMENTS` | 32 | hard batch cap per E1 event |
-| `LV_DELTA_PENDING_CAP` | 1024 | producer-side pending-segment buffer bound (§7.3) |
-| `LV_JOBS_COALESCE_MS` | 500 | E2 trailing-edge coalescing window per meeting |
-| `LV_LEVEL_INTERVAL_MS` | 100 (= RC `LEVEL_EVENT_INTERVAL_MS`) | E3 per source |
+| Constant                | Value                                | Applies to                                        |
+| ----------------------- | ------------------------------------ | ------------------------------------------------- |
+| `LV_DELTA_COALESCE_MS`  | 250                                  | E1 trailing-edge coalescing window per meeting    |
+| `LV_DELTA_MAX_SEGMENTS` | 32                                   | hard batch cap per E1 event                       |
+| `LV_DELTA_PENDING_CAP`  | 1024                                 | producer-side pending-segment buffer bound (§7.3) |
+| `LV_JOBS_COALESCE_MS`   | 500                                  | E2 trailing-edge coalescing window per meeting    |
+| `LV_LEVEL_INTERVAL_MS`  | 100 (= RC `LEVEL_EVENT_INTERVAL_MS`) | E3 per source                                     |
 
 ### 3.2 Coalescing algorithm
 
@@ -214,7 +227,7 @@ Per `(topic, meeting_id)` the publisher runs one trailing-edge coalescer:
    aggregate snapshot — aggregates collapse, so E2 never batches).
 3. E1 overflow: more than 32 pending segments at emit time ⇒ each
    subsequent window tick emits one more full batch (32 segments) until the
-   buffer is drained; the *rate* cap of §3.3 (≥ `LV_DELTA_COALESCE_MS`
+   buffer is drained; the _rate_ cap of §3.3 (≥ `LV_DELTA_COALESCE_MS`
    between events) always holds, so a huge backlog drains over consecutive
    windows instead of bursting.
 4. Terminal facts are never coalesced away: the trailing-edge rule already
@@ -227,11 +240,11 @@ Per `(topic, meeting_id)` the publisher runs one trailing-edge coalescer:
 
 **Rate caps (per meeting):**
 
-| Channel | Max emission rate | Source of the bound |
-| --- | --- | --- |
-| E1 | 4 events/s (= 1000/`LV_DELTA_COALESCE_MS`) | coalescing window |
-| E2 | 2 events/s (= 1000/`LV_JOBS_COALESCE_MS`) | coalescing window |
-| E3 | 10 events/s per source, ≤ 20/s per meeting | recorder throttle, two sources |
+| Channel | Max emission rate                          | Source of the bound            |
+| ------- | ------------------------------------------ | ------------------------------ |
+| E1      | 4 events/s (= 1000/`LV_DELTA_COALESCE_MS`) | coalescing window              |
+| E2      | 2 events/s (= 1000/`LV_JOBS_COALESCE_MS`)  | coalescing window              |
+| E3      | 10 events/s per source, ≤ 20/s per meeting | recorder throttle, two sources |
 
 Worst case for the webview is therefore **≤ 26 events/s across all three
 channels while a session is live**, and ≤ 6 events/s after capture ends
@@ -240,16 +253,16 @@ transition table itself (a handful of events per meeting lifetime).
 
 **Worst-case backlog bound, computed (G1):**
 
-- *Instantaneous burst of M finished segments* (worst realistic shape: a
+- _Instantaneous burst of M finished segments_ (worst realistic shape: a
   re-transcription run or many cloud jobs returning inside one poll —
-  bounded by JSC-§1 concurrency classes, but the bound must not *depend* on
+  bounded by JSC-§1 concurrency classes, but the bound must not _depend_ on
   that): emissions = ⌈M/32⌉ events, spaced ≥ 250 ms ⇒ drain time
   ≈ 0.25 s × (⌈M/32⌉ − 1). Concrete worst case: an entire 120-minute
   two-source meeting (240 chunks at the 60 s rollover target, RC constants)
   re-transcribed "instantaneously": M = 240 ⇒ ⌈240/32⌉ = **8 delta events
   over ≈ 1.75 s**. The webview performs ≤ 8 store actions; no render storm
   is possible because coalescing is upstream of IPC.
-- *Sustained throughput ceiling*: 4 events/s × 32 segments = **128
+- _Sustained throughput ceiling_: 4 events/s × 32 segments = **128
   segments/s** sustainable. Realistic completion is ≤ ~2 segments/s (one
   local engine lease at a time, JSC-L1; bounded cloud slots, JSC-C1) — a
   ≥ 64× headroom. Input above 128 segments/s sustained is structurally
@@ -304,15 +317,15 @@ modifies O1–O7.
 
 ## 5. What each §6.11 surface consumes (traceability)
 
-| Plan §6.11 element | Consumes |
-| --- | --- |
-| Status bar "Aufnahme läuft"/"Pausiert", Dauer | SSC events + snapshot only (unchanged) |
-| "Audio gespeichert" / warning | snapshot chunk aggregates + `meeting://session-error`; no dedicated chunk event (§8 NG-3) |
-| Finished transcript segments with timestamps | E1 + tail page (§6.3) |
-| `Hört zu` / `Abschnitt wird transkribiert` / `Verarbeitung liegt zurück` | E2 aggregates + session state (derived, §1.1) |
-| Mic/system level meters | E3 (refs/rAF, FSC-B5) |
-| "Anzahl wartender Abschnitte" (only when backlog exists) | E2 `total_backlog` |
-| §6.12 processing checklist after stop | E2 + snapshot totals (plan lines 939–941: view may close; checklist continues) |
+| Plan §6.11 element                                                       | Consumes                                                                                  |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Status bar "Aufnahme läuft"/"Pausiert", Dauer                            | SSC events + snapshot only (unchanged)                                                    |
+| "Audio gespeichert" / warning                                            | snapshot chunk aggregates + `meeting://session-error`; no dedicated chunk event (§8 NG-3) |
+| Finished transcript segments with timestamps                             | E1 + tail page (§6.3)                                                                     |
+| `Hört zu` / `Abschnitt wird transkribiert` / `Verarbeitung liegt zurück` | E2 aggregates + session state (derived, §1.1)                                             |
+| Mic/system level meters                                                  | E3 (refs/rAF, FSC-B5)                                                                     |
+| "Anzahl wartender Abschnitte" (only when backlog exists)                 | E2 `total_backlog`                                                                        |
+| §6.12 processing checklist after stop                                    | E2 + snapshot totals (plan lines 939–941: view may close; checklist continues)            |
 
 ---
 
@@ -324,13 +337,13 @@ The backend keeps **no per-subscriber cursor and no replay buffer** (§8
 NG-5). A reloading webview reconstructs its view from persistence plus
 newly arriving events, exactly as SSC-§5 prescribes ("the UI is a pure
 function of persistence plus events") — the live view is no exception; it
-merely needs a *bounded* initial read instead of the whole session.
+merely needs a _bounded_ initial read instead of the whole session.
 
 ### 6.2 The handshake (extends FSC-L6, which stays in force)
 
 On every window creation, reload, or re-subscription:
 
-1. Register listeners first (FSC-L3), *then* call `get_meeting_snapshot`.
+1. Register listeners first (FSC-L3), _then_ call `get_meeting_snapshot`.
 2. The snapshot response for a live/processing meeting includes, next to
    the SSC fields (`state`, `state_revision`, job aggregates):
    - `transcript_head_sequence`: max persisted `sequence` for the meeting;
@@ -365,7 +378,7 @@ lookup — no transcript scan, no replay of N hours of events.
   refetch); live-view gaps never trigger a session snapshot and vice versa
   (D4).
 
-Because every healing path is a *query*, not a replayed event, event loss
+Because every healing path is a _query_, not a replayed event, event loss
 degrades latency-to-truth, never correctness.
 
 ---
@@ -391,7 +404,7 @@ degrades latency-to-truth, never correctness.
 ### 7.3 Congestion rule (bounded memory, lossy by design)
 
 If pending E1 segments exceed `LV_DELTA_PENDING_CAP` (1024), the publisher
-drops the *oldest* pending batches and sets `truncated: true` on the next
+drops the _oldest_ pending batches and sets `truncated: true` on the next
 emitted event. Consumers respond per §6.3. This keeps both the manager's
 memory and the webview's event load bounded under any input rate, at the
 price of a refetch — the correct trade for a channel whose truth lives in
@@ -438,10 +451,10 @@ Anything not in §2's three schemas is a non-goal until the plan changes.
 
 ## Appendix A — Gate traceability
 
-| Gate | Coverage |
-| --- | --- |
-| G1 max event rate + coalescing window + computed worst-case backlog bound | §3.1 constants, §3.2 algorithm, §3.3 rate table with the 240-chunk ⇒ 8-events/≈1.75 s computation and the 128 seg/s ceiling vs. ≥64× headroom argument |
-| G2 reload/resubscribe without whole-session replay (snapshot + delta) | §6.1 principle (no replay buffers), §6.2 four-step handshake with `transcript_head_sequence` + one tail page + O(1) snapshot argument, §6.3 gap/truncation/terminal healing |
-| G3 no contradiction with SSC §4; additive only | §1.2 additivity statement (no O-rule restated, no existing payload changed, no new authority); §4 D1–D3 explicitly mirror O1–O3, D4–D8 additive; D4 pins cross-stream independence so neither guard can corrupt the other |
-| G4 non-goals + documentation index updated | §8 NG-1–NG-9; row appended to `docs/meeting-mode-documentation-index.md` §3 table per its Pflegeregel |
-| G5 git status confined to declared scope | verified after authoring via `git status --porcelain`; recorded in the mission result evidence |
+| Gate                                                                      | Coverage                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1 max event rate + coalescing window + computed worst-case backlog bound | §3.1 constants, §3.2 algorithm, §3.3 rate table with the 240-chunk ⇒ 8-events/≈1.75 s computation and the 128 seg/s ceiling vs. ≥64× headroom argument                                                                    |
+| G2 reload/resubscribe without whole-session replay (snapshot + delta)     | §6.1 principle (no replay buffers), §6.2 four-step handshake with `transcript_head_sequence` + one tail page + O(1) snapshot argument, §6.3 gap/truncation/terminal healing                                               |
+| G3 no contradiction with SSC §4; additive only                            | §1.2 additivity statement (no O-rule restated, no existing payload changed, no new authority); §4 D1–D3 explicitly mirror O1–O3, D4–D8 additive; D4 pins cross-stream independence so neither guard can corrupt the other |
+| G4 non-goals + documentation index updated                                | §8 NG-1–NG-9; row appended to `docs/meeting-mode-documentation-index.md` §3 table per its Pflegeregel                                                                                                                     |
+| G5 git status confined to declared scope                                  | verified after authoring via `git status --porcelain`; recorded in the mission result evidence                                                                                                                            |

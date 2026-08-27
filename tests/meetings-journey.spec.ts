@@ -34,7 +34,9 @@ test.describe("Meetings journey (mocked Tauri IPC)", () => {
     await openMeetings(page);
 
     // Create: the page generates a locale-formatted default title.
-    await page.getByRole("button", { name: tEn("meetings.newMeeting") }).click();
+    await page
+      .getByRole("button", { name: tEn("meetings.newMeeting") })
+      .click();
 
     // Detail opens for the new draft session.
     const titleInput = page.getByLabel(tEn("meetings.titleInputLabel"));
@@ -45,7 +47,10 @@ test.describe("Meetings journey (mocked Tauri IPC)", () => {
     await page.getByRole("button", { name: tEn("meetings.saveTitle") }).click();
 
     // Back to the library: the saved title is listed.
-    await page.getByRole("button", { name: tEn("meetings.backToList") }).first().click();
+    await page
+      .getByRole("button", { name: tEn("meetings.backToList") })
+      .first()
+      .click();
     await expect(page.getByText("Budget Review Sync")).toBeVisible();
 
     // The rename crossed the IPC bridge with the right payload.
@@ -74,7 +79,9 @@ test.describe("Meetings journey (mocked Tauri IPC)", () => {
     page,
   }) => {
     await openMeetings(page);
-    await page.getByRole("button", { name: tEn("meetings.newMeeting") }).click();
+    await page
+      .getByRole("button", { name: tEn("meetings.newMeeting") })
+      .click();
     const titleInput = page.getByLabel(tEn("meetings.titleInputLabel"));
     await titleInput.fill("Budget Review Sync");
     await page.getByRole("button", { name: tEn("meetings.saveTitle") }).click();
@@ -87,7 +94,9 @@ test.describe("Meetings journey (mocked Tauri IPC)", () => {
     // Regression: a search matching nothing used to fall through to the
     // first-run empty library, hiding existing meetings behind the
     // "New Meeting" hero. It must show the no-results feedback instead.
-    await page.getByLabel(tEn("meetings.searchPlaceholder")).fill("zzz-no-match");
+    await page
+      .getByLabel(tEn("meetings.searchPlaceholder"))
+      .fill("zzz-no-match");
     await page.getByRole("button", { name: tEn("meetings.search") }).click();
     await expect(page.getByText(tEn("common.noOptionsFound"))).toBeVisible();
     // The first-run empty-state hero must not appear: it would present the
@@ -105,7 +114,9 @@ test.describe("Meetings journey (mocked Tauri IPC)", () => {
     page,
   }) => {
     await openMeetings(page);
-    await page.getByRole("button", { name: tEn("meetings.newMeeting") }).click();
+    await page
+      .getByRole("button", { name: tEn("meetings.newMeeting") })
+      .click();
     const titleInput = page.getByLabel(tEn("meetings.titleInputLabel"));
     await titleInput.fill("Doomed Meeting");
     await page.getByRole("button", { name: tEn("meetings.saveTitle") }).click();
@@ -119,7 +130,10 @@ test.describe("Meetings journey (mocked Tauri IPC)", () => {
     await page.getByRole("button", { name: /Doomed Meeting/ }).click();
 
     // Delete behind the explicit confirmation dialog.
-    await page.getByRole("button", { name: tEn("common.delete") }).first().click();
+    await page
+      .getByRole("button", { name: tEn("common.delete") })
+      .first()
+      .click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: tEn("common.delete") }).click();

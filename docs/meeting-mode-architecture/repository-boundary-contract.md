@@ -50,7 +50,7 @@ not specify the database layout.
    shape, `db-schema.md` wins for schema questions and this contract wins for
    ownership, transaction, and envelope-semantics questions.
 2. **Any sync or server implementation.** The envelope defined in §5 makes
-   data *consumable* by the plan's later server and MCP clients
+   data _consumable_ by the plan's later server and MCP clients
    (plan lines 1758–1783), but implements none of it. No sync protocol, no
    conflict resolution, no CRDT, no network code, no MCP tools are in scope
    (plan lines 1161–1162: "Das ist noch keine Synchronisation und kein CRDT";
@@ -63,7 +63,7 @@ not specify the database layout.
    und Migrationsebenen").
 4. **AssetStore internals** (hashing algorithm details, directory layout,
    atomic-commit mechanics) — owned by its own contract/task; this contract
-   only fixes the *call direction* (§7.1, rule R4).
+   only fixes the _call direction_ (§7.1, rule R4).
 
 ### 0.2 In scope
 
@@ -99,9 +99,9 @@ React-Oberfläche liest weder SQLite noch lokale Dateien direkt").
 
 Two repositories exist, split along the plan's own component boundary:
 
-| Repository | File (plan §5) | Domain |
-| --- | --- | --- |
-| `MeetingStore` | `src-tauri/src/managers/meeting_store.rs` | Meeting capture pipeline: sessions, audio chunks, STT jobs, transcript segments, summaries |
+| Repository       | File (plan §5)                              | Domain                                                                                                      |
+| ---------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `MeetingStore`   | `src-tauri/src/managers/meeting_store.rs`   | Meeting capture pipeline: sessions, audio chunks, STT jobs, transcript segments, summaries                  |
 | `KnowledgeStore` | `src-tauri/src/managers/knowledge_store.rs` | Projects, sources, normalized content, assets metadata, tasks, snapshots, processing jobs, change revisions |
 
 Both live under `managers/` next to the services that consume them, exactly as
@@ -305,25 +305,25 @@ module issues SQL at all (§7). Cross-store relationships reference the partner
 row exclusively by its stable UUID (plan line 1151); neither store parses or
 duplicates partner fields.
 
-| # | Entity (plan §9 heading) | Owning store | Owning file (plan §5) | Tier (§4) |
-| -- | --- | --- | --- | --- |
-| 1 | `meeting_sessions` (lines 1164–1178) | MeetingStore | `src-tauri/src/managers/meeting_store.rs` | A |
-| 2 | `meeting_audio_chunks` (lines 1180–1188) | MeetingStore | `src-tauri/src/managers/meeting_store.rs` | A |
-| 3 | `meeting_stt_jobs` (lines 1190–1199) | MeetingStore | `src-tauri/src/managers/meeting_store.rs` | B |
-| 4 | `meeting_transcript_segments` (lines 1201–1208) | MeetingStore | `src-tauri/src/managers/meeting_store.rs` | A |
-| 5 | `meeting_summaries` (lines 1210–1217) | MeetingStore | `src-tauri/src/managers/meeting_store.rs` | A |
-| 6 | `projects` (lines 1219–1225) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | A |
-| 7 | `sources` (lines 1227–1239) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | A |
-| 8 | `project_sources` (lines 1241–1251) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | A |
-| 9 | `source_items` (lines 1253–1266) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | A |
-| 10 | `assets` (metadata rows; lines 1268–1275) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` (bytes: `storage/asset_store.rs`) | A |
-| 11 | `source_item_assets` (lines 1268–1275) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | A |
-| 12 | `project_tasks` (lines 1277–1293) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | A |
-| 13 | `task_evidence` (lines 1295–1301) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | A |
-| 14 | `project_snapshots` + `snapshot_evidence` (lines 1303–1311) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | A |
-| 15 | `processing_jobs` (lines 1313–1318) | KnowledgeStore | `src-tauri/src/managers/knowledge_store.rs` | B |
-| 16 | `change_log` (lines 1320–1325) | Append-only shared helper `managers/change_log.rs`; schema owner: task-0020 | `src-tauri/src/managers/change_log.rs` (called only inside §4 units of work) | C |
-| 17 | FTS5 search index ("Suche", lines 1327–1332) | KnowledgeStore maintains it; derived data | `src-tauri/src/managers/knowledge_store.rs` | D |
+| #   | Entity (plan §9 heading)                                    | Owning store                                                                | Owning file (plan §5)                                                         | Tier (§4) |
+| --- | ----------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------- |
+| 1   | `meeting_sessions` (lines 1164–1178)                        | MeetingStore                                                                | `src-tauri/src/managers/meeting_store.rs`                                     | A         |
+| 2   | `meeting_audio_chunks` (lines 1180–1188)                    | MeetingStore                                                                | `src-tauri/src/managers/meeting_store.rs`                                     | A         |
+| 3   | `meeting_stt_jobs` (lines 1190–1199)                        | MeetingStore                                                                | `src-tauri/src/managers/meeting_store.rs`                                     | B         |
+| 4   | `meeting_transcript_segments` (lines 1201–1208)             | MeetingStore                                                                | `src-tauri/src/managers/meeting_store.rs`                                     | A         |
+| 5   | `meeting_summaries` (lines 1210–1217)                       | MeetingStore                                                                | `src-tauri/src/managers/meeting_store.rs`                                     | A         |
+| 6   | `projects` (lines 1219–1225)                                | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | A         |
+| 7   | `sources` (lines 1227–1239)                                 | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | A         |
+| 8   | `project_sources` (lines 1241–1251)                         | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | A         |
+| 9   | `source_items` (lines 1253–1266)                            | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | A         |
+| 10  | `assets` (metadata rows; lines 1268–1275)                   | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs` (bytes: `storage/asset_store.rs`) | A         |
+| 11  | `source_item_assets` (lines 1268–1275)                      | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | A         |
+| 12  | `project_tasks` (lines 1277–1293)                           | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | A         |
+| 13  | `task_evidence` (lines 1295–1301)                           | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | A         |
+| 14  | `project_snapshots` + `snapshot_evidence` (lines 1303–1311) | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | A         |
+| 15  | `processing_jobs` (lines 1313–1318)                         | KnowledgeStore                                                              | `src-tauri/src/managers/knowledge_store.rs`                                   | B         |
+| 16  | `change_log` (lines 1320–1325)                              | Append-only shared helper `managers/change_log.rs`; schema owner: task-0020 | `src-tauri/src/managers/change_log.rs` (called only inside §4 units of work)  | C         |
+| 17  | FTS5 search index ("Suche", lines 1327–1332)                | KnowledgeStore maintains it; derived data                                   | `src-tauri/src/managers/knowledge_store.rs`                                   | D         |
 
 Notes and boundary rulings:
 
@@ -401,17 +401,17 @@ Tier definitions:
 
 MeetingStore units of work:
 
-| Unit | Mutation | Transaction contents | Tier / change_log? |
-| --- | --- | --- | --- |
-| U1 | `create_session` | INSERT `meeting_sessions` (rev = 1) + `change_log`(create) | A / yes |
-| U2 | `update_session` (title, state, provider snapshot, error, …) | UPDATE + rev++ + `change_log`(update) | A / yes |
-| U3 | `soft_delete_session` | UPDATE `deleted_at` + rev++ + `change_log`(tombstone) | A / yes |
-| U4 | `claim_due_stt_job` / `transition_stt_job` | UPDATE `meeting_stt_jobs` state/lease/retry fields | B / **no** |
-| U5 | `append_chunk` | INSERT `meeting_audio_chunks` (state `writing`, rev = 1) + `change_log`(create) | A / yes |
-| U6 | `finalize_chunk` | UPDATE chunk → `ready` + checksum + sizes + rev++ + `change_log`(update) | A / yes |
-| U7 | `mark_chunk` (`damaged`/`deleted`) | UPDATE + rev++ + `change_log`(update; tombstone when `deleted`) | A / yes |
-| U8 | `insert_segments` | Batched INSERT `meeting_transcript_segments` + one `change_log`(create) per inserted segment, single transaction | A / yes |
-| U9 | `upsert_summary` | INSERT or UPDATE `meeting_summaries` + rev++ + `change_log`(create/update) | A / yes |
+| Unit | Mutation                                                     | Transaction contents                                                                                             | Tier / change_log? |
+| ---- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------ |
+| U1   | `create_session`                                             | INSERT `meeting_sessions` (rev = 1) + `change_log`(create)                                                       | A / yes            |
+| U2   | `update_session` (title, state, provider snapshot, error, …) | UPDATE + rev++ + `change_log`(update)                                                                            | A / yes            |
+| U3   | `soft_delete_session`                                        | UPDATE `deleted_at` + rev++ + `change_log`(tombstone)                                                            | A / yes            |
+| U4   | `claim_due_stt_job` / `transition_stt_job`                   | UPDATE `meeting_stt_jobs` state/lease/retry fields                                                               | B / **no**         |
+| U5   | `append_chunk`                                               | INSERT `meeting_audio_chunks` (state `writing`, rev = 1) + `change_log`(create)                                  | A / yes            |
+| U6   | `finalize_chunk`                                             | UPDATE chunk → `ready` + checksum + sizes + rev++ + `change_log`(update)                                         | A / yes            |
+| U7   | `mark_chunk` (`damaged`/`deleted`)                           | UPDATE + rev++ + `change_log`(update; tombstone when `deleted`)                                                  | A / yes            |
+| U8   | `insert_segments`                                            | Batched INSERT `meeting_transcript_segments` + one `change_log`(create) per inserted segment, single transaction | A / yes            |
+| U9   | `upsert_summary`                                             | INSERT or UPDATE `meeting_summaries` + rev++ + `change_log`(create/update)                                       | A / yes            |
 
 Read-only MeetingStore operations (no transaction writes, no log rows):
 `get_session`, `list_sessions`, `segments_for_meeting`,
@@ -419,18 +419,18 @@ Read-only MeetingStore operations (no transaction writes, no log rows):
 
 KnowledgeStore units of work:
 
-| Unit | Mutation | Transaction contents | Tier / change_log? |
-| --- | --- | --- | --- |
-| K1 | `create_project` | INSERT `projects` (rev = 1) + `change_log`(create) | A / yes |
-| K2/K2' | `update_project` / `archive_project` (incl. manual status note; AI output must not overwrite it, plan lines 1224–1225) | UPDATE + rev++ + `change_log` | A / yes |
-| K3 | `soft_delete_project` | tombstone per W3 + `change_log`(tombstone) | A / yes |
-| K4 | `commit_source` | INSERT `sources` + N× INSERT `source_items` + M× INSERT `assets` metadata (after `AssetStore` byte placement succeeded) + K× INSERT `source_item_assets` + one `change_log` row per inserted row, **single transaction**, rolled back entirely if any part fails | A / yes |
-| K5 | `soft_delete_source` | tombstone cascade decision recorded on `sources` + `change_log` (item-level tombstones follow the same W3 pattern) | A / yes |
-| K6 | `link_project_source` / unlink | INSERT/UPDATE `project_sources` (+ rev semantics per plan lines 1241–1247) + `change_log` | A / yes |
-| K7 | `upsert_task` / `transition_task` | INSERT/UPDATE `project_tasks` + rev++ + `change_log`; human edits win over AI (plan lines 264–265) | A / yes |
-| K8 | `attach_task_evidence` | INSERT `task_evidence` + `change_log`; an AI task without ≥1 valid evidence is never published (plan lines 1300–1301) — enforced before K7 publishes AI-origin tasks | A / yes |
-| K9 | `publish_snapshot` | INSERT `project_snapshots` (`current`) + `snapshot_evidence` rows + demote previous `current` + `covered_through` bookkeeping + `change_log`, single transaction (plan lines 1303–1311) | A / yes |
-| K10 | `claim_processing_job` / `finish_processing_job` | UPDATE `processing_jobs` | B / **no** |
+| Unit   | Mutation                                                                                                               | Transaction contents                                                                                                                                                                                                                                             | Tier / change_log? |
+| ------ | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| K1     | `create_project`                                                                                                       | INSERT `projects` (rev = 1) + `change_log`(create)                                                                                                                                                                                                               | A / yes            |
+| K2/K2' | `update_project` / `archive_project` (incl. manual status note; AI output must not overwrite it, plan lines 1224–1225) | UPDATE + rev++ + `change_log`                                                                                                                                                                                                                                    | A / yes            |
+| K3     | `soft_delete_project`                                                                                                  | tombstone per W3 + `change_log`(tombstone)                                                                                                                                                                                                                       | A / yes            |
+| K4     | `commit_source`                                                                                                        | INSERT `sources` + N× INSERT `source_items` + M× INSERT `assets` metadata (after `AssetStore` byte placement succeeded) + K× INSERT `source_item_assets` + one `change_log` row per inserted row, **single transaction**, rolled back entirely if any part fails | A / yes            |
+| K5     | `soft_delete_source`                                                                                                   | tombstone cascade decision recorded on `sources` + `change_log` (item-level tombstones follow the same W3 pattern)                                                                                                                                               | A / yes            |
+| K6     | `link_project_source` / unlink                                                                                         | INSERT/UPDATE `project_sources` (+ rev semantics per plan lines 1241–1247) + `change_log`                                                                                                                                                                        | A / yes            |
+| K7     | `upsert_task` / `transition_task`                                                                                      | INSERT/UPDATE `project_tasks` + rev++ + `change_log`; human edits win over AI (plan lines 264–265)                                                                                                                                                               | A / yes            |
+| K8     | `attach_task_evidence`                                                                                                 | INSERT `task_evidence` + `change_log`; an AI task without ≥1 valid evidence is never published (plan lines 1300–1301) — enforced before K7 publishes AI-origin tasks                                                                                             | A / yes            |
+| K9     | `publish_snapshot`                                                                                                     | INSERT `project_snapshots` (`current`) + `snapshot_evidence` rows + demote previous `current` + `covered_through` bookkeeping + `change_log`, single transaction (plan lines 1303–1311)                                                                          | A / yes            |
+| K10    | `claim_processing_job` / `finish_processing_job`                                                                       | UPDATE `processing_jobs`                                                                                                                                                                                                                                         | B / **no**         |
 
 Read-only KnowledgeStore operations: all project/source/item/task/snapshot/
 asset queries, `search` (reads tier-D index), duplicate checks
@@ -459,8 +459,8 @@ Inhalts-Hash"):
 ### 5.2 `revision` — change counter
 
 - Per-entity monotonic integer, starting at **1** on creation, incremented by
-  exactly 1 on every committed tier-A mutation (rule W4). It expresses *that*
-  and *how often* a row changed — not wall-clock time.
+  exactly 1 on every committed tier-A mutation (rule W4). It expresses _that_
+  and _how often_ a row changed — not wall-clock time.
 - Comparison semantics for later consumers: higher revision wins as "newer
   state of the same entity"; equality means identical known state. Actual
   merge/conflict policy is explicitly deferred (plan lines 1764–1766) and not
@@ -485,7 +485,7 @@ Inhalts-Hash"):
 - Across the seam and toward later clients, deletion surfaces as the boolean
   projection `deleted == true` alongside `deleted_at`; consumers never infer
   deletion from absence.
-- Physical row deletion of tier-A entities does not exist in v1. Asset *byte*
+- Physical row deletion of tier-A entities does not exist in v1. Asset _byte_
   reclamation is a retention-policy concern (plan lines 1468 ff.) handled
   separately and never by ad-hoc `DELETE`s in store code.
 - Hard deletes remain legitimate for tier-B operational rows once finished —
@@ -498,7 +498,7 @@ Inhalts-Hash"):
 - For `assets`: hash over the exact stored byte sequence (matches the
   `AssetStore` hashing duty, plan line 1547).
 - For normalized records (`sources`, `source_items`, snapshots, summaries):
-  hash over a canonical serialization of the *content* fields — UTF-8 JSON
+  hash over a canonical serialization of the _content_ fields — UTF-8 JSON
   with lexicographically sorted keys, excluding envelope fields
   (`id`, `revision`, `created_at`, `updated_at`, `deleted_at`) so that
   re-saving unchanged content does not alter the hash. Canonicalization
@@ -512,7 +512,7 @@ Inhalts-Hash"):
 ### 5.6 Explicit non-scope statement
 
 **No sync, server, transport, or MCP code is in scope for v1.** The envelope
-exists solely so that the data *can* be consumed later by the server API and
+exists solely so that the data _can_ be consumed later by the server API and
 MCP tooling sketched in plan lines 1758–1783. Nothing in this contract
 implements synchronization, conflict resolution, encryption, networking, or
 MCP tools; those are roadmap items (plan lines 1745–1753) gated by separate
@@ -527,15 +527,15 @@ v1 vorgetäuscht").
 For completeness, the intended callers — all of them domain services, never
 the frontend directly:
 
-| Caller | Uses | Notes |
-| --- | --- | --- |
-| `MeetingManager` (`managers/meeting.rs`) | MeetingStore units U1–U3, U5–U7 | Writes session state through the store synchronously with decisions (SSC-§1.2 item 4) |
-| `MeetingTranscriptionQueue` (`managers/meeting_transcription.rs`) | U4, U8 | Claim/complete cycles only; STT-§3 |
-| `MeetingSummaryService` (`managers/meeting_summary.rs`) | U9, reads | Persists summary jobs/results |
-| `ProjectManager` (`managers/project.rs`) | KnowledgeStore K1–K6, reads | Manual user changes outrank AI runs (plan lines 264–265) |
-| `SourceIngestionService` (`managers/source_ingestion.rs`) | K4 | `commit` step maps onto the single unit of work |
-| `ProjectIntelligenceService` (`managers/project_intelligence.rs`) | K7–K9, K10, reads | Incremental analysis consumes the change log (plan line 1323) |
-| Future server/MCP clients | typed service layer only | Out of scope for v1 (§5.6) |
+| Caller                                                            | Uses                            | Notes                                                                                 |
+| ----------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
+| `MeetingManager` (`managers/meeting.rs`)                          | MeetingStore units U1–U3, U5–U7 | Writes session state through the store synchronously with decisions (SSC-§1.2 item 4) |
+| `MeetingTranscriptionQueue` (`managers/meeting_transcription.rs`) | U4, U8                          | Claim/complete cycles only; STT-§3                                                    |
+| `MeetingSummaryService` (`managers/meeting_summary.rs`)           | U9, reads                       | Persists summary jobs/results                                                         |
+| `ProjectManager` (`managers/project.rs`)                          | KnowledgeStore K1–K6, reads     | Manual user changes outrank AI runs (plan lines 264–265)                              |
+| `SourceIngestionService` (`managers/source_ingestion.rs`)         | K4                              | `commit` step maps onto the single unit of work                                       |
+| `ProjectIntelligenceService` (`managers/project_intelligence.rs`) | K7–K9, K10, reads               | Incremental analysis consumes the change log (plan line 1323)                         |
+| Future server/MCP clients                                         | typed service layer only        | Out of scope for v1 (§5.6)                                                            |
 
 ---
 
@@ -555,9 +555,9 @@ mechanics that keep it true mechanically, not just by convention.
   4. `src-tauri/src/managers/history.rs` (**legacy carve-out** — existing
      dictation history, unchanged; verified present at HEAD, see §7.3)
   5. the migration module designated by task-0020 (schema authority, §0.1)
-  No other file — in particular nothing under `commands/`, `managers/*.rs`
-  beyond the list, `audio_toolkit/`, or anything frontend-side — may name
-  `rusqlite` types or open the database.
+     No other file — in particular nothing under `commands/`, `managers/*.rs`
+     beyond the list, `audio_toolkit/`, or anything frontend-side — may name
+     `rusqlite` types or open the database.
 - **R2 — constructor confinement.** `MeetingStore::open` and
   `KnowledgeStore::open` are `pub(crate)` and are called exactly once each,
   in Tauri setup in `lib.rs`, then handed to services/command handlers as
@@ -623,10 +623,10 @@ script-verification precedent (`docs/meeting-mode-architecture/verify-sketch.ps1
 
 ## 8. Gate verification checklist
 
-| Gate | Where satisfied |
-| --- | --- |
-| G1 ownership matrix, one owning store per §9 entity, file per plan §5 | §3 matrix rows 1–17; homes per plan lines 243, 275, 308 |
-| G2 unit-of-work enumeration incl. same-transaction change_log/tombstones and read-only lists | §4.1 rules W1–W7; §4.2 tables U1–U9, K1–K10 with explicit "**no**" rows (U4, K10) and read-only lists |
-| G3 envelope fields with semantics + explicit no-sync-code statement | §5.1–§5.5; §5.6 citing plan lines 1758–1783 and Phase 3 acceptance lines 1557–1558 |
-| G4 named choke point enforcing no-direct-DB-access + testability note | §7.1 rules R1–R5 (module visibility + command-layer rule); §7.3 static allow-list gate and behavioral tests |
-| G5 zero table DDL, task-0020/db-schema.md cited as schema authority | §0.1 item 1; the document defines ownership, transactions and envelope semantics only — no table or index definitions anywhere |
+| Gate                                                                                         | Where satisfied                                                                                                                |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| G1 ownership matrix, one owning store per §9 entity, file per plan §5                        | §3 matrix rows 1–17; homes per plan lines 243, 275, 308                                                                        |
+| G2 unit-of-work enumeration incl. same-transaction change_log/tombstones and read-only lists | §4.1 rules W1–W7; §4.2 tables U1–U9, K1–K10 with explicit "**no**" rows (U4, K10) and read-only lists                          |
+| G3 envelope fields with semantics + explicit no-sync-code statement                          | §5.1–§5.5; §5.6 citing plan lines 1758–1783 and Phase 3 acceptance lines 1557–1558                                             |
+| G4 named choke point enforcing no-direct-DB-access + testability note                        | §7.1 rules R1–R5 (module visibility + command-layer rule); §7.3 static allow-list gate and behavioral tests                    |
+| G5 zero table DDL, task-0020/db-schema.md cited as schema authority                          | §0.1 item 1; the document defines ownership, transactions and envelope semantics only — no table or index definitions anywhere |

@@ -30,7 +30,7 @@ Sibling contracts consumed read-only below, abbreviated:
 
 Conflict rule (identical to the documentation index): plan wins over this
 contract, this contract wins over catalogs, nothing wins over actual code.
-Where TAX assigns error codes, TAX stays authoritative for the *code*; this
+Where TAX assigns error codes, TAX stays authoritative for the _code_; this
 contract is authoritative for how a code appears in logs, events, and the
 diagnostics bundle.
 
@@ -43,11 +43,11 @@ Meeting mode processes hours of spoken content per session. When a user reports
 questions from artifacts the user can hand over — without ever receiving the
 spoken content itself:
 
-1. *Which session?* — every log line and every event about that session must be
+1. _Which session?_ — every log line and every event about that session must be
    identifiable as belonging to it (correlation).
-2. *What happened?* — failures must appear under the same names everywhere
+2. _What happened?_ — failures must appear under the same names everywhere
    (taxonomy alignment with TAX).
-3. *Is it safe to share?* — the diagnostics bundle must provably exclude
+3. _Is it safe to share?_ — the diagnostics bundle must provably exclude
    transcripts, audio, summaries, and secrets at **every** verbosity tier.
 
 This contract defines the single **diagnostics seam** between meeting-mode
@@ -61,7 +61,7 @@ SSC §4). Normative claims:
    carries exactly one session correlation id (**§2**).
 2. Every meeting-mode log record carries a structured tag whose name is drawn
    from one namespace aligned 1:1 with TAX §3 (**§3**).
-3. Verbosity is tiered; tiers change *quantity*, never *category* of logged
+3. Verbosity is tiered; tiers change _quantity_, never _category_ of logged
    content (**§4**).
 4. Transcript-class content cannot reach any log tier or event payload; only
    whitelisted metadata fields may be logged (**§5**, §6 — the core gate).
@@ -111,14 +111,14 @@ owner named by SSC §1 — and travels with work explicitly; ambient/task-local
 propagation across `.await` points and worker threads is explicitly rejected
 (NG-2). Concretely:
 
-| # | Stage | Carrier of the cid | Stamp duty |
-| --- | --- | --- | --- |
-| P1 | Recorder capture | `MeetingRecorder` calls are issued by `MeetingManager`, which holds the active `meeting_id`; `RecorderEvent`s are re-emitted by the manager's event sink with the cid already attached | manager stamps every record it writes while handling recorder events/events it forwards |
-| P2 | Chunk persistence & recovery | chunk rows belong to `meeting_id` (plan §9); startup recovery (RC §8, SSC §6) iterates per meeting | recovery loop logs per-meeting with that meeting's cid, including `meeting.recorder.recovery_failed` paths |
-| P3 | STT queue | `meeting_stt_jobs` rows carry `meeting_id` (plan §9); JSC leases are keyed by job row | queue workers read the cid from the leased job row and stamp every attempt/retry/terminal record (`meeting.stt.*` codes included) |
-| P4 | Summary | summary work is requested per meeting (SPC/SPD); the request carries `meeting_id` | `MeetingSummaryService` stamps all stage records, incl. map-reduce window records (window indexes allowed, window text never — §5) |
-| P5 | Import | an import creates (or attaches to) a project source item; before a meeting exists there is no cid | two-phase rule: pre-ingest records (validation, zip-bomb checks, asset extraction) are uncorrelated (R2.2) and tagged `evt=meeting.import.*`; from the moment the target meeting/source row exists, subsequent records carry its cid. An import that fails before creating a row stays uncorrelated — its diagnostics link is the import job id, which is whitelisted metadata (§5.2 W12) |
-| P6 | Frontend events | every `meeting://*` payload carries `"cid"` per R2.4 | emitters are the same manager sinks; the debug panel may filter the live log viewer by the cid of the meeting currently open |
+| #   | Stage                        | Carrier of the cid                                                                                                                                                                     | Stamp duty                                                                                                                                                                                                                                                                                                                                                                                |
+| --- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1  | Recorder capture             | `MeetingRecorder` calls are issued by `MeetingManager`, which holds the active `meeting_id`; `RecorderEvent`s are re-emitted by the manager's event sink with the cid already attached | manager stamps every record it writes while handling recorder events/events it forwards                                                                                                                                                                                                                                                                                                   |
+| P2  | Chunk persistence & recovery | chunk rows belong to `meeting_id` (plan §9); startup recovery (RC §8, SSC §6) iterates per meeting                                                                                     | recovery loop logs per-meeting with that meeting's cid, including `meeting.recorder.recovery_failed` paths                                                                                                                                                                                                                                                                                |
+| P3  | STT queue                    | `meeting_stt_jobs` rows carry `meeting_id` (plan §9); JSC leases are keyed by job row                                                                                                  | queue workers read the cid from the leased job row and stamp every attempt/retry/terminal record (`meeting.stt.*` codes included)                                                                                                                                                                                                                                                         |
+| P4  | Summary                      | summary work is requested per meeting (SPC/SPD); the request carries `meeting_id`                                                                                                      | `MeetingSummaryService` stamps all stage records, incl. map-reduce window records (window indexes allowed, window text never — §5)                                                                                                                                                                                                                                                        |
+| P5  | Import                       | an import creates (or attaches to) a project source item; before a meeting exists there is no cid                                                                                      | two-phase rule: pre-ingest records (validation, zip-bomb checks, asset extraction) are uncorrelated (R2.2) and tagged `evt=meeting.import.*`; from the moment the target meeting/source row exists, subsequent records carry its cid. An import that fails before creating a row stays uncorrelated — its diagnostics link is the import job id, which is whitelisted metadata (§5.2 W12) |
+| P6  | Frontend events              | every `meeting://*` payload carries `"cid"` per R2.4                                                                                                                                   | emitters are the same manager sinks; the debug panel may filter the live log viewer by the cid of the meeting currently open                                                                                                                                                                                                                                                              |
 
 **End-to-end claim (G1):** for any meeting M, the set
 `{records mentioning M} ⊆ {records carrying cid=M}` holds by construction,
@@ -131,7 +131,7 @@ argument.
 
 Where a record must reference related entities, they are additional whitelisted
 fields next to `cid` (chunk id, job id, segment id — §5.2), never substitutes
-for it. Support joins *from* the meeting detail view outward: meeting → jobs →
+for it. Support joins _from_ the meeting detail view outward: meeting → jobs →
 chunks → attempts. Reverse joins (job id alone → meeting) are possible because
 P3/P4 carriers embed both ids.
 
@@ -154,13 +154,13 @@ immediately after the log target, before free-text fields. The namespace is
    `import` is hereby registered for diagnostics tags only — TAX §5 tables
    remain untouched until import fault codes actually exist):
 
-   | Origin | Closed verb set |
-   | --- | --- |
-   | `recorder` | `started`, `paused`, `resumed`, `stopping`, `stopped`, `recovery_scan`, `source_segment_opened` |
-   | `session` | `draft_created`, `state_changed`, `snapshot_taken`, `consent_gate`, `retention_decided` |
-   | `stt` | `enqueued`, `leased`, `attempt_done`, `backoff_wait`, `cancelled`, `completed` |
-   | `summary` | `window_started`, `window_persisted`, `reduce_started`, `completed`, `fallback_used`, `consent_checked` |
-   | `import` | `archive_validating`, `extracting`, `item_parsed`, `asset_ingested`, `completed` |
+   | Origin     | Closed verb set                                                                                         |
+   | ---------- | ------------------------------------------------------------------------------------------------------- |
+   | `recorder` | `started`, `paused`, `resumed`, `stopping`, `stopped`, `recovery_scan`, `source_segment_opened`         |
+   | `session`  | `draft_created`, `state_changed`, `snapshot_taken`, `consent_gate`, `retention_decided`                 |
+   | `stt`      | `enqueued`, `leased`, `attempt_done`, `backoff_wait`, `cancelled`, `completed`                          |
+   | `summary`  | `window_started`, `window_persisted`, `reduce_started`, `completed`, `fallback_used`, `consent_checked` |
+   | `import`   | `archive_validating`, `extracting`, `item_parsed`, `asset_ingested`, `completed`                        |
 
 3. **Registration duty (mirrors TAX §3.5):** a verb not in the table above, or
    a tag outside the namespace, is a defect; adding one requires an edit to
@@ -180,17 +180,17 @@ immediately after the log target, before free-text fields. The namespace is
 Tiers map onto the **existing** plumbing only (`logging.rs` atomics, settings
 `log_level`, debug-mode toggle, CLI `--debug`). No new setting is introduced.
 
-| Tier | Trigger | File-log level | Webview stream | Content delta vs. lower tier |
-| --- | --- | --- | --- | --- |
-| **T0 — normal** | default (`log_level` = Info per current defaults; file level per stored setting) | Info (user-adjustable via existing `set_log_level`, unchanged) | off | lifecycle + faults only (`evt` records at Info/Warn/Error) |
-| **T1 — user debug** | Debug mode toggled (Ctrl/Cmd+Shift+D) | Debug | on (`WEBVIEW_LOG_STREAMING`, unchanged) | adds Debug records: retry/backoff arithmetic, lease waits, queue depths, coalescing stats |
-| **T2 — trace** | `--debug` flag or explicit Trace selection (existing behavior, lib.rs:524–533) | Trace | on | adds Trace records: timing spans, byte offsets/sizes, provider HTTP status *classes* (not bodies), internal scheduler decisions |
+| Tier                | Trigger                                                                          | File-log level                                                 | Webview stream                          | Content delta vs. lower tier                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **T0 — normal**     | default (`log_level` = Info per current defaults; file level per stored setting) | Info (user-adjustable via existing `set_log_level`, unchanged) | off                                     | lifecycle + faults only (`evt` records at Info/Warn/Error)                                                                      |
+| **T1 — user debug** | Debug mode toggled (Ctrl/Cmd+Shift+D)                                            | Debug                                                          | on (`WEBVIEW_LOG_STREAMING`, unchanged) | adds Debug records: retry/backoff arithmetic, lease waits, queue depths, coalescing stats                                       |
+| **T2 — trace**      | `--debug` flag or explicit Trace selection (existing behavior, lib.rs:524–533)   | Trace                                                          | on                                      | adds Trace records: timing spans, byte offsets/sizes, provider HTTP status _classes_ (not bodies), internal scheduler decisions |
 
 Normative rules:
 
 - R4.1 — tiers are **monotone in quantity only**. Any record legal at T2 is
-  legal (modulo level) at T0 *after* redaction; nothing exists that only T2
-  may log but T0 forbids *by category*. This is what makes the §5 prohibition
+  legal (modulo level) at T0 _after_ redaction; nothing exists that only T2
+  may log but T0 forbids _by category_. This is what makes the §5 prohibition
   enforceable once instead of per tier.
 - R4.2 — the transcript prohibition (§5) binds **identically at T0, T1, T2**.
   There is no "trace may include content" escape hatch (G2). If debugging ever
@@ -233,27 +233,27 @@ Specifically prohibited (non-exhaustive, by way of illustration — absence from
 
 ### 5.2 Metadata whitelist (complete, enumerated)
 
-| # | Field | Type/shape | Notes |
-| --- | --- | --- | --- |
-| W1 | `cid` | UUID v4 string | §2 |
-| W2 | `chunk_id`, `segment_id`, `job_id`, `marker_id` | ids as defined by RC/STT/SSC | opaque ids, safe by construction |
-| W3 | state values | session/job/chunk/source states (SSC §2, STT §3, RC enums) | closed vocabularies |
-| W4 | `code` + envelope `params` | TAX code string; params per TAX §2.1 flat scalar shape | params values are device names, counts, durations — TAX already bounds them; a param key not declared in a TAX §5 row is a defect |
-| W5 | `provider` | enum {local, azure, custom} + model id | model id is a catalog name, not user content |
-| W6 | counts and durations | integers, ms/bytes | backlog depth, attempt counts, segment counts, timeline ms, byte sizes, free/required disk bytes |
-| W7 | timing | timestamps, elapsed ms, monotonic deltas | wall-clock timestamps fine (local artifact) |
-| W8 | error classification | retryability class (TAX §4.3), HTTP status *class* (4xx/5xx/timeout/tls), WASAPI/cpal error *kind discriminant* | never raw HRESULT/HTTP bodies — mirrors TAX §3.4 provider-detail ban |
-| W9 | language/locale codes | BCP-47 tags | e.g. `de-DE` |
-| W10 | versions | app version, git hash, schema/parser/prompt/model versions | supports §7 bundle |
-| W11 | relative storage paths | path relative to the app-data dir, forward slashes | e.g. `meetings/<cid>/audio/chunk_0042.wav` — the cid segment is W1; absolute prefixes are stripped before logging |
-| W12 | import job facts | archive element count, total/uncompressed byte sizes, compression ratio, parser id, rejection reason class (zip-bomb/traversal/encrypted/damaged) | plan §12 lines 1463–1468; classes only, never offending names |
-| W13 | `topic` | `meeting://*` topic string | §3.4 |
-| W14 | device names | user-visible audio device name strings | already travel as TAX `params.deviceName`; needed to act on device-lost reports; they are the *only* free-form strings on this list |
+| #   | Field                                           | Type/shape                                                                                                                                        | Notes                                                                                                                               |
+| --- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| W1  | `cid`                                           | UUID v4 string                                                                                                                                    | §2                                                                                                                                  |
+| W2  | `chunk_id`, `segment_id`, `job_id`, `marker_id` | ids as defined by RC/STT/SSC                                                                                                                      | opaque ids, safe by construction                                                                                                    |
+| W3  | state values                                    | session/job/chunk/source states (SSC §2, STT §3, RC enums)                                                                                        | closed vocabularies                                                                                                                 |
+| W4  | `code` + envelope `params`                      | TAX code string; params per TAX §2.1 flat scalar shape                                                                                            | params values are device names, counts, durations — TAX already bounds them; a param key not declared in a TAX §5 row is a defect   |
+| W5  | `provider`                                      | enum {local, azure, custom} + model id                                                                                                            | model id is a catalog name, not user content                                                                                        |
+| W6  | counts and durations                            | integers, ms/bytes                                                                                                                                | backlog depth, attempt counts, segment counts, timeline ms, byte sizes, free/required disk bytes                                    |
+| W7  | timing                                          | timestamps, elapsed ms, monotonic deltas                                                                                                          | wall-clock timestamps fine (local artifact)                                                                                         |
+| W8  | error classification                            | retryability class (TAX §4.3), HTTP status _class_ (4xx/5xx/timeout/tls), WASAPI/cpal error _kind discriminant_                                   | never raw HRESULT/HTTP bodies — mirrors TAX §3.4 provider-detail ban                                                                |
+| W9  | language/locale codes                           | BCP-47 tags                                                                                                                                       | e.g. `de-DE`                                                                                                                        |
+| W10 | versions                                        | app version, git hash, schema/parser/prompt/model versions                                                                                        | supports §7 bundle                                                                                                                  |
+| W11 | relative storage paths                          | path relative to the app-data dir, forward slashes                                                                                                | e.g. `meetings/<cid>/audio/chunk_0042.wav` — the cid segment is W1; absolute prefixes are stripped before logging                   |
+| W12 | import job facts                                | archive element count, total/uncompressed byte sizes, compression ratio, parser id, rejection reason class (zip-bomb/traversal/encrypted/damaged) | plan §12 lines 1463–1468; classes only, never offending names                                                                       |
+| W13 | `topic`                                         | `meeting://*` topic string                                                                                                                        | §3.4                                                                                                                                |
+| W14 | device names                                    | user-visible audio device name strings                                                                                                            | already travel as TAX `params.deviceName`; needed to act on device-lost reports; they are the _only_ free-form strings on this list |
 
 Nothing else. A field proposal not in this table requires an edit here first
 (same registration duty as §3.3).
 
-### 5.3 Why this is *provable*, not aspirational (G2)
+### 5.3 Why this is _provable_, not aspirational (G2)
 
 Three independent layers, each testable (hooks in §8):
 
@@ -265,7 +265,7 @@ Three independent layers, each testable (hooks in §8):
    record from a raw transcript `String` has no expression path — the type
    system, not reviewer diligence, carries the invariant.
 2. **Order-of-filters (tier independence):** redaction happens inside the
-   emission module, i.e. *before* any `tauri_plugin_log` target filter runs
+   emission module, i.e. _before_ any `tauri_plugin_log` target filter runs
    (lib.rs:373–402). Filters select among already-safe records; therefore no
    tier configuration, env var (`RUST_LOG`), or future target can re-enable
    content. This closes the classic "verbose mode leaks" hole by ordering, not
@@ -303,15 +303,15 @@ seam). The dictation pipeline is untouched (NG-7 analog of TAX §9).
 
 A user-triggered "support report" for meeting M produces exactly:
 
-| # | Artifact | Source | Bound by |
-| --- | --- | --- | --- |
-| B1 | `speak.log` — current file-log file(s) as written at the user's tier | existing log dir (`commands::get_log_dir_path` target) | safe by §5 at any tier |
-| B2 | `environment.json` | generated | app version/commit (W10), OS name/version/arch, locale (W9), tier history if recorded (W7/W3) |
-| B3 | `settings-redacted.json` | tauri-plugin-store settings minus a declared exclusion set | excludes: provider secrets/keys (referenced by id only, STT §7), selected device ids may stay as *names* (W14), everything else retained |
-| B4 | `session-metadata.json` | `meeting_sessions` row for M + snapshot/device columns | metadata columns only; no transcript/summary joins |
-| B5 | `jobs.jsonl` | `meeting_stt_jobs` + relevant `processing_jobs` rows for M | states, attempts, timings, codes (W2–W8); result columns excluded |
-| B6 | `manifest.json` | the session directory manifest (phase2-contracts §2) | already metadata-only by that contract's own rules |
-| B7 | `events-recent.ndjson` | optional attach: the last N (cap 500) `meeting://*` payloads with `cid=M` if the user opts in from debug mode | payloads already conform to §2/§5 |
+| #   | Artifact                                                             | Source                                                                                                        | Bound by                                                                                                                                 |
+| --- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| B1  | `speak.log` — current file-log file(s) as written at the user's tier | existing log dir (`commands::get_log_dir_path` target)                                                        | safe by §5 at any tier                                                                                                                   |
+| B2  | `environment.json`                                                   | generated                                                                                                     | app version/commit (W10), OS name/version/arch, locale (W9), tier history if recorded (W7/W3)                                            |
+| B3  | `settings-redacted.json`                                             | tauri-plugin-store settings minus a declared exclusion set                                                    | excludes: provider secrets/keys (referenced by id only, STT §7), selected device ids may stay as _names_ (W14), everything else retained |
+| B4  | `session-metadata.json`                                              | `meeting_sessions` row for M + snapshot/device columns                                                        | metadata columns only; no transcript/summary joins                                                                                       |
+| B5  | `jobs.jsonl`                                                         | `meeting_stt_jobs` + relevant `processing_jobs` rows for M                                                    | states, attempts, timings, codes (W2–W8); result columns excluded                                                                        |
+| B6  | `manifest.json`                                                      | the session directory manifest (phase2-contracts §2)                                                          | already metadata-only by that contract's own rules                                                                                       |
+| B7  | `events-recent.ndjson`                                               | optional attach: the last N (cap 500) `meeting://*` payloads with `cid=M` if the user opts in from debug mode | payloads already conform to §2/§5                                                                                                        |
 
 Explicitly **never** in the bundle: audio chunks (any retention state),
 transcript segments, summaries/snapshots, imported originals/assets, secret
@@ -322,9 +322,9 @@ titles — content-adjacent — so only aggregate counts per entity type ship).
 
 The operations guide (authored separately; not present in this worktree at
 authoring time — verified by glob against `docs/`, see Appendix A) owns the
-*procedure*: how a support agent asks for the bundle, how the user produces
-it, how artifacts are read in which order. This contract owns the *supply
-side*: the fixed artifact set above is what any such procedure may assume.
+_procedure_: how a support agent asks for the bundle, how the user produces
+it, how artifacts are read in which order. This contract owns the _supply
+side_: the fixed artifact set above is what any such procedure may assume.
 The binding rule in both directions:
 
 - **G3-M1:** the guide may rely on B1–B6 existing verbatim and B7 being
@@ -336,7 +336,7 @@ The binding rule in both directions:
   procedural step, menu path, or copy string — those live only in the guide
   and COPY respectively.
 - **G3-M3 (disclosed dependency):** because the guide did not exist in this
-  worktree, G3 is satisfied as a *forward mapping*: §7.1 defines the complete
+  worktree, G3 is satisfied as a _forward mapping_: §7.1 defines the complete
   assumption surface, and the guide inherits conformance duties G3-M1/M2 at
   its authoring time. Any later divergence is resolved by the precedence
   rule of the header (contracts over catalogs; the plan over both) plus the
@@ -409,9 +409,9 @@ Deliberately **not** specified, with reasons:
 
 ## Appendix A — Gate traceability
 
-| Gate | Coverage |
-| --- | --- |
-| G1 — correlation-id propagation across recorder, STT queue, summary, import end-to-end | §2.1 (id = meeting_id), §2.2 (canonical rendering rules R2.1–R2.4), §2.3 (stage table P1–P6 + end-to-end claim), §2.4 (join keys); verification §8.1 |
-| G2 — transcript substrings provably absent from any log tier; whitelist enumerated | §5.1 (allowlist rule), §5.2 (whitelist W1–W14, complete), §5.3 (three-layer proof: structure, filter order, negative tests; tier independence also fixed by §4 R4.1/R4.2); hooks §8.2/§8.3/§8.4 |
-| G3 — bundle contents mapped to operations-guide expectations without duplicating it | §7.1 (closed artifact table B1–B7 + never-list), §7.2 (mapping rules G3-M1/M2, disclosed dependency G3-M3 — guide file absent from this worktree, verified via glob during authoring) |
-| G4 — non-goals; documentation index updated | §9 (NG-1–NG-9); index table row and reading-order entry added in `docs/meeting-mode-documentation-index.md` |
+| Gate                                                                                   | Coverage                                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1 — correlation-id propagation across recorder, STT queue, summary, import end-to-end | §2.1 (id = meeting_id), §2.2 (canonical rendering rules R2.1–R2.4), §2.3 (stage table P1–P6 + end-to-end claim), §2.4 (join keys); verification §8.1                                            |
+| G2 — transcript substrings provably absent from any log tier; whitelist enumerated     | §5.1 (allowlist rule), §5.2 (whitelist W1–W14, complete), §5.3 (three-layer proof: structure, filter order, negative tests; tier independence also fixed by §4 R4.1/R4.2); hooks §8.2/§8.3/§8.4 |
+| G3 — bundle contents mapped to operations-guide expectations without duplicating it    | §7.1 (closed artifact table B1–B7 + never-list), §7.2 (mapping rules G3-M1/M2, disclosed dependency G3-M3 — guide file absent from this worktree, verified via glob during authoring)           |
+| G4 — non-goals; documentation index updated                                            | §9 (NG-1–NG-9); index table row and reading-order entry added in `docs/meeting-mode-documentation-index.md`                                                                                     |

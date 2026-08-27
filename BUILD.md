@@ -307,9 +307,9 @@ including its nested `ggml`/Vulkan sub-builds) aborts with exit code 1 and
 involved. A differential measurement against the same CMake build directory
 showed:
 
-| Invocation | Result |
-| --- | --- |
-| `cmake --build <dir> --target install --config Release` (serial) | succeeds, exit 0 |
+| Invocation                                                                  | Result                                                             |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `cmake --build <dir> --target install --config Release` (serial)            | succeeds, exit 0                                                   |
 | same command plus `--parallel 20` (what the build script issues by default) | fails, exit 1, right after `Checking File Globs`, zero diagnostics |
 
 Two independent stressors were confirmed on this machine via an MSBuild

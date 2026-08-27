@@ -58,8 +58,7 @@ Update (Task task-0348, 22.08.2026): Neu aufgenommen als Zeile unten:
 `docs/operator/troubleshooting-shortcuts-cli.md` (`implemented behavior` für
 globale Shortcuts, Single-Instance-Weiterleitung und CLI-Fernsteuerung,
 Belegstand HEAD `00f58671`). Bestand damit (verifiziert am 22.08.2026 per
-`Get-ChildItem docs -Recurse -Filter *.md` bzw. `Select-String '^\| \`docs/'`
-auf diesem Index): **54** Markdown-Dateien unter `docs/`, **48** hier mit
+`Get-ChildItem docs -Recurse -Filter *.md` bzw. `Select-String '^\| \`docs/'`auf diesem Index): **54** Markdown-Dateien unter`docs/`, **48** hier mit
 Tabellenzeile erfasst, weiterhin **6** ausgenommen (Indexdokument + 5
 Audit-Dokumente unter `docs/reviews/`).
 
@@ -68,8 +67,8 @@ Update (Task task-0356, 22.08.2026): Neu aufgenommen als Zeile unten:
 ausschließlich andere Dokumente plus den belegten Ist-Stand „kein
 Meeting-Modus-Produktionsverhalten", Belegstand HEAD `61237b15`). Bestand
 damit (verifiziert am 22.08.2026 per `Get-ChildItem docs -Recurse -Filter
-*.md` bzw. `Select-String '^\| \`docs/'` auf diesem Index): **56**
-Markdown-Dateien unter `docs/`, **49** hier mit Tabellenzeile erfasst,
+*.md` bzw. `Select-String '^\| \`docs/'`auf diesem Index): **56**
+Markdown-Dateien unter`docs/`, **49** hier mit Tabellenzeile erfasst,
 weiterhin **6** ausgenommen (Indexdokument + 5 Audit-Dokumente unter
 `docs/reviews/`).
 
@@ -108,12 +107,12 @@ Retention und automatischer Löschung; erklärt ausschließlich den Stand des
 macht keine Ist-Verhaltensaussagen und trägt daher nicht den Status
 „implemented behavior“; Belegstand HEAD `65ee93d`). Bestand damit
 (verifiziert am 22.08.2026 per `Get-ChildItem docs -Recurse -Filter *.md`
-bzw. `Select-String '^\| \`docs/'` auf diesem Index): **60** Markdown-Dateien
-unter `docs/`, **52** hier mit Tabellenzeile erfasst, weiterhin **6**
+bzw. `Select-String '^\| \`docs/'`auf diesem Index): **60** Markdown-Dateien
+unter`docs/`, **52** hier mit Tabellenzeile erfasst, weiterhin **6**
 ausgenommen (Indexdokument + 5 Audit-Dokumente unter `docs/reviews/`). Die
 bereits in task-0358 notierte Diskrepanz besteht fort: `docs/operator/
-backup-restore-drill.md` besitzt weiterhin keine Tabellenzeile; zusätzlich
-ist seit task-0363 `docs/operator/meeting-mode-readiness-checklist.md`
+backup-restore-drill.md`besitzt weiterhin keine Tabellenzeile; zusätzlich
+ist seit task-0363`docs/operator/meeting-mode-readiness-checklist.md`
 ebenfalls ohne Tabellenzeile im Bestand — beide Nachträge bleiben dem
 jeweiligen Dokument-Eigentümer vorbehalten und wurden von task-0368 bewusst
 nicht nachgetragen. Die Aufnahme der FAQ-Zeile selbst ist die durch Gate G3
@@ -129,18 +128,17 @@ Happy-Path des heutigen Onboarding-Flows mit Belegen aus
 Fehlfälle nur zu den drei Troubleshooting-Matrizen, ohne sie zu duplizieren).
 Bestand damit (verifiziert am 22.08.2026 per
 `Get-ChildItem docs -Recurse -Filter *.md` bzw.
-`Select-String '^\| \`docs/'` auf diesem Index): **61** Markdown-Dateien
-unter `docs/`, **53** hier mit Tabellenzeile erfasst, weiterhin **6**
+`Select-String '^\| \`docs/'`auf diesem Index): **61** Markdown-Dateien
+unter`docs/`, **53** hier mit Tabellenzeile erfasst, weiterhin **6**
 ausgenommen (Indexdokument + 5 Audit-Dokumente unter `docs/reviews/`). Die
 bereits in task-0358 notierte Diskrepanz besteht fort:
-`docs/operator/backup-restore-drill.md` besitzt weiterhin keine
-Tabellenzeile; zusätzlich bleiben seit task-0368
-`docs/operator/meeting-mode-readiness-checklist.md` ohne Zeile — beide
+`docs/operator/backup-restore-drill.md`besitzt weiterhin keine
+Tabellenzeile; zusätzlich bleiben seit task-0368`docs/operator/meeting-mode-readiness-checklist.md`ohne Zeile — beide
 Nachträge bleiben dem jeweiligen Dokument-Eigentümer vorbehalten und wurden
 von task-0370 bewusst nicht nachgetragen. Die Aufnahme der Quickstart-Zeile
 selbst ist die durch Gate G3 des Leaf geforderte Indexregistrierung und damit
 eine offengelegte, minimal notwendige Erweiterung des deklarierten
-Konfliktumfangs (deklarierter Umfang war nur `docs/operator/quickstart.md`
+Konfliktumfangs (deklarierter Umfang war nur`docs/operator/quickstart.md`
 plus Read-Scopes).
 
 Update (Task task-0371, 22.08.2026): Neu aufgenommen als Zeile unten:
@@ -150,18 +148,17 @@ Nutzeraktion; beschreibt ausschließlich den Stand des
 macht keine Ist-Verhaltensaussagen und trägt daher nicht den Status
 „implemented behavior“). Bestand damit (verifiziert am 22.08.2026 per
 `Get-ChildItem docs -Recurse -Filter *.md` bzw.
-`Select-String '^\| \`docs/'` auf diesem Index): **62** Markdown-Dateien
-unter `docs/`, **54** hier mit Tabellenzeile erfasst, weiterhin **6**
+`Select-String '^\| \`docs/'`auf diesem Index): **62** Markdown-Dateien
+unter`docs/`, **54** hier mit Tabellenzeile erfasst, weiterhin **6**
 ausgenommen (Indexdokument + 5 Audit-Dokumente unter `docs/reviews/`). Die
 bereits in task-0358/task-0368 notierte Diskrepanz besteht fort:
-`docs/operator/backup-restore-drill.md` und
-`docs/operator/meeting-mode-readiness-checklist.md` besitzen weiterhin keine
+`docs/operator/backup-restore-drill.md`und`docs/operator/meeting-mode-readiness-checklist.md`besitzen weiterhin keine
 Tabellenzeile — beide Nachträge bleiben dem jeweiligen Dokument-Eigentümer
 vorbehalten und wurden von task-0371 bewusst nicht nachgetragen. Die
 Aufnahme der Crosswalk-Zeile selbst ist die durch Gate G3 des Leaf
 geforderte Indexregistrierung und damit eine offengelegte, minimal
 notwendige Erweiterung des deklarierten Konfliktumfangs (deklarierter
-Umfang war nur `docs/operator/error-code-crosswalk.md` plus Read-Scopes).
+Umfang war nur`docs/operator/error-code-crosswalk.md` plus Read-Scopes).
 
 Update (Task task-0359, 23.08.2026): Neu aufgenommen als Zeile unten:
 `docs/contributing-docs.md` (Contributor-Konventionen für
@@ -171,18 +168,17 @@ Known-Limitations-Registers als wörtliche Zitate der normativen Quellen,
 macht selbst keine Verhaltensaussagen über Produktcode, Belegstand HEAD
 `33c6e0fd`). Bestand damit (verifiziert am 23.08.2026 per
 `Get-ChildItem docs -Recurse -Filter *.md` bzw.
-`Select-String '^\| \`docs/'` auf diesem Index): **63** Markdown-Dateien
-unter `docs/`, **55** hier mit Tabellenzeile erfasst, weiterhin **6**
+`Select-String '^\| \`docs/'`auf diesem Index): **63** Markdown-Dateien
+unter`docs/`, **55** hier mit Tabellenzeile erfasst, weiterhin **6**
 ausgenommen (Indexdokument + 5 Audit-Dokumente unter `docs/reviews/`). Die
 bereits in task-0358/task-0368 notierte Diskrepanz besteht fort:
-`docs/operator/backup-restore-drill.md` und
-`docs/operator/meeting-mode-readiness-checklist.md` besitzen weiterhin keine
+`docs/operator/backup-restore-drill.md`und`docs/operator/meeting-mode-readiness-checklist.md`besitzen weiterhin keine
 Tabellenzeile — beide Nachträge bleiben dem jeweiligen Dokument-Eigentümer
 vorbehalten und wurden von task-0359 bewusst nicht nachgetragen. Die
 Aufnahme der Contributing-Docs-Zeile selbst ist die durch Gate G3 des Leaf
 geforderte Indexregistrierung und damit eine offengelegte, minimal
 notwendige Erweiterung des deklarierten Konfliktumfangs (deklarierter
-Umfang war nur `docs/contributing-docs.md` plus Read-Scopes).
+Umfang war nur`docs/contributing-docs.md` plus Read-Scopes).
 
 | Dokumentpfad                                                  | Abgedeckte Plan-Abschnitte (meeting-mode-plan.md)                                                                                                                                                                                                                                                                                                                                                                                             | Status                                                      | Authority Statement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -255,28 +251,25 @@ Paketabhängigkeit), Wayland-Erkennung und -Werkzeugketten sowie die
 Autostart-Mechanismen — jede Variablen-Aussage grep-verifiziert gegen
 `src-tauri/src/**` und `src-tauri/build.rs`, Belegstand HEAD `33c6e0fd`).
 Bestand damit (verifiziert am 22.08.2026 per `Get-ChildItem docs -Recurse
--Filter *.md` bzw. `Select-String '^\| \`docs/'` auf diesem Index): **63**
-Markdown-Dateien unter `docs/`, **55** hier mit Tabellenzeile erfasst.
+-Filter *.md` bzw. `Select-String '^\| \`docs/'`auf diesem Index): **63**
+Markdown-Dateien unter`docs/`, **55** hier mit Tabellenzeile erfasst.
 Nicht erfasst sind damit **8**: dieses Indexdokument, die **vier**
-Audit-Markdown-Dateien unter `docs/reviews/`
-(consent-indicator-boundary, output-channel-privacy,
-secrets-exposure-and-durability, tauri-attack-surface),
-`docs/reviews/import-security-spec/import-security-spec.md` sowie die zwei
+Audit-Markdown-Dateien unter `docs/reviews/`(consent-indicator-boundary, output-channel-privacy,
+secrets-exposure-and-durability, tauri-attack-surface),`docs/reviews/import-security-spec/import-security-spec.md`sowie die zwei
 nachfolgend genannten Diskrepanzdateien. Korrektur gegenüber früheren
 Updates: die dortige Formel „6 ausgenommen = Indexdokument + 5
-Audit-Dokumente unter `docs/reviews/`“ war bereits vor task-0366
-unzutreffend — `docs/reviews/` enthält nur vier Markdown-Audits, und das
+Audit-Dokumente unter`docs/reviews/`“ war bereits vor task-0366
+unzutreffend — `docs/reviews/`enthält nur vier Markdown-Audits, und das
 Import-Security-Spec-Dokument war in der Aufzählung nie genannt; die
 Datei-/Zeilen-Zählungen selbst stimmten jeweils. Die bereits in
 task-0358/task-0368 notierte Diskrepanz
-besteht fort: `docs/operator/backup-restore-drill.md` und
-`docs/operator/meeting-mode-readiness-checklist.md` besitzen weiterhin keine
+besteht fort:`docs/operator/backup-restore-drill.md`und`docs/operator/meeting-mode-readiness-checklist.md`besitzen weiterhin keine
 Tabellenzeile — beide Nachträge bleiben dem jeweiligen Dokument-Eigentümer
 vorbehalten und wurden von task-0366 bewusst nicht nachgetragen. Die
 Aufnahme der Platform-Notes-Zeile selbst ist die durch Gate G3 des Leaf
 geforderte Indexregistrierung und damit eine offengelegte, minimal
 notwendige Erweiterung des deklarierten Konfliktumfangs (deklarierter
-Umfang war nur `docs/operator/platform-notes.md` plus Read-Scopes).
+Umfang war nur`docs/operator/platform-notes.md` plus Read-Scopes).
 
 Update (Task task-0442, 22.08.2026): Neu aufgenommen als Zeilen unten:
 `docs/operator/backup-restore-drill.md` (`implemented behavior` nur für den
@@ -291,13 +284,11 @@ ausschließlich Plan-/Vertragsquellen mit je Zeile getragener Statusmarkierung
 plan/contract/proposal, ausdrücklich keine Ist-Verhaltensaussagen; Kopf:
 „PLAN-BASED READINESS CHECKLIST — NOT SHIPPED FUNCTIONALITY“). Belegstand
 beider Zeilen HEAD `2ba6bfe4`. Bestand damit (verifiziert am 22.08.2026 per
-`Get-ChildItem docs -Recurse -Filter *.md` bzw. `Select-String '^\| \`docs/'`
-auf diesem Index): **64** Markdown-Dateien unter `docs/`, **58** hier mit
+`Get-ChildItem docs -Recurse -Filter *.md` bzw. `Select-String '^\| \`docs/'`auf diesem Index): **64** Markdown-Dateien unter`docs/`, **58** hier mit
 Tabellenzeile erfasst, weiterhin **6** ausgenommen (Indexdokument + die fünf
 Markdown-Dokumente unter `docs/reviews/`: vier Audits und das
 Import-Security-Spec-Dokument). Damit ist die seit task-0358/task-0368 hier
-notierte Diskrepanz aufgelöst: `docs/operator/backup-restore-drill.md` und
-`docs/operator/meeting-mode-readiness-checklist.md` besitzen jetzt je genau
+notierte Diskrepanz aufgelöst: `docs/operator/backup-restore-drill.md`und`docs/operator/meeting-mode-readiness-checklist.md` besitzen jetzt je genau
 eine Tabellenzeile; keine bestehende Zeile wurde geändert.
 
 | `docs/operator/platform-notes.md` | übergreifend (kein eigener Plan-Abschnitt; Operator-Nachschlagewerk zum belegten Ist-Stand des heutigen Diktiermodus, analog Phase-0-Baseline) | `implemented behavior` | Plattform-Operator-Referenz der Betriebsknöpfe: Plattform-Matrix (§1), Laufzeit-Variablen mit Codebeleg — `HANDY_NO_GTK_LAYER_SHELL` (`overlay.rs:115-137`, Fallback `425-433/507-524`), `HANDY_METAL_RESIDENCY`/Weitergabe an `GGML_METAL_NO_RESIDENCY` (`lib.rs:176-189`, Issue #1902), `RUST_LOG` (`logging.rs:38-58`), Debug-only `HANDY_FORCE_TRANSCRIPTION_FAILURE` (`transcription.rs:1168-1174`) und `HANDY_DEBUG_MIC_READY_DELAY_MS` inkl. 10-s-Cap (`actions.rs:612-625`); Build-Zeit-Variablen `ORT_LIB_LOCATION`+`ORT_PREFER_DYNAMIC_LINK` (`build.rs:105-147`; macOS-dev via BUILD.md:26/32), `HANDY_VC_REDIST_DIRS` (`build.rs:40-103`, Issue #1527), `HANDY_FORCE_AI_STUB` (`build.rs:417-444`); Acceleration-Backends als Build-Feature-Tabelle aus `Cargo.toml` (Win-x64 Vulkan+dynamic-backends, Win-ARM CPU-statisch, macOS Metal statisch, Linux Vulkan+dynamic-backends; OpenBLAS als deb/rpm-Paketabhängigkeit aus `tauri.conf.json:48,56`; ONNX überall CPU-only); Wayland-Erkennung (`utils.rs:141-163`), Paste-Werkzeugketten (`clipboard.rs:120-224`, `wl-copy` :33), ehrliche Korrektur des README-Workarounds `WEBKIT_DISABLE_DMABUF_RENDERER` (wird von Handy auf Linux selbst gesetzt, `main.rs:10-15`, README:468-474 damit obsolet); Autostart-Mechanismen SMAppService vs. Plugin inkl. Legacy-Plist-Räumung (`autostart.rs:1-111`, Issue #337); jede Variable grep-verifiziert (Beleglauf im Task task-0366 gegen HEAD `33c6e0fd`), Non-Goals/Komplexitätsbudget in §7. |
@@ -327,7 +318,7 @@ Dokumenttabelle erfasst:
    (`docs/meeting-mode-documentation-index.md`) — es beschreibt nur andere
    Dokumente und hat per Abschnitt 5 immer den Status „Dokumentationsindex“.
 2. **Alle Audit-Dokumente unter `docs/reviews/`** (`consent-indicator-
-   boundary-audit.md`, `import-security-spec/import-security-spec.md`,
+boundary-audit.md`, `import-security-spec/import-security-spec.md`,
    `output-channel-privacy-audit.md`, `secrets-exposure-and-durability-audit.md`,
    `tauri-attack-surface-audit.md`) — unabhängige, punktuelle Sicherheits-/
    Datenschutz-Audits außerhalb des meeting-mode-Planungs- und Vertragskorpus;

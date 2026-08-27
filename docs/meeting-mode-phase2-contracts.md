@@ -17,11 +17,11 @@ This document specifies contracts only; it changes no source code.
 
 ## 0. Contract parties
 
-| Direction | Producer | Consumer |
-| --- | --- | --- |
-| Capture → disk | `MeetingRecorder` (Phase 2, planned home `src-tauri/src/audio_toolkit/audio/meeting_recorder.rs`) | `MeetingStore` (persistence), crash-recovery scan |
-| Disk → transcription | `MeetingStore` + `RecorderEvent::ChunkFinalized` | `MeetingTranscriptionQueue` (Phase 5), VAD segmenter |
-| Chunks → providers | Queue-built segment jobs / Azure stereo packages | `LocalMeetingProvider`, `AzureMeetingClient`, `CustomMultipartProvider` |
+| Direction            | Producer                                                                                          | Consumer                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Capture → disk       | `MeetingRecorder` (Phase 2, planned home `src-tauri/src/audio_toolkit/audio/meeting_recorder.rs`) | `MeetingStore` (persistence), crash-recovery scan                       |
+| Disk → transcription | `MeetingStore` + `RecorderEvent::ChunkFinalized`                                                  | `MeetingTranscriptionQueue` (Phase 5), VAD segmenter                    |
+| Chunks → providers   | Queue-built segment jobs / Azure stereo packages                                                  | `LocalMeetingProvider`, `AzureMeetingClient`, `CustomMultipartProvider` |
 
 The recorder is the **single writer** of `meetings/<meeting-id>/audio/` while a
 session is active (recorder-contract.md §1). Everything below is normative.
@@ -45,7 +45,7 @@ meetings/<meeting-id>/
 Naming rules (normative):
 
 1. **Pattern:** `<sequence:%06u>-<file_tag>.wav` with `file_tag ∈ { microphone,
-   system }` (plan §2: technical provenance `microphone` | `system`, never speaker
+system }` (plan §2: technical provenance `microphone` | `system`, never speaker
    identification). The tags match `SourceKind::file_tag()` in
    recorder-contract.md §2.1.
 2. **Sequence numbers** are `u32`, zero-padded to six digits, **monotonic and
@@ -71,14 +71,14 @@ Naming rules (normative):
 
 ### WAV payload format (every chunk)
 
-| Property | Value | Trace |
-| --- | --- | --- |
-| Encoding | PCM16 little-endian (`RIFF/WAVE`) | plan §7 "rollierenden PCM16-WAV-Dateien" |
-| Sample rate | 16 000 Hz exactly | plan §7 "gemeinsame Zielzeitachse arbeitet mit 16 kHz Mono" |
-| Channels | 1 (mono per source) | plan §7; plan §3.5 keeps sources separated even for Azure |
-| Normalization | downmix per dictation semantics; `f32` clamp `[-1,1]`, ×32767, round-to-nearest | recorder-contract.md §2.3 (reuse obligation, plan §5) |
+| Property      | Value                                                                           | Trace                                                       |
+| ------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Encoding      | PCM16 little-endian (`RIFF/WAVE`)                                               | plan §7 "rollierenden PCM16-WAV-Dateien"                    |
+| Sample rate   | 16 000 Hz exactly                                                               | plan §7 "gemeinsame Zielzeitachse arbeitet mit 16 kHz Mono" |
+| Channels      | 1 (mono per source)                                                             | plan §7; plan §3.5 keeps sources separated even for Azure   |
+| Normalization | downmix per dictation semantics; `f32` clamp `[-1,1]`, ×32767, round-to-nearest | recorder-contract.md §2.3 (reuse obligation, plan §5)       |
 
-The WAV header of a *writing* chunk carries provisional sizes; they become
+The WAV header of a _writing_ chunk carries provisional sizes; they become
 authoritative only through finalization (§5).
 
 ## 2. `manifest.json` schema (session manifest)
@@ -91,29 +91,34 @@ recovery reconciles manifest + filesystem against the database (§7).
 
 ```jsonc
 {
-  "manifest_version": 1,              // u32, bumps on breaking change (plan §9 "Schema- und Parser-Versionen")
-  "parser_min_version": 1,            // u32, lowest version a reader accepts
-  "meeting_id": "<uuid-v4>",          // string, == directory name, == meeting_sessions.id (plan §9)
-  "created_wall_clock": "<RFC3339>",  // display/metadata only; NEVER used for audio math
-  "timeline": {                       // see §3
-    "sample_rate_hz": 16000,          // u32 const
+  "manifest_version": 1, // u32, bumps on breaking change (plan §9 "Schema- und Parser-Versionen")
+  "parser_min_version": 1, // u32, lowest version a reader accepts
+  "meeting_id": "<uuid-v4>", // string, == directory name, == meeting_sessions.id (plan §9)
+  "created_wall_clock": "<RFC3339>", // display/metadata only; NEVER used for audio math
+  "timeline": {
+    // see §3
+    "sample_rate_hz": 16000, // u32 const
     "origin_monotonic": "session_start",
-    "initial_offset_fill_ms": 12.4,   // f64 ≥ 0; leading silence pre-filled so both tracks share t=0
-    "markers": [                      // pause/resume pairs, oldest first
-      { "kind": "pause",  "timeline_ms": 1234567.5 },
-      { "kind": "resume", "timeline_ms": 1234567.5 }
-    ]
+    "initial_offset_fill_ms": 12.4, // f64 ≥ 0; leading silence pre-filled so both tracks share t=0
+    "markers": [
+      // pause/resume pairs, oldest first
+      { "kind": "pause", "timeline_ms": 1234567.5 },
+      { "kind": "resume", "timeline_ms": 1234567.5 },
+    ],
   },
   "sources": {
-    "microphone": {                   // optional: absent if session is mic-only fallback
-      "native_sample_rate_hz": 48000,// u32, first-callback observation (spike col `sample_rate`)
-      "native_channels": 2,           // u16 (spike col `channels`)
-      "native_sample_format": "f32",  // string (spike col `sample_format`)
-      "device_label": "Analogue 1 + 2 (Focusrite USB Audio)"
+    "microphone": {
+      // optional: absent if session is mic-only fallback
+      "native_sample_rate_hz": 48000, // u32, first-callback observation (spike col `sample_rate`)
+      "native_channels": 2, // u16 (spike col `channels`)
+      "native_sample_format": "f32", // string (spike col `sample_format`)
+      "device_label": "Analogue 1 + 2 (Focusrite USB Audio)",
     },
-    "system": { "...same shape...": 0 }
+    "system": { "...same shape...": 0 },
   },
-  "chunks": [ /* ChunkManifestEntry, one per chunk ever opened */ ]
+  "chunks": [
+    /* ChunkManifestEntry, one per chunk ever opened */
+  ],
 }
 ```
 
@@ -173,36 +178,36 @@ Every field carries type + semantics + trace. In-memory this is
 its persisted projection. Optional (`Option<T>` / absent-in-JSON) fields are
 marked.
 
-| Field | Type | Semantics | Trace |
-| --- | --- | --- | --- |
-| `chunk_uuid` | string (UUIDv4) | stable cross-store identity (§1 rule 4) | plan §9 sync-ready IDs |
-| `source` | `"microphone" \| "system"` | technical source provenance; persisted verbatim as `meeting_audio_chunks.source` | plan §2, §8 `source`, §9 |
-| `sequence` | u32 | `%06u` filename component, monotonic per source, never reused | plan §7 layout, §9 `sequence`; Testmatrix "Chunk-Rollover…" |
-| `storage_key` | string | relative path of the final file, e.g. `audio/000001-microphone.wav` | plan §9 `path` + "keine absoluten Dateipfade" |
-| `state` | `"writing" \| "ready" \| "damaged" \| "deleted"` | lifecycle state; only `ready` is consumable (§6). For `deleted`, `storage_key` remains as a record but the file content is unlinked (retention/user deletion, plan §9) | plan §9 `state` |
-| `finalized` | bool | **finalization marker**: `true` iff the atomic rename succeeded and header sizes are authoritative. Implies `state ∈ {ready, deleted}`; `false` ⇔ `writing`/`damaged` | Testmatrix "Chunk-Rollover und atomare Finalisierung"; plan §7 "atomar umbenannt" |
-| `timeline_start_ms` | f64 | monotone timeline position of the chunk's first sample (half-open range start) | plan §9 `timeline_start_ms`; §7 "Gemeinsame Zeitachse" |
-| `timeline_end_ms` | f64 | `start + sample_count / 16000 × 1000`; range end (exclusive). For `damaged`/`writing`: last known intended value, marked non-authoritative by `finalized:false` | plan §9 `timeline_end_ms`; Testmatrix "Timeline-, Gap- und Drift-Berechnungen" |
-| `sample_rate_hz` | u32 (=16000) | timeline rate of contained audio | plan §9 `sample_rate`; §7 |
-| `channels` | u16 (=1) | mono track | plan §7 |
-| `sample_format` | `"pcm16le"` | payload encoding | plan §7 |
-| `sample_count` | u64 | PCM16 frames contained (bytes/2). Invariant: `(end−start)` ms ≡ `sample_count` @16 kHz | plan §9 `sample_count` |
-| `byte_size` | u64 | finalized file size in bytes | plan §9 `file_size` |
-| `checksum_sha256` | Option\<string hex\> | SHA‑256 over finalized file bytes; `None` while `writing`/`damaged` | plan §9 "Prüfsumme" |
-| `source_segment_id` | string (UUIDv4) | device-continuity segment this chunk belongs to (new id at open/reconnect/device-change/resume-with-different-device) | plan §6.x "Pause": "ein Gerätewechsel wird als neuer Quellenabschnitt dokumentiert"; Fehlerverhalten "Standardgerät wechselt" |
-| `device_label` | string | non-secret device snapshot of that segment | plan §9 "Gerätekennung" |
-| `gap_stats.gaps_filled` | u32 | count of input gaps silence-filled inside this chunk | Testmatrix "Timeline-, Gap- und Drift-Berechnungen"; plan §7 sync task 2 |
-| `gap_stats.total_filled_ms` | f64 ≥ 0 | sum of filled gap durations (spike `gap_ms` aggregate) | same |
-| `gap_stats.max_gap_ms` | f64 ≥ 0 | largest single gap in the chunk | same |
-| `gap_stats.classes` | `{normal: u32, sparse: u32, long: u32}` | histogram using the **spike harness classes**: ≤250 ms / ≤1000 ms / >1000 ms (boundaries implemented in `docs/phase1-spike/tools/analyze-spike-csv.ps1`, column `gap_class`) | Testmatrix row above; Phase‑1 acceptance "gemessene Gap-/Drift-Werte … dokumentiert" |
-| `drift.delivered_frames_end` | i64 | cumulative delivered device frames at chunk end (spike `total_frames` trend) | Testmatrix row above |
-| `drift.frames_delta_end_ms` | f64 | net drift at chunk end expressed in ms (`drift_frames/native_rate×1000`, spike formula used by `analyze-spike-csv.ps1`) | same |
-| `drift.correction_applied` | bool | whether resampler-ratio compensation was active at any point in this chunk | plan §7 sync task 3 ("Langsame Clock-Abweichung über den vorhandenen Resampler kontrolliert ausgleichen") |
-| `drift.applied_ratio_ppm` | Option\<f64\> | last applied ratio offset in ppm when `correction_applied` | same |
-| `drift.corrected_samples` | u64 | total samples produced by corrected-ratio resampling in this chunk | same |
-| `drift.tolerance_exceeded` | bool | drift left the correction envelope; chunk contains uncorrected audio, source flagged degraded | recorder-contract.md §5.3(4); pending-value constant `DRIFT_EXCEEDED_FRAMES` (task-0008) |
-| `recovered` | bool | chunk was completed by crash recovery, not by clean finalization | Testmatrix "Recovery beschädigter/offener Chunks" |
-| `created_wall_clock` | RFC3339 | display metadata only | plan §9 `created_at` analog |
+| Field                        | Type                                             | Semantics                                                                                                                                                                    | Trace                                                                                                                         |
+| ---------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `chunk_uuid`                 | string (UUIDv4)                                  | stable cross-store identity (§1 rule 4)                                                                                                                                      | plan §9 sync-ready IDs                                                                                                        |
+| `source`                     | `"microphone" \| "system"`                       | technical source provenance; persisted verbatim as `meeting_audio_chunks.source`                                                                                             | plan §2, §8 `source`, §9                                                                                                      |
+| `sequence`                   | u32                                              | `%06u` filename component, monotonic per source, never reused                                                                                                                | plan §7 layout, §9 `sequence`; Testmatrix "Chunk-Rollover…"                                                                   |
+| `storage_key`                | string                                           | relative path of the final file, e.g. `audio/000001-microphone.wav`                                                                                                          | plan §9 `path` + "keine absoluten Dateipfade"                                                                                 |
+| `state`                      | `"writing" \| "ready" \| "damaged" \| "deleted"` | lifecycle state; only `ready` is consumable (§6). For `deleted`, `storage_key` remains as a record but the file content is unlinked (retention/user deletion, plan §9)       | plan §9 `state`                                                                                                               |
+| `finalized`                  | bool                                             | **finalization marker**: `true` iff the atomic rename succeeded and header sizes are authoritative. Implies `state ∈ {ready, deleted}`; `false` ⇔ `writing`/`damaged`        | Testmatrix "Chunk-Rollover und atomare Finalisierung"; plan §7 "atomar umbenannt"                                             |
+| `timeline_start_ms`          | f64                                              | monotone timeline position of the chunk's first sample (half-open range start)                                                                                               | plan §9 `timeline_start_ms`; §7 "Gemeinsame Zeitachse"                                                                        |
+| `timeline_end_ms`            | f64                                              | `start + sample_count / 16000 × 1000`; range end (exclusive). For `damaged`/`writing`: last known intended value, marked non-authoritative by `finalized:false`              | plan §9 `timeline_end_ms`; Testmatrix "Timeline-, Gap- und Drift-Berechnungen"                                                |
+| `sample_rate_hz`             | u32 (=16000)                                     | timeline rate of contained audio                                                                                                                                             | plan §9 `sample_rate`; §7                                                                                                     |
+| `channels`                   | u16 (=1)                                         | mono track                                                                                                                                                                   | plan §7                                                                                                                       |
+| `sample_format`              | `"pcm16le"`                                      | payload encoding                                                                                                                                                             | plan §7                                                                                                                       |
+| `sample_count`               | u64                                              | PCM16 frames contained (bytes/2). Invariant: `(end−start)` ms ≡ `sample_count` @16 kHz                                                                                       | plan §9 `sample_count`                                                                                                        |
+| `byte_size`                  | u64                                              | finalized file size in bytes                                                                                                                                                 | plan §9 `file_size`                                                                                                           |
+| `checksum_sha256`            | Option\<string hex\>                             | SHA‑256 over finalized file bytes; `None` while `writing`/`damaged`                                                                                                          | plan §9 "Prüfsumme"                                                                                                           |
+| `source_segment_id`          | string (UUIDv4)                                  | device-continuity segment this chunk belongs to (new id at open/reconnect/device-change/resume-with-different-device)                                                        | plan §6.x "Pause": "ein Gerätewechsel wird als neuer Quellenabschnitt dokumentiert"; Fehlerverhalten "Standardgerät wechselt" |
+| `device_label`               | string                                           | non-secret device snapshot of that segment                                                                                                                                   | plan §9 "Gerätekennung"                                                                                                       |
+| `gap_stats.gaps_filled`      | u32                                              | count of input gaps silence-filled inside this chunk                                                                                                                         | Testmatrix "Timeline-, Gap- und Drift-Berechnungen"; plan §7 sync task 2                                                      |
+| `gap_stats.total_filled_ms`  | f64 ≥ 0                                          | sum of filled gap durations (spike `gap_ms` aggregate)                                                                                                                       | same                                                                                                                          |
+| `gap_stats.max_gap_ms`       | f64 ≥ 0                                          | largest single gap in the chunk                                                                                                                                              | same                                                                                                                          |
+| `gap_stats.classes`          | `{normal: u32, sparse: u32, long: u32}`          | histogram using the **spike harness classes**: ≤250 ms / ≤1000 ms / >1000 ms (boundaries implemented in `docs/phase1-spike/tools/analyze-spike-csv.ps1`, column `gap_class`) | Testmatrix row above; Phase‑1 acceptance "gemessene Gap-/Drift-Werte … dokumentiert"                                          |
+| `drift.delivered_frames_end` | i64                                              | cumulative delivered device frames at chunk end (spike `total_frames` trend)                                                                                                 | Testmatrix row above                                                                                                          |
+| `drift.frames_delta_end_ms`  | f64                                              | net drift at chunk end expressed in ms (`drift_frames/native_rate×1000`, spike formula used by `analyze-spike-csv.ps1`)                                                      | same                                                                                                                          |
+| `drift.correction_applied`   | bool                                             | whether resampler-ratio compensation was active at any point in this chunk                                                                                                   | plan §7 sync task 3 ("Langsame Clock-Abweichung über den vorhandenen Resampler kontrolliert ausgleichen")                     |
+| `drift.applied_ratio_ppm`    | Option\<f64\>                                    | last applied ratio offset in ppm when `correction_applied`                                                                                                                   | same                                                                                                                          |
+| `drift.corrected_samples`    | u64                                              | total samples produced by corrected-ratio resampling in this chunk                                                                                                           | same                                                                                                                          |
+| `drift.tolerance_exceeded`   | bool                                             | drift left the correction envelope; chunk contains uncorrected audio, source flagged degraded                                                                                | recorder-contract.md §5.3(4); pending-value constant `DRIFT_EXCEEDED_FRAMES` (task-0008)                                      |
+| `recovered`                  | bool                                             | chunk was completed by crash recovery, not by clean finalization                                                                                                             | Testmatrix "Recovery beschädigter/offener Chunks"                                                                             |
+| `created_wall_clock`         | RFC3339                                          | display metadata only                                                                                                                                                        | plan §9 `created_at` analog                                                                                                   |
 
 Field-to-spike mapping (gate G4). The verified spike CSV column set — identical
 header in all four runs (`run-20260822`, `-r2`, `-r2-attempt1-reaped`, `-r3`;
@@ -212,15 +217,15 @@ sample_format, expected_frames, drift_frames, gap_class, silent, peak, rms, erro
 plus `#`-metadata lines (`silence_threshold=0.0001`, per-source config lines) —
 maps onto contract fields as:
 
-| Spike column / meta | Contract consumer |
-| --- | --- |
-| `source` (`microphone`/`loopback`) | `source` (`loopback` is renamed to the product term `system`) |
-| `sample_rate`, `channels`, `sample_format`, config meta lines | `sources.<s>.native_*` (session manifest, §2) |
-| `t_rel_ms` | timeline stamping model (§3); replay-test input for `timeline_start_ms` math |
-| `gap_ms`, `gap_class` | `gap_stats.*` incl. class histogram; classification constants reused verbatim |
-| `expected_frames`, `total_frames`, `frames`, `drift_frames` | `drift.*` (drift = delivered − expected, computed identically to the harness) |
-| `silent`, `peak`, `rms`, meta `silence_threshold` | telemetry only (level events, `SILENCE_PEAK_THRESHOLD`); **not** chunk manifest fields — silence is legitimate audio, not an error condition (plan Fehlerverhalten "Keine Systemlautstärke") |
-| `error` column | feeds `state: damaged` decisions and stream-error events, not manifest fields themselves |
+| Spike column / meta                                           | Contract consumer                                                                                                                                                                            |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source` (`microphone`/`loopback`)                            | `source` (`loopback` is renamed to the product term `system`)                                                                                                                                |
+| `sample_rate`, `channels`, `sample_format`, config meta lines | `sources.<s>.native_*` (session manifest, §2)                                                                                                                                                |
+| `t_rel_ms`                                                    | timeline stamping model (§3); replay-test input for `timeline_start_ms` math                                                                                                                 |
+| `gap_ms`, `gap_class`                                         | `gap_stats.*` incl. class histogram; classification constants reused verbatim                                                                                                                |
+| `expected_frames`, `total_frames`, `frames`, `drift_frames`   | `drift.*` (drift = delivered − expected, computed identically to the harness)                                                                                                                |
+| `silent`, `peak`, `rms`, meta `silence_threshold`             | telemetry only (level events, `SILENCE_PEAK_THRESHOLD`); **not** chunk manifest fields — silence is legitimate audio, not an error condition (plan Fehlerverhalten "Keine Systemlautstärke") |
+| `error` column                                                | feeds `state: damaged` decisions and stream-error events, not manifest fields themselves                                                                                                     |
 
 Gap/drift classes measured in Phase 1 (histogram buckets, drift trend in
 frames/hour per `analyze-spike-csv.ps1`) therefore map 1:1 onto manifest fields;
@@ -288,7 +293,7 @@ second writer authority over chunk files.
    needed downstream.
 4. **Segment model.** Segments carry exactly the plan §8 fields
    (`meeting_id, source, timeline_start_ms, timeline_end_ms, audio_chunk_ids,
-   language, provider, provider_settings_snapshot, attempt, state`);
+language, provider, provider_settings_snapshot, attempt, state`);
    `source` inherits the chunk's `microphone|system` value.
 5. **Chronological merge.** The transcript view is derived by sorting persisted
    segments by `timeline_start_ms` (ties: `timeline_end_ms`, then insertion
@@ -313,7 +318,7 @@ second writer authority over chunk files.
 (Full protocol: recorder-contract.md §8; restated as the data-visible rules.)
 
 1. At startup, any session whose persisted state claims `starting/recording/
-   paused` without a live owner runs recovery. A session is never left in
+paused` without a live owner runs recovery. A session is never left in
    `recording` (plan §6.x Session-Zustände).
 2. Each `writing` chunk resolves to: parseable `.part` → header patched to whole
    frames, renamed, `ready` with `recovered:true`, `timeline_end_ms` recomputed
@@ -350,7 +355,7 @@ The contract enforces this structurally:
    - System device lost → identical isolation mirrored; the session may continue
      mic-only (`has_system_audio=false` from that point, plan Fehlerverhalten).
    - One source's disk-full on rollover → controlled stop still preserves the
-     *other* source's already-finalized chunks (§5.2).
+     _other_ source's already-finalized chunks (§5.2).
    - Crash during either source's finalization → at most that one chunk is
      affected (§5.1, §7); all previously renamed chunks of both sources remain
      playable and transcribable (plan §7: "Ein Prozessabsturz kann damit höchstens

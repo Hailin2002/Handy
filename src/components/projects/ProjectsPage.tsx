@@ -1,8 +1,21 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Check, FolderPlus, Inbox, Pencil, Trash2, Unlink, X } from "lucide-react";
-import { commands, type MeetingSession, type Project, type ProjectTask } from "@/bindings";
+import {
+  Check,
+  FolderPlus,
+  Inbox,
+  Pencil,
+  Trash2,
+  Unlink,
+  X,
+} from "lucide-react";
+import {
+  commands,
+  type MeetingSession,
+  type Project,
+  type ProjectTask,
+} from "@/bindings";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -252,7 +265,11 @@ export const ProjectsPage: React.FC = () => {
                   className="flex items-center justify-between gap-2 rounded-md bg-mid-gray/5 px-2 py-1 text-sm"
                 >
                   <span>{session?.title ?? meetingId}</span>
-                  <Button size="sm" variant="ghost" onClick={() => void unassign(meetingId)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void unassign(meetingId)}
+                  >
                     <Unlink className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                     {t("projects.unlink")}
                   </Button>
@@ -260,7 +277,9 @@ export const ProjectsPage: React.FC = () => {
               );
             })}
             {memberIds.length === 0 && (
-              <li className="text-sm text-text/50">{t("projects.noMeetings")}</li>
+              <li className="text-sm text-text/50">
+                {t("projects.noMeetings")}
+              </li>
             )}
           </ul>
 
@@ -296,7 +315,11 @@ export const ProjectsPage: React.FC = () => {
                   key={task.id}
                   className="flex items-center justify-between gap-2 rounded-md bg-mid-gray/5 px-2 py-1 text-sm"
                 >
-                  <span className={task.state === "rejected" ? "line-through opacity-50" : ""}>
+                  <span
+                    className={
+                      task.state === "rejected" ? "line-through opacity-50" : ""
+                    }
+                  >
                     {task.title}
                     {task.origin === "ai" && task.state === "suggested" && (
                       <span className="ml-1 text-xs text-text/50">
@@ -307,19 +330,31 @@ export const ProjectsPage: React.FC = () => {
                   <span className="flex gap-1">
                     {task.state === "suggested" && (
                       <>
-                        <Button size="sm" variant="ghost" aria-label={t("projects.taskAccept")}
-                          onClick={() => void decideTask(task.id, "accepted")}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={t("projects.taskAccept")}
+                          onClick={() => void decideTask(task.id, "accepted")}
+                        >
                           <Check className="h-3.5 w-3.5" aria-hidden="true" />
                         </Button>
-                        <Button size="sm" variant="ghost" aria-label={t("projects.taskReject")}
-                          onClick={() => void decideTask(task.id, "rejected")}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={t("projects.taskReject")}
+                          onClick={() => void decideTask(task.id, "rejected")}
+                        >
                           <X className="h-3.5 w-3.5" aria-hidden="true" />
                         </Button>
                       </>
                     )}
                     {(task.state === "accepted" || task.state === "edited") && (
-                      <Button size="sm" variant="ghost" aria-label={t("common.edit")}
-                        onClick={() => void decideTask(task.id, "edited")}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={t("common.edit")}
+                        onClick={() => void decideTask(task.id, "edited")}
+                      >
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       </Button>
                     )}
@@ -327,7 +362,9 @@ export const ProjectsPage: React.FC = () => {
                 </li>
               ))}
               {tasks.length === 0 && (
-                <li className="text-sm text-text/50">{t("projects.noTasks")}</li>
+                <li className="text-sm text-text/50">
+                  {t("projects.noTasks")}
+                </li>
               )}
             </ul>
             <div className="mt-2 flex gap-1">

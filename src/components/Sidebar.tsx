@@ -55,7 +55,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   )
     ? { elapsedSeconds }
     : null;
-  const meeting = activeMeeting !== undefined ? activeMeeting : derivedActiveMeeting;
+  const meeting =
+    activeMeeting !== undefined ? activeMeeting : derivedActiveMeeting;
 
   const renderEntries = (entries: typeof PRIMARY_NAV) =>
     entries.flatMap((entry) => [

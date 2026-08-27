@@ -7,10 +7,7 @@ import {
   Cpu,
   FlaskConical,
 } from "lucide-react";
-import {
-  AdvancedSettings,
-  DebugSettings,
-} from "../settings";
+import { AdvancedSettings, DebugSettings } from "../settings";
 import {
   AppGeneralTab,
   DictationSettingsTab,

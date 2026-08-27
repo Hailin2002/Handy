@@ -19,7 +19,7 @@ Index: [../meeting-mode-documentation-index.md](../meeting-mode-documentation-in
 sense: every document under
 [../meeting-mode-architecture/](../meeting-mode-architecture/) is planning or a
 `spec contract` for future implementation. None of them has an implementation
-behind it today, and this tour describes *future* code paths — not existing
+behind it today, and this tour describes _future_ code paths — not existing
 ones. Do not expect to find `MeetingManager`, `MeetingRecorder`, the session
 state machine, STT jobs, summaries, projects or imports anywhere in the app.
 
@@ -33,8 +33,8 @@ pipeline:
    [../../src-tauri/src/managers/knowledge_store.rs](../../src-tauri/src/managers/knowledge_store.rs)
    contain traits and entity types transcribed from
    [repository-boundary-contract.md](../meeting-mode-architecture/repository-boundary-contract.md).
-   Their own headers state: *"no SQL, no concrete struct, no constructor and no
-   manager wiring"*. Nothing calls them.
+   Their own headers state: _"no SQL, no concrete struct, no constructor and no
+   manager wiring"_. Nothing calls them.
 2. **A build-flag-gated UI placeholder** (task-0181 prototype):
    [../../src/components/meetings/MeetingList.tsx](../../src/components/meetings/MeetingList.tsx)
    renders an empty-state list only when
@@ -65,12 +65,12 @@ restated verbatim in every contract header):
 
 Concretely:
 
-| Rank | Artifact | Role |
-| --- | --- | --- |
-| 1 | [../meeting-mode-plan.md](../meeting-mode-plan.md) | Sole normative source for goals, scope, architecture (§5), phases (§13) and acceptance (§14/§17). |
-| 2 | `spec contract`s under [../meeting-mode-architecture/](../meeting-mode-architecture/) | Narrow, binding interface/data/state decisions for future implementation. They may refine but never move or contradict a plan decision. |
-| 3 | Catalogs and proposals (e.g. [UX copy catalog](../meeting-mode-ux-copy-catalog.md)) | Non-binding drafts (copy texts, suggested identifiers) until adopted by a contract or the plan. |
-| — | Actual code | The final arbiter once something is implemented. Only documents citing concrete code may claim *implemented behavior*. |
+| Rank | Artifact                                                                              | Role                                                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | [../meeting-mode-plan.md](../meeting-mode-plan.md)                                    | Sole normative source for goals, scope, architecture (§5), phases (§13) and acceptance (§14/§17).                                       |
+| 2    | `spec contract`s under [../meeting-mode-architecture/](../meeting-mode-architecture/) | Narrow, binding interface/data/state decisions for future implementation. They may refine but never move or contradict a plan decision. |
+| 3    | Catalogs and proposals (e.g. [UX copy catalog](../meeting-mode-ux-copy-catalog.md))   | Non-binding drafts (copy texts, suggested identifiers) until adopted by a contract or the plan.                                         |
+| —    | Actual code                                                                           | The final arbiter once something is implemented. Only documents citing concrete code may claim _implemented behavior_.                  |
 
 A worked example of this order in action is the `MeetingRecorder` home
 adjudication in [module-placement-map.md §3](../meeting-mode-architecture/module-placement-map.md):
@@ -103,8 +103,8 @@ Note the two structural invariants stated right in §5: the React layer never
 reads SQLite or asset files directly, and the existing dictation `AudioRecorder`
 is never overloaded with meeting concerns.
 
-After this step you can answer: *what are the moving parts and which layer does
-each live in?*
+After this step you can answer: _what are the moving parts and which layer does
+each live in?_
 
 ### Step 2 — Module placement map: where future code will land
 
@@ -122,8 +122,8 @@ path conflict (§3, see §2 above). Key placements to remember:
 - Import direction is fixed: `commands/* → managers::* → {storage::*, audio_toolkit::*}`;
   `audio_toolkit` never depends on `managers` (rule E4).
 
-After this step you can answer: *for any component name, which exact file will
-implement it?*
+After this step you can answer: _for any component name, which exact file will
+implement it?_
 
 ### Step 3 — The contract graph
 
@@ -152,21 +152,21 @@ recorder-contract  stt-provider   (phase2 data      coexistence-
 1. **[recorder-contract.md](../meeting-mode-architecture/recorder-contract.md)** (RC)
    — the first contract to read. One concern: turn two live capture streams
    into crash-safe PCM16 WAV chunk files plus level/state/error events. The
-   recorder owns *only* chunk writing; it stays storage-agnostic through a
+   recorder owns _only_ chunk writing; it stays storage-agnostic through a
    `ChunkStateStore` trait and is the single writer of `meetings/<id>/audio/`.
    Anchors: plan §5, §6.x, §7, §14. Future home: B2.
 2. **[stt-provider-contract.md](../meeting-mode-architecture/stt-provider-contract.md)** (STT)
    — exactly one trait, `MeetingSttProvider`, behind Local, Azure Fast
    Transcription and Custom Multipart providers. Providers return segments
-   *relative to the audio they were given*; only the queue maps them onto the
+   _relative to the audio they were given_; only the queue maps them onto the
    meeting timeline. Callers outside the meeting transcription component never
    see provider details. Anchors: plan §8, §9. Future home: B4/B5 consumers.
 3. **[coexistence-contract.md](../meeting-mode-architecture/coexistence-contract.md)** (CC)
-   — fixes the seams *between* meeting mode and the untouched dictation path:
+   — fixes the seams _between_ meeting mode and the untouched dictation path:
    S1 engine lease, S2 microphone tap with the single-device-open invariant,
    S3 mutual exclusion of simultaneous starts, S4 settings separation with
    snapshot isolation, S5 shortcut namespace. Structural law throughout:
-   *capture never waits on inference*. Anchors: plan §6, §6.9, §6.10, §8, §13
+   _capture never waits on inference_. Anchors: plan §6, §6.9, §6.10, §8, §13
    Phase 4/5.
 4. **[session-state-contract.md](../meeting-mode-architecture/session-state-contract.md)** (SSC)
    — the internal seam of `MeetingManager`: it is the single authoritative
@@ -199,14 +199,14 @@ Work lands phase by phase (plan §13: Phase 0 done, Phase 1 spike evidence
 committed, Phases 2–11 pending). Each phase has a designated contract entry
 point; read that contract before touching its future canonical paths:
 
-| Phase | Entry contracts | First files that will appear |
-| --- | --- | --- |
-| 2 — dual-source recorder | RC, [phase2 data contracts](../meeting-mode-phase2-contracts.md) | B2 `audio_toolkit/audio/meeting_recorder.rs`; chunk/manifest layout |
-| 3 — storage foundation & app shell | RBC, FSC, placement map | B3/B7/B11 store seams; three-area app-shell groundwork (F1/F2) |
-| 4 — session & recording UI | SSC, CC | B1 `managers/meeting.rs`; F5–F7, F10, F11 |
-| 5 — local meeting STT | STT, CC, [scheduler](../meeting-mode-architecture/job-scheduler-contract.md) | B4 queue; provider implementations |
-| 7+ — summary/library/export | [summary provider/evidence/pipeline](../meeting-mode-architecture/summary-provider-contract.md), export dataflow | B5; library/export surfaces |
-| 9 — WhatsApp import | [ingestion pipeline](../meeting-mode-architecture/ingestion-pipeline-contract.md), [WhatsApp importer](../meeting-mode-architecture/whatsapp-importer-contract.md) | B8/B9; F19 wizard |
+| Phase                              | Entry contracts                                                                                                                                                    | First files that will appear                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| 2 — dual-source recorder           | RC, [phase2 data contracts](../meeting-mode-phase2-contracts.md)                                                                                                   | B2 `audio_toolkit/audio/meeting_recorder.rs`; chunk/manifest layout |
+| 3 — storage foundation & app shell | RBC, FSC, placement map                                                                                                                                            | B3/B7/B11 store seams; three-area app-shell groundwork (F1/F2)      |
+| 4 — session & recording UI         | SSC, CC                                                                                                                                                            | B1 `managers/meeting.rs`; F5–F7, F10, F11                           |
+| 5 — local meeting STT              | STT, CC, [scheduler](../meeting-mode-architecture/job-scheduler-contract.md)                                                                                       | B4 queue; provider implementations                                  |
+| 7+ — summary/library/export        | [summary provider/evidence/pipeline](../meeting-mode-architecture/summary-provider-contract.md), export dataflow                                                   | B5; library/export surfaces                                         |
+| 9 — WhatsApp import                | [ingestion pipeline](../meeting-mode-architecture/ingestion-pipeline-contract.md), [WhatsApp importer](../meeting-mode-architecture/whatsapp-importer-contract.md) | B8/B9; F19 wizard                                                   |
 
 ## 4. From contracts to future code paths — how the handoff will work
 
@@ -218,7 +218,7 @@ When implementation starts, the expected mechanics are:
    text beats contract text; both beat catalogs/proposals; actual code beats
    everything once it exists.
 3. **Status flip**: a document may move from `spec contract` to describing
-   *implemented behavior* only with concrete code citations
+   _implemented behavior_ only with concrete code citations
    ([documentation index §1 rule](../meeting-mode-documentation-index.md)).
    Until then, treat every behavioral sentence you read as a promise, not a fact.
 4. **Dictation isolation**: the existing dictation path stays untouched by

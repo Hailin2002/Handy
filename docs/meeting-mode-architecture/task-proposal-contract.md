@@ -99,14 +99,14 @@ carry. It is the normative answer to five questions:
 
 From plan lines 1277–1293 (`project_tasks`) and 1295–1301 (`task_evidence`):
 
-| Field | Role in this contract |
-| --- | --- |
-| `state`: `suggested`, `open`, `done`, `dismissed` (v1) | `suggested` marks a live proposal; `open`/`done`/`dismissed` are task lifecycle after human resolution |
-| `origin`: `human` \| `ai` | who created the row |
-| `confidence`, `model`, prompt version | mandatory provenance metadata on AI-origin rows (plan line 1286); pinned per SEC-§6 |
-| `human_edited_at` | set by the store on every human mutation of any column; the protection trigger shared with SEC-§4.1 |
+| Field                                                            | Role in this contract                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`: `suggested`, `open`, `done`, `dismissed` (v1)           | `suggested` marks a live proposal; `open`/`done`/`dismissed` are task lifecycle after human resolution                                                                                                                                                                                                      |
+| `origin`: `human` \| `ai`                                        | who created the row                                                                                                                                                                                                                                                                                         |
+| `confidence`, `model`, prompt version                            | mandatory provenance metadata on AI-origin rows (plan line 1286); pinned per SEC-§6                                                                                                                                                                                                                         |
+| `human_edited_at`                                                | set by the store on every human mutation of any column; the protection trigger shared with SEC-§4.1                                                                                                                                                                                                         |
 | `owner_type`: `unassigned` \| `human` (v1, plan lines 1284–1285) | assignee display; AI may write a proposed **assignee label** only when it appears verbatim in a cited source (plan line 1358: otherwise "Verantwortlich: nicht erkannt"); it never mints person identities and never sets `owner_type` itself — that stays `unassigned` until a human resolves the proposal |
-| `revision`, `updated_at`, `deleted_at` | change envelope (RB-§5); basis for the race closure of §3.3 |
+| `revision`, `updated_at`, `deleted_at`                           | change envelope (RB-§5); basis for the race closure of §3.3                                                                                                                                                                                                                                                 |
 
 A **proposal** is not a second table. It is the projection
 `origin='ai' AND state='suggested'` of a `project_tasks` row, resolved
@@ -121,12 +121,12 @@ through the transitions of §2.
 The four proposal outcomes demanded by the leaf — `suggested`, `accepted`,
 `rejected`, `edited` — map onto `project_tasks` columns exactly as follows:
 
-| Proposal state | `project_tasks` projection | Meaning |
-| --- | --- | --- |
-| `suggested` | `origin='ai'` ∧ `state='suggested'` ∧ `human_edited_at IS NULL` | live AI proposal, untouched by humans; the only state an AI run may still modify (WR-2, §3.2) |
-| `accepted` | task transitioned `suggested → open` by `Actor::Human` (RB-§4 K7) | user adopted the proposal into their task list |
-| `rejected` | task transitioned `suggested → dismissed` by `Actor::Human` | user declined; terminal against re-suggestion (WR-3, §3.2) |
-| `edited` | `human_edited_at IS NOT NULL` ∧ `state='suggested'` | user changed one or more protected columns (SEC-§4.1: title, text/description, state, priority, due date, assignee) of a still-open proposal; the row keeps `origin='ai'` for provenance but is now human-owned for every write rule |
+| Proposal state | `project_tasks` projection                                        | Meaning                                                                                                                                                                                                                              |
+| -------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `suggested`    | `origin='ai'` ∧ `state='suggested'` ∧ `human_edited_at IS NULL`   | live AI proposal, untouched by humans; the only state an AI run may still modify (WR-2, §3.2)                                                                                                                                        |
+| `accepted`     | task transitioned `suggested → open` by `Actor::Human` (RB-§4 K7) | user adopted the proposal into their task list                                                                                                                                                                                       |
+| `rejected`     | task transitioned `suggested → dismissed` by `Actor::Human`       | user declined; terminal against re-suggestion (WR-3, §3.2)                                                                                                                                                                           |
+| `edited`       | `human_edited_at IS NOT NULL` ∧ `state='suggested'`               | user changed one or more protected columns (SEC-§4.1: title, text/description, state, priority, due date, assignee) of a still-open proposal; the row keeps `origin='ai'` for provenance but is now human-owned for every write rule |
 
 `accepted` and `rejected` are terminal **proposal** outcomes; the underlying
 task continues its ordinary human lifecycle (`open → done`, `open →
@@ -141,15 +141,15 @@ ProjectIntelligenceService run inside its P3 publish transaction (SEC-§1.2).
 Every transition below goes through KnowledgeStore unit-of-work K7
 (RB-§4.2), i.e. one transaction, revision bump, `change_log` row.
 
-| # | From | Actor | Event | To | Side effects / guards |
-| --- | --- | --- | --- | --- | --- |
-| T0 | *(no row)* | AI | publish candidate proposal | `suggested` | dedup resolution first (§5.2); requires ≥1 valid evidence pointer (TP-E1a, §4.3); provenance pinned (§1) |
-| T1 | `suggested` | H | accept | `accepted` (task `open`) | K7 `transition_task`; revision++ |
-| T2 | `suggested` | H | reject | `rejected` (task `dismissed`) | K7 `transition_task`; fingerprint recorded as suppressed (§5.2 R3) |
-| T3 | `suggested` | H | edit any column | `edited` | K7 `upsert_task` with `Actor::Human`; store sets `human_edited_at` |
-| T4 | `edited` | H | edit again / accept / reject | `edited` / `accepted` / `rejected` | as T1–T3; `human_edited_at` refreshed |
-| T5 | `suggested` | AI | refresh (same `dedupe_fingerprint`, §5.1) | `suggested` | update-in-place of the row's own AI fields **only if** WR-2 holds at write time (§3.2); evidence may be extended additively via K8 |
-| T6 | `edited`, `accepted`, `rejected` | AI | *(any write)* | **forbidden** | no AI code path exists; a violation attempt is a contract breach and a test target (§3.2 WR-2) |
+| #   | From                             | Actor | Event                                     | To                                 | Side effects / guards                                                                                                              |
+| --- | -------------------------------- | ----- | ----------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| T0  | _(no row)_                       | AI    | publish candidate proposal                | `suggested`                        | dedup resolution first (§5.2); requires ≥1 valid evidence pointer (TP-E1a, §4.3); provenance pinned (§1)                           |
+| T1  | `suggested`                      | H     | accept                                    | `accepted` (task `open`)           | K7 `transition_task`; revision++                                                                                                   |
+| T2  | `suggested`                      | H     | reject                                    | `rejected` (task `dismissed`)      | K7 `transition_task`; fingerprint recorded as suppressed (§5.2 R3)                                                                 |
+| T3  | `suggested`                      | H     | edit any column                           | `edited`                           | K7 `upsert_task` with `Actor::Human`; store sets `human_edited_at`                                                                 |
+| T4  | `edited`                         | H     | edit again / accept / reject              | `edited` / `accepted` / `rejected` | as T1–T3; `human_edited_at` refreshed                                                                                              |
+| T5  | `suggested`                      | AI    | refresh (same `dedupe_fingerprint`, §5.1) | `suggested`                        | update-in-place of the row's own AI fields **only if** WR-2 holds at write time (§3.2); evidence may be extended additively via K8 |
+| T6  | `edited`, `accepted`, `rejected` | AI    | _(any write)_                             | **forbidden**                      | no AI code path exists; a violation attempt is a contract breach and a test target (§3.2 WR-2)                                     |
 
 There are no other transitions. In particular: no AI-initiated
 `suggested → dismissed`, no automatic expiry, no automatic acceptance, and no
@@ -162,14 +162,14 @@ one K7 unit of work. SQLite serializes writers, so every interleaving lands
 in exactly one of these cases — the enumeration is exhaustive because both
 sides write only through whole transactions:
 
-| Case | Ordering | Outcome | Enforced by |
-| --- | --- | --- | --- |
-| E-a | edit commits **before** P0 reads | edit is part of the run's baseline; nothing special | normal pipeline |
-| E-b | edit commits between P0/P2 reads and P3 publish | the edited entity's `revision > baseline_revision` → excluded from all AI writes of this run; snapshot records a visible conflict entry (plan line 1397) instead | `manual_change_guard` inside the P3 transaction (SEC-§4.3) |
-| E-c | edit attempts **during** the P3 transaction | impossible to interleave; SQLite allows one writer, so the edit either commits fully before the guard check (→ case E-b) or fully after commit (→ next run's baseline) | W1 unit-of-work isolation (RB-§4.1) + SEC-§4.3 protocol step 3 |
-| E-d | user **rejects** the proposal while P2 is still reconciling | committed before P3 → fingerprint resolution sees `dismissed` and drops the candidate (R3, §5.2); committed after P3 → the rejection stands untouched, the published suggestion remains resolvable by the user afterwards (it never overwrites the dismissal) | §5.2 R3 + disjoint AI write surfaces (§3.1) |
-| E-e | user **edits** the still-`suggested` row and then a retry/re-run reaches T5 | WR-2 precondition fails (`human_edited_at IS NOT NULL`) → update-in-place degrades to a no-op plus an additive `ai_comment`/conflict annotation; the user's field values survive byte-identically | WR-2 checked inside the same K7 transaction that would write (§3.2) |
-| E-f | user deletes/tombstones a source the pending run cites | pointers fail validity at publish → the affected claims are dropped by the E1-style whole-publication rejection, job fails with `evidence_validation_failed` | SEC-§3.3 validity rule 1–3 applied at P3 |
+| Case | Ordering                                                                    | Outcome                                                                                                                                                                                                                                                       | Enforced by                                                         |
+| ---- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| E-a  | edit commits **before** P0 reads                                            | edit is part of the run's baseline; nothing special                                                                                                                                                                                                           | normal pipeline                                                     |
+| E-b  | edit commits between P0/P2 reads and P3 publish                             | the edited entity's `revision > baseline_revision` → excluded from all AI writes of this run; snapshot records a visible conflict entry (plan line 1397) instead                                                                                              | `manual_change_guard` inside the P3 transaction (SEC-§4.3)          |
+| E-c  | edit attempts **during** the P3 transaction                                 | impossible to interleave; SQLite allows one writer, so the edit either commits fully before the guard check (→ case E-b) or fully after commit (→ next run's baseline)                                                                                        | W1 unit-of-work isolation (RB-§4.1) + SEC-§4.3 protocol step 3      |
+| E-d  | user **rejects** the proposal while P2 is still reconciling                 | committed before P3 → fingerprint resolution sees `dismissed` and drops the candidate (R3, §5.2); committed after P3 → the rejection stands untouched, the published suggestion remains resolvable by the user afterwards (it never overwrites the dismissal) | §5.2 R3 + disjoint AI write surfaces (§3.1)                         |
+| E-e  | user **edits** the still-`suggested` row and then a retry/re-run reaches T5 | WR-2 precondition fails (`human_edited_at IS NOT NULL`) → update-in-place degrades to a no-op plus an additive `ai_comment`/conflict annotation; the user's field values survive byte-identically                                                             | WR-2 checked inside the same K7 transaction that would write (§3.2) |
+| E-f  | user deletes/tombstones a source the pending run cites                      | pointers fail validity at publish → the affected claims are dropped by the E1-style whole-publication rejection, job fails with `evidence_validation_failed`                                                                                                  | SEC-§3.3 validity rule 1–3 applied at P3                            |
 
 **Winner rule (explicit):** in every case the last committed **human**
 decision wins. An AI run never observes a human edit and then overwrites it;
@@ -276,7 +276,7 @@ type/module property, not a convention.
 - **WR-2 (mechanical form of WR-1 for T5).** An AI update-in-place is
   permitted iff, evaluated **inside the writing transaction**, the target row
   satisfies `origin='ai' AND human_edited_at IS NULL AND
-  state='suggested'`. The check shares the transaction with the write, so no
+state='suggested'`. The check shares the transaction with the write, so no
   interleaved human edit can slip between check and commit (same atomicity
   argument as SEC-§4.3 step 3). A failed check aborts the update portion and
   records the entity in the run's conflict payload — it never silently
@@ -303,7 +303,7 @@ Every `task_evidence` row uses the SEC-§3.2 field set verbatim — `subject`
 (the task UUID), `source_id` (required FK), `locator` = exactly one of
 `source_item_id` OR `meeting_transcript_segment_id` (plan line 1297),
 optional-but-bound `time_range`, `quote_excerpt`, `rationale` — and is
-*valid* under the SEC-§3.3 definition (source alive and untombstoned,
+_valid_ under the SEC-§3.3 definition (source alive and untombstoned,
 locator exists/belongs to the source, quote still matches whitespace-
 normalized, time range inside segment bounds). This contract introduces **no
 new pointer format, no alternative locator kind, and no additional storage
@@ -314,12 +314,12 @@ and this document could be read differently on pointers, SEC wins.
 
 Classify every column an AI run writes on a proposal:
 
-| Class | Fields | Obligation |
-| --- | --- | --- |
-| Claim fields | `title`, description/text | each requires coverage by ≥1 **valid** pointer (TP-E1b) |
-| Derived metadata fields | `priority`, due date, proposed assignee label (verbatim from a cited source, §1) | each, when written non-null by AI, requires coverage like a claim field (TP-E1b) |
-| Provenance metadata | `origin`, `confidence`, `model`, prompt version, envelope fields | exempt from evidence (they are *about* the write, not claims *in* the world); instead mandatory and pinned per SEC-§6 |
-| Lifecycle fields | `state`, timestamps, revision | set by the store/human flow, never AI-authored |
+| Class                   | Fields                                                                           | Obligation                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Claim fields            | `title`, description/text                                                        | each requires coverage by ≥1 **valid** pointer (TP-E1b)                                                               |
+| Derived metadata fields | `priority`, due date, proposed assignee label (verbatim from a cited source, §1) | each, when written non-null by AI, requires coverage like a claim field (TP-E1b)                                      |
+| Provenance metadata     | `origin`, `confidence`, `model`, prompt version, envelope fields                 | exempt from evidence (they are _about_ the write, not claims _in_ the world); instead mandatory and pinned per SEC-§6 |
+| Lifecycle fields        | `state`, timestamps, revision                                                    | set by the store/human flow, never AI-authored                                                                        |
 
 "Coverage" means: the field is named in the `rationale` of at least one
 valid pointer attached to this task (the rationale therefore doubles as the
@@ -328,9 +328,9 @@ message proving both title and due date).
 
 ### 4.3 Enforceable publication invariant (gate G2)
 
-**Invariant TP-E1:** *the insertion/update of an AI-originated proposal row
+**Invariant TP-E1:** _the insertion/update of an AI-originated proposal row
 is rejected in full unless both clauses hold at write time, inside the same
-transaction.*
+transaction._
 
 - **TP-E1a (row level, plan lines 1300–1301).** The proposal carries ≥1
   evidence pointer that is valid per SEC-§3.3. This is the K8 rule of
@@ -393,7 +393,7 @@ edited (meeting unlink, plan lines 1432–1434: references become "zu prüfende
 Belege markiert und nicht still entfernt"). Consistent with PSC-§3
 (read-time aging of pins), a stored task pointer whose validity decays is
 displayed as unverifiable — it is never auto-deleted, never rewritten by a
-later run, and its decay blocks nothing except fresh reliance: a *new*
+later run, and its decay blocks nothing except fresh reliance: a _new_
 proposal must re-establish validity at its own publish time.
 
 ---
@@ -415,19 +415,19 @@ proposal (SEC-§2.3 rule 3).
 
 Before inserting a candidate (inside the P3 publish transaction):
 
-| R# | Existing match | Action |
-| --- | --- | --- |
-| R1 | previous **AI suggestion**, same fingerprint, still `suggested`, `human_edited_at IS NULL` | **update-in-place** of that row's own AI fields (T5) under WR-2; stable UUID, revision and history preserved; no new row |
-| R2 | **open human task** (`origin='human'`, `state='open'`) matched semantically | **merge**: no new task row; the excerpt is attached as additional `task_evidence`/`ai_comment` on the existing task (Phase 10 "Merge-Workflow", plan line 1701; SEC-§2.3 case 2) |
-| R3 | human terminal decision (`done` or `dismissed`) with same fingerprint | **drop** the candidate; no resurrection, ever (WR-3) |
-| R4 | no match | insert as new proposal (T0) under TP-E1 |
+| R#  | Existing match                                                                             | Action                                                                                                                                                                           |
+| --- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | previous **AI suggestion**, same fingerprint, still `suggested`, `human_edited_at IS NULL` | **update-in-place** of that row's own AI fields (T5) under WR-2; stable UUID, revision and history preserved; no new row                                                         |
+| R2  | **open human task** (`origin='human'`, `state='open'`) matched semantically                | **merge**: no new task row; the excerpt is attached as additional `task_evidence`/`ai_comment` on the existing task (Phase 10 "Merge-Workflow", plan line 1701; SEC-§2.3 case 2) |
+| R3  | human terminal decision (`done` or `dismissed`) with same fingerprint                      | **drop** the candidate; no resurrection, ever (WR-3)                                                                                                                             |
+| R4  | no match                                                                                   | insert as new proposal (T0) under TP-E1                                                                                                                                          |
 
 Two subtleties closed explicitly:
 
 - **Retry vs. deliberate re-run.** A crashed/retried run keeps its
   idempotency key (SEC-§2.1) and replays idempotently; a deliberate rerun
   increments `rerun_generation`. Either way, publication resolves through
-  R1–R4 against the *current* table state — generation affects run identity,
+  R1–R4 against the _current_ table state — generation affects run identity,
   never the right to duplicate a human decision.
 - **Edited-then-reproposed.** A row in `edited` state with the same
   fingerprint is neither R1 (WR-2 fails) nor a resurrection target: the
@@ -458,13 +458,13 @@ Per RB-§6 (line: "`ProjectIntelligenceService` … K7–K9, K10, reads") the
 service — consuming `Arc<dyn KnowledgeRepository>`, never the concrete store
 (RB-§2.1) — may call exactly:
 
-| Seam op | Used for | Restrictions specific to this contract |
-| --- | --- | --- |
-| `upsert_task` (K7) | T0 insert, T5 refresh | AI calls carry `Actor::Ai`; TP-E1 validated in-transaction (§4.3); WR-2 prechecked and re-checked in-transaction (§3.2) |
-| `attach_task_evidence` (K8) | R2 merge additions, additive pointers/comments on existing tasks | additive only; never removes or rewrites existing evidence |
-| `publish_snapshot` (K9) | P3 publication incl. `snapshot_evidence` | owned by SEC-§1.2/PSC; listed here because it shares the publish transaction family |
-| `claim_processing_job` / `finish_processing_job` (K10) | run envelope on `processing_jobs` | tier-B semantics, STT-style states (SEC-§1.4) |
-| Reads: change_log-driven delta queries, `current_snapshot`, `search`, duplicate/fingerprint lookups, source/source-item/task queries | P0 delta, P2 reconcile | read-only; hits carry entity id + position (plan lines 1329–1331) |
+| Seam op                                                                                                                              | Used for                                                         | Restrictions specific to this contract                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `upsert_task` (K7)                                                                                                                   | T0 insert, T5 refresh                                            | AI calls carry `Actor::Ai`; TP-E1 validated in-transaction (§4.3); WR-2 prechecked and re-checked in-transaction (§3.2) |
+| `attach_task_evidence` (K8)                                                                                                          | R2 merge additions, additive pointers/comments on existing tasks | additive only; never removes or rewrites existing evidence                                                              |
+| `publish_snapshot` (K9)                                                                                                              | P3 publication incl. `snapshot_evidence`                         | owned by SEC-§1.2/PSC; listed here because it shares the publish transaction family                                     |
+| `claim_processing_job` / `finish_processing_job` (K10)                                                                               | run envelope on `processing_jobs`                                | tier-B semantics, STT-style states (SEC-§1.4)                                                                           |
+| Reads: change_log-driven delta queries, `current_snapshot`, `search`, duplicate/fingerprint lookups, source/source-item/task queries | P0 delta, P2 reconcile                                           | read-only; hits carry entity id + position (plan lines 1329–1331)                                                       |
 
 ### 6.2 Forbidden operations
 
@@ -483,7 +483,7 @@ service — consuming `Arc<dyn KnowledgeRepository>`, never the concrete store
 
 RB-§4.2 K8 already demands "an AI task without ≥1 valid evidence is never
 published … enforced before K7 publishes AI-origin tasks". To satisfy that
-*atomically* despite W1 (one transaction per public method), this contract
+_atomically_ despite W1 (one transaction per public method), this contract
 fixes the seam extension: **the `TaskUpsert` payload for AI-origin inserts
 (T0) embeds the complete evidence set** (`Vec<NewTaskEvidence>`), and K7
 validates TP-E1a+TP-E1b in the same transaction it inserts the task — the
@@ -499,22 +499,22 @@ store; schema and final signatures stay with task-0020 / implementation.
 
 Checked deliberately while authoring; each is closed by a cited rule:
 
-1. *"KI run finishes after user rejected the task."* → R3/E-d: candidate
+1. _"KI run finishes after user rejected the task."_ → R3/E-d: candidate
    dropped; rejection survives byte-identically.
-2. *"User accepts; a queued older run still wants to refresh."* → WR-2
+2. _"User accepts; a queued older run still wants to refresh."_ → WR-2
    fails in-transaction (`state != 'suggested'` after T1); update aborts to
    conflict annotation.
-3. *"Model outputs a plausible task with a fabricated segment id."* →
+3. _"Model outputs a plausible task with a fabricated segment id."_ →
    locator resolution fails SEC-§3.3 rule 2 → TP-E1a rejects publication;
    injection cannot mint evidence (SEC-§7 rule 3).
-4. *"Same meeting transcribed twice, two overlapping proposals."* → same
+4. _"Same meeting transcribed twice, two overlapping proposals."_ → same
    fingerprint → R1 update-in-place; UNIQUE constraint backstops races
    (§5.3).
-5. *"AI sets priority='urgent' citing only a message that proves the
-   title."* → TP-E1b: `priority` uncovered → `evidence_coverage_failed`;
+5. _"AI sets priority='urgent' citing only a message that proves the
+   title."_ → TP-E1b: `priority` uncovered → `evidence_coverage_failed`;
    whole write rolled back.
-6. *"User edits title of a suggestion; next run extracts the corrected
-   title independently."* → new fingerprint ≠ old → R4 would insert a near-
+6. _"User edits title of a suggestion; next run extracts the corrected
+   title independently."_ → new fingerprint ≠ old → R4 would insert a near-
    duplicate; mitigated, not eliminated, in v1: the semantic feature-set hash
    component of the fingerprint (SEC-§2.3) is computed from evidence
    locators as well as text, so identical evidence usually re-matches the
@@ -536,9 +536,9 @@ the documented discovery cycle with evidence-backed need.
 
 ## 9. Gate verification checklist
 
-| Gate | Requirement | Where satisfied |
-| --- | --- | --- |
-| G1 | State machine enumerates all transitions incl. user edits during a pending KI run, winner rule explicit | §2.1 (states/projections), §2.2 (T0–T6 complete table), §2.3 (exhaustive race cases E-a…E-f), §3.2 (WR-1…WR-4) |
-| G2 | Every AI-written field carries a `task_evidence` row or the write is rejected; enforceable rule stated | §4.2 (field classification), §4.3 (TP-E1a/TP-E1b, error classes, in-transaction enforcement at K7/K8 boundary) |
-| G3 | Consistent with summary-evidence-contract §3 pointer model — no divergent format | §4.1 (verbatim adoption of SEC-§3.2 fields and SEC-§3.3 validity; explicit no-new-format ruling; precedence clause) |
-| G4 | Non-goals section; documentation index updated | §0.2 + §8; row added to `docs/meeting-mode-documentation-index.md` §3 table and reading-order list |
+| Gate | Requirement                                                                                             | Where satisfied                                                                                                     |
+| ---- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| G1   | State machine enumerates all transitions incl. user edits during a pending KI run, winner rule explicit | §2.1 (states/projections), §2.2 (T0–T6 complete table), §2.3 (exhaustive race cases E-a…E-f), §3.2 (WR-1…WR-4)      |
+| G2   | Every AI-written field carries a `task_evidence` row or the write is rejected; enforceable rule stated  | §4.2 (field classification), §4.3 (TP-E1a/TP-E1b, error classes, in-transaction enforcement at K7/K8 boundary)      |
+| G3   | Consistent with summary-evidence-contract §3 pointer model — no divergent format                        | §4.1 (verbatim adoption of SEC-§3.2 fields and SEC-§3.3 validity; explicit no-new-format ruling; precedence clause) |
+| G4   | Non-goals section; documentation index updated                                                          | §0.2 + §8; row added to `docs/meeting-mode-documentation-index.md` §3 table and reading-order list                  |

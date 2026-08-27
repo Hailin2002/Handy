@@ -87,14 +87,14 @@ tasks, sources, or imports.
 These findings motivate the rules of §3; they are recorded as evidence, not
 as defects to fix in this task (this contract changes no source code):
 
-| Observation | Location | Consequence |
-| --- | --- | --- |
-| Correct unlisten lifecycle exists: `const unlisten = listen(…)` inside `useEffect` with `return () => { unlisten.then(fn => fn()) }` | `src/App.tsx` lines 104–128, 134–143, 147–156, 159–175 | This is the pattern §3 mandates — but scoped per component mount, which §3 restricts further. |
-| Fire-and-forget store listeners: `initialize()` calls `listen("model-state-changed", …)` and `listen("settings-changed", …)` discarding the promise and the `UnlistenFn`; no dedup guard | `src/stores/settingsStore.ts` lines 674–683 | Calling `initialize()` twice duplicates delivery of both topics forever; nothing can ever unsubscribe (leak class LK-1/DUP-1 in §3.4). |
-| Guarded but undisposable store listeners: `modelStore.initialize()` registers 12 topics behind an `initialized` flag, no unlisten retained | `src/stores/modelStore.ts` lines 268–428 | Duplicate delivery is prevented, but teardown for tests/HMR/window close is impossible (leak class LK-1). |
-| Component-level `listen()` for transient toasts and hardware events | `App.tsx` (above), `SecureInputWarning.tsx` line 36, `RecordingOverlay.tsx` lines 57–118, `UpdateChecker.tsx` line 60, `LiveLogViewer.tsx` line 103, `ModelSelector.tsx` lines 73+, `HandyKeysShortcutInput.tsx` line 140, `HistorySettings.tsx` line 135, `useAzureSpeechStream.ts` lines 372–417 | Each remount resubscribes; correctness depends on every effect cleaning up. §3 turns this convention into a registry with exactly one owner per topic. |
-| Version-guarded optimistic update with per-key serialization already exists for settings | `src/stores/settingsStore.ts` lines 85–108 (`enqueueSettingUpdate`, `settingUpdateVersions`) and `updateSetting` lines 342–385 | This is the rollback template §6 adopts; it correctly prevents an older failed request from rolling back a newer value. |
-| No direct SQL channel in the webview | grep `plugin-sql|invoke\(` under `src/` → no matches; all backend calls go through generated `commands` from `src/bindings.ts` | Confirms RBC-§7.1 R5 at HEAD; §5 keeps it true mechanically for meeting-mode UI. Note: `@tauri-apps/plugin-sql` is present in `package.json` dependencies (line 33) — meeting-mode code must never import it (rule C3, §5). |
+| Observation                                                                                                                                                                              | Location                                                                                                                                                                                                                                                                                           | Consequence                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Correct unlisten lifecycle exists: `const unlisten = listen(…)` inside `useEffect` with `return () => { unlisten.then(fn => fn()) }`                                                     | `src/App.tsx` lines 104–128, 134–143, 147–156, 159–175                                                                                                                                                                                                                                             | This is the pattern §3 mandates — but scoped per component mount, which §3 restricts further.                                                          |
+| Fire-and-forget store listeners: `initialize()` calls `listen("model-state-changed", …)` and `listen("settings-changed", …)` discarding the promise and the `UnlistenFn`; no dedup guard | `src/stores/settingsStore.ts` lines 674–683                                                                                                                                                                                                                                                        | Calling `initialize()` twice duplicates delivery of both topics forever; nothing can ever unsubscribe (leak class LK-1/DUP-1 in §3.4).                 |
+| Guarded but undisposable store listeners: `modelStore.initialize()` registers 12 topics behind an `initialized` flag, no unlisten retained                                               | `src/stores/modelStore.ts` lines 268–428                                                                                                                                                                                                                                                           | Duplicate delivery is prevented, but teardown for tests/HMR/window close is impossible (leak class LK-1).                                              |
+| Component-level `listen()` for transient toasts and hardware events                                                                                                                      | `App.tsx` (above), `SecureInputWarning.tsx` line 36, `RecordingOverlay.tsx` lines 57–118, `UpdateChecker.tsx` line 60, `LiveLogViewer.tsx` line 103, `ModelSelector.tsx` lines 73+, `HandyKeysShortcutInput.tsx` line 140, `HistorySettings.tsx` line 135, `useAzureSpeechStream.ts` lines 372–417 | Each remount resubscribes; correctness depends on every effect cleaning up. §3 turns this convention into a registry with exactly one owner per topic. |
+| Version-guarded optimistic update with per-key serialization already exists for settings                                                                                                 | `src/stores/settingsStore.ts` lines 85–108 (`enqueueSettingUpdate`, `settingUpdateVersions`) and `updateSetting` lines 342–385                                                                                                                                                                     | This is the rollback template §6 adopts; it correctly prevents an older failed request from rolling back a newer value.                                |
+| No direct SQL channel in the webview                                                                                                                                                     | grep `plugin-sql                                                                                                                                                                                                                                                                                   | invoke\(`under`src/`→ no matches; all backend calls go through generated`commands`from`src/bindings.ts`                                                | Confirms RBC-§7.1 R5 at HEAD; §5 keeps it true mechanically for meeting-mode UI. Note: `@tauri-apps/plugin-sql` is present in `package.json` dependencies (line 33) — meeting-mode code must never import it (rule C3, §5). |
 
 ---
 
@@ -106,13 +106,13 @@ Exactly three domain stores join the two existing infrastructure stores. All
 live flat under `src/stores/` beside them (no subdirectory split — the
 existing convention, verified: `src/stores/{settingsStore,modelStore}.ts`).
 
-| # | Store (canonical path) | Domain | Status | Owns |
-| --- | --- | --- | --- | --- |
-| S1 | `src/stores/meetingStore.ts` | Meetings | planned-new (Phase 4) | Frontend projections of all `MeetingStore` entities (RBC rows 1–5); live session view-model; listener registrar for `meeting://*` |
-| S2 | `src/stores/projectStore.ts` | Projects & knowledge | planned-new (Phase 8/9) | Frontend projections of all `KnowledgeStore` entities (RBC rows 6–15); search-result cache; listener registrar for `project://*` and `import://*` |
-| S3 | `src/stores/dictationStore.ts` | Dictation | planned-new (Phase 3 shell work) | Dictation-history projection (legacy `HistoryManager` domain, RBC note N4) and dictation runtime status card model (plan §6.4) |
-| S4 | `src/stores/settingsStore.ts` | Settings (cross-cutting) | existing — unchanged by this contract | App settings mirror incl. meeting settings keys (coexistence-contract §6.1); devices; post-process options |
-| S5 | `src/stores/modelStore.ts` | Models (cross-cutting) | existing — unchanged by this contract | Model catalogue/download progress |
+| #   | Store (canonical path)         | Domain                   | Status                                | Owns                                                                                                                                              |
+| --- | ------------------------------ | ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S1  | `src/stores/meetingStore.ts`   | Meetings                 | planned-new (Phase 4)                 | Frontend projections of all `MeetingStore` entities (RBC rows 1–5); live session view-model; listener registrar for `meeting://*`                 |
+| S2  | `src/stores/projectStore.ts`   | Projects & knowledge     | planned-new (Phase 8/9)               | Frontend projections of all `KnowledgeStore` entities (RBC rows 6–15); search-result cache; listener registrar for `project://*` and `import://*` |
+| S3  | `src/stores/dictationStore.ts` | Dictation                | planned-new (Phase 3 shell work)      | Dictation-history projection (legacy `HistoryManager` domain, RBC note N4) and dictation runtime status card model (plan §6.4)                    |
+| S4  | `src/stores/settingsStore.ts`  | Settings (cross-cutting) | existing — unchanged by this contract | App settings mirror incl. meeting settings keys (coexistence-contract §6.1); devices; post-process options                                        |
+| S5  | `src/stores/modelStore.ts`     | Models (cross-cutting)   | existing — unchanged by this contract | Model catalogue/download progress                                                                                                                 |
 
 Boundary rules:
 
@@ -146,26 +146,26 @@ Every row cites its backend twin. "Frontend owner" names the only store that
 may hold state derived from that entity. Rows 16–17 have **no** frontend
 mirror by design.
 
-| RBC row | Backend entity (owner) | Frontend owner (slice) | Projection form | Change channel (§4) |
-| --- | --- | --- | --- | --- |
-| 1 | `meeting_sessions` (MeetingStore) | S1 `meetingStore.sessions` | `Map<Uuid, MeetingSessionVm>` incl. state, revisions, provider label | `meeting://session-*` envelopes + `get_meeting_snapshot` |
-| 2 | `meeting_audio_chunks` (MeetingStore) | S1 `meetingStore.chunkStats[meetingId]` | Aggregate counts by state + last-finalized marker; individual chunks only where the Processing tab needs them (F-view "Verarbeitung") | aggregated tier-A events; snapshot on open |
-| 3 | `meeting_stt_jobs` (MeetingStore, tier B) | S1 `meetingStore.jobBacklog[meetingId]` | Counts `{queued,running,retryWait,failed}` + oldest-failed summary — never per-job churn | coalesced `meeting://jobs-updated` (tier B, no envelope) |
-| 4 | `meeting_transcript_segments` (MeetingStore) | S1 `meetingStore.transcript[meetingId]` | Paged chronological segments (windowed, scroll-anchored per plan §6.11) | segment-append events + paged refetch |
-| 5 | `meeting_summaries` (MeetingStore) | S1 `meetingStore.summary[meetingId]` | Current summary VM incl. structured decisions/tasks/questions | `meeting://summary-available` + snapshot |
-| 6 | `projects` (KnowledgeStore) | S2 `projectStore.projects` | `Map<Uuid, ProjectVm>` incl. archived/deleted flags | `project://entity-changed` envelopes |
-| 7 | `sources` (KnowledgeStore) | S2 `projectStore.sources` | `Map<Uuid, SourceVm>` | same |
-| 8 | `project_sources` (KnowledgeStore) | S2 `projectStore.links` | Link records keyed `${projectId}:${sourceId}` | same |
-| 9 | `source_items` (KnowledgeStore) | S2 `projectStore.items[sourceId]` | Paged normalized items per opened source | same + paged refetch |
-| 10 | `assets` metadata (KnowledgeStore) | S2 `projectStore.assetMeta` | `Map<Uuid, AssetMetaVm>`; bytes only via serve URL (RBC R4) | same |
-| 11 | `source_item_assets` (KnowledgeStore) | folded into S2 item/asset VMs | Association lists on the item VM | same |
-| 12 | `project_tasks` (KnowledgeStore) | S2 `projectStore.tasks[projectId]` | `Map<Uuid, TaskVm>` with origin/confidence/evidence refs | same |
-| 13 | `task_evidence` (KnowledgeStore) | folded into S2 task VMs | Evidence array on `TaskVm` | same |
-| 14 | `project_snapshots` + `snapshot_evidence` (KnowledgeStore) | S2 `projectStore.snapshot[projectId]` | Current snapshot + evidence; history count only | same + `current_snapshot` refetch |
-| 15 | `processing_jobs` (KnowledgeStore, tier B) | S2 `projectStore.importProgress` | Per-source progress checklist model (plan §6.12 style) | coalesced `import://progress` (tier B) |
-| 16 | `change_log` (append-only helper) | **no frontend mirror** — diagnostic/incremental-analysis basis only (plan lines 1322–1325) | — | — |
-| 17 | FTS5 index (derived) | S2 `projectStore.searchResults` | Query-keyed result cache (hits carry entity id + position per plan lines 1329–1331); a cache, not an entity mirror | refetch per query; invalidated wholesale on any tier-A project-domain event |
-| N4 | `transcription_history` (legacy HistoryManager) | S3 `dictationStore.history` | Existing paginated history projection | existing history events (legacy carve-out, untouched) |
+| RBC row | Backend entity (owner)                                     | Frontend owner (slice)                                                                     | Projection form                                                                                                                       | Change channel (§4)                                                         |
+| ------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 1       | `meeting_sessions` (MeetingStore)                          | S1 `meetingStore.sessions`                                                                 | `Map<Uuid, MeetingSessionVm>` incl. state, revisions, provider label                                                                  | `meeting://session-*` envelopes + `get_meeting_snapshot`                    |
+| 2       | `meeting_audio_chunks` (MeetingStore)                      | S1 `meetingStore.chunkStats[meetingId]`                                                    | Aggregate counts by state + last-finalized marker; individual chunks only where the Processing tab needs them (F-view "Verarbeitung") | aggregated tier-A events; snapshot on open                                  |
+| 3       | `meeting_stt_jobs` (MeetingStore, tier B)                  | S1 `meetingStore.jobBacklog[meetingId]`                                                    | Counts `{queued,running,retryWait,failed}` + oldest-failed summary — never per-job churn                                              | coalesced `meeting://jobs-updated` (tier B, no envelope)                    |
+| 4       | `meeting_transcript_segments` (MeetingStore)               | S1 `meetingStore.transcript[meetingId]`                                                    | Paged chronological segments (windowed, scroll-anchored per plan §6.11)                                                               | segment-append events + paged refetch                                       |
+| 5       | `meeting_summaries` (MeetingStore)                         | S1 `meetingStore.summary[meetingId]`                                                       | Current summary VM incl. structured decisions/tasks/questions                                                                         | `meeting://summary-available` + snapshot                                    |
+| 6       | `projects` (KnowledgeStore)                                | S2 `projectStore.projects`                                                                 | `Map<Uuid, ProjectVm>` incl. archived/deleted flags                                                                                   | `project://entity-changed` envelopes                                        |
+| 7       | `sources` (KnowledgeStore)                                 | S2 `projectStore.sources`                                                                  | `Map<Uuid, SourceVm>`                                                                                                                 | same                                                                        |
+| 8       | `project_sources` (KnowledgeStore)                         | S2 `projectStore.links`                                                                    | Link records keyed `${projectId}:${sourceId}`                                                                                         | same                                                                        |
+| 9       | `source_items` (KnowledgeStore)                            | S2 `projectStore.items[sourceId]`                                                          | Paged normalized items per opened source                                                                                              | same + paged refetch                                                        |
+| 10      | `assets` metadata (KnowledgeStore)                         | S2 `projectStore.assetMeta`                                                                | `Map<Uuid, AssetMetaVm>`; bytes only via serve URL (RBC R4)                                                                           | same                                                                        |
+| 11      | `source_item_assets` (KnowledgeStore)                      | folded into S2 item/asset VMs                                                              | Association lists on the item VM                                                                                                      | same                                                                        |
+| 12      | `project_tasks` (KnowledgeStore)                           | S2 `projectStore.tasks[projectId]`                                                         | `Map<Uuid, TaskVm>` with origin/confidence/evidence refs                                                                              | same                                                                        |
+| 13      | `task_evidence` (KnowledgeStore)                           | folded into S2 task VMs                                                                    | Evidence array on `TaskVm`                                                                                                            | same                                                                        |
+| 14      | `project_snapshots` + `snapshot_evidence` (KnowledgeStore) | S2 `projectStore.snapshot[projectId]`                                                      | Current snapshot + evidence; history count only                                                                                       | same + `current_snapshot` refetch                                           |
+| 15      | `processing_jobs` (KnowledgeStore, tier B)                 | S2 `projectStore.importProgress`                                                           | Per-source progress checklist model (plan §6.12 style)                                                                                | coalesced `import://progress` (tier B)                                      |
+| 16      | `change_log` (append-only helper)                          | **no frontend mirror** — diagnostic/incremental-analysis basis only (plan lines 1322–1325) | —                                                                                                                                     | —                                                                           |
+| 17      | FTS5 index (derived)                                       | S2 `projectStore.searchResults`                                                            | Query-keyed result cache (hits carry entity id + position per plan lines 1329–1331); a cache, not an entity mirror                    | refetch per query; invalidated wholesale on any tier-A project-domain event |
+| N4      | `transcription_history` (legacy HistoryManager)            | S3 `dictationStore.history`                                                                | Existing paginated history projection                                                                                                 | existing history events (legacy carve-out, untouched)                       |
 
 Mirror proof (gate G1): rows 1–15 of RBC-§3 map onto exactly one S1/S2 slice
 each, rows 16–17 map onto "no mirror"/"cache" with an explicit reason, and
@@ -194,7 +194,7 @@ Each rule eliminates a named defect class and is component-testable (§3.4).
   `projectStore.initListeners()` for `project://*`/`import://*`,
   `dictationStore.initListeners()` for dictation-history topics). No other
   module may pass that topic to `listen()`. Fan-out to interested parties
-  happens *inside* the store action the registrar calls — additional UI
+  happens _inside_ the store action the registrar calls — additional UI
   reactions subscribe to the store, not to the topic.
 - **L2 — Components never call `listen()`.** Components (all of F1–F22 and
   all future meeting-mode components) consume state through hooks only. Two
@@ -223,7 +223,7 @@ Each rule eliminates a named defect class and is component-testable (§3.4).
   revision already applied for that entity id. Out-of-order or duplicated
   delivery therefore cannot regress store state.
 - **L6 — Subscribe-then-snapshot handshake.** Store initialization registers
-  listeners (L3) *before* issuing the snapshot command, then applies the
+  listeners (L3) _before_ issuing the snapshot command, then applies the
   snapshot atomically under the same revision guard. A gap
   (`payload.revision > known + 1`) triggers a snapshot refetch instead of
   guessing intermediate states (SSC-O5/O6). Missed-event recovery needs no
@@ -241,18 +241,18 @@ Each rule eliminates a named defect class and is component-testable (§3.4).
 Owned topics at contract time (any new topic must be added here and in
 `identifier-registry.md` before first use):
 
-| Topic | Producer (contract) | Owner (registrar) | Notes |
-| --- | --- | --- | --- |
-| `meeting://session-created` | MeetingManager (SSC-§2.2 T01) | S1 | |
-| `meeting://session-state` | MeetingManager (T02–T18) | S1 | carries `(meeting_id, state_revision)` per SSC-O2 |
-| `meeting://session-error` | MeetingManager (T04/T13/T17) | S1 | |
-| `meeting://summary-available` | MeetingManager (T12) | S1 | triggers summary refetch (payload carries ids only) |
-| `meeting://session-recovered` | startup reconciliation (SSC-§6.2 R6) | S1 | drives F11 `MeetingRecoveryBanner` |
-| `meeting://jobs-updated` | queue/manager (SSC-§3.3 step 3) | S1 | tier-B aggregates; coalescing allowed (§4.3) |
-| `project://entity-changed` *(proposed)* | KnowledgeStore/services (Phase 8+) | S2 | generic batched envelope feed `{entries: [{entity, id, revision, deleted}]}` mirroring `change_log` tails; name pending identifier-registry |
-| `import://progress` *(proposed)* | SourceIngestionService (Phase 9+) | S2 | tier-B progress/checklist aggregates |
-| dictation-history update event | HistoryManager (existing) | S3 | legacy topic, name unchanged |
-| window-scoped: `show-overlay`, `hide-overlay`, `recording-ready`, `mic-level`, `theme-changed` | overlay/tray plumbing (existing) | window bootstrap (exception L2.1) | never domain data |
+| Topic                                                                                          | Producer (contract)                  | Owner (registrar)                 | Notes                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting://session-created`                                                                    | MeetingManager (SSC-§2.2 T01)        | S1                                |                                                                                                                                             |
+| `meeting://session-state`                                                                      | MeetingManager (T02–T18)             | S1                                | carries `(meeting_id, state_revision)` per SSC-O2                                                                                           |
+| `meeting://session-error`                                                                      | MeetingManager (T04/T13/T17)         | S1                                |                                                                                                                                             |
+| `meeting://summary-available`                                                                  | MeetingManager (T12)                 | S1                                | triggers summary refetch (payload carries ids only)                                                                                         |
+| `meeting://session-recovered`                                                                  | startup reconciliation (SSC-§6.2 R6) | S1                                | drives F11 `MeetingRecoveryBanner`                                                                                                          |
+| `meeting://jobs-updated`                                                                       | queue/manager (SSC-§3.3 step 3)      | S1                                | tier-B aggregates; coalescing allowed (§4.3)                                                                                                |
+| `project://entity-changed` _(proposed)_                                                        | KnowledgeStore/services (Phase 8+)   | S2                                | generic batched envelope feed `{entries: [{entity, id, revision, deleted}]}` mirroring `change_log` tails; name pending identifier-registry |
+| `import://progress` _(proposed)_                                                               | SourceIngestionService (Phase 9+)    | S2                                | tier-B progress/checklist aggregates                                                                                                        |
+| dictation-history update event                                                                 | HistoryManager (existing)            | S3                                | legacy topic, name unchanged                                                                                                                |
+| window-scoped: `show-overlay`, `hide-overlay`, `recording-ready`, `mic-level`, `theme-changed` | overlay/tray plumbing (existing)     | window bootstrap (exception L2.1) | never domain data                                                                                                                           |
 
 Recorder level/stream events stay behind `MeetingManager` (SSC-O4): the
 frontend subscribes to manager-published topics only, never to raw recorder
@@ -271,16 +271,16 @@ Written for vitest + React Testing Library (harness to be added by the
 implementing task, §0.2 item 4); each test mocks the Tauri event API with an
 in-memory emitter.
 
-| Defect class | Test (per rule) |
-| --- | --- |
-| Second owner on an owned topic (L1) | Static-gate check (§3.3): the lint rule fails when a file outside the registry's owner set passes a registered topic to `listen()`; in the test suite this is a fixture assertion over the registry table (every topic maps to exactly one registrar constant). |
-| Leak (LK-1): unsubscribable store listeners | L4: `initListeners()` → `disposeListeners()` → assert emitter has zero remaining handlers for every owned topic; repeat init/dispose twice, assert still zero. |
-| Duplicate delivery (DUP-1): double `initialize()` | L3: call `initListeners()` twice, emit one event, assert the store action ran exactly once. Component variant: render two mounted consumers, emit, assert one state change. |
-| Component resubscription storms | L2: mount/unmount a consumer 3× around emits, assert handler count for the topic never exceeds 1 (registration lives at store level, unaffected by mounts). |
-| Stale/out-of-order application | L5: emit revision 5, then 3, then 5 again; assert applied state equals the rev-5 payload and rev-3 was discarded. |
-| Missed events during init | L6: emit an event *between* subscription and snapshot resolution; assert final state reflects the event, and a forced revision gap triggers exactly one snapshot refetch. |
-| Handler side effects | L7: fire each topic with a malformed payload; assert store records an ingest error and no toast/navigation fired (those belong to effects on state). |
-| Secret ingress | L8: payload containing a key-shaped field; assert the field is absent from all store slices afterwards. |
+| Defect class                                      | Test (per rule)                                                                                                                                                                                                                                                 |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Second owner on an owned topic (L1)               | Static-gate check (§3.3): the lint rule fails when a file outside the registry's owner set passes a registered topic to `listen()`; in the test suite this is a fixture assertion over the registry table (every topic maps to exactly one registrar constant). |
+| Leak (LK-1): unsubscribable store listeners       | L4: `initListeners()` → `disposeListeners()` → assert emitter has zero remaining handlers for every owned topic; repeat init/dispose twice, assert still zero.                                                                                                  |
+| Duplicate delivery (DUP-1): double `initialize()` | L3: call `initListeners()` twice, emit one event, assert the store action ran exactly once. Component variant: render two mounted consumers, emit, assert one state change.                                                                                     |
+| Component resubscription storms                   | L2: mount/unmount a consumer 3× around emits, assert handler count for the topic never exceeds 1 (registration lives at store level, unaffected by mounts).                                                                                                     |
+| Stale/out-of-order application                    | L5: emit revision 5, then 3, then 5 again; assert applied state equals the rev-5 payload and rev-3 was discarded.                                                                                                                                               |
+| Missed events during init                         | L6: emit an event _between_ subscription and snapshot resolution; assert final state reflects the event, and a forced revision gap triggers exactly one snapshot refetch.                                                                                       |
+| Handler side effects                              | L7: fire each topic with a malformed payload; assert store records an ingest error and no toast/navigation fired (those belong to effects on state).                                                                                                            |
+| Secret ingress                                    | L8: payload containing a key-shaped field; assert the field is absent from all store slices afterwards.                                                                                                                                                         |
 
 ---
 
@@ -297,7 +297,7 @@ action `applyEnvelope(entry)`:
    → discard (L5). Else proceed.
 2. If `entry.deleted` → remove the entity from its `byId` map, drop it from
    all derived lists, bump the touched list versions (§4.2). Tombstones are
-   never stored as rows — deletion surfaces as absence *after* the tombstone
+   never stored as rows — deletion surfaces as absence _after_ the tombstone
    event, never as inferred absence (RBC-§5.4: consumers never infer
    deletion from silence).
 3. Else upsert the payload (or, for thin notifications carrying only ids,
@@ -390,12 +390,12 @@ hold:
 
 ### 6.1 Whitelist (exhaustive)
 
-| # | Operation | Command family | Rollback |
-| --- | --- | --- | --- |
-| O-1 | Rename a meeting (`title` patch) | session update | restore prior `title` |
-| O-2 | Edit project `name`/`description`/`color` | project update | restore prior fields |
-| O-3 | Edit fields of a `human`-origin task (`title`, description, priority, due date) | task upsert | restore prior fields |
-| O-4 | Toggle a human task between `open` ↔ `done` | task transition | restore prior state |
+| #   | Operation                                                                       | Command family  | Rollback              |
+| --- | ------------------------------------------------------------------------------- | --------------- | --------------------- |
+| O-1 | Rename a meeting (`title` patch)                                                | session update  | restore prior `title` |
+| O-2 | Edit project `name`/`description`/`color`                                       | project update  | restore prior fields  |
+| O-3 | Edit fields of a `human`-origin task (`title`, description, priority, due date) | task upsert     | restore prior fields  |
+| O-4 | Toggle a human task between `open` ↔ `done`                                    | task transition | restore prior state   |
 
 Everything else is await-authoritative, notably: start/pause/resume/stop
 meeting (backend state machine owns truth — plan lines 924–927; the Start
@@ -457,12 +457,12 @@ the plan changes.
 
 ## Appendix A — Gate verification checklist
 
-| Gate | Where satisfied |
-| --- | --- |
-| G1 store-ownership matrix mirrors backend entity-ownership 1:1 | §2.2 (total, injective mapping of RBC-§3 rows 1–17 + N4 carve-out, with explicit "no mirror"/"cache" rulings for rows 16–17); boundary rules B1/B2 make divergence a defect |
-| G2 listener lifecycle eliminates leak/duplicate classes, each rule testable | §3.1 rules L1–L8; §3.4 defect-class table naming one mechanical component test per class (LK-1, DUP-1, resubscription, stale-apply, missed-event, side-effect, secret-ingress); baseline defects evidenced in §1.1 (`settingsStore.ts` 674–683, `modelStore.ts` 268–428) |
-| G3 optimistic updates limited to stated safe operations, everything else await-authoritative | §6 default posture with four-part admissibility test; exhaustive whitelist O-1–O-4; explicit forbidden list (recording control, deletes, imports, assignments, provider changes); rollback mechanics with version guard cited from existing code |
-| G4 non-goals section + documentation index updated | §7 complexity budget/non-goals; row appended to `docs/meeting-mode-documentation-index.md` §3 table per its Pflegeregel |
+| Gate                                                                                         | Where satisfied                                                                                                                                                                                                                                                          |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| G1 store-ownership matrix mirrors backend entity-ownership 1:1                               | §2.2 (total, injective mapping of RBC-§3 rows 1–17 + N4 carve-out, with explicit "no mirror"/"cache" rulings for rows 16–17); boundary rules B1/B2 make divergence a defect                                                                                              |
+| G2 listener lifecycle eliminates leak/duplicate classes, each rule testable                  | §3.1 rules L1–L8; §3.4 defect-class table naming one mechanical component test per class (LK-1, DUP-1, resubscription, stale-apply, missed-event, side-effect, secret-ingress); baseline defects evidenced in §1.1 (`settingsStore.ts` 674–683, `modelStore.ts` 268–428) |
+| G3 optimistic updates limited to stated safe operations, everything else await-authoritative | §6 default posture with four-part admissibility test; exhaustive whitelist O-1–O-4; explicit forbidden list (recording control, deletes, imports, assignments, provider changes); rollback mechanics with version guard cited from existing code                         |
+| G4 non-goals section + documentation index updated                                           | §7 complexity budget/non-goals; row appended to `docs/meeting-mode-documentation-index.md` §3 table per its Pflegeregel                                                                                                                                                  |
 
 ## Appendix B — Implementation prerequisites (for the implementing tasks)
 

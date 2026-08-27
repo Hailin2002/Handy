@@ -57,7 +57,10 @@ export const installTauriMock = async (
     await route.fulfill({
       response,
       contentType: "text/html; charset=utf-8",
-      body: html.replace(APP_ENTRY_MARKER, (entry) => `${MOCK_ENTRY_TAG}${entry}`),
+      body: html.replace(
+        APP_ENTRY_MARKER,
+        (entry) => `${MOCK_ENTRY_TAG}${entry}`,
+      ),
     });
   });
 };
@@ -74,7 +77,9 @@ export interface MockBridgeSnapshot {
  * structured clone), so every read runs inside the page context.
  */
 const ensureBridgeInstalled = async (page: Page): Promise<void> => {
-  const installed = await page.evaluate(() => !!window.__SPEAK_E2E_MOCK_BRIDGE__);
+  const installed = await page.evaluate(
+    () => !!window.__SPEAK_E2E_MOCK_BRIDGE__,
+  );
   if (!installed) {
     throw new Error("Tauri mock bridge is not installed on this page");
   }
@@ -130,7 +135,9 @@ export const wasInvokedWith = (
 type TranslationDict = Record<string, unknown>;
 
 const loadLocaleDict = (locale: string): TranslationDict => {
-  const localesDir = fileURLToPath(new URL("../../src/i18n/locales", import.meta.url));
+  const localesDir = fileURLToPath(
+    new URL("../../src/i18n/locales", import.meta.url),
+  );
   const raw = readFileSync(`${localesDir}/${locale}/translation.json`, "utf-8");
   return JSON.parse(raw) as TranslationDict;
 };

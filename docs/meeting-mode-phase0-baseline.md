@@ -7,14 +7,14 @@ Aufgenommen am: 22.08.2026, 06:13 (+02:00)
 
 ## 1. Checkpoint
 
-| Punkt | Wert |
-| --- | --- |
-| Checkpoint-Branch | `checkpoint/custom-stt-pre-meeting` |
-| Checkpoint-Commit | `2355da6c7ebb16701c6f9ce82be584f03ce9e486` |
-| Commit-Betreff | `docs: add meeting-mode planning notes` |
-| Commit-Datum | 2026-08-22 05:08:18 +0200 |
-| identisch mit HEAD von | `feat/custom-stt-pipeline` |
-| Push-Remote | `fork/feat/custom-stt-pipeline` (Branch-Tracking aktiv) |
+| Punkt                  | Wert                                                    |
+| ---------------------- | ------------------------------------------------------- |
+| Checkpoint-Branch      | `checkpoint/custom-stt-pre-meeting`                     |
+| Checkpoint-Commit      | `2355da6c7ebb16701c6f9ce82be584f03ce9e486`              |
+| Commit-Betreff         | `docs: add meeting-mode planning notes`                 |
+| Commit-Datum           | 2026-08-22 05:08:18 +0200                               |
+| identisch mit HEAD von | `feat/custom-stt-pipeline`                              |
+| Push-Remote            | `fork/feat/custom-stt-pipeline` (Branch-Tracking aktiv) |
 
 Zum Zeitpunkt der Baseline-Ausführung enthielt der Arbeitbaum auf
 `feat/custom-stt-pipeline` zusätzlich 14 uncommittete, modifizierte Dateien
@@ -55,25 +55,25 @@ Node v24.19.0); `bun` ist in dieser Shell-Umgebung nicht im PATH, daher wurden
 die Paket-Skripte über die äquivalenten lokalen Binaries aus
 `node_modules\.bin` bzw. direkt ausgeführt.
 
-| # | Kommando | Arbeitsverzeichnis | Ergebnis | Exit-Code |
-| --- | --- | --- | --- | --- |
-| 1 | `node_modules\.bin\eslint.cmd src` (entspricht `bun run lint`) | Repo-Root | **PASS** | 0 |
-| 2 | `node_modules\.bin\prettier.cmd --check .` (Teil von `bun run format:check`) | Repo-Root | **FAIL** | 1 |
-| 3 | `cargo fmt -- --check` (Teil von `bun run format:check`) | `src-tauri` | **PASS** | 0 |
-| 4 | `node scripts/check-translations.ts` (`bun run check:translations`) | Repo-Root | **PASS** | 0 |
-| 5 | `cargo test` | `src-tauri` | **FAIL** (Build-Skript, siehe 2.3) | 101 |
+| #   | Kommando                                                                     | Arbeitsverzeichnis | Ergebnis                           | Exit-Code |
+| --- | ---------------------------------------------------------------------------- | ------------------ | ---------------------------------- | --------- |
+| 1   | `node_modules\.bin\eslint.cmd src` (entspricht `bun run lint`)               | Repo-Root          | **PASS**                           | 0         |
+| 2   | `node_modules\.bin\prettier.cmd --check .` (Teil von `bun run format:check`) | Repo-Root          | **FAIL**                           | 1         |
+| 3   | `cargo fmt -- --check` (Teil von `bun run format:check`)                     | `src-tauri`        | **PASS**                           | 0         |
+| 4   | `node scripts/check-translations.ts` (`bun run check:translations`)          | Repo-Root          | **PASS**                           | 0         |
+| 5   | `cargo test`                                                                 | `src-tauri`        | **FAIL** (Build-Skript, siehe 2.3) | 101       |
 
 Nach der Behebung des `transcribe-cpp-sys`-Buildproblems (Abschnitt 2.3) wurde
 die Backend-Baseline am selben Tag erneut ausgeführt:
 
-| # | Kommando | Arbeitsverzeichnis | Ergebnis | Exit-Code |
-| --- | --- | --- | --- | --- |
-| 6 | `cargo test` | `src-tauri` | **PASS** — 220 Tests: 208 (lib) + 12 (bin `meeting_loopback_spike`) bestanden, 0 fehlgeschlagen; Log `src-tauri/target/baseline-tools/logs/11-cargo-test-serial-fix.log` | 0 |
-| 7 | `cargo clippy --all-targets` | `src-tauri` | **PASS** — 0 Warnungen nach Fix der 6 Doc-Kommentar-Indentierungs-Warnungen in `src/bin/meeting_loopback_spike.rs`; Logs `13-cargo-clippy-final.log` / `14-cargo-clippy-final.log` im selben Verzeichnis | 0 |
-| 8 | `cargo fmt -- --check` (nach Clippy-Fix) | `src-tauri` | **PASS** | 0 |
-| 9 | `cargo test` (unabhängiger Verifikationslauf, 22.08.2026 08:0x +02:00) | `src-tauri` | **PASS** — erneut 208 (lib) + 12 (`meeting_loopback_spike`) = 220 bestanden, 0 fehlgeschlagen; Log `15-cargo-test-verification.log` | 0 |
-| 10 | `cargo clippy --all-targets` (Verifikationslauf) | `src-tauri` | **PASS** — 0 Lint-Warnungen (einzige „warning:"-Zeilen sind Build-Skript-`cargo:warning=`-Ausgaben); Log `16-cargo-clippy-verification.log` | 0 |
-| 11 | `cargo fmt -- --check` (Verifikationslauf) | `src-tauri` | **PASS** | 0 |
+| #   | Kommando                                                               | Arbeitsverzeichnis | Ergebnis                                                                                                                                                                                                 | Exit-Code |
+| --- | ---------------------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| 6   | `cargo test`                                                           | `src-tauri`        | **PASS** — 220 Tests: 208 (lib) + 12 (bin `meeting_loopback_spike`) bestanden, 0 fehlgeschlagen; Log `src-tauri/target/baseline-tools/logs/11-cargo-test-serial-fix.log`                                 | 0         |
+| 7   | `cargo clippy --all-targets`                                           | `src-tauri`        | **PASS** — 0 Warnungen nach Fix der 6 Doc-Kommentar-Indentierungs-Warnungen in `src/bin/meeting_loopback_spike.rs`; Logs `13-cargo-clippy-final.log` / `14-cargo-clippy-final.log` im selben Verzeichnis | 0         |
+| 8   | `cargo fmt -- --check` (nach Clippy-Fix)                               | `src-tauri`        | **PASS**                                                                                                                                                                                                 | 0         |
+| 9   | `cargo test` (unabhängiger Verifikationslauf, 22.08.2026 08:0x +02:00) | `src-tauri`        | **PASS** — erneut 208 (lib) + 12 (`meeting_loopback_spike`) = 220 bestanden, 0 fehlgeschlagen; Log `15-cargo-test-verification.log`                                                                      | 0         |
+| 10  | `cargo clippy --all-targets` (Verifikationslauf)                       | `src-tauri`        | **PASS** — 0 Lint-Warnungen (einzige „warning:"-Zeilen sind Build-Skript-`cargo:warning=`-Ausgaben); Log `16-cargo-clippy-verification.log`                                                              | 0         |
+| 11  | `cargo fmt -- --check` (Verifikationslauf)                             | `src-tauri`        | **PASS**                                                                                                                                                                                                 | 0         |
 
 Die Zeilen 9–11 sind ein unabhängiger Wiederholungslauf in einer frischen
 Sandbox-Shell ohne geerbte Maschinen-Umgebung: `VULKAN_SDK` musste dort wie in
@@ -126,9 +126,9 @@ Das Fehlverhalten war in zwei aufeinanderfolgenden `cargo test`-Läufen
 reproduzierbar. Eine gezielte Differentialmessung am selben CMake-Build-Verzeichnis
 (`C:\Users\haeni\AppData\Local\tcs\32df4e9f173a51bb\build`):
 
-| Aufruf | Ergebnis |
-| --- | --- |
-| `cmake --build <dir> --target install --config Release` (seriell) | **erfolgreich**, Exit 0; installiert u. a. `transcribe.dll`, `ggml-vulkan.dll`, `transcribe-link.json` |
+| Aufruf                                                                                                  | Ergebnis                                                                                                      |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `cmake --build <dir> --target install --config Release` (seriell)                                       | **erfolgreich**, Exit 0; installiert u. a. `transcribe.dll`, `ggml-vulkan.dll`, `transcribe-link.json`        |
 | `cmake --build <dir> --target install --config Release --parallel 20` (wie vom Build-Skript aufgerufen) | **Fehler**, Exit 1; MSBuild bricht direkt nach `Checking File Globs` ab, ohne sichtbare Compilerfehlermeldung |
 
 Eine zusätzliche MSBuild-Diagnose-Aufzeichnung (`msbuild.log`, `/v:diag /flp`,
@@ -267,28 +267,28 @@ Punkte sind zu Beginn der Phase 1 **pending** — es liegt kein Testergebnis vor
 Spalten `Ergebnis` nur mit tatsächlich beobachtetem Ausfüllen: `pass`,
 `fail` (mit Notiz) oder weiter `pending`.
 
-| # | Testfall | Ergebnis | Pass | Fail | Notizen |
-| --- | --- | --- | --- | --- | --- |
-| M1 | Teams, WhatsApp Desktop, Browser-Meet, Zoom und Discord als Audioquelle | pending | ☐ | ☐ | |
-| M2 | Headset, Laptoplautsprecher und Bluetooth-Gerät als Output | pending | ☐ | ☐ | |
-| M3 | Standardgerät sowie explizit ausgewähltes Gerät | pending | ☐ | ☐ | |
-| M4 | 30 Sekunden Stille, lange Stille und wechselnde Gesprächsaktivität | pending | ☐ | ☐ | |
-| M5 | Mikrofon hört Lautsprecher mit | pending | ☐ | ☐ | |
-| M6 | Output-Gerät wird entfernt und neu verbunden | pending | ☐ | ☐ | |
-| M7 | Standardgerät wird während der Aufnahme geändert | pending | ☐ | ☐ | |
-| M8 | App wird hart beendet und neu gestartet | pending | ☐ | ☐ | |
-| M9 | Azure-Key ungültig, Endpoint falsch, Netzwerk offline und Netzwerk langsam | pending | ☐ | ☐ | |
-| M10 | Lokales Modell langsamer als Echtzeit | pending | ☐ | ☐ | |
-| M11 | Diktat wird während lokaler Meetingverarbeitung ausgelöst | pending | ☐ | ☐ | |
-| M12 | Datenträger nähert sich der Kapazitätsgrenze | pending | ☐ | ☐ | |
-| M13 | App klein, maximiert und Vollbild; Fensterzustand nach Neustart | pending | ☐ | ☐ | |
-| M14 | Projekt erstellen, archivieren und Quelle neu zuordnen | pending | ☐ | ☐ | |
-| M15 | `.txt`- sowie `.zip`-Export mit/ohne Medien und überlappendem Verlauf | pending | ☐ | ☐ | |
-| M16 | Beschädigtes, verschlüsseltes und bösartig konstruiertes ZIP | pending | ☐ | ☐ | |
-| M17 | OpenRouter-Modell mit und ohne passende Bildeingabe-Fähigkeit | pending | ☐ | ☐ | |
-| M18 | Cloudfreigabe abbrechen und denselben Import vollständig lokal fortsetzen | pending | ☐ | ☐ | |
-| M19 | KI-Aufgabe bearbeiten/erledigen und danach Projekt erneut analysieren | pending | ☐ | ☐ | |
-| M20 | Suche springt zur richtigen Chatnachricht oder Meeting-Zeitposition | pending | ☐ | ☐ | |
+| #   | Testfall                                                                   | Ergebnis | Pass | Fail | Notizen |
+| --- | -------------------------------------------------------------------------- | -------- | ---- | ---- | ------- |
+| M1  | Teams, WhatsApp Desktop, Browser-Meet, Zoom und Discord als Audioquelle    | pending  | ☐    | ☐    |         |
+| M2  | Headset, Laptoplautsprecher und Bluetooth-Gerät als Output                 | pending  | ☐    | ☐    |         |
+| M3  | Standardgerät sowie explizit ausgewähltes Gerät                            | pending  | ☐    | ☐    |         |
+| M4  | 30 Sekunden Stille, lange Stille und wechselnde Gesprächsaktivität         | pending  | ☐    | ☐    |         |
+| M5  | Mikrofon hört Lautsprecher mit                                             | pending  | ☐    | ☐    |         |
+| M6  | Output-Gerät wird entfernt und neu verbunden                               | pending  | ☐    | ☐    |         |
+| M7  | Standardgerät wird während der Aufnahme geändert                           | pending  | ☐    | ☐    |         |
+| M8  | App wird hart beendet und neu gestartet                                    | pending  | ☐    | ☐    |         |
+| M9  | Azure-Key ungültig, Endpoint falsch, Netzwerk offline und Netzwerk langsam | pending  | ☐    | ☐    |         |
+| M10 | Lokales Modell langsamer als Echtzeit                                      | pending  | ☐    | ☐    |         |
+| M11 | Diktat wird während lokaler Meetingverarbeitung ausgelöst                  | pending  | ☐    | ☐    |         |
+| M12 | Datenträger nähert sich der Kapazitätsgrenze                               | pending  | ☐    | ☐    |         |
+| M13 | App klein, maximiert und Vollbild; Fensterzustand nach Neustart            | pending  | ☐    | ☐    |         |
+| M14 | Projekt erstellen, archivieren und Quelle neu zuordnen                     | pending  | ☐    | ☐    |         |
+| M15 | `.txt`- sowie `.zip`-Export mit/ohne Medien und überlappendem Verlauf      | pending  | ☐    | ☐    |         |
+| M16 | Beschädigtes, verschlüsseltes und bösartig konstruiertes ZIP               | pending  | ☐    | ☐    |         |
+| M17 | OpenRouter-Modell mit und ohne passende Bildeingabe-Fähigkeit              | pending  | ☐    | ☐    |         |
+| M18 | Cloudfreigabe abbrechen und denselben Import vollständig lokal fortsetzen  | pending  | ☐    | ☐    |         |
+| M19 | KI-Aufgabe bearbeiten/erledigen und danach Projekt erneut analysieren      | pending  | ☐    | ☐    |         |
+| M20 | Suche springt zur richtigen Chatnachricht oder Meeting-Zeitposition        | pending  | ☐    | ☐    |         |
 
 Hinweis: M13–M20 betreffen Phasen ab Phase 3 (App-Shell, Projekte, Import,
 KI-Aufgaben) und bleiben solange pending, bis die jeweilige Phase implementiert

@@ -149,7 +149,9 @@ export const MOCK_MODELS: ModelInfo[] = [
     name: "Whisper Large",
     description: "Large Whisper model",
     filename: "ggml-large.bin",
-    source: { Url: { url: "https://example.invalid/ggml-large.bin", sha256: null } },
+    source: {
+      Url: { url: "https://example.invalid/ggml-large.bin", sha256: null },
+    },
     size_mb: 2900,
     is_downloaded: false,
     engine_type: "TranscribeCpp",

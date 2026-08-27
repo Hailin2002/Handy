@@ -20,9 +20,9 @@ Bestandteil von v1"). Normative inputs consumed read-only:
 
 Planned implementation homes (all design-phase, none exists):
 
-| Concern | Planned module |
-| --- | --- |
-| Pure policy evaluation (this contract's core) | `src-tauri/src/storage/retention_policy.rs` |
+| Concern                                        | Planned module                               |
+| ---------------------------------------------- | -------------------------------------------- |
+| Pure policy evaluation (this contract's core)  | `src-tauri/src/storage/retention_policy.rs`  |
 | Trigger wiring + action executor (the "sweep") | `src-tauri/src/storage/retention_sweeper.rs` |
 
 Both files sit under the `storage/` module root introduced by B11
@@ -51,15 +51,15 @@ order — and nothing else.**
 
 It does _not_ own:
 
-| Concern | Owner | Interaction |
-| --- | --- | --- |
-| Unlinking files, delete levels 1–3 | `AssetStore` (AS-§5.1, AS-§9) | executes `PolicyAction::DeleteAudioLevel1`; refuses anything but level-1 keys from the sweeper |
+| Concern                                                       | Owner                                                     | Interaction                                                                                    |
+| ------------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Unlinking files, delete levels 1–3                            | `AssetStore` (AS-§5.1, AS-§9)                             | executes `PolicyAction::DeleteAudioLevel1`; refuses anything but level-1 keys from the sweeper |
 | "May this meeting's audio be auto-deleted?" at execution time | `RetentionGuard` (AS-§8.2, implemented by `MeetingStore`) | consulted inside the sweep loop immediately before the first unlink; binding, no default-allow |
-| Session/job/summary state truth | `MeetingStore` (B3) | produces the `PolicyInput` snapshot via read-only queries |
-| `change_log` writes and row deletion | `change_log` module (RBC-§7.1 R1 allow-list) | appends audit rows; executes the prune under transaction |
-| Disk-full end-state flag | disk guard (DG-§4.2 step 4, DG-§6.2) | sets `meeting_sessions.ended_disk_full`; this contract consumes it |
-| UX rendering of notices | frontend via events | receives typed sweep-result events; renders the §6 notice keys |
-| Import admission limits (ZIP bombs, per-file caps) | import admission (plan §12 lines 1463–1468) | orthogonal: bounds one import; never consults or mutates retention policy |
+| Session/job/summary state truth                               | `MeetingStore` (B3)                                       | produces the `PolicyInput` snapshot via read-only queries                                      |
+| `change_log` writes and row deletion                          | `change_log` module (RBC-§7.1 R1 allow-list)              | appends audit rows; executes the prune under transaction                                       |
+| Disk-full end-state flag                                      | disk guard (DG-§4.2 step 4, DG-§6.2)                      | sets `meeting_sessions.ended_disk_full`; this contract consumes it                             |
+| UX rendering of notices                                       | frontend via events                                       | receives typed sweep-result events; renders the §6 notice keys                                 |
+| Import admission limits (ZIP bombs, per-file caps)            | import admission (plan §12 lines 1463–1468)               | orthogonal: bounds one import; never consults or mutates retention policy                      |
 
 ---
 
@@ -70,11 +70,11 @@ counter can drift from reality; a `SUM` cannot. There are no ledger tables
 (non-goal NG-5). Every figure below is assembled by `MeetingStore` /
 `KnowledgeStore` read queries at trigger time.
 
-| # | Ledger | Unit | Definition (exact source rows) | Consumed by |
-| --- | --- | --- | --- | --- |
-| L1 | Audio bytes | bytes | `SUM(file_size_bytes)` over `meeting_audio_chunks` rows in state `ready` across all meetings. `.part` files and `writing` rows are excluded (transient, owned by the recorder, AS-§4 invariant 2). `damaged` rows excluded (quarantined; resolved by AS-§7, not by quota). | Rules R1/R2 (§4), `PolicyInput.audio_bytes_total` |
-| L2 | Asset bytes | bytes | `SUM(size_bytes)` recorded on `assets` rows (imports, exports-as-assets, media blobs) plus the `export/` and `recovery/` files reported by the last per-meeting tree stat. Accounted **only** for diagnostics and the post-import trigger report; no v1 rule acts on it. | Post-import report (T3); user-facing storage info |
-| L3 | Change-log rows | rows | `COUNT(*)` over `change_log`, split by age against the §9 cutoff. | Rule R3 (§4) |
+| #   | Ledger          | Unit  | Definition (exact source rows)                                                                                                                                                                                                                                             | Consumed by                                       |
+| --- | --------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| L1  | Audio bytes     | bytes | `SUM(file_size_bytes)` over `meeting_audio_chunks` rows in state `ready` across all meetings. `.part` files and `writing` rows are excluded (transient, owned by the recorder, AS-§4 invariant 2). `damaged` rows excluded (quarantined; resolved by AS-§7, not by quota). | Rules R1/R2 (§4), `PolicyInput.audio_bytes_total` |
+| L2  | Asset bytes     | bytes | `SUM(size_bytes)` recorded on `assets` rows (imports, exports-as-assets, media blobs) plus the `export/` and `recovery/` files reported by the last per-meeting tree stat. Accounted **only** for diagnostics and the post-import trigger report; no v1 rule acts on it.   | Post-import report (T3); user-facing storage info |
+| L3  | Change-log rows | rows  | `COUNT(*)` over `change_log`, split by age against the §9 cutoff.                                                                                                                                                                                                          | Rule R3 (§4)                                      |
 
 Why L2 carries no rule: plan §12 defines retention rules for **meeting audio**
 ("Aufbewahrungsregel" applies to recordings; lines 1444–1452) and per-import
@@ -100,12 +100,12 @@ mandates ("invoked at app start and on a daily timer"); a long-running app
 without the timer would never age out anything between restarts, so T4 is
 retained verbatim from AS-§8.2, not invented here.
 
-| # | Trigger | Fires | Mandatory preceding condition | Notes |
-| --- | --- | --- | --- | --- |
-| T1 | Startup | Once per app start, after init | **The AS-§7 startup recovery scan has completed for every `meetings/<id>/` directory.** The scan owns crash-residue classification; evaluating policy against unscanned state could act on rows whose files are quarantined or missing. Order is normative: scan → evaluate → UI. | Same entry point AS-§8.2 already names |
-| T2 | Post-finalize | Immediately after the transaction that marks a session's processing **confirmed complete** (sets `completed_at`, session → `completed`) | That transaction committed. This is the same instant at which the sweep clock starts (AS-§8.1) and at which the first-meeting retention question (catalog P6) may be shown. | Guarantees `DeleteImmediately` takes effect without waiting a day |
-| T3 | Post-import | Immediately after `commit_import` (AS-§2.2) and its DB transaction commit | Import admitted through the plan-§12 checks | Produces an L2 ledger report row in `change_log` only; **no rule acts on L2** (§2). No automatic asset deletion ever |
-| T4 | Daily timer | Every 24 h while the app runs | None (runs after the previous pass ends; passes never overlap) | AS-§8.2 obligation |
+| #   | Trigger       | Fires                                                                                                                                   | Mandatory preceding condition                                                                                                                                                                                                                                                     | Notes                                                                                                                |
+| --- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| T1  | Startup       | Once per app start, after init                                                                                                          | **The AS-§7 startup recovery scan has completed for every `meetings/<id>/` directory.** The scan owns crash-residue classification; evaluating policy against unscanned state could act on rows whose files are quarantined or missing. Order is normative: scan → evaluate → UI. | Same entry point AS-§8.2 already names                                                                               |
+| T2  | Post-finalize | Immediately after the transaction that marks a session's processing **confirmed complete** (sets `completed_at`, session → `completed`) | That transaction committed. This is the same instant at which the sweep clock starts (AS-§8.1) and at which the first-meeting retention question (catalog P6) may be shown.                                                                                                       | Guarantees `DeleteImmediately` takes effect without waiting a day                                                    |
+| T3  | Post-import   | Immediately after `commit_import` (AS-§2.2) and its DB transaction commit                                                               | Import admitted through the plan-§12 checks                                                                                                                                                                                                                                       | Produces an L2 ledger report row in `change_log` only; **no rule acts on L2** (§2). No automatic asset deletion ever |
+| T4  | Daily timer   | Every 24 h while the app runs                                                                                                           | None (runs after the previous pass ends; passes never overlap)                                                                                                                                                                                                                    | AS-§8.2 obligation                                                                                                   |
 
 Every trigger performs the identical three-stage sequence (§5.2). Triggers
 never run concurrently with each other: the sweeper holds a process-wide lock
@@ -122,24 +122,24 @@ what gate G2 requires.
 Exactly three rules exist in v1. They are code, not configuration; there is no
 user-visible or file-based rule definition (gate G4, NG-1).
 
-| # | Rule | Acts on | Semantics |
-| --- | --- | --- | --- |
-| R1 | **Age rule** (plan §12 lines 1444–1452) | L1, per session | For each session whose stored `recording_retention_policy` is `delete_immediately` / `after_7_days` / `after_30_days` and whose sweep clock (`completed_at`, AS-§8.1) is at least the policy's delay in the past → emit `DeleteAudioLevel1 { reason: RetentionAge }`. |
-| R2 | **Quota rule** | L1, global | When the **projected post-pass** audio total — the raw ledger minus bytes freed by already-emitted R1 actions, so a meeting selected by both rules frees its bytes exactly once — exceeds `AUDIO_QUOTA_HARD_BYTES` (§4.2), emit `DeleteAudioLevel1 { reason: QuotaPressure }` for eligible sessions oldest-first until the projection is at or below `AUDIO_QUOTA_SOFT_BYTES`, or candidates are exhausted (then: `QuotaStuckWarning`). |
-| R3 | **Change-log prune** | L3 | When `change_log` holds rows older than `CHANGE_LOG_RETENTION_DAYS`, emit one `PruneChangeLog` action (§9). |
+| #   | Rule                                    | Acts on         | Semantics                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | --------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | **Age rule** (plan §12 lines 1444–1452) | L1, per session | For each session whose stored `recording_retention_policy` is `delete_immediately` / `after_7_days` / `after_30_days` and whose sweep clock (`completed_at`, AS-§8.1) is at least the policy's delay in the past → emit `DeleteAudioLevel1 { reason: RetentionAge }`.                                                                                                                                                                   |
+| R2  | **Quota rule**                          | L1, global      | When the **projected post-pass** audio total — the raw ledger minus bytes freed by already-emitted R1 actions, so a meeting selected by both rules frees its bytes exactly once — exceeds `AUDIO_QUOTA_HARD_BYTES` (§4.2), emit `DeleteAudioLevel1 { reason: QuotaPressure }` for eligible sessions oldest-first until the projection is at or below `AUDIO_QUOTA_SOFT_BYTES`, or candidates are exhausted (then: `QuotaStuckWarning`). |
+| R3  | **Change-log prune**                    | L3              | When `change_log` holds rows older than `CHANGE_LOG_RETENTION_DAYS`, emit one `PruneChangeLog` action (§9).                                                                                                                                                                                                                                                                                                                             |
 
 ### 4.2 Constants and their derivations
 
 No constant is invented freely; each is an arithmetic multiple of the DG-§2.1
 rate or a stated product decision tied to a plan sentence.
 
-| Constant | Value | Derivation |
-| --- | --- | --- |
-| `AUDIO_QUOTA_HARD_BYTES` | `100 × 230_400_000 = 23_040_000_000` (~21.5 GiB) | Plan fixes the byte rate (§12 lines 1438–1439) but no quota number; 100 dual-track hours is the smallest round multiple that is provably irrelevant to normal use: the maximal modeled v1 session is 10 h (AS-§7 V5 rationale), so even ten back-to-back maximal meetings stay under half the hard quota. Product decision recorded here, changeable only in code with a test update (NG-1). |
-| `AUDIO_QUOTA_SOFT_BYTES` | `80 × 230_400_000 = 18_432_000_000` | Hard − soft = 20 h of headroom, strictly greater than one maximal 10 h session: a single pass can never thrash — after reaching soft, the next pass cannot cross hard again without ≥ 10 h of new audio. |
-| `CHANGE_LOG_RETENTION_DAYS` | `180` | Plan §9: `change_log` serves incremental project analysis and diagnosis in v1; sync clients are an explicit plan non-goal (§2 line 85). 180 days bounds growth while keeping every audit row written by AS-§8.2 rule 5 answerable for half a year ("warum ist mein Audio (noch da/weg)?"). |
-| `CHANGE_LOG_PRUNE_MAX_ROWS_PER_PASS` | `1000` | Bounds a single pass's transaction size and lock hold time; leftover expired rows are pruned on the next trigger (T4 recurs daily). |
-| Policy delays | `0 / 7 d / 30 d` | Plan §12 line 1449 verbatim option list; `keep_permanent` and unanswered → no delay, never swept. |
+| Constant                             | Value                                            | Derivation                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUDIO_QUOTA_HARD_BYTES`             | `100 × 230_400_000 = 23_040_000_000` (~21.5 GiB) | Plan fixes the byte rate (§12 lines 1438–1439) but no quota number; 100 dual-track hours is the smallest round multiple that is provably irrelevant to normal use: the maximal modeled v1 session is 10 h (AS-§7 V5 rationale), so even ten back-to-back maximal meetings stay under half the hard quota. Product decision recorded here, changeable only in code with a test update (NG-1). |
+| `AUDIO_QUOTA_SOFT_BYTES`             | `80 × 230_400_000 = 18_432_000_000`              | Hard − soft = 20 h of headroom, strictly greater than one maximal 10 h session: a single pass can never thrash — after reaching soft, the next pass cannot cross hard again without ≥ 10 h of new audio.                                                                                                                                                                                     |
+| `CHANGE_LOG_RETENTION_DAYS`          | `180`                                            | Plan §9: `change_log` serves incremental project analysis and diagnosis in v1; sync clients are an explicit plan non-goal (§2 line 85). 180 days bounds growth while keeping every audit row written by AS-§8.2 rule 5 answerable for half a year ("warum ist mein Audio (noch da/weg)?").                                                                                                   |
+| `CHANGE_LOG_PRUNE_MAX_ROWS_PER_PASS` | `1000`                                           | Bounds a single pass's transaction size and lock hold time; leftover expired rows are pruned on the next trigger (T4 recurs daily).                                                                                                                                                                                                                                                          |
+| Policy delays                        | `0 / 7 d / 30 d`                                 | Plan §12 line 1449 verbatim option list; `keep_permanent` and unanswered → no delay, never swept.                                                                                                                                                                                                                                                                                            |
 
 ### 4.3 Exemptions (who is never swept)
 
@@ -147,7 +147,7 @@ Two dimensions, both plain stored flags — no rule objects, no expressions:
 
 1. **Per-session policy exemptions** (plan-native): `Unanswered` (NULL
    `recording_retention_policy`) and `KeepPermanent` are never eligible, for
-   R1 *and* R2 alike. "Dauerhaft behalten" (plan §12 line 1449) is a promise;
+   R1 _and_ R2 alike. "Dauerhaft behalten" (plan §12 line 1449) is a promise;
    quota pressure does not override promises.
 2. **Project-scoped exemption**: a new boolean column
    `projects.protect_meeting_audio INTEGER NOT NULL DEFAULT 0`. While set,
@@ -179,10 +179,10 @@ it is deliberately explicit rather than implied by the code sketch.
 
 ### 4.5 Schema additions (owned by the storage workstream)
 
-| Change | Table | Reason |
-| --- | --- | --- |
-| `protect_meeting_audio INTEGER NOT NULL DEFAULT 0` | `projects` | §4.3 item 2 |
-| `ended_disk_full INTEGER NOT NULL DEFAULT 0` | `meeting_sessions` | **Adoption of DG-§7 open item 1** (the interface note in DG-§6.2 rule 3). DG-§6.2 correctly notes AS-§8.2's `RetentionBlockReason` lacks a variant; this contract declares the variant `SessionEndedDiskFull` (§5.1 sketch) and thereby closes that open interface item. Both migrations land with the Phase-3 storage work. |
+| Change                                             | Table              | Reason                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protect_meeting_audio INTEGER NOT NULL DEFAULT 0` | `projects`         | §4.3 item 2                                                                                                                                                                                                                                                                                                                  |
+| `ended_disk_full INTEGER NOT NULL DEFAULT 0`       | `meeting_sessions` | **Adoption of DG-§7 open item 1** (the interface note in DG-§6.2 rule 3). DG-§6.2 correctly notes AS-§8.2's `RetentionBlockReason` lacks a variant; this contract declares the variant `SessionEndedDiskFull` (§5.1 sketch) and thereby closes that open interface item. Both migrations land with the Phase-3 storage work. |
 
 No further columns: the ledgers are queried, not cached (§2).
 
@@ -469,16 +469,16 @@ Stage C — execution (sweeper, in emitted list order):
 
 ### 6.1 The decision matrix
 
-| Action class | Automatic? | Files touched | Confirmation |
-| --- | --- | --- | --- |
-| R1/R2 `DeleteAudioLevel1` | **Yes — the only automatic file deletion in the product** | `audio/*.wav` + `export/*` of that meeting (AS-§9.1 column 1 exactly); chunks → `deleted`, transcript + summary kept | none (that is its purpose, plan §12); guarded per §7, noticed per §6.2 N1/N2 |
-| R3 `PruneChangeLog` | Yes | none (DB rows only) | none; invisible by design (N3) |
-| `QuotaStuckWarning` | n/a (advisory) | none | surfaces a warning (N4) |
-| Recovery quarantine removal (`recovery/` contents, orphan `.part`) | **Never automatic** (AS-§7 verbatim: "The scan never deletes audio content automatically") | — | explicit user confirmation only |
-| Delete level 1 (manual) | No | as above | confirmation dialog (catalog P8) |
-| Delete level 2 | No | transcript + summary rows | dialog (P9) |
-| Delete level 3 | No | entire meeting tree | two-step dialog (P10) |
-| Imported assets / media (L2 ledger) | **Never automatic** | — | user-initiated only; overage is reported, not acted on (§2, NG-6) |
+| Action class                                                       | Automatic?                                                                                 | Files touched                                                                                                        | Confirmation                                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| R1/R2 `DeleteAudioLevel1`                                          | **Yes — the only automatic file deletion in the product**                                  | `audio/*.wav` + `export/*` of that meeting (AS-§9.1 column 1 exactly); chunks → `deleted`, transcript + summary kept | none (that is its purpose, plan §12); guarded per §7, noticed per §6.2 N1/N2 |
+| R3 `PruneChangeLog`                                                | Yes                                                                                        | none (DB rows only)                                                                                                  | none; invisible by design (N3)                                               |
+| `QuotaStuckWarning`                                                | n/a (advisory)                                                                             | none                                                                                                                 | surfaces a warning (N4)                                                      |
+| Recovery quarantine removal (`recovery/` contents, orphan `.part`) | **Never automatic** (AS-§7 verbatim: "The scan never deletes audio content automatically") | —                                                                                                                    | explicit user confirmation only                                              |
+| Delete level 1 (manual)                                            | No                                                                                         | as above                                                                                                             | confirmation dialog (catalog P8)                                             |
+| Delete level 2                                                     | No                                                                                         | transcript + summary rows                                                                                            | dialog (P9)                                                                  |
+| Delete level 3                                                     | No                                                                                         | entire meeting tree                                                                                                  | two-step dialog (P10)                                                        |
+| Imported assets / media (L2 ledger)                                | **Never automatic**                                                                        | —                                                                                                                    | user-initiated only; overage is reported, not acted on (§2, NG-6)            |
 
 ### 6.2 Notice-key table (G1: every automatic deletion names its key)
 
@@ -488,14 +488,14 @@ Catalog convention: existing reusable keys come from
 proposal-only status. None of these keys exists in
 `src/i18n/locales/en/translation.json` today (catalog §1 verification stands).
 
-| # | User-visible outcome | Trigger | Catalog entry | i18n key paths |
-| --- | --- | --- | --- | --- |
-| N1 | Audio auto-deleted because the retention window elapsed | R1 executed | **new, proposed:** `meeting.retention.autoDeleted.title` / `.bodyAge` | title: `“{{title}}”: old recording audio was removed.`; body: `{{count}} meeting(s) cleaned up — {{freedMb}} MB freed. Transcript and summary were kept.` Buttons: `meeting.actions.openMeeting` (exists), `meeting.actions.close` (exists) |
-| N2 | Audio auto-deleted because of storage quota | R2 executed | **new, proposed:** `meeting.retention.autoDeleted.title` (shared) / `.bodyQuota` | body: `Storage was running low, so audio of {{count}} oldest finished meeting(s) ({{freedMb}} MB) was removed. Transcript and summary were kept.` Same buttons as N1 |
-| N3 | change_log prune executed | R3 executed | none (invisible) | No user-facing copy is required or defined — same justification pattern as disk-guard U7: the prune is bookkeeping with zero user-visible effect; it is auditable via its own `change_log` marker row (§9) |
-| N4 | Quota exceeded but nothing could be deleted safely | `QuotaStuckWarning` | **new, proposed:** `meeting.retention.quotaStuck.title` / `.body` | body: `Meeting audio is using {{usedGb}} GB. Nothing could be cleaned up automatically because every meeting is protected, kept permanently, or still processing. Review storage in settings.` Buttons: `meeting.actions.openSettings` (exists), `meeting.actions.close` (exists) |
-| N5 | Sweep skipped a meeting (guard block) | §7 block at execution | none (invisible) | Surfaced only indirectly: audio simply persists; the block reason lands in `change_log` per AS-§8.2 rule 5 (identical to disk-guard U7). No notification for a *non*-event |
-| N6 | Retention question after first successful processing | T2, first completion | **exists (proposal):** catalog **P6** | `meeting.retention.question.title/.body`, options `meeting.retention.option.deleteNow|.7days|.30days|.forever`, `meeting.actions.decideLater` |
+| #   | User-visible outcome                                    | Trigger               | Catalog entry                                                                    | i18n key paths                                                                                                                                                                                                                                                                    |
+| --- | ------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- | ---------------------------------------- |
+| N1  | Audio auto-deleted because the retention window elapsed | R1 executed           | **new, proposed:** `meeting.retention.autoDeleted.title` / `.bodyAge`            | title: `“{{title}}”: old recording audio was removed.`; body: `{{count}} meeting(s) cleaned up — {{freedMb}} MB freed. Transcript and summary were kept.` Buttons: `meeting.actions.openMeeting` (exists), `meeting.actions.close` (exists)                                       |
+| N2  | Audio auto-deleted because of storage quota             | R2 executed           | **new, proposed:** `meeting.retention.autoDeleted.title` (shared) / `.bodyQuota` | body: `Storage was running low, so audio of {{count}} oldest finished meeting(s) ({{freedMb}} MB) was removed. Transcript and summary were kept.` Same buttons as N1                                                                                                              |
+| N3  | change_log prune executed                               | R3 executed           | none (invisible)                                                                 | No user-facing copy is required or defined — same justification pattern as disk-guard U7: the prune is bookkeeping with zero user-visible effect; it is auditable via its own `change_log` marker row (§9)                                                                        |
+| N4  | Quota exceeded but nothing could be deleted safely      | `QuotaStuckWarning`   | **new, proposed:** `meeting.retention.quotaStuck.title` / `.body`                | body: `Meeting audio is using {{usedGb}} GB. Nothing could be cleaned up automatically because every meeting is protected, kept permanently, or still processing. Review storage in settings.` Buttons: `meeting.actions.openSettings` (exists), `meeting.actions.close` (exists) |
+| N5  | Sweep skipped a meeting (guard block)                   | §7 block at execution | none (invisible)                                                                 | Surfaced only indirectly: audio simply persists; the block reason lands in `change_log` per AS-§8.2 rule 5 (identical to disk-guard U7). No notification for a _non_-event                                                                                                        |
+| N6  | Retention question after first successful processing    | T2, first completion  | **exists (proposal):** catalog **P6**                                            | `meeting.retention.question.title/.body`, options `meeting.retention.option.deleteNow                                                                                                                                                                                             | .7days | .30days | .forever`, `meeting.actions.decideLater` |
 
 Honesty constraints on N1/N2 copy (plan §6.2 principle 5): the notice MUST be
 rendered from the sweeper's aggregate `DeleteReport` data (removed bytes =
@@ -514,13 +514,13 @@ disk-full state, or (f) is project-protected / policy-exempt.
 
 ### 7.1 Enumeration of every unlink path for meeting audio
 
-| # | Path | Automatic? | Protection |
-| --- | --- | --- | --- |
-| U-P1 | Sweeper executing `DeleteAudioLevel1` | Yes | **Double gate** — §7.2 |
-| U-P2 | User-initiated delete levels 1–3 | No (explicit, confirmed in the same UI session, plan §11 line 1431) | Outside the invariant's scope by definition; the confirmation dialog displays unconfirmed/failed jobs as a warning (AS-§8.2 rule 4) |
-| U-P3 | AS-§7 startup scan | n/a | Deletes nothing, verbatim: "The scan never deletes audio content automatically" (AS-§7 closing paragraph) |
-| U-P4 | Recovery quarantine | n/a | Moves files (`recovery/`), removes nothing without explicit confirmation (AS-§4 invariant 4) |
-| U-P5 | `AssetStore::delete` / `delete_meeting_tree` called by anyone else | n/a | No such caller exists or may exist: the sweeper is the only automatic client, and module-placement-map E-rules confine `storage/` access to the stores; a new caller would be a reviewable defect against AS-§8.2's named-enforcement-point rule |
+| #    | Path                                                               | Automatic?                                                          | Protection                                                                                                                                                                                                                                       |
+| ---- | ------------------------------------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| U-P1 | Sweeper executing `DeleteAudioLevel1`                              | Yes                                                                 | **Double gate** — §7.2                                                                                                                                                                                                                           |
+| U-P2 | User-initiated delete levels 1–3                                   | No (explicit, confirmed in the same UI session, plan §11 line 1431) | Outside the invariant's scope by definition; the confirmation dialog displays unconfirmed/failed jobs as a warning (AS-§8.2 rule 4)                                                                                                              |
+| U-P3 | AS-§7 startup scan                                                 | n/a                                                                 | Deletes nothing, verbatim: "The scan never deletes audio content automatically" (AS-§7 closing paragraph)                                                                                                                                        |
+| U-P4 | Recovery quarantine                                                | n/a                                                                 | Moves files (`recovery/`), removes nothing without explicit confirmation (AS-§4 invariant 4)                                                                                                                                                     |
+| U-P5 | `AssetStore::delete` / `delete_meeting_tree` called by anyone else | n/a                                                                 | No such caller exists or may exist: the sweeper is the only automatic client, and module-placement-map E-rules confine `storage/` access to the stores; a new caller would be a reviewable defect against AS-§8.2's named-enforcement-point rule |
 
 The enumeration is exhaustive because `AssetStore` is the single resolution
 and deletion choke point (AS-§2.1 rule 2) and its delete methods have exactly
@@ -534,10 +534,10 @@ Gate 1 — **snapshot-time eligibility** (`SessionSnapshot::deletion_eligible`,
 its snapshot shows no open session, zero unfinished jobs, zero failed jobs,
 complete processing, no disk-full flag, and no exemption. Note the open-session
 case is doubly covered: an active session has `completed_at = None` (clock
-never started, AS-§8.1) *and* `processing_incomplete = true`.
+never started, AS-§8.1) _and_ `processing_incomplete = true`.
 
 Gate 2 — **execution-time guard** (binding, AS-§8.2 rule 1 adopted verbatim):
-inside the sweep loop, per meeting, *immediately before the first unlink*, the
+inside the sweep loop, per meeting, _immediately before the first unlink_, the
 sweeper calls `RetentionGuard::audio_deletion_allowed(meeting_id)`; there is
 no default-allow implementation, and `Blocked(_)` skips the meeting and logs
 the reason. The guard's block-reason set is extended here by
@@ -546,11 +546,11 @@ the reason. The guard's block-reason set is extended here by
 
 Why two gates: the snapshot can go stale between stage A and stage C (e.g. a
 retry of a previously failed job flips a session back to unfinished). Gate 1
-makes the *decision* conservative and testable; Gate 2 makes the *deletion*
+makes the _decision_ conservative and testable; Gate 2 makes the _deletion_
 safe against races, because it re-reads the live job/session state
 transactionally at the last possible moment. A meeting that becomes blocked
 after snapshotting is skipped and retried on the next trigger; a meeting that
-becomes *more* deletable can only do so by passing through a state transition
+becomes _more_ deletable can only do so by passing through a state transition
 which itself occurs after a fresh guard read on some future pass — it can
 never retroactively legitimize an already-made deletion.
 
@@ -562,7 +562,7 @@ never retroactively legitimize an already-made deletion.
    `evaluate` contains no `DeleteAudioLevel1` for X (each flag fuzzed
    independently).
 2. Ordering test with an instrumented fs seam: for each executed deletion,
-   `audio_deletion_allowed` is observed called *strictly before* the first
+   `audio_deletion_allowed` is observed called _strictly before_ the first
    `unlink` syscall of that meeting.
 3. Race test: enqueue an STT job for meeting Y between stage A and stage C;
    assert Y's files untouched and a `change_log` block row with reason
@@ -605,7 +605,7 @@ Normative rules, in order:
    skips ahead to R3.
 5. **Reporting.** The pass aggregates `DeleteReport`s (AS-§5.1) and renders
    N1/N2 from real numbers (§6.2 honesty constraint); every applied action
-   and every guard-block writes a `change_log` row (AS-§8.2 rule 5) *before*
+   and every guard-block writes a `change_log` row (AS-§8.2 rule 5) _before_
    R3 could ever prune it — R3's 180-day window guarantees freshly written
    audit rows survive (§9).
 6. **Interaction with the retention question (P6).** T2 fires after the

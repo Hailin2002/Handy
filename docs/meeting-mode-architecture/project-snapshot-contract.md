@@ -74,11 +74,11 @@ SEC-owned mechanisms.
 A snapshot publication is always the terminal stage P3 of a project-intelligence
 run (SEC-§1.2). Runs are caused by exactly three trigger classes:
 
-| # | Trigger | Origin | Notes |
-| --- | --- | --- | --- |
-| T-S1 | Source delta | Any committed tier-A mutation under `sources`/`source_items`/`project_sources`/`project_tasks` lands in `change_log` (plan lines 1382–1386: "neue/geänderte Source-Items") | Debounced per §1.3; never synchronously inside the mutating transaction |
-| T-S2 | Restart resumption | Startup recovery finds a non-terminal intelligence job (same rule class as STT-§3.4) | Re-executes deterministically from persisted stages; publishes nothing twice (§2.3) |
-| T-S3 | Explicit user action | `Projektstatus aktualisieren` command routed through `ProjectManager` | Increments `rerun_generation` exactly as SEC-§2.1 prescribes for deliberate re-runs |
+| #    | Trigger              | Origin                                                                                                                                                                     | Notes                                                                               |
+| ---- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| T-S1 | Source delta         | Any committed tier-A mutation under `sources`/`source_items`/`project_sources`/`project_tasks` lands in `change_log` (plan lines 1382–1386: "neue/geänderte Source-Items") | Debounced per §1.3; never synchronously inside the mutating transaction             |
+| T-S2 | Restart resumption   | Startup recovery finds a non-terminal intelligence job (same rule class as STT-§3.4)                                                                                       | Re-executes deterministically from persisted stages; publishes nothing twice (§2.3) |
+| T-S3 | Explicit user action | `Projektstatus aktualisieren` command routed through `ProjectManager`                                                                                                      | Increments `rerun_generation` exactly as SEC-§2.1 prescribes for deliberate re-runs |
 
 There is **no timer-driven re-analysis**: a run without a source delta cannot
 produce a different snapshot (its inputs are identical), so scheduling one
@@ -157,14 +157,14 @@ Guarantees:
 
 ### 2.1 Identity fields
 
-| Field | Rule |
-| --- | --- |
-| `id` | UUIDv4, store-generated at persist, lowercase hyphenated (RB-§5.1); never reused |
-| `project_id` | FK to `projects`; scoping boundary for every read and write |
-| `version_seq` | Per-project monotone integer starting at 1, assigned inside the K9 transaction as `previous.version_seq + 1` (or 1 for genesis); `UNIQUE(project_id, version_seq)` |
-| `idempotency_key` | The §1.4 `snapshot_key`; `UNIQUE(project_id, idempotency_key)` |
-| `parent_snapshot_id` | See §2.2; `NULL` iff `version_seq = 1` |
-| `current` | Exactly one row per project; demotion/promotion only inside K9 (RB-§4) |
+| Field                | Rule                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                 | UUIDv4, store-generated at persist, lowercase hyphenated (RB-§5.1); never reused                                                                                   |
+| `project_id`         | FK to `projects`; scoping boundary for every read and write                                                                                                        |
+| `version_seq`        | Per-project monotone integer starting at 1, assigned inside the K9 transaction as `previous.version_seq + 1` (or 1 for genesis); `UNIQUE(project_id, version_seq)` |
+| `idempotency_key`    | The §1.4 `snapshot_key`; `UNIQUE(project_id, idempotency_key)`                                                                                                     |
+| `parent_snapshot_id` | See §2.2; `NULL` iff `version_seq = 1`                                                                                                                             |
+| `current`            | Exactly one row per project; demotion/promotion only inside K9 (RB-§4)                                                                                             |
 
 ### 2.2 Parent-chain rules
 
@@ -205,13 +205,13 @@ demote/promote swap.
 
 ### 3.2 What each publication pins
 
-| Pinned artifact | Content | Anchor |
-| --- | --- | --- |
-| `covered_through` | `(change_log_rowid, captured_at)` of the P0 cutoff (§1.2) — the auditable answer to "bis welchem Stand?" (plan line 1707) | plan line 1307 |
-| Source-revision set | Every `(source_id, source_revision)` that P0 selected | SEC-§2.1 `delta_basis` inputs |
-| `snapshot_evidence` rows | Per claim: `subject_statement_lineage_id`, `source_id`, `source_revision_at_publish`, locator (`source_item_id` or `meeting_transcript_segment_id`), optional `time_range`, verbatim `quote_excerpt`, `rationale` — SEC-§3.2 field set **plus** the pinned source/item revisions | plan lines 1309–1310, SEC-§3.2 |
-| Provenance | `provider` (+ non-secret settings snapshot), `model`, `prompt_version`, `prompt_content_hash`, `payload_schema_version` | plan lines 1305–1308; authority SEC-§6.1 — see §6 |
-| Conflict entries | Both contradicting positions, each with valid evidence pointers (invariant E3) | SEC-§3.3 E3, plan lines 1397–1398 |
+| Pinned artifact          | Content                                                                                                                                                                                                                                                                          | Anchor                                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `covered_through`        | `(change_log_rowid, captured_at)` of the P0 cutoff (§1.2) — the auditable answer to "bis welchem Stand?" (plan line 1707)                                                                                                                                                        | plan line 1307                                    |
+| Source-revision set      | Every `(source_id, source_revision)` that P0 selected                                                                                                                                                                                                                            | SEC-§2.1 `delta_basis` inputs                     |
+| `snapshot_evidence` rows | Per claim: `subject_statement_lineage_id`, `source_id`, `source_revision_at_publish`, locator (`source_item_id` or `meeting_transcript_segment_id`), optional `time_range`, verbatim `quote_excerpt`, `rationale` — SEC-§3.2 field set **plus** the pinned source/item revisions | plan lines 1309–1310, SEC-§3.2                    |
+| Provenance               | `provider` (+ non-secret settings snapshot), `model`, `prompt_version`, `prompt_content_hash`, `payload_schema_version`                                                                                                                                                          | plan lines 1305–1308; authority SEC-§6.1 — see §6 |
+| Conflict entries         | Both contradicting positions, each with valid evidence pointers (invariant E3)                                                                                                                                                                                                   | SEC-§3.3 E3, plan lines 1397–1398                 |
 
 Publication validity: invariant **E1** applies verbatim — the P3 transaction
 rejects the whole publication if any claim lacks a valid evidence pointer
@@ -220,14 +220,14 @@ rejects the whole publication if any claim lacks a valid evidence pointer
 
 ### 3.3 How pins age (read-time resolution, never rewriting)
 
-Evidence pins are historical records of *why the snapshot said what it said*.
+Evidence pins are historical records of _why the snapshot said what it said_.
 They are never repaired, re-resolved or deleted when sources change later:
 
 - Resolution status (`live` / `stale_quote` / `locator_gone` / `source_tombstoned`)
   is computed at read time against current state using the SEC-§3.3 validity
   conditions plus the pinned revisions. A pin whose `quote_excerpt` still
   matches and whose locator still exists resolves even many revisions later.
-- A dangling pin degrades the *display* of the affected claim (UI marks the
+- A dangling pin degrades the _display_ of the affected claim (UI marks the
   statement's evidence as unverifiable); it never invalidates the snapshot as
   a historical artifact and never triggers automatic correction.
 - The successor run sees the tombstoned/changed source as delta input
@@ -264,8 +264,8 @@ structural argument; nothing new is invented.
      publish). A human `done`/`dismissed` decision suppresses re-suggestion
      via the SEC-§2.3 resolution rules; re-runs resurrect nothing.
    - Because snapshots are append-only versions, a re-run can never
-     *overwrite* the previous view of anything — worst case it publishes a
-     wrong *new* version, which the user replaces via T-S3 while the old
+     _overwrite_ the previous view of anything — worst case it publishes a
+     wrong _new_ version, which the user replaces via T-S3 while the old
      version stays inspectable.
 
 ---
@@ -302,8 +302,8 @@ Lineage is decided once, inside the P2/P3 pipeline of each run, against the
 previous `current` snapshot:
 
 1. Compute each candidate statement's `match_fingerprint =
-   SHA-256(kind, fold_case(trim_whitespace(content)),
-   sorted evidence locator ids)`.
+SHA-256(kind, fold_case(trim_whitespace(content)),
+sorted evidence locator ids)`.
 2. Match against the previous snapshot's statements:
    - equal fingerprint → same lineage: carry the previous
      `statement_lineage_id` forward;
@@ -453,11 +453,11 @@ Properties (each testable):
 
 Reported alongside `entries`, computed from the same two immutable rows:
 
-| Dimension | Comparison |
-| --- | --- |
-| Task population | counts by state (`suggested`/`open`/`done`/`dismissed`) plus added/removed AI-suggestion lineage ids (SEC-§2.3 fingerprints) |
-| Coverage | `covered_through` advanced or unchanged (§1.2) |
-| Conflicts | count of conflict entries opened/resolved between the versions |
+| Dimension         | Comparison                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Task population   | counts by state (`suggested`/`open`/`done`/`dismissed`) plus added/removed AI-suggestion lineage ids (SEC-§2.3 fingerprints)   |
+| Coverage          | `covered_through` advanced or unchanged (§1.2)                                                                                 |
+| Conflicts         | count of conflict entries opened/resolved between the versions                                                                 |
 | Provenance change | provider/prompt-version equality flag — informational only; a provider switch alone must NEVER mark content statements Changed |
 
 ### 5.6 Explicitly rejected: text-patch semantics
@@ -516,11 +516,11 @@ for "bis zu welchem Stand wurde ausgewertet". Therefore:
 Even with keep-all, the lifecycle touches the named retention seams at three
 exact points:
 
-| Hook (retention-quota-contract name) | Snapshot interaction |
-| --- | --- |
-| Trigger **T2 Post-Finalize** / evaluation sequence A→B→C (RQ-§3, RQ-§5.2) | Not extended: snapshot publication is a KnowledgeStore K9 event, not a sweep concern; the sweeper never reads snapshots in v1 |
+| Hook (retention-quota-contract name)                                       | Snapshot interaction                                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trigger **T2 Post-Finalize** / evaluation sequence A→B→C (RQ-§3, RQ-§5.2)  | Not extended: snapshot publication is a KnowledgeStore K9 event, not a sweep concern; the sweeper never reads snapshots in v1                                                                                                             |
 | **`change_log`** audit rows (RQ-§9 protocol: marker-first, 180-day window) | Every K9 publication and K3 project tombstone writes its tier-A `change_log` row (RB-§4 W2); those rows age out under R3 exactly like all others — snapshot traceability rests on the immutable rows themselves, not on their log entries |
-| Delete levels / `RetentionGuard` (RQ-§7.2, AS-§8.2) | Untouched: `DeleteAudioLevel1` semantics cover only meeting audio/export files; no snapshot file exists to unlink |
+| Delete levels / `RetentionGuard` (RQ-§7.2, AS-§8.2)                        | Untouched: `DeleteAudioLevel1` semantics cover only meeting audio/export files; no snapshot file exists to unlink                                                                                                                         |
 
 ### 7.3 Reserved extension path (right-column, NOT built in v1)
 
@@ -606,12 +606,12 @@ evidence-backed value:
 
 ## 10. Gate verification checklist
 
-| Gate | Requirement | Where satisfied |
-| --- | --- | --- |
-| G1 | Idempotent creation per (project, source-revision-set) with stated key derivation; identity + parent-chain rules | §1.4 (key instantiation of SEC-§2), §1.3 (coalescing), §2.1 (identity), §2.2 (chain), §9 tests |
-| G2 | Manual changes provably survive re-runs, precedence cross-referenced to ProjectManager duties | §4 (ownership disjointness argument citing RB-§6, plan lines 263–265; SEC-§4 guard), §9 fuzz hook |
-| G3 | Entity-level diff model (not text patches); old-snapshot retention tied to retention-quota-contract hook names | §5.2–§5.4 (typed entity model), §5.6 (patch rejection), §7.1–§7.3 (keep-all + T4/stage-B-C/marker-row/Gate-2 hook names) |
-| G4 | Non-goals section; documentation index updated | §8 (NG-1–NG-8); `docs/meeting-mode-documentation-index.md` gains this document's row and reading-order slot |
+| Gate | Requirement                                                                                                      | Where satisfied                                                                                                          |
+| ---- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| G1   | Idempotent creation per (project, source-revision-set) with stated key derivation; identity + parent-chain rules | §1.4 (key instantiation of SEC-§2), §1.3 (coalescing), §2.1 (identity), §2.2 (chain), §9 tests                           |
+| G2   | Manual changes provably survive re-runs, precedence cross-referenced to ProjectManager duties                    | §4 (ownership disjointness argument citing RB-§6, plan lines 263–265; SEC-§4 guard), §9 fuzz hook                        |
+| G3   | Entity-level diff model (not text patches); old-snapshot retention tied to retention-quota-contract hook names   | §5.2–§5.4 (typed entity model), §5.6 (patch rejection), §7.1–§7.3 (keep-all + T4/stage-B-C/marker-row/Gate-2 hook names) |
+| G4   | Non-goals section; documentation index updated                                                                   | §8 (NG-1–NG-8); `docs/meeting-mode-documentation-index.md` gains this document's row and reading-order slot              |
 
 ## Appendix A — Sketch compilability
 

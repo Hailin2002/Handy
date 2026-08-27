@@ -1,17 +1,17 @@
 {
-    "schema":  "smoke-suite-verdict/1",
-    "mode":  "live",
-    "status":  "fail",
-    "run_id":  "smoke-abort-path-test",
-    "error":  "spike binary not found; build it with: cargo build --release --bin meeting_loopback_spike",
-    "started_utc":  "2026-08-24T07:00:18.3593519Z",
-    "finished_utc":  "2026-08-24T07:00:18.4032833Z",
-    "checks":  [
-                   {
-                       "expected":  "existing meeting_loopback_spike.exe",
-                       "pass":  false,
-                       "name":  "spike_binary_available",
-                       "actual":  "not found; tried: C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\src-tauri\\target\\release\\meeting_loopback_spike.exe; C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\src-tauri\\target\\debug\\meeting_loopback_spike.exe"
-                   }
-               ]
+  "schema": "smoke-suite-verdict/1",
+  "mode": "live",
+  "status": "fail",
+  "run_id": "smoke-abort-path-test",
+  "error": "spike binary not found; build it with: cargo build --release --bin meeting_loopback_spike",
+  "started_utc": "2026-08-24T07:00:18.3593519Z",
+  "finished_utc": "2026-08-24T07:00:18.4032833Z",
+  "checks": [
+    {
+      "expected": "existing meeting_loopback_spike.exe",
+      "pass": false,
+      "name": "spike_binary_available",
+      "actual": "not found; tried: C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\src-tauri\\target\\release\\meeting_loopback_spike.exe; C:\\Users\\haeni\\Documents\\Projekte\\Speak system\\src-tauri\\target\\debug\\meeting_loopback_spike.exe"
+    }
+  ]
 }

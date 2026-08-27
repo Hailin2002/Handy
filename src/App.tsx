@@ -50,9 +50,7 @@ const renderProductContent = (
       // Real meetings journey (plan §6.5): live list from the Rust
       // MeetingManager, create/open/save/delete backed by SQLite. The flag
       // only stays for emergency-rollback builds (defaults to ON).
-      return MEETING_MODE_ENABLED ? (
-        <MeetingsPage />
-      ) : null;
+      return MEETING_MODE_ENABLED ? <MeetingsPage /> : null;
     case "projects":
       return <ProjectsPage />;
     case "history":

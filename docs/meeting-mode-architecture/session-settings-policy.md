@@ -36,7 +36,7 @@ and names the seam where each class is enforced.
 
 ## 1. Purpose and scope
 
-The owning contracts fix *what* each meeting setting is and *where it lives*
+The owning contracts fix _what_ each meeting setting is and _where it lives_
 (CC §6.1 enumerates the meeting keys; SPC §2.1 fixes the consent key; AS §8.1
 fixes the per-session retention column; CC §7.1 fixes the shortcut ids). None
 of them answers, in one place, the operator-facing question:
@@ -63,7 +63,7 @@ to all settings without altering any H-rule.
 - `src-tauri/src/settings/types.rs` lines 319–361: `SecretMap` serializes as
   `{}` — secrets never persist through settings; relevant to §6 item 2.
 - No meeting-mode source module exists yet (index rule 1); every enforcement
-  seam below is a *future implementation home*, cited to its owning contract.
+  seam below is a _future implementation home_, cited to its owning contract.
 
 ---
 
@@ -72,14 +72,14 @@ to all settings without altering any H-rule.
 Every meeting-relevant setting belongs to exactly one **primary class**, with
 at most one declared directional exception (§4 table, last column):
 
-| Class | Definition |
-| --- | --- |
-| **hot-apply** | A mid-session change takes effect inside the running session (or its processing pipeline) without starting a new session. Any such effect must name its exact boundary (e.g. "next stage gate") — unspecified immediacy is forbidden. |
-| **apply-next-session** | A mid-session change persists immediately and legally; the running session is unaffected because it resolves the setting through its session-start capture; the change binds at the next session's validation/snapshot time. No marking duty beyond the standard save acknowledgment. |
-| **locked-while-recording** | The session-*effective* value is frozen by the immutable session snapshot (CC §6.3, DCD H1). Three consequences: (a) the live view renders the value read-only (plan §6.11); (b) a write to the global key while a session records succeeds but is inert for that session and the settings surface marks it "gilt ab dem nächsten Meeting" (DCD M6/S6, H2); (c) any command path that attempts to *apply* the new value to the running session is rejected with the code of §5.3. |
+| Class                      | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **hot-apply**              | A mid-session change takes effect inside the running session (or its processing pipeline) without starting a new session. Any such effect must name its exact boundary (e.g. "next stage gate") — unspecified immediacy is forbidden.                                                                                                                                                                                                                                             |
+| **apply-next-session**     | A mid-session change persists immediately and legally; the running session is unaffected because it resolves the setting through its session-start capture; the change binds at the next session's validation/snapshot time. No marking duty beyond the standard save acknowledgment.                                                                                                                                                                                             |
+| **locked-while-recording** | The session-_effective_ value is frozen by the immutable session snapshot (CC §6.3, DCD H1). Three consequences: (a) the live view renders the value read-only (plan §6.11); (b) a write to the global key while a session records succeeds but is inert for that session and the settings surface marks it "gilt ab dem nächsten Meeting" (DCD M6/S6, H2); (c) any command path that attempts to _apply_ the new value to the running session is rejected with the code of §5.3. |
 
 Decision rule for future keys: if the value feeds capture, inference, summary
-routing, or data-deletion obligations of the *running* session →
+routing, or data-deletion obligations of the _running_ session →
 **locked-while-recording**; if the running session merely holds a stable
 reference but the setting is safe to flip anytime → **apply-next-session**;
 if the change must reach the running session for safety or correctness →
@@ -93,7 +93,7 @@ rule: free-floating keys are forbidden).
 
 Plan §6.11 (Zeilen 635–637) makes provider/model/language/devices read-only in
 the live view, and plan §6.7 (Zeilen 532–533) states snapshots isolate running
-meetings from global changes. CC §6.3 makes the snapshot the *exclusive* read
+meetings from global changes. CC §6.3 makes the snapshot the _exclusive_ read
 source after start, and DCD H1 extends this to pause/resume re-validation.
 Together these leave no read path from live settings into a running session —
 so a hot-apply classification for any capture-affecting key would require
@@ -101,7 +101,7 @@ building a second read path, which violates the complexity budget (§7) and
 has zero user value: mid-meeting provider/model swaps would create mixed-
 provenance segments (SEC run-key reproducibility forbids this for summaries,
 and STT job provenance inherits the same discipline). The single sanctioned
-immediate effect is the cloud-consent *withdrawal* (§4 row 8): it closes a
+immediate effect is the cloud-consent _withdrawal_ (§4 row 8): it closes a
 data-flow risk and therefore must not wait for a session boundary (SPC §2.2
 rule 5 owns its semantics; this document only classifies it).
 
@@ -112,21 +112,21 @@ rule 5 owns its semantics; this document only classifies it).
 Columns: **Setting** · Owner · Primary class · UI enforcement seam · Backend
 enforcement seam · Directional exceptions.
 
-| # | Setting | Owner | Class | UI enforcement seam | Backend enforcement seam | Exception |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | `meeting_stt_provider` (`Local/Azure/Custom`) | CC §6.1 | locked-while-recording | Live view status row read-only (plan §6.11); settings write during session marked "ab nächstem Meeting" | Session snapshot column (SSC T01) is the sole read source (CC §6.3, DCD H1); apply attempt rejected per §5 | none |
-| 2 | `meeting_model_id` | CC §6.1 | locked-while-recording | as row 1 | as row 1; local worker lease re-acquisition compares against the snapshot, not live settings (CC §3.5 step 2) | none |
-| 3 | `meeting_language` | CC §6.1 | locked-while-recording | as row 1 | as row 1; resolved language frozen in snapshot at start | none |
-| 4 | `meeting_selected_microphone` | CC §6.1 | locked-while-recording | Live view shows resolved device read-only; mid-session changes happen **only** via RC §7.1 actions (*Wiederverbinden*/*Gerät wechseln*), which are recorder operations, not settings propagation (DCD H3) | DCD H1/H4: capture reads snapshot exclusively; switch = validate-before-close `open_source`, never a settings read | none |
-| 5 | `meeting_selected_output_device` | CC §6.1 | locked-while-recording | as row 4 (*Loopback neu öffnen*/*Ohne Systemaudio fortführen* are RC §7.1 actions, DCD H3) | as row 4 for `SourceKind::System` | none |
-| 6 | `meeting_follow_default_output` | CC §6.1 | locked-while-recording | as row 1 | as row 1; the follow flag is snapshotted, so mid-session flips cannot re-bind streams (DCD M8/S1–S2 semantics) | none |
-| 7 | Summary choice of the session (`none \| local \| cloud`, start dialog) | SPC §2.2 rule 3 | locked-while-recording | Start dialog is the only writer; processing checklist shows the pinned choice read-only | Pinned in the session snapshot; a session started local/none never becomes cloud mid-flight (SPC §2.2 rule 3) | none |
-| 8 | `meeting_summary_cloud_consent` (bool) | SPC §2.1 | apply-next-session | Settings toggle always enabled; enabling shows no "pending" marker (it never affects a running session) | Enabling passes only future validations/re-summarize runs (SPC §2.2 rules 2–3) | **hot-apply on withdrawal**: turning the flag off takes effect at the next M1/M2 stage gate evaluation; it never aborts a running cloud job retroactively (SPC §2.2 rule 5) |
-| 9 | Per-session audio retention policy (`Unanswered/KeepPermanent/DeleteImmediately/After7Days/After30Days`, AS §8.1) | AS §8.1, RQC §4 | locked-while-recording | Chosen once in the start dialog (first-meeting question per plan §12); not editable in the live view | Stored on the session record (`recording_retention_policy`); RQC evaluates exclusively against the stored per-session value — a global-default change can never reach a stored session row | none |
-| 10 | Global retention default (the answer to the plan §12 first-meeting question, applied to new sessions) | plan §12; RQC §4 | apply-next-session | Normal settings control; changing it mid-session needs no marking (it seeds only future sessions' dialog default) | Applied only when a new session row is created (SSC T01); RQC never reads it for existing rows | none |
-| 11 | `meeting_toggle` binding (bindings map id) | CC §7.1 | apply-next-session | Shortcut editor freely editable mid-meeting; editor shows no lock | Global rebind allowed anytime (CC §7.5); the running session resolves stop/countdown handlers through the session-start binding snapshot (CC §6.3 last bullet, §7.5); if the old binding is deleted mid-meeting, stop stays reachable via UI/tray (CC §7.5 edge rule) | none |
-| 12 | `meeting_pause` binding (reserved id) | CC §7.1 | apply-next-session | as row 11 | as row 11 | none |
-| 13 | Dictation-path settings (`selected_model`, `selected_microphone`, `selected_language`, post-process providers/keys) | existing code (phase0 baseline) | hot-apply — **dictation tool only** | Unchanged legacy dictation settings UI | Dictation keeps its per-run `get_settings()` behavior (CC §6.3 bullet 4) | Hard boundary: never read by meeting capture or the meeting snapshot (CC §6.2 hard rule; DCD H5 for `selected_output_device`) |
+| #   | Setting                                                                                                             | Owner                           | Class                               | UI enforcement seam                                                                                                                                                                                       | Backend enforcement seam                                                                                                                                                                                                                                              | Exception                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `meeting_stt_provider` (`Local/Azure/Custom`)                                                                       | CC §6.1                         | locked-while-recording              | Live view status row read-only (plan §6.11); settings write during session marked "ab nächstem Meeting"                                                                                                   | Session snapshot column (SSC T01) is the sole read source (CC §6.3, DCD H1); apply attempt rejected per §5                                                                                                                                                            | none                                                                                                                                                                        |
+| 2   | `meeting_model_id`                                                                                                  | CC §6.1                         | locked-while-recording              | as row 1                                                                                                                                                                                                  | as row 1; local worker lease re-acquisition compares against the snapshot, not live settings (CC §3.5 step 2)                                                                                                                                                         | none                                                                                                                                                                        |
+| 3   | `meeting_language`                                                                                                  | CC §6.1                         | locked-while-recording              | as row 1                                                                                                                                                                                                  | as row 1; resolved language frozen in snapshot at start                                                                                                                                                                                                               | none                                                                                                                                                                        |
+| 4   | `meeting_selected_microphone`                                                                                       | CC §6.1                         | locked-while-recording              | Live view shows resolved device read-only; mid-session changes happen **only** via RC §7.1 actions (_Wiederverbinden_/_Gerät wechseln_), which are recorder operations, not settings propagation (DCD H3) | DCD H1/H4: capture reads snapshot exclusively; switch = validate-before-close `open_source`, never a settings read                                                                                                                                                    | none                                                                                                                                                                        |
+| 5   | `meeting_selected_output_device`                                                                                    | CC §6.1                         | locked-while-recording              | as row 4 (_Loopback neu öffnen_/_Ohne Systemaudio fortführen_ are RC §7.1 actions, DCD H3)                                                                                                                | as row 4 for `SourceKind::System`                                                                                                                                                                                                                                     | none                                                                                                                                                                        |
+| 6   | `meeting_follow_default_output`                                                                                     | CC §6.1                         | locked-while-recording              | as row 1                                                                                                                                                                                                  | as row 1; the follow flag is snapshotted, so mid-session flips cannot re-bind streams (DCD M8/S1–S2 semantics)                                                                                                                                                        | none                                                                                                                                                                        |
+| 7   | Summary choice of the session (`none \| local \| cloud`, start dialog)                                              | SPC §2.2 rule 3                 | locked-while-recording              | Start dialog is the only writer; processing checklist shows the pinned choice read-only                                                                                                                   | Pinned in the session snapshot; a session started local/none never becomes cloud mid-flight (SPC §2.2 rule 3)                                                                                                                                                         | none                                                                                                                                                                        |
+| 8   | `meeting_summary_cloud_consent` (bool)                                                                              | SPC §2.1                        | apply-next-session                  | Settings toggle always enabled; enabling shows no "pending" marker (it never affects a running session)                                                                                                   | Enabling passes only future validations/re-summarize runs (SPC §2.2 rules 2–3)                                                                                                                                                                                        | **hot-apply on withdrawal**: turning the flag off takes effect at the next M1/M2 stage gate evaluation; it never aborts a running cloud job retroactively (SPC §2.2 rule 5) |
+| 9   | Per-session audio retention policy (`Unanswered/KeepPermanent/DeleteImmediately/After7Days/After30Days`, AS §8.1)   | AS §8.1, RQC §4                 | locked-while-recording              | Chosen once in the start dialog (first-meeting question per plan §12); not editable in the live view                                                                                                      | Stored on the session record (`recording_retention_policy`); RQC evaluates exclusively against the stored per-session value — a global-default change can never reach a stored session row                                                                            | none                                                                                                                                                                        |
+| 10  | Global retention default (the answer to the plan §12 first-meeting question, applied to new sessions)               | plan §12; RQC §4                | apply-next-session                  | Normal settings control; changing it mid-session needs no marking (it seeds only future sessions' dialog default)                                                                                         | Applied only when a new session row is created (SSC T01); RQC never reads it for existing rows                                                                                                                                                                        | none                                                                                                                                                                        |
+| 11  | `meeting_toggle` binding (bindings map id)                                                                          | CC §7.1                         | apply-next-session                  | Shortcut editor freely editable mid-meeting; editor shows no lock                                                                                                                                         | Global rebind allowed anytime (CC §7.5); the running session resolves stop/countdown handlers through the session-start binding snapshot (CC §6.3 last bullet, §7.5); if the old binding is deleted mid-meeting, stop stays reachable via UI/tray (CC §7.5 edge rule) | none                                                                                                                                                                        |
+| 12  | `meeting_pause` binding (reserved id)                                                                               | CC §7.1                         | apply-next-session                  | as row 11                                                                                                                                                                                                 | as row 11                                                                                                                                                                                                                                                             | none                                                                                                                                                                        |
+| 13  | Dictation-path settings (`selected_model`, `selected_microphone`, `selected_language`, post-process providers/keys) | existing code (phase0 baseline) | hot-apply — **dictation tool only** | Unchanged legacy dictation settings UI                                                                                                                                                                    | Dictation keeps its per-run `get_settings()` behavior (CC §6.3 bullet 4)                                                                                                                                                                                              | Hard boundary: never read by meeting capture or the meeting snapshot (CC §6.2 hard rule; DCD H5 for `selected_output_device`)                                               |
 
 Totality claim: rows 1–13 enumerate every meeting-relevant key defined by the
 owning contracts as of this document — CC §6.1 (rows 1–6, 11–12), SPC §2
@@ -137,11 +137,11 @@ must be added here when those contracts define them.
 
 ### 4.1 Enforcement-seam summary by class
 
-| Class | UI enforcement seam | Backend enforcement seam |
-| --- | --- | --- |
-| hot-apply | The owning contract's own surface carries the effect (row 8 withdrawal needs no settings UI change; row 13 is the unchanged legacy dictation UI) | The named gate/boundary of the owning contract (SPC §2.2 rule 5 stage gate; dictation per-run `get_settings()`, CC §6.3 bullet 4) |
-| apply-next-session | Normal settings controls, no lock/marking duty beyond the standard save acknowledgment | Existing typed-settings persistence path (`AppSettings`, tauri-plugin-store); binding at next session's Startvalidierung/snapshot (SSC T01) or shortcut re-registration (CC §7.5) |
-| locked-while-recording | Live-view control plane renders snapshot values read-only; `Für nächstes Meeting ändern` link; pending-change marking "gilt ab dem nächsten Meeting" (§5.1) | Snapshot authority as sole read source + command guard returning `meeting.session.settings_locked_while_recording` (§5.2–§5.3) |
+| Class                  | UI enforcement seam                                                                                                                                         | Backend enforcement seam                                                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| hot-apply              | The owning contract's own surface carries the effect (row 8 withdrawal needs no settings UI change; row 13 is the unchanged legacy dictation UI)            | The named gate/boundary of the owning contract (SPC §2.2 rule 5 stage gate; dictation per-run `get_settings()`, CC §6.3 bullet 4)                                                 |
+| apply-next-session     | Normal settings controls, no lock/marking duty beyond the standard save acknowledgment                                                                      | Existing typed-settings persistence path (`AppSettings`, tauri-plugin-store); binding at next session's Startvalidierung/snapshot (SSC T01) or shortcut re-registration (CC §7.5) |
+| locked-while-recording | Live-view control plane renders snapshot values read-only; `Für nächstes Meeting ändern` link; pending-change marking "gilt ab dem nächsten Meeting" (§5.1) | Snapshot authority as sole read source + command guard returning `meeting.session.settings_locked_while_recording` (§5.2–§5.3)                                                    |
 
 ---
 
@@ -187,16 +187,18 @@ Following TAX §3 (format `meeting.<origin>.<snake_case_name>`; origin set
 reused):
 
 ```jsonc
-{ "code": "meeting.session.settings_locked_while_recording",
-  "params": { "settingKey": "meeting_stt_provider" } }
+{
+  "code": "meeting.session.settings_locked_while_recording",
+  "params": { "settingKey": "meeting_stt_provider" },
+}
 ```
 
-| Property | Value | Basis |
-| --- | --- | --- |
-| Severity | `warning` | progress intent refused; recording unaffected (TAX §4.1) |
-| Action class | `none` (primary), `repair` (`openSettings` for next-session change) | TAX §4.2 |
-| Auto-retry | `n/a` (session-origin codes are never auto-retried, TAX §4.3) | TAX §4.3 |
-| Copy key | NEW family `meeting.errors.settingsLocked.*` (`title`, `body`), hand-off to the catalog owner per TAX §6 convention | — |
+| Property     | Value                                                                                                               | Basis                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Severity     | `warning`                                                                                                           | progress intent refused; recording unaffected (TAX §4.1) |
+| Action class | `none` (primary), `repair` (`openSettings` for next-session change)                                                 | TAX §4.2                                                 |
+| Auto-retry   | `n/a` (session-origin codes are never auto-retried, TAX §4.3)                                                       | TAX §4.3                                                 |
+| Copy key     | NEW family `meeting.errors.settingsLocked.*` (`title`, `body`), hand-off to the catalog owner per TAX §6 convention | —                                                        |
 
 Registration duty (same pattern as prior contracts' NEW-key hand-offs): this
 row must be added to TAX §5 and flagged for the next identifier-registry pass
@@ -273,12 +275,12 @@ Deliberately **not** specified, with reasons:
 
 ## 8. Gate coverage
 
-| Gate | Where satisfied |
-| --- | --- |
-| G1 complete classification + named enforcement seam per class | §2 (class definitions + decision rule), §4 (total table, UI + backend seam columns, totality claim) |
-| G2 defined error for locked attempts | §5 (UI seam, backend seams, reserved code `meeting.session.settings_locked_while_recording` within the closed TAX namespace, with severity/action/retry/copy-key mapping and registration duty) |
-| G3 snapshot-isolation restated, not altered | §6 (verbatim-consistent restatement of CC §6.3 items 1–5 and DCD H1–H5, with authority pointers) |
-| G4 non-goals + index updated | §7; table row and reading-order entry added in `docs/meeting-mode-documentation-index.md` |
+| Gate                                                          | Where satisfied                                                                                                                                                                                 |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1 complete classification + named enforcement seam per class | §2 (class definitions + decision rule), §4 (total table, UI + backend seam columns, totality claim)                                                                                             |
+| G2 defined error for locked attempts                          | §5 (UI seam, backend seams, reserved code `meeting.session.settings_locked_while_recording` within the closed TAX namespace, with severity/action/retry/copy-key mapping and registration duty) |
+| G3 snapshot-isolation restated, not altered                   | §6 (verbatim-consistent restatement of CC §6.3 items 1–5 and DCD H1–H5, with authority pointers)                                                                                                |
+| G4 non-goals + index updated                                  | §7; table row and reading-order entry added in `docs/meeting-mode-documentation-index.md`                                                                                                       |
 
 ## Appendix A — Consistency cross-checks performed
 

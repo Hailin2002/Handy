@@ -101,20 +101,20 @@ on any divergence the owning contract's wording prevails.
 ## 1. Position in the architecture and verified baseline
 
 Citations sit entirely inside the React projection layer (FSC §1). They hold
-no domain authority: a citation is a *view* over an already-persisted pointer
+no domain authority: a citation is a _view_ over an already-persisted pointer
 row plus one resolution query. Losing navigation state never loses evidence —
 the pointer row is the truth, the citation is one of its renderings.
 
 Verified observations at authoring time (HEAD):
 
-| Observation | Location | Consequence |
-| --- | --- | --- |
-| All citation-bearing components (F9 `MeetingDetail`, F14 `ProjectDetail`, F15–F17 tabs) are `planned-new`; F10 `MeetingList` exists as Phase 3 work-in-progress, but repo-wide grep for `evidence`/`Beleg`/`citation` under `src/` returns zero matches | module-placement-map lines 154, 159–162; verified: only `src/components/meetings/{index.ts, MeetingList.tsx, meetingList.render.test.tsx}` exist, no `src/components/projects/`; grep empty | §2 defines the seam before any citation implementation; no citation code exists to migrate. |
-| The app already owns a proven programmatic-focus pattern: save `document.activeElement` on open, restore on teardown | `src/components/ui/Dialog.tsx` lines 68–93 (save 71–74, restore 90) | §5.4 focus return adopts this exact pattern for the jump-back case. |
-| Sidebar navigation is currently mouse-driven (`onClick`, no keyboard path) | `src/components/Sidebar.tsx` line 45; a11y-baseline §6.14.2 FAIL, delta D1 | Citations must not inherit this defect: §5.1 mandates real `<button>` semantics from day one. |
-| Beyond the sonner toaster there is no `aria-live` region anywhere in `src/` | a11y-baseline §6.14.5 (repo-wide grep, zero matches in source) | §5.1 step 5 introduces exactly one polite announcement region for jumps — no scattered live regions. |
+| Observation                                                                                                                                                                                                                                             | Location                                                                                                                                                                                    | Consequence                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| All citation-bearing components (F9 `MeetingDetail`, F14 `ProjectDetail`, F15–F17 tabs) are `planned-new`; F10 `MeetingList` exists as Phase 3 work-in-progress, but repo-wide grep for `evidence`/`Beleg`/`citation` under `src/` returns zero matches | module-placement-map lines 154, 159–162; verified: only `src/components/meetings/{index.ts, MeetingList.tsx, meetingList.render.test.tsx}` exist, no `src/components/projects/`; grep empty | §2 defines the seam before any citation implementation; no citation code exists to migrate.          |
+| The app already owns a proven programmatic-focus pattern: save `document.activeElement` on open, restore on teardown                                                                                                                                    | `src/components/ui/Dialog.tsx` lines 68–93 (save 71–74, restore 90)                                                                                                                         | §5.4 focus return adopts this exact pattern for the jump-back case.                                  |
+| Sidebar navigation is currently mouse-driven (`onClick`, no keyboard path)                                                                                                                                                                              | `src/components/Sidebar.tsx` line 45; a11y-baseline §6.14.2 FAIL, delta D1                                                                                                                  | Citations must not inherit this defect: §5.1 mandates real `<button>` semantics from day one.        |
+| Beyond the sonner toaster there is no `aria-live` region anywhere in `src/`                                                                                                                                                                             | a11y-baseline §6.14.5 (repo-wide grep, zero matches in source)                                                                                                                              | §5.1 step 5 introduces exactly one polite announcement region for jumps — no scattered live regions. |
 
-Layer position relative to the deep-open seam: citations are *in-app*
+Layer position relative to the deep-open seam: citations are _in-app_
 navigation. They dispatch through the same single `navigate(route)` door as
 nav clicks (NSC §3.1); the `main-window-navigate` topic plays no role here
 and none is added.
@@ -128,13 +128,13 @@ and none is added.
 Exactly five surfaces render stored pointers as citations. Anything else is
 out of scope until this table grows:
 
-| # | Surface (component home) | Pointer source | Renders from |
-| --- | --- | --- | --- |
-| K1 | Structured summary items — Entscheidungen / Aufgaben / offene Fragen in F9 `MeetingDetail` Übersicht tab | per-item evidence arrays embedded in `meeting_summaries.decisions/action_items/open_questions` (SEC §3.4) | `locator`, `time_range`, `quote_excerpt`, `rationale` (SEC §3.2) |
-| K2 | Task cards in F16 `ProjectTasks` | `task_evidence` rows (plan lines 1295–1301) | same field set + `review_state` (EPD §8.1) |
-| K3 | Snapshot statements in F15 `ProjectOverview` | `snapshot_evidence` rows with pinned revisions (PSC §3.2) | field set + pinned revisions |
-| K4 | Transcript/search hits in F9 Transkript-Tab search and project search results | `HitPosition::MeetingPosition(MeetingPositionRef)` resp. `HitPosition::SourceItem` (SIC §6.1) — converted to the §3 input shape before navigation (EPD §3.2) | position ref + fragment |
-| K5 | Conflict entries in snapshot views (both positions cited separately) | two pointer sets per conflict (SEC §3.3 E3) | field set, one citation per side |
+| #   | Surface (component home)                                                                                 | Pointer source                                                                                                                                               | Renders from                                                     |
+| --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| K1  | Structured summary items — Entscheidungen / Aufgaben / offene Fragen in F9 `MeetingDetail` Übersicht tab | per-item evidence arrays embedded in `meeting_summaries.decisions/action_items/open_questions` (SEC §3.4)                                                    | `locator`, `time_range`, `quote_excerpt`, `rationale` (SEC §3.2) |
+| K2  | Task cards in F16 `ProjectTasks`                                                                         | `task_evidence` rows (plan lines 1295–1301)                                                                                                                  | same field set + `review_state` (EPD §8.1)                       |
+| K3  | Snapshot statements in F15 `ProjectOverview`                                                             | `snapshot_evidence` rows with pinned revisions (PSC §3.2)                                                                                                    | field set + pinned revisions                                     |
+| K4  | Transcript/search hits in F9 Transkript-Tab search and project search results                            | `HitPosition::MeetingPosition(MeetingPositionRef)` resp. `HitPosition::SourceItem` (SIC §6.1) — converted to the §3 input shape before navigation (EPD §3.2) | position ref + fragment                                          |
+| K5  | Conflict entries in snapshot views (both positions cited separately)                                     | two pointer sets per conflict (SEC §3.3 E3)                                                                                                                  | field set, one citation per side                                 |
 
 Free prose inside `summary_markdown` is **never** parsed for links or made
 clickable (SEC §3.4 exempts it); its traceability rides on the structured
@@ -421,3 +421,4 @@ contract rejects:
 | G2 | Focus management satisfies plan §6.14: focus moves to target and is announced | §5.1 activation sequence (real button, ≥44 px, visible focus, post-render `tabindex="-1"` focus move, polite one-shot announcement, non-color highlight, reduced-motion scroll); §5.2 no focus stealing; §5.3 honest race landing; §5.4 focus return via verified Dialog pattern; §2.2 structural citation requirements |
 | G3 | No direct DB/file access — resolution through repository-seam queries only | §4.1 store-action choke point (FSC C1/C3); §4.2 repository-trait delegation, no asset-key/file/row exposure (RBC §7.1); §4.3 typed command surface (SIC §6.2); §4.4 no new IPC/event channel |
 | G4 | Non-goals section; documentation index updated | §6 complexity budget/non-goals; row appended to `docs/meeting-mode-documentation-index.md` §3 table plus reading-order entry per its Pflegeregeln |
+```

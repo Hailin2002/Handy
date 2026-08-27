@@ -49,7 +49,7 @@ One worker-pool/lease seam sits **above** `MeetingSttProvider` (STT-§1) and
 `MeetingTranscriptionQueue` module (plan line 251), referred to below as the
 **scheduler**. The scheduler owns exactly three things:
 
-1. **Admission control** — deciding *when* a persisted job may execute, by
+1. **Admission control** — deciding _when_ a persisted job may execute, by
    acquiring a concurrency-class slot (§1) for it;
 2. **Worker pool** — the bounded set of worker threads that pull claimed jobs
    to execution and call the provider/service exactly once per claim;
@@ -64,24 +64,24 @@ pipeline stage logic (SEC-§1), evidence validation (SEC-§3), session state
 Plan §9 defines two persistent job tables. This contract fixes their division
 of labor:
 
-| Job family | Table | Examples | Schema/state-machine authority |
-| --- | --- | --- | --- |
-| STT jobs | `meeting_stt_jobs` (plan lines 1190–1199) | one VAD segment / Azure package / Custom segment | STT-§2/§3 |
-| Generic AI-pipeline & ingestion jobs | `processing_jobs` (plan lines 1313–1318) | meeting-summary runs, WhatsApp import, media analysis, source summaries, project snapshots, later connector syncs | SEC-§1.4 (state/retry semantics of `meeting_stt_jobs` apply **verbatim**) |
+| Job family                           | Table                                     | Examples                                                                                                          | Schema/state-machine authority                                            |
+| ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| STT jobs                             | `meeting_stt_jobs` (plan lines 1190–1199) | one VAD segment / Azure package / Custom segment                                                                  | STT-§2/§3                                                                 |
+| Generic AI-pipeline & ingestion jobs | `processing_jobs` (plan lines 1313–1318)  | meeting-summary runs, WhatsApp import, media analysis, source summaries, project snapshots, later connector syncs | SEC-§1.4 (state/retry semantics of `meeting_stt_jobs` apply **verbatim**) |
 
-**Single-persistence-point invariant P1:** *All durable scheduler state lives
+**Single-persistence-point invariant P1:** _All durable scheduler state lives
 exactly in these job rows. There is no scheduler-private queue file, no broker,
-no OS-level queue, no secondary journal, and no durable in-memory registry.*
+no OS-level queue, no secondary journal, and no durable in-memory registry._
 Every enqueue, state flip, `next_attempt_at`, attempt counter, cancel flag and
 error record is written inside the store units of work (RB-§4 U4/U8 for
 `meeting_stt_jobs`, K10 for `processing_jobs`, tier-B operational writes per
 RB line 228 — no `change_log` rows). Everything else the scheduler holds is
 volatile and reconstructible from rows (§6.2).
 
-*Reconciliation note:* the task brief phrases P1 as "`processing_jobs` rows are
+_Reconciliation note:_ the task brief phrases P1 as "`processing_jobs` rows are
 the single persistence point." Read against the plan, STT jobs have their own
 specialized table (plan lines 1190–1199), while plan line 1317 explicitly ties
-`processing_jobs` to the *same* state and retry semantics. P1 above is the
+`processing_jobs` to the _same_ state and retry semantics. P1 above is the
 faithful reading: **one** persistence discipline, **two** row families sharing
 one state machine, one claim protocol and one idempotency regime — never a
 second mechanism beside the rows. Within the non-STT subsystems,
@@ -105,11 +105,11 @@ exception path; **may** = permitted option.
 There are exactly **three** schedulable concurrency classes. Adding a fourth
 requires revisiting this contract first (mirror of COEX §9 rule 2).
 
-| Class | Resource | Ceiling | Slot owner | Covers |
-| --- | --- | --- | --- | --- |
-| **L1** — local engine lease | the single shared STT engine (`TranscriptionManager`) | **exactly 1**, process-wide, shared with interactive dictation | `TranscriptionManager` via the COEX-§3 lease extension | `LocalMeetingProvider` jobs (STT-§4.1) |
-| **C1** — cloud STT slots | outbound Fast-Transcription / Custom-Multipart requests | **2** concurrent (`MAX_CONCURRENT_CLOUD_STT_JOBS`, testable internal constant, plan lines 1116–1117: Parallelität ist konfigurierbarer interner Wert) | scheduler | `AzureMeetingClient` + `CustomMultipartProvider` jobs (STT-§4.2/4.3) |
-| **S1** — summary/intelligence slots | outbound/local LLM requests of `MeetingSummaryService` and `ProjectIntelligenceService` | **2** concurrent (`MAX_CONCURRENT_LLM_JOBS`, testable internal constant) | scheduler | SEC M1/M2 map+reduce model calls, P1/P2 batches |
+| Class                               | Resource                                                                                | Ceiling                                                                                                                                               | Slot owner                                             | Covers                                                               |
+| ----------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
+| **L1** — local engine lease         | the single shared STT engine (`TranscriptionManager`)                                   | **exactly 1**, process-wide, shared with interactive dictation                                                                                        | `TranscriptionManager` via the COEX-§3 lease extension | `LocalMeetingProvider` jobs (STT-§4.1)                               |
+| **C1** — cloud STT slots            | outbound Fast-Transcription / Custom-Multipart requests                                 | **2** concurrent (`MAX_CONCURRENT_CLOUD_STT_JOBS`, testable internal constant, plan lines 1116–1117: Parallelität ist konfigurierbarer interner Wert) | scheduler                                              | `AzureMeetingClient` + `CustomMultipartProvider` jobs (STT-§4.2/4.3) |
+| **S1** — summary/intelligence slots | outbound/local LLM requests of `MeetingSummaryService` and `ProjectIntelligenceService` | **2** concurrent (`MAX_CONCURRENT_LLM_JOBS`, testable internal constant)                                                                              | scheduler                                              | SEC M1/M2 map+reduce model calls, P1/P2 batches                      |
 
 Class rules:
 
@@ -123,8 +123,8 @@ Class rules:
    of STT choice; the slot pools encode that independence mechanically.
 3. **Stage gating beats slots.** SEC-§1.1 rule 3 (M2 starts only when all M1
    stages succeeded) and the sequential P-stage gating are enforced by the
-   *services*, not by slot counts; the scheduler never runs a stage whose
-   predecessor set is incomplete. Slots only bound *how many* ready jobs run
+   _services_, not by slot counts; the scheduler never runs a stage whose
+   predecessor set is incomplete. Slots only bound _how many_ ready jobs run
    at once.
 4. **Within a run, ready-before-pending.** Among the jobs of one
    `processing_jobs` run, reduce/publish stages that became ready are dequeued
@@ -133,19 +133,19 @@ Class rules:
 
 ### 1.2 Invariant CAP1: capture never waits on scheduling (G1)
 
-Exact wording (plan lines 248–249): *"Audioaufnahme darf niemals auf STT
-warten"*; plan line 1063: *"Aufnahme-Threads warten niemals auf Inferenz"*;
+Exact wording (plan lines 248–249): _"Audioaufnahme darf niemals auf STT
+warten"_; plan line 1063: _"Aufnahme-Threads warten niemals auf Inferenz"_;
 task gate: capture must never block **on scheduling** either.
 
 **Proof structure** (same shape as COEX-§3.6; each row names the objects the
 path touches):
 
-| Path | Objects touched | Blocking primitives on path |
-| --- | --- | --- |
-| Device callback → recorder writer → rolling WAV chunks | recorder-internal channels, disk writer (recorder-contract §1) | none on the callback (bounded channel send) |
-| Chunk finalization → VAD segmentation worker | chunk rows (RC/DC contracts), CPU-bound VAD off the callback | none shared with the scheduler |
-| Segment/package enqueue (`enqueue_stt_job`) | ONE short SQLite INSERT transaction (job row, family per §0.2) + condvar notify | SQLite write lock only — bounded by a single small transaction, and already on the persistence path those contracts mandate; **never** a lease acquire, never a slot wait, never a lock also held across provider I/O |
-| Summary/import enqueue (`enqueue_processing_job`) | ONE short SQLite INSERT (+`UNIQUE(idempotency_key)` guard) + notify | same as above |
+| Path                                                   | Objects touched                                                                 | Blocking primitives on path                                                                                                                                                                                           |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Device callback → recorder writer → rolling WAV chunks | recorder-internal channels, disk writer (recorder-contract §1)                  | none on the callback (bounded channel send)                                                                                                                                                                           |
+| Chunk finalization → VAD segmentation worker           | chunk rows (RC/DC contracts), CPU-bound VAD off the callback                    | none shared with the scheduler                                                                                                                                                                                        |
+| Segment/package enqueue (`enqueue_stt_job`)            | ONE short SQLite INSERT transaction (job row, family per §0.2) + condvar notify | SQLite write lock only — bounded by a single small transaction, and already on the persistence path those contracts mandate; **never** a lease acquire, never a slot wait, never a lock also held across provider I/O |
+| Summary/import enqueue (`enqueue_processing_job`)      | ONE short SQLite INSERT (+`UNIQUE(idempotency_key)` guard) + notify             | same as above                                                                                                                                                                                                         |
 
 Three structural facts make the invariant hold:
 
@@ -260,7 +260,7 @@ Background class, honor `BgPauseRequested` only at safe segment boundaries
 unavailability as "remain queued": for class L1 the store claim (§2.4) is only
 executed once the engine lease can actually be granted, so a local job waiting
 for the engine never carries the `running` mark. No
-scheduler timer ever aborts a local job for *waiting*.
+scheduler timer ever aborts a local job for _waiting_.
 
 ### 3.2 C1/S1 — slot leases
 
@@ -317,11 +317,11 @@ Exactly three, all converging on one scheduler API
 Tauri commands (the frontend never touches job rows directly — SSC-§1.1
 pattern):
 
-| Scope | Meaning |
-| --- | --- |
-| `Meeting(meeting_id)` | cancel all non-terminal jobs of one meeting (plan line 940: „Der Nutzer kann die Verarbeitung abbrechen…"); audio is **not** deleted |
-| `Job(job_id)` | cancel one job („Fehlerhafte Abschnitte erneut versuchen"-Flows, per-segment abort) |
-| `Run(run_id)` | cancel one `processing_jobs` run incl. its unfinished `ai_pipeline_stages` (SEC-§1.3); published artifacts of already-succeeded stages remain |
+| Scope                 | Meaning                                                                                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Meeting(meeting_id)` | cancel all non-terminal jobs of one meeting (plan line 940: „Der Nutzer kann die Verarbeitung abbrechen…"); audio is **not** deleted          |
+| `Job(job_id)`         | cancel one job („Fehlerhafte Abschnitte erneut versuchen"-Flows, per-segment abort)                                                           |
+| `Run(run_id)`         | cancel one `processing_jobs` run incl. its unfinished `ai_pipeline_stages` (SEC-§1.3); published artifacts of already-succeeded stages remain |
 
 ### 4.2 Semantics per job state
 
@@ -329,13 +329,13 @@ Cancel intent is written transactionally (state flip guarded by a
 `WHERE state = :expected` predicate), so concurrent cancel requests produce
 **exactly one** flip; losers observe the already-cancelled row.
 
-| Current state | Effect of cancel |
-| --- | --- |
-| `queued` | flip to `cancelled` immediately; nothing to release; `next_attempt_at` cleared |
-| `retry_wait` | flip to `cancelled` immediately; backoff timer discarded |
-| **leased** (claimed in §2.4 sense, worker not yet past its first checkpoint) | cancel intent recorded; worker observes the token at its start checkpoint and exits without invoking provider/service ⇒ flip to `cancelled`. If the worker misses the checkpoint (race), the running rules below apply — the outcome is `cancelled` either way |
-| **running** (provider/service call in flight) | cooperative cancellation: the in-flight call is aborted best-effort (drop of the HTTP future / engine call finishes at the next safe boundary for local inference, mirroring COEX-§3.4's never-interrupt rule), partial results are **discarded** — inserts are atomic per STT-§3.3 rule 2 / SEC-§1.1 rule 4, so no partial state can exist — then flip to `cancelled` |
-| `succeeded` / `failed` / `cancelled` | **no-op**: returns `Ok(current_state)`; success is never undone by a late cancel |
+| Current state                                                                | Effect of cancel                                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `queued`                                                                     | flip to `cancelled` immediately; nothing to release; `next_attempt_at` cleared                                                                                                                                                                                                                                                                                         |
+| `retry_wait`                                                                 | flip to `cancelled` immediately; backoff timer discarded                                                                                                                                                                                                                                                                                                               |
+| **leased** (claimed in §2.4 sense, worker not yet past its first checkpoint) | cancel intent recorded; worker observes the token at its start checkpoint and exits without invoking provider/service ⇒ flip to `cancelled`. If the worker misses the checkpoint (race), the running rules below apply — the outcome is `cancelled` either way                                                                                                         |
+| **running** (provider/service call in flight)                                | cooperative cancellation: the in-flight call is aborted best-effort (drop of the HTTP future / engine call finishes at the next safe boundary for local inference, mirroring COEX-§3.4's never-interrupt rule), partial results are **discarded** — inserts are atomic per STT-§3.3 rule 2 / SEC-§1.1 rule 4, so no partial state can exist — then flip to `cancelled` |
+| `succeeded` / `failed` / `cancelled`                                         | **no-op**: returns `Ok(current_state)`; success is never undone by a late cancel                                                                                                                                                                                                                                                                                       |
 
 Bound on take-effect time:
 
@@ -413,11 +413,11 @@ the middle.**
 
 Everything another component could legitimately observe about scheduling:
 
-| Fact | Where | Writer |
-| --- | --- | --- |
-| existence, payload refs, idempotency key | job row at enqueue (UNIQUE guards per STT-§3.3 rule 6 / SEC-§2.1) | store units of work |
-| state, attempt_count, next_attempt_at, last_error, worker/lease marks | job row at every transition (STT-§3 header: „transaktional zusammen mit seinen Nebenwirkungen") | store units of work U4/K10 |
-| stage payloads | `ai_pipeline_stages` (SEC-§1.3) keyed by `job_id` | services inside their publish transactions |
+| Fact                                                                  | Where                                                                                           | Writer                                     |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| existence, payload refs, idempotency key                              | job row at enqueue (UNIQUE guards per STT-§3.3 rule 6 / SEC-§2.1)                               | store units of work                        |
+| state, attempt_count, next_attempt_at, last_error, worker/lease marks | job row at every transition (STT-§3 header: „transaktional zusammen mit seinen Nebenwirkungen") | store units of work U4/K10                 |
+| stage payloads                                                        | `ai_pipeline_stages` (SEC-§1.3) keyed by `job_id`                                               | services inside their publish transactions |
 
 Operational rows are RB tier B: no `change_log` entries for job-state churn
 (RB line 228).
@@ -441,15 +441,15 @@ rows. An event is never the only copy of a scheduling fact.
 
 ## 7. Consistency with sibling contracts (gate G3 support)
 
-| Concern | STT contract | Summary/Evidence contract | This contract |
-| --- | --- | --- | --- |
-| State machine | STT-§3.1/3.2 (authoritative) | SEC-§1.4 applies STT-§3 verbatim | consumed unchanged; scheduler adds no states, no transitions |
-| Idempotency keys | STT-§3.3 (formation + UNIQUE guards) | SEC-§2 (run/stage derivations, `UNIQUE(idempotency_key)` on `processing_jobs`) | enforced at enqueue via the store; late-result absorption §3.2 |
-| Retry/backoff values | STT-§3.5 (parameter tables) | inherited via SEC-§1.4 | scheduler computes/persists timers only |
-| Error classification | STT-§6 (criteria lists) | same lists for LLM endpoints | scheduler consumes categories, never classifies itself |
-| Restart resumption | STT-§3.4 | implied verbatim | §3.4 extends to both tables in one startup transaction |
-| Engine lease | STT-§4.1 single-worker rule | n/a | delegated to COEX-§3; L1 ceiling 1 |
-| Persistence seams | STT-§2 (queue persists job fields) | SEC-§1.3/§1.4 | RB units of work U4/U8/K10 are the only writers (RB-§7 choke points) |
+| Concern              | STT contract                         | Summary/Evidence contract                                                      | This contract                                                        |
+| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| State machine        | STT-§3.1/3.2 (authoritative)         | SEC-§1.4 applies STT-§3 verbatim                                               | consumed unchanged; scheduler adds no states, no transitions         |
+| Idempotency keys     | STT-§3.3 (formation + UNIQUE guards) | SEC-§2 (run/stage derivations, `UNIQUE(idempotency_key)` on `processing_jobs`) | enforced at enqueue via the store; late-result absorption §3.2       |
+| Retry/backoff values | STT-§3.5 (parameter tables)          | inherited via SEC-§1.4                                                         | scheduler computes/persists timers only                              |
+| Error classification | STT-§6 (criteria lists)              | same lists for LLM endpoints                                                   | scheduler consumes categories, never classifies itself               |
+| Restart resumption   | STT-§3.4                             | implied verbatim                                                               | §3.4 extends to both tables in one startup transaction               |
+| Engine lease         | STT-§4.1 single-worker rule          | n/a                                                                            | delegated to COEX-§3; L1 ceiling 1                                   |
+| Persistence seams    | STT-§2 (queue persists job fields)   | SEC-§1.3/§1.4                                                                  | RB units of work U4/U8/K10 are the only writers (RB-§7 choke points) |
 
 ---
 
@@ -487,9 +487,9 @@ evidence-backed and preserve simplicity):
 
 ## 9. Gate verification checklist
 
-| Gate | Requirement | Where satisfied |
-| --- | --- | --- |
-| G1 | Concurrency ceilings stated; 'capture never waits on STT' proven under the scheduler, consistent with coexistence-contract.md | §1.1 (class table: L1=1, C1=2, S1=2), §1.2 (CAP1 proof table + test obligations, extending COEX-§3.6) |
-| G2 | Cancellation semantics for queued, leased, and running states with idempotent cancel results | §4.2 (per-state table incl. leased), §4.3 (idempotency rules 1–4), §4.4 (downstream effects) |
-| G3 | Explicit non-goals; consistent with stt-provider-contract.md job state machine and summary-evidence-contract.md idempotency keys | §8 (non-goals/complexity budget), §7 (consistency matrix), §0.2 (P1 reconciliation) |
-| G4 | Documentation index updated | Row added to `docs/meeting-mode-documentation-index.md` §3 (done in this task) |
+| Gate | Requirement                                                                                                                      | Where satisfied                                                                                       |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| G1   | Concurrency ceilings stated; 'capture never waits on STT' proven under the scheduler, consistent with coexistence-contract.md    | §1.1 (class table: L1=1, C1=2, S1=2), §1.2 (CAP1 proof table + test obligations, extending COEX-§3.6) |
+| G2   | Cancellation semantics for queued, leased, and running states with idempotent cancel results                                     | §4.2 (per-state table incl. leased), §4.3 (idempotency rules 1–4), §4.4 (downstream effects)          |
+| G3   | Explicit non-goals; consistent with stt-provider-contract.md job state machine and summary-evidence-contract.md idempotency keys | §8 (non-goals/complexity budget), §7 (consistency matrix), §0.2 (P1 reconciliation)                   |
+| G4   | Documentation index updated                                                                                                      | Row added to `docs/meeting-mode-documentation-index.md` §3 (done in this task)                        |

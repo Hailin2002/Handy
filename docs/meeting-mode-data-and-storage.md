@@ -7,14 +7,14 @@ Author working base: HEAD of this worktree, verified clean via
 
 Sources (all citations refer to [`meeting-mode-plan.md`](meeting-mode-plan.md)):
 
-| Source | Range | Content |
-| --- | --- | --- |
-| Plan §5 "Zielarchitektur" | `meeting-mode-plan.md:185-338` | Layered architecture, backend components incl. `MeetingStore`, `KnowledgeStore`, `AssetStore` |
-| Plan §9 "Datenmodell" | `meeting-mode-plan.md:1143-1332` | Full SQLite table model, identity conventions, `change_log`, FTS5 |
-| Plan §12 "Speicher- und Datenschutzlogik" | `meeting-mode-plan.md:1436-1477` | Retention, disk budget, import safety, audit trail |
-| Supporting: Plan §4 | `meeting-mode-plan.md:166-170` | Verified current state: `history.db` under portable-resolved app-data dir |
-| Supporting: Plan §7 "Persistenzformat" | `meeting-mode-plan.md:1002-1031` | On-disk session directory layout, atomic chunk finalization |
-| Supporting: Plan §13 Phase 3 | `meeting-mode-plan.md:1536-1558` | Delivery phase that introduces all of the above |
+| Source                                    | Range                            | Content                                                                                       |
+| ----------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------- |
+| Plan §5 "Zielarchitektur"                 | `meeting-mode-plan.md:185-338`   | Layered architecture, backend components incl. `MeetingStore`, `KnowledgeStore`, `AssetStore` |
+| Plan §9 "Datenmodell"                     | `meeting-mode-plan.md:1143-1332` | Full SQLite table model, identity conventions, `change_log`, FTS5                             |
+| Plan §12 "Speicher- und Datenschutzlogik" | `meeting-mode-plan.md:1436-1477` | Retention, disk budget, import safety, audit trail                                            |
+| Supporting: Plan §4                       | `meeting-mode-plan.md:166-170`   | Verified current state: `history.db` under portable-resolved app-data dir                     |
+| Supporting: Plan §7 "Persistenzformat"    | `meeting-mode-plan.md:1002-1031` | On-disk session directory layout, atomic chunk finalization                                   |
+| Supporting: Plan §13 Phase 3              | `meeting-mode-plan.md:1536-1558` | Delivery phase that introduces all of the above                                               |
 
 Related normative detail documents (spec contracts, also not implemented):
 [`meeting-mode-architecture/repository-boundary-contract.md`](meeting-mode-architecture/repository-boundary-contract.md)
@@ -49,27 +49,27 @@ What actually exists in code today is exactly one persistence stack:
 - Settings/secrets persistence outside this doc's scope (tauri-plugin-store,
   `secret_store.rs`).
 
-This matches the plan's own verified baseline: *"HistoryManager speichert bereits
+This matches the plan's own verified baseline: _"HistoryManager speichert bereits
 in `history.db` unter dem von `portable.rs` aufgelösten App-Datenverzeichnis.
 Projekt- und Assetspeicherung muss dieselbe portable-aware Pfadlogik
-verwenden."* (`meeting-mode-plan.md:168-170`) and its assessment that the flat
+verwenden."_ (`meeting-mode-plan.md:168-170`) and its assessment that the flat
 dictation table cannot represent meeting states, audio segments, or retry jobs
 (`meeting-mode-plan.md:166-167`).
 
 Per-component status summary (details per table in §3):
 
-| Piece | Plan citation | Status |
-| --- | --- | --- |
-| `transcription_history` table + migrations | n/a (pre-existing, kept unchanged) | **exists today**: `managers/history.rs:20-34` |
-| `HistoryManager` (dictation path) | kept per `meeting-mode-plan.md:1145` | **exists today**: `managers/history.rs:68-97` |
-| portable.rs app-data-dir logic | `meeting-mode-plan.md:168-170`, `304-306` | **exists today**: `portable.rs:64-90` |
-| Single shared SQLite file, separate migration layers | `meeting-mode-plan.md:1145-1147` | planned, not implemented |
-| `MeetingStore`, `KnowledgeStore`, repositories | `meeting-mode-plan.md:238-243,269-275` | planned, not implemented (`managers/meeting_store.rs`, `managers/knowledge_store.rs` do not exist) |
-| All §9 tables (`meeting_sessions` … `snapshot_evidence`) | `meeting-mode-plan.md:1164-1311` | planned, not implemented |
-| `processing_jobs`, `change_log` | `meeting-mode-plan.md:1313-1325` | planned, not implemented |
-| FTS5 search index | `meeting-mode-plan.md:1327-1332` | planned, not implemented |
-| `AssetStore` (`storage/asset_store.rs`) | `meeting-mode-plan.md:301-308,1547` | planned, not implemented (`src-tauri/src/storage/` does not exist) |
-| `meetings/<id>/` on-disk layout, manifest | `meeting-mode-plan.md:1004-1021` | planned, not implemented |
+| Piece                                                    | Plan citation                             | Status                                                                                             |
+| -------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `transcription_history` table + migrations               | n/a (pre-existing, kept unchanged)        | **exists today**: `managers/history.rs:20-34`                                                      |
+| `HistoryManager` (dictation path)                        | kept per `meeting-mode-plan.md:1145`      | **exists today**: `managers/history.rs:68-97`                                                      |
+| portable.rs app-data-dir logic                           | `meeting-mode-plan.md:168-170`, `304-306` | **exists today**: `portable.rs:64-90`                                                              |
+| Single shared SQLite file, separate migration layers     | `meeting-mode-plan.md:1145-1147`          | planned, not implemented                                                                           |
+| `MeetingStore`, `KnowledgeStore`, repositories           | `meeting-mode-plan.md:238-243,269-275`    | planned, not implemented (`managers/meeting_store.rs`, `managers/knowledge_store.rs` do not exist) |
+| All §9 tables (`meeting_sessions` … `snapshot_evidence`) | `meeting-mode-plan.md:1164-1311`          | planned, not implemented                                                                           |
+| `processing_jobs`, `change_log`                          | `meeting-mode-plan.md:1313-1325`          | planned, not implemented                                                                           |
+| FTS5 search index                                        | `meeting-mode-plan.md:1327-1332`          | planned, not implemented                                                                           |
+| `AssetStore` (`storage/asset_store.rs`)                  | `meeting-mode-plan.md:301-308,1547`       | planned, not implemented (`src-tauri/src/storage/` does not exist)                                 |
+| `meetings/<id>/` on-disk layout, manifest                | `meeting-mode-plan.md:1004-1021`          | planned, not implemented                                                                           |
 
 ---
 
@@ -225,6 +225,7 @@ explicitly **not** pulled forward while full-text search meets real demand.
 ---
 
 ## 4. Sync-ready identity conventions (plan §9 preamble,
+
 `meeting-mode-plan.md:1149-1162`)
 
 Applies to every synchronizable core record (projects, sources, source items,
@@ -232,7 +233,7 @@ tasks, snapshots, summaries, jobs) already in v1:
 
 1. **Stable UUIDs** — IDs never depend on SQLite AUTOINCREMENT. (Contrast with
    the existing `transcription_history`, whose `id INTEGER PRIMARY KEY
-   AUTOINCREMENT` at `history.rs:23` is fine for the dictation path precisely
+AUTOINCREMENT` at `history.rs:23` is fine for the dictation path precisely
    because that table stays out of scope.)
 2. **Timestamps + tombstones + revisions** — `created_at`, `updated_at`,
    optional `deleted_at` tombstone marker, and a **monotone `revision`** on
@@ -254,6 +255,7 @@ v1 (also `meeting-mode-plan.md:1557-1558`).
 ---
 
 ## 5. AssetStore layout (plan §5 `meeting-mode-plan.md:301-308`,
+
 §7 `1002-1031`, §9 `1268-1275`, Phase 3 `1547`)
 
 Planned home: `src-tauri/src/storage/asset_store.rs`. **Not implemented.**
@@ -376,7 +378,7 @@ or `storage/` module under `src-tauri/src/`; a repo-wide grep for `M::up`,
 `Migrations::new`, and `CREATE TABLE` finds SQLite schema definitions only in
 `history.rs`, whose migrations at `history.rs:20-34` define only
 `transcription_history`; `managers/model/migrations.rs` migrates bundled model
-*files*, not SQLite schemas). Nothing in this document is a contract of
+_files_, not SQLite schemas). Nothing in this document is a contract of
 implemented behavior;
 it consolidates target design from plan §5, §9, and §12 so implementers have a
 single entry point. When Phase 3 lands, re-verify every "exists today" claim in

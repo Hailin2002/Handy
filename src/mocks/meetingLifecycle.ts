@@ -133,7 +133,11 @@ const transition = (
 ) => {
   const from = lifecycle.state;
   const now = Date.now();
-  if (from === "recording" && to !== "recording" && lifecycle.startedAt !== null) {
+  if (
+    from === "recording" &&
+    to !== "recording" &&
+    lifecycle.startedAt !== null
+  ) {
     lifecycle.elapsedBaseMs += Math.max(0, now - lifecycle.startedAt);
     lifecycle.startedAt = null;
   }
@@ -167,12 +171,13 @@ const later = (
   delay: number,
   run: () => void,
 ) => {
-  lifecycle.timers.push(
-    setTimeout(run, delay) as unknown as number,
-  );
+  lifecycle.timers.push(setTimeout(run, delay) as unknown as number);
 };
 
-const startLevels = (backend: MockBackend, lifecycle: MeetingLifecycleState) => {
+const startLevels = (
+  backend: MockBackend,
+  lifecycle: MeetingLifecycleState,
+) => {
   if (lifecycle.levelTimer !== null) return;
   let phase = 0;
   lifecycle.levelTimer = setInterval(() => {
@@ -203,7 +208,10 @@ const stopLevels = (lifecycle: MeetingLifecycleState) => {
   lifecycle.levelTimer = null;
 };
 
-const emitSegment = (backend: MockBackend, lifecycle: MeetingLifecycleState) => {
+const emitSegment = (
+  backend: MockBackend,
+  lifecycle: MeetingLifecycleState,
+) => {
   const index = lifecycle.segments;
   if (index >= SEGMENT_TEXTS.length) return;
   lifecycle.segments += 1;

@@ -31,25 +31,25 @@ explanation shown). It owns no UI, no parsing of chat semantics, and no cloud up
 
 Inputs covered:
 
-| Input | Examples | Rules |
-| --- | --- | --- |
-| WhatsApp "Export chat" ZIP archives | `_chat.txt`, `Media/*.jpg`, `.opus`, stickers, nested archives | §3–§7 |
-| Plain-text WhatsApp exports | single `.txt` export without media | §8 |
-| Any other user-chosen file routed through the meeting import | future sources (plan: "alle importierten Dateien") | §3–§7 apply to containers; §8 applies to bare text |
+| Input                                                        | Examples                                                       | Rules                                              |
+| ------------------------------------------------------------ | -------------------------------------------------------------- | -------------------------------------------------- |
+| WhatsApp "Export chat" ZIP archives                          | `_chat.txt`, `Media/*.jpg`, `.opus`, stickers, nested archives | §3–§7                                              |
+| Plain-text WhatsApp exports                                  | single `.txt` export without media                             | §8                                                 |
+| Any other user-chosen file routed through the meeting import | future sources (plan: "alle importierten Dateien")             | §3–§7 apply to containers; §8 applies to bare text |
 
 ### 1.2 Threat model
 
 The attacker controls every byte of the import file, including metadata (entry names,
 flags, Unix mode bits, declared sizes). Attacker goals and where they die:
 
-| Goal | Attack class | Killed by |
-| --- | --- | --- |
-| Write outside staging/app-data | zip-slip `../`, drive letters, UNC, absolute paths | §4 R-PATH-* |
-| Plant links that later resolve elsewhere | symlink / special-file members | §4 R-MODE-* |
-| Exhaust disk / RAM / CPU | zip bombs (ratio bombs, declared-size lies, entry floods) | §5 R-LIMIT-* |
-| Bypass limits via recursion | nested archive bombs | §5 R-LIMIT-6 (opaque treatment) + caps |
-| Sneak partial content through | encrypted members, corrupted members mid-stream | §6 R-INTEG-* (full-reject rule) |
-| Feed binary garbage into the text parser | masquerading `.txt`, invalid encodings | §8 |
+| Goal                                     | Attack class                                              | Killed by                              |
+| ---------------------------------------- | --------------------------------------------------------- | -------------------------------------- |
+| Write outside staging/app-data           | zip-slip `../`, drive letters, UNC, absolute paths        | §4 R-PATH-\*                           |
+| Plant links that later resolve elsewhere | symlink / special-file members                            | §4 R-MODE-\*                           |
+| Exhaust disk / RAM / CPU                 | zip bombs (ratio bombs, declared-size lies, entry floods) | §5 R-LIMIT-\*                          |
+| Bypass limits via recursion              | nested archive bombs                                      | §5 R-LIMIT-6 (opaque treatment) + caps |
+| Sneak partial content through            | encrypted members, corrupted members mid-stream           | §6 R-INTEG-\* (full-reject rule)       |
+| Feed binary garbage into the text parser | masquerading `.txt`, invalid encodings                    | §8                                     |
 
 Out of scope (owned elsewhere, cited for boundary clarity): chat-format parsing
 warnings (parser layer), hash-dedup/idempotent re-import (ingestion service),
@@ -104,15 +104,15 @@ This yields one deterministic verdict per fixture (testability requirement G3).
 All rules below reference these single-source constants; they live in one module so
 tests can import them and the corpus can assert against the exact production values.
 
-| Constant | Value | Rationale |
-| --- | --- | --- |
-| `MAX_ENTRIES` | 10 000 | Largest observed WhatsApp media export stays two orders of magnitude below; anything larger is hostile or pathological. |
-| `MAX_FILE_UNCOMPRESSED` | 256 MiB (268 435 456 B) | WhatsApp media ceiling is ~2 GiB device-dependent but chat-shareable media is far smaller; 256 MiB comfortably covers real video notes. |
-| `MAX_TOTAL_UNCOMPRESSED` | 2 GiB (2 147 483 648 B) | Matches plan §12's own scale estimate (230 MB/h audio); an import may not dwarf a session. |
-| `MAX_COMPRESSION_RATIO` | 200 : 1 | Real chat text ≈ 3–5 : 1, JPEG/MP4 ≈ 1 : 1; 200 : 1 is unreachable for legitimate content. |
-| `RATIO_EXEMPT_BELOW` | 4 096 B compressed | Tiny entries (e.g., 30 B → 3 KB of zeros) must not trip the ratio rule; absolute caps still apply to them. |
-| `MAX_NAME_BYTES` | 1 024 | Full member name, UTF-8 bytes, after decoding. |
-| `MAX_COMPONENT_BYTES` | 255 | Per path component (matches NTFS/ext/APF minimum common denominator). |
+| Constant                 | Value                   | Rationale                                                                                                                               |
+| ------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `MAX_ENTRIES`            | 10 000                  | Largest observed WhatsApp media export stays two orders of magnitude below; anything larger is hostile or pathological.                 |
+| `MAX_FILE_UNCOMPRESSED`  | 256 MiB (268 435 456 B) | WhatsApp media ceiling is ~2 GiB device-dependent but chat-shareable media is far smaller; 256 MiB comfortably covers real video notes. |
+| `MAX_TOTAL_UNCOMPRESSED` | 2 GiB (2 147 483 648 B) | Matches plan §12's own scale estimate (230 MB/h audio); an import may not dwarf a session.                                              |
+| `MAX_COMPRESSION_RATIO`  | 200 : 1                 | Real chat text ≈ 3–5 : 1, JPEG/MP4 ≈ 1 : 1; 200 : 1 is unreachable for legitimate content.                                              |
+| `RATIO_EXEMPT_BELOW`     | 4 096 B compressed      | Tiny entries (e.g., 30 B → 3 KB of zeros) must not trip the ratio rule; absolute caps still apply to them.                              |
+| `MAX_NAME_BYTES`         | 1 024                   | Full member name, UTF-8 bytes, after decoding.                                                                                          |
+| `MAX_COMPONENT_BYTES`    | 255                     | Per path component (matches NTFS/ext/APF minimum common denominator).                                                                   |
 
 Streaming counters (Phase C) enforce the same three size caps **incrementally**: the
 validator aborts at the first byte that would exceed a cap — it never buffers a bomb
@@ -132,16 +132,16 @@ pose as a flat name. NUL bytes and other C0 control characters (< 0x20) in the n
 
 ### 4.2 Component rules (applied to the `/`-split components)
 
-| Rule | Condition (after splitting on `/`, dropping empty leading results of split mechanics) | Verdict |
-| --- | --- | --- |
-| R-PATH-1 | any component equals `..` | REJECT `E_TRAVERSAL` |
-| R-PATH-2 | any component equals `.` | component dropped (normalization); if the remaining name is empty ⇒ REJECT `E_TRAVERSAL` |
-| R-PATH-3 | name starts with `/` (i.e., first split component was empty) | REJECT `E_ABSOLUTE_PATH` |
-| R-PATH-4 | any component contains a `:` — this covers drive-letter prefixes (`^[A-Za-z]:`, i.e. `C:\…` and drive-relative `C:evil`) and NTFS alternate-data-stream syntax (`file.txt:stream`) | REJECT `E_ABSOLUTE_PATH` |
-| R-PATH-5 | name starts with `//` (UNC) | REJECT `E_ABSOLUTE_PATH` |
-| R-PATH-6 | any component is a Windows reserved device name case-insensitively (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`), optionally with an extension (`COM1.txt` counts) | REJECT `E_RESERVED_NAME` |
-| R-PATH-7 | any component ends with `.` or space (NTFS strips them → redirection hazard), except the bare `.` of R-PATH-2 | REJECT `E_RESERVED_NAME` |
-| R-PATH-8 | name longer than `MAX_NAME_BYTES` or any component longer than `MAX_COMPONENT_BYTES` | REJECT `E_INVALID_NAME` |
+| Rule     | Condition (after splitting on `/`, dropping empty leading results of split mechanics)                                                                                              | Verdict                                                                                  |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| R-PATH-1 | any component equals `..`                                                                                                                                                          | REJECT `E_TRAVERSAL`                                                                     |
+| R-PATH-2 | any component equals `.`                                                                                                                                                           | component dropped (normalization); if the remaining name is empty ⇒ REJECT `E_TRAVERSAL` |
+| R-PATH-3 | name starts with `/` (i.e., first split component was empty)                                                                                                                       | REJECT `E_ABSOLUTE_PATH`                                                                 |
+| R-PATH-4 | any component contains a `:` — this covers drive-letter prefixes (`^[A-Za-z]:`, i.e. `C:\…` and drive-relative `C:evil`) and NTFS alternate-data-stream syntax (`file.txt:stream`) | REJECT `E_ABSOLUTE_PATH`                                                                 |
+| R-PATH-5 | name starts with `//` (UNC)                                                                                                                                                        | REJECT `E_ABSOLUTE_PATH`                                                                 |
+| R-PATH-6 | any component is a Windows reserved device name case-insensitively (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`), optionally with an extension (`COM1.txt` counts)    | REJECT `E_RESERVED_NAME`                                                                 |
+| R-PATH-7 | any component ends with `.` or space (NTFS strips them → redirection hazard), except the bare `.` of R-PATH-2                                                                      | REJECT `E_RESERVED_NAME`                                                                 |
+| R-PATH-8 | name longer than `MAX_NAME_BYTES` or any component longer than `MAX_COMPONENT_BYTES`                                                                                               | REJECT `E_INVALID_NAME`                                                                  |
 
 Defense-in-depth note: R-PATH-1 rejects **every** `..` component even when it would
 resolve inside staging. This is deliberate (the plan says traversal "wird abgewiesen",
@@ -172,13 +172,13 @@ attrs, e.g., Windows tools) are regular files by definition; no rejection.
 
 ### 5.1 Metadata-phase checks (Phase B)
 
-| Rule | Condition | Verdict |
-| --- | --- | --- |
-| R-LIMIT-1 | central-directory entry count > `MAX_ENTRIES` | REJECT `E_TOO_MANY_ENTRIES` |
-| R-LIMIT-2 | any entry's declared uncompressed size > `MAX_FILE_UNCOMPRESSED` | REJECT `E_SINGLE_FILE_TOO_LARGE` |
-| R-LIMIT-3 | Σ declared uncompressed sizes > `MAX_TOTAL_UNCOMPRESSED` | REJECT `E_TOTAL_SIZE_EXCEEDED` |
-| R-LIMIT-4 | any entry with `uncompressed / compressed > MAX_COMPRESSION_RATIO`, unless `compressed < RATIO_EXEMPT_BELOW` | REJECT `E_RATIO_BOMB` |
-| R-LIMIT-5 | declared sizes inconsistent with ZIP64 extras where present ⇒ handled as corruption (`E_CORRUPT_METADATA`, §6) | REJECT |
+| Rule      | Condition                                                                                                      | Verdict                          |
+| --------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| R-LIMIT-1 | central-directory entry count > `MAX_ENTRIES`                                                                  | REJECT `E_TOO_MANY_ENTRIES`      |
+| R-LIMIT-2 | any entry's declared uncompressed size > `MAX_FILE_UNCOMPRESSED`                                               | REJECT `E_SINGLE_FILE_TOO_LARGE` |
+| R-LIMIT-3 | Σ declared uncompressed sizes > `MAX_TOTAL_UNCOMPRESSED`                                                       | REJECT `E_TOTAL_SIZE_EXCEEDED`   |
+| R-LIMIT-4 | any entry with `uncompressed / compressed > MAX_COMPRESSION_RATIO`, unless `compressed < RATIO_EXEMPT_BELOW`   | REJECT `E_RATIO_BOMB`            |
+| R-LIMIT-5 | declared sizes inconsistent with ZIP64 extras where present ⇒ handled as corruption (`E_CORRUPT_METADATA`, §6) | REJECT                           |
 
 Declared-size checks fire **before** any decompression — a bomb is refused from its
 central directory alone, costing O(entries) work, not O(output).
@@ -209,15 +209,15 @@ must independently satisfy R-LIMIT-1–4 or it is rejected anyway. Fixture
 
 ### 6.1 Detection rules
 
-| Rule | Condition | Verdict |
-| --- | --- | --- |
-| R-INTEG-1 | EOCD record missing/unparseable (truncation, junk suffix beyond tolerance of 64 KiB comment) | REJECT `E_CORRUPT_CONTAINER` |
-| R-INTEG-2 | central-directory unreadable: bad signatures, offsets outside file, truncated directory | REJECT `E_CORRUPT_CONTAINER` |
-| R-INTEG-3 | any member carries general-purpose bit 0 set (encrypted), regardless of method | REJECT `E_ENCRYPTED` |
-| R-INTEG-4 | local header disagrees with central directory (name bytes, method, sizes, CRC) when reached in Phase C | REJECT `E_HEADER_MISMATCH` |
-| R-INTEG-5 | CRC-32 of decompressed content ≠ declared CRC | REJECT `E_CRC_MISMATCH` |
-| R-INTEG-6 | stream ends before declared size (premature EOF) | REJECT `E_TRUNCATED` |
-| R-INTEG-7 | strict-UTF-8 decode failure of a flagged name, unparseable ZIP64 extra | REJECT `E_CORRUPT_METADATA` |
+| Rule      | Condition                                                                                              | Verdict                      |
+| --------- | ------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| R-INTEG-1 | EOCD record missing/unparseable (truncation, junk suffix beyond tolerance of 64 KiB comment)           | REJECT `E_CORRUPT_CONTAINER` |
+| R-INTEG-2 | central-directory unreadable: bad signatures, offsets outside file, truncated directory                | REJECT `E_CORRUPT_CONTAINER` |
+| R-INTEG-3 | any member carries general-purpose bit 0 set (encrypted), regardless of method                         | REJECT `E_ENCRYPTED`         |
+| R-INTEG-4 | local header disagrees with central directory (name bytes, method, sizes, CRC) when reached in Phase C | REJECT `E_HEADER_MISMATCH`   |
+| R-INTEG-5 | CRC-32 of decompressed content ≠ declared CRC                                                          | REJECT `E_CRC_MISMATCH`      |
+| R-INTEG-6 | stream ends before declared size (premature EOF)                                                       | REJECT `E_TRUNCATED`         |
+| R-INTEG-7 | strict-UTF-8 decode failure of a flagged name, unparseable ZIP64 extra                                 | REJECT `E_CORRUPT_METADATA`  |
 
 ### 6.2 Full-reject rule (no partial import)
 
@@ -241,32 +241,30 @@ Every REJECT produces a structured report consumed by the UI:
 {
   "decision": "reject",
   "primary_code": "E_TRAVERSAL",
-  "violations": [
-    {"code": "E_TRAVERSAL", "member": "../evil.txt"}
-  ],
-  "stats": {"entries_scanned": 42, "bytes_declared": 1832944}
+  "violations": [{ "code": "E_TRAVERSAL", "member": "../evil.txt" }],
+  "stats": { "entries_scanned": 42, "bytes_declared": 1832944 }
 }
 ```
 
 Each code maps 1:1 to an i18n key (frontend renders localized copy; the backend never
 hardcodes user-facing strings):
 
-| Code | i18n key | EN copy sketch |
-| --- | --- | --- |
-| E_TRAVERSAL | `meeting.import.error.eTraversal` | "An archive entry tries to escape the import folder ('{{member}}')." |
-| E_ABSOLUTE_PATH | `meeting.import.error.eAbsolutePath` | "An archive entry uses an absolute path ('{{member}}')." |
-| E_SYMLINK | `meeting.import.error.eSymlink` | "The archive contains a symbolic link ('{{member}}'), which imports do not follow." |
-| E_SPECIAL_MEMBER | `meeting.import.error.eSpecialMember` | "The archive contains a special file ('{{member}}'), not a regular file." |
-| E_RESERVED_NAME | `meeting.import.error.eReservedName` | "'{{member}}' uses a name that Windows reserves." |
-| E_INVALID_NAME | `meeting.import.error.eInvalidName` | "An archive entry has an unusable name." |
-| E_TOO_MANY_ENTRIES | `…eTooManyEntries` | "The archive holds more than {{limit}} items." |
-| E_SINGLE_FILE_TOO_LARGE | `…eSingleFileTooLarge` | "'{{member}}' unpacks to more than {{limit}}." |
-| E_TOTAL_SIZE_EXCEEDED | `…eTotalSizeExceeded` | "The archive unpacks to more than {{limit}} in total." |
-| E_RATIO_BOMB | `…eRatioBomb` | "The archive expands more than {{ratio}}× its size — likely a decompression bomb." |
-| E_ENCRYPTED | `…eEncrypted` | "The archive is password-protected. WhatsApp exports never are — please re-export." |
-| E_CORRUPT_CONTAINER / _METADATA | `…eCorruptArchive` | "The archive is damaged and cannot be read completely." |
-| E_HEADER_MISMATCH / E_CRC_MISMATCH / E_TRUNCATED / E_SIZE_MISMATCH | `…eCorruptArchive` (shared detail line per code) | "Contents failed verification." |
-| E_EMPTY / E_NOT_TEXT / E_TEXT_DECODING (§8) | `…eEmptyFile` / `…eNotText` / `…eTextDecoding` | text-specific equivalents |
+| Code                                                               | i18n key                                         | EN copy sketch                                                                      |
+| ------------------------------------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| E_TRAVERSAL                                                        | `meeting.import.error.eTraversal`                | "An archive entry tries to escape the import folder ('{{member}}')."                |
+| E_ABSOLUTE_PATH                                                    | `meeting.import.error.eAbsolutePath`             | "An archive entry uses an absolute path ('{{member}}')."                            |
+| E_SYMLINK                                                          | `meeting.import.error.eSymlink`                  | "The archive contains a symbolic link ('{{member}}'), which imports do not follow." |
+| E_SPECIAL_MEMBER                                                   | `meeting.import.error.eSpecialMember`            | "The archive contains a special file ('{{member}}'), not a regular file."           |
+| E_RESERVED_NAME                                                    | `meeting.import.error.eReservedName`             | "'{{member}}' uses a name that Windows reserves."                                   |
+| E_INVALID_NAME                                                     | `meeting.import.error.eInvalidName`              | "An archive entry has an unusable name."                                            |
+| E_TOO_MANY_ENTRIES                                                 | `…eTooManyEntries`                               | "The archive holds more than {{limit}} items."                                      |
+| E_SINGLE_FILE_TOO_LARGE                                            | `…eSingleFileTooLarge`                           | "'{{member}}' unpacks to more than {{limit}}."                                      |
+| E_TOTAL_SIZE_EXCEEDED                                              | `…eTotalSizeExceeded`                            | "The archive unpacks to more than {{limit}} in total."                              |
+| E_RATIO_BOMB                                                       | `…eRatioBomb`                                    | "The archive expands more than {{ratio}}× its size — likely a decompression bomb."  |
+| E_ENCRYPTED                                                        | `…eEncrypted`                                    | "The archive is password-protected. WhatsApp exports never are — please re-export." |
+| E_CORRUPT_CONTAINER / \_METADATA                                   | `…eCorruptArchive`                               | "The archive is damaged and cannot be read completely."                             |
+| E_HEADER_MISMATCH / E_CRC_MISMATCH / E_TRUNCATED / E_SIZE_MISMATCH | `…eCorruptArchive` (shared detail line per code) | "Contents failed verification."                                                     |
+| E_EMPTY / E_NOT_TEXT / E_TEXT_DECODING (§8)                        | `…eEmptyFile` / `…eNotText` / `…eTextDecoding`   | text-specific equivalents                                                           |
 
 ## 7. Isolated staging and AssetStore handoff (plan lines 1467–68)
 
@@ -313,16 +311,16 @@ not trust decisions.
 ## 8. Bare-text (.txt) export rules (ZIP/TXT parity)
 
 Applies to a user-chosen `.txt` WhatsApp export. The `_chat.txt` extracted from an
-archive is *not* subject to this section (archive rules cover it; parsing happens
+archive is _not_ subject to this section (archive rules cover it; parsing happens
 downstream).
 
-| Rule | Condition | Verdict |
-| --- | --- | --- |
-| R-TXT-1 | file size > `MAX_FILE_UNCOMPRESSED` | REJECT `E_SINGLE_FILE_TOO_LARGE` |
-| R-TXT-2 | 0 bytes | REJECT `E_EMPTY` |
-| R-TXT-3 | first 4 KiB contains a NUL byte **(files with a UTF-16 BOM are exempt — that encoding legitimately interleaves zero bytes; they proceed to R-TXT-4)**, or the file begins with a known binary magic (`PK\x03\x04`, `%PDF`, `\x89PNG`, `\xFF\xD8`, `MThd`, `RIFF`, `OggS`, `\x1f\x8b`) | REJECT `E_NOT_TEXT` |
-| R-TXT-4 | BOM present (UTF-8 / UTF-16LE / UTF-16BE) → decode accordingly; else strict UTF-8 | decode failure ⇒ REJECT `E_TEXT_DECODING`; no lossy fallback (mojibake silently corrupts evidence timestamps) |
-| R-TXT-5 | decoded text with zero parsable message lines | ACCEPT with warning `unparsable_lines=all` (preview shows the warning; import remains local and searchable per plan line 1689) |
+| Rule    | Condition                                                                                                                                                                                                                                                                             | Verdict                                                                                                                        |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| R-TXT-1 | file size > `MAX_FILE_UNCOMPRESSED`                                                                                                                                                                                                                                                   | REJECT `E_SINGLE_FILE_TOO_LARGE`                                                                                               |
+| R-TXT-2 | 0 bytes                                                                                                                                                                                                                                                                               | REJECT `E_EMPTY`                                                                                                               |
+| R-TXT-3 | first 4 KiB contains a NUL byte **(files with a UTF-16 BOM are exempt — that encoding legitimately interleaves zero bytes; they proceed to R-TXT-4)**, or the file begins with a known binary magic (`PK\x03\x04`, `%PDF`, `\x89PNG`, `\xFF\xD8`, `MThd`, `RIFF`, `OggS`, `\x1f\x8b`) | REJECT `E_NOT_TEXT`                                                                                                            |
+| R-TXT-4 | BOM present (UTF-8 / UTF-16LE / UTF-16BE) → decode accordingly; else strict UTF-8                                                                                                                                                                                                     | decode failure ⇒ REJECT `E_TEXT_DECODING`; no lossy fallback (mojibake silently corrupts evidence timestamps)                  |
+| R-TXT-5 | decoded text with zero parsable message lines                                                                                                                                                                                                                                         | ACCEPT with warning `unparsable_lines=all` (preview shows the warning; import remains local and searchable per plan line 1689) |
 
 ## 9. Adversarial fixture corpus (implements G2/G3)
 
@@ -337,17 +335,17 @@ encrypted fixture is genuinely well-formed encryption (not just a flipped flag).
 
 Attack-class coverage matrix:
 
-| Class (gate G2 wording) | Fixtures (expected verdict) |
-| --- | --- |
-| Traversal | `attack_traversal_basic.zip` → E_TRAVERSAL · `attack_traversal_deep_mixed.zip` → E_TRAVERSAL · `attack_traversal_backslash.zip` → E_TRAVERSAL |
-| Absolute path | `attack_absolute_unix.zip`, `attack_absolute_windows.zip`, `attack_absolute_unc.zip` → E_ABSOLUTE_PATH · `attack_ads_colon.zip` (`notes.txt:hidden`, NTFS ADS) → E_ABSOLUTE_PATH |
-| Symlink | `attack_symlink_escape.zip` (target escapes), `attack_symlink_internal.zip` (benign target) → both E_SYMLINK · `attack_special_member.zip` → E_SPECIAL_MEMBER |
-| Bomb ratio | `attack_ratio_entry.zip` → E_RATIO_BOMB · `attack_single_file_oversize.zip` → E_SINGLE_FILE_TOO_LARGE · `attack_total_size.zip` → E_TOTAL_SIZE_EXCEEDED · `attack_too_many_entries.zip` → E_TOO_MANY_ENTRIES · `benign_nested_archive_opaque.zip` → ACCEPT (opaque, R-LIMIT-6) |
-| Encrypted | `attack_encrypted_zipcrypto.zip`, `attack_encrypted_partial.zip` → E_ENCRYPTED (partial one proves R-FULLREJECT) |
-| Corrupt | `corrupt_truncated_eocd.zip` → E_CORRUPT_CONTAINER · `corrupt_central_directory.zip` → E_CORRUPT_CONTAINER · `corrupt_crc_stored.zip` → E_CRC_MISMATCH · `corrupt_local_header.zip` → E_HEADER_MISMATCH |
-| Benign accept-path | `benign_minimal.zip`, `benign_media.zip`, `benign_unicode_utf8.zip`, `benign_cp437_legacy.zip`, `benign_dotfile.zip` → ACCEPT |
-| Reserved/invalid names | `attack_reserved_name.zip` → E_RESERVED_NAME |
-| Text rules | `benign_chat_utf8_bom.txt`, `benign_chat_utf16le.txt` → ACCEPT · `benign_chat_no_timestamps.txt` → ACCEPT+warning · `attack_txt_empty.txt` → E_EMPTY · `attack_txt_binary_masquerade.txt` → E_NOT_TEXT · `attack_txt_invalid_utf8.txt` → E_TEXT_DECODING |
+| Class (gate G2 wording) | Fixtures (expected verdict)                                                                                                                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Traversal               | `attack_traversal_basic.zip` → E_TRAVERSAL · `attack_traversal_deep_mixed.zip` → E_TRAVERSAL · `attack_traversal_backslash.zip` → E_TRAVERSAL                                                                                                                                  |
+| Absolute path           | `attack_absolute_unix.zip`, `attack_absolute_windows.zip`, `attack_absolute_unc.zip` → E_ABSOLUTE_PATH · `attack_ads_colon.zip` (`notes.txt:hidden`, NTFS ADS) → E_ABSOLUTE_PATH                                                                                               |
+| Symlink                 | `attack_symlink_escape.zip` (target escapes), `attack_symlink_internal.zip` (benign target) → both E_SYMLINK · `attack_special_member.zip` → E_SPECIAL_MEMBER                                                                                                                  |
+| Bomb ratio              | `attack_ratio_entry.zip` → E_RATIO_BOMB · `attack_single_file_oversize.zip` → E_SINGLE_FILE_TOO_LARGE · `attack_total_size.zip` → E_TOTAL_SIZE_EXCEEDED · `attack_too_many_entries.zip` → E_TOO_MANY_ENTRIES · `benign_nested_archive_opaque.zip` → ACCEPT (opaque, R-LIMIT-6) |
+| Encrypted               | `attack_encrypted_zipcrypto.zip`, `attack_encrypted_partial.zip` → E_ENCRYPTED (partial one proves R-FULLREJECT)                                                                                                                                                               |
+| Corrupt                 | `corrupt_truncated_eocd.zip` → E_CORRUPT_CONTAINER · `corrupt_central_directory.zip` → E_CORRUPT_CONTAINER · `corrupt_crc_stored.zip` → E_CRC_MISMATCH · `corrupt_local_header.zip` → E_HEADER_MISMATCH                                                                        |
+| Benign accept-path      | `benign_minimal.zip`, `benign_media.zip`, `benign_unicode_utf8.zip`, `benign_cp437_legacy.zip`, `benign_dotfile.zip` → ACCEPT                                                                                                                                                  |
+| Reserved/invalid names  | `attack_reserved_name.zip` → E_RESERVED_NAME                                                                                                                                                                                                                                   |
+| Text rules              | `benign_chat_utf8_bom.txt`, `benign_chat_utf16le.txt` → ACCEPT · `benign_chat_no_timestamps.txt` → ACCEPT+warning · `attack_txt_empty.txt` → E_EMPTY · `attack_txt_binary_masquerade.txt` → E_NOT_TEXT · `attack_txt_invalid_utf8.txt` → E_TEXT_DECODING                       |
 
 Exact numeric expectations (codes, decisions, warnings) live in `manifest.json`;
 that file is the single arbiter for G3. Large fixtures are built at true production
@@ -360,9 +358,9 @@ corpus's continuous acceptance gate.
 
 ## 10. Gate traceability
 
-| Gate | Where proven |
-| --- | --- |
-| G1 — every plan-line 1463–1468 requirement mapped to a concrete testable rule | §4 (line 1464: normalization/traversal/absolute/symlink → R-PATH-*, R-MODE-*), §5 (line 1465: four limits → R-LIMIT-1–4), §6 (lines 1466–67: corrupt/encrypted full-reject → R-INTEG-*, R-FULLREJECT), §7 (lines 1467–68: isolated staging → handoff → S-STAGE-*, S-HANDOFF-1); each rule states condition + expected verdict |
-| G2 — ≥1 fixture per attack class from a committed script | §9 matrix; `generate_fixtures.py` committed; corpus generated by running it (see mission evidence) |
-| G3 — exact expected validation verdict per fixture | `manifest.json` `expected.decision` + `expected.primary_code` (+warnings); asserted mechanically by `verify_corpus.py` |
-| G4 — no production code modified | All artifacts under `docs/reviews/import-security-spec/` and `tests/fixtures/import-security/`; `git status` shows nothing else touched |
+| Gate                                                                          | Where proven                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1 — every plan-line 1463–1468 requirement mapped to a concrete testable rule | §4 (line 1464: normalization/traversal/absolute/symlink → R-PATH-_, R-MODE-_), §5 (line 1465: four limits → R-LIMIT-1–4), §6 (lines 1466–67: corrupt/encrypted full-reject → R-INTEG-_, R-FULLREJECT), §7 (lines 1467–68: isolated staging → handoff → S-STAGE-_, S-HANDOFF-1); each rule states condition + expected verdict |
+| G2 — ≥1 fixture per attack class from a committed script                      | §9 matrix; `generate_fixtures.py` committed; corpus generated by running it (see mission evidence)                                                                                                                                                                                                                            |
+| G3 — exact expected validation verdict per fixture                            | `manifest.json` `expected.decision` + `expected.primary_code` (+warnings); asserted mechanically by `verify_corpus.py`                                                                                                                                                                                                        |
+| G4 — no production code modified                                              | All artifacts under `docs/reviews/import-security-spec/` and `tests/fixtures/import-security/`; `git status` shows nothing else touched                                                                                                                                                                                       |

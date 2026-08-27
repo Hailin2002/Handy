@@ -22,7 +22,9 @@ import type { AppSettings } from "@/bindings";
 import { commands } from "@/bindings";
 import { useSettingsStore } from "../settingsStore";
 
-const mockedChangeAudioFeedback = vi.mocked(commands.changeAudioFeedbackSetting);
+const mockedChangeAudioFeedback = vi.mocked(
+  commands.changeAudioFeedbackSetting,
+);
 const mockedGetAppSettings = vi.mocked(commands.getAppSettings);
 
 const makeSettings = (overrides: Partial<AppSettings> = {}): AppSettings => ({
