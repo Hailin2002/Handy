@@ -237,7 +237,23 @@ export const MeetingsPage: React.FC = () => {
     return (
       <div className="flex w-full flex-col gap-4">
         <MeetingRecoveryBanner onOpenMeeting={(id) => setSelectedId(id)} />
+        {/* Importing a chat export is a legitimate *first* action — arguably
+            more so than recording — but the header carrying that button lives
+            below this early return, so on an empty library the importer was
+            unreachable. The hero's own secondary slot is reserved for the
+            not-yet-shipped audio importer, so the button sits above it rather
+            than duplicating the hero's primary "New Meeting" call to action. */}
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={() => setImportOpen(true)}>
+            {t("whatsapp.title")}
+          </Button>
+        </div>
         <MeetingList onNewMeeting={createMeeting} />
+        <WhatsAppImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onImported={() => void refresh()}
+        />
       </div>
     );
   }

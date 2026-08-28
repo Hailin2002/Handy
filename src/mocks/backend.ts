@@ -131,6 +131,54 @@ export const handleCommand = (
       // page must render that as an empty membership list, not as a failure.
       return [];
 
+    // --- WhatsApp import (text paths; the zip paths need a file dialog) ----
+    case "whatsapp_preview_text": {
+      const content = typeof args.content === "string" ? args.content : "";
+      // Close enough to managers/whatsapp_importer.rs for the wizard: one
+      // message per "[date, time] Author: text" line, media markers counted.
+      const lines = content.split("\n").filter((l) => l.trim());
+      const authors = new Set<string>();
+      let media = 0;
+      for (const line of lines) {
+        const m = /^\[[^\]]+\]\s*([^:]+):\s*(.*)$/.exec(line);
+        if (!m) continue;
+        authors.add(m[1].trim());
+        if (/<attached:|<Medien ausgeschlossen>|<Media omitted>/.test(m[2])) {
+          media++;
+        }
+      }
+      return {
+        participants: [...authors],
+        message_count: lines.length,
+        media_count: media,
+        date_order_ambiguous: false,
+      };
+    }
+
+    case "whatsapp_import_text": {
+      const title = typeof args.title === "string" ? args.title.trim() : "";
+      const body = typeof args.content === "string" ? args.content : "";
+      const now = Date.now();
+      return {
+        source: {
+          id: `src_${now}`,
+          source_type: "whatsapp_export",
+          title,
+          ingestion_state: "imported",
+          parser_version: "whatsapp-txt-v1",
+          content_hash: String(now),
+          created_at: now,
+        },
+        created: true,
+        item_count: body.split("\n").filter((l) => l.trim()).length,
+      };
+    }
+
+    case "source_list":
+    case "source_items":
+    case "source_assets":
+      return [];
+
     case "task_list":
       // No task store in the mock; the page must render an empty task list
       // rather than surfacing a failure.
