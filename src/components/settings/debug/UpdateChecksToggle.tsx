@@ -14,7 +14,11 @@ export const UpdateChecksToggle: React.FC<UpdateChecksToggleProps> = ({
 }) => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
-  const updateChecksEnabled = getSetting("update_checks_enabled") ?? true;
+  // Must match `default_update_checks_enabled` in settings/schema.rs. This
+  // fallback applies while settings load, and it used to be `true` — so the
+  // toggle rendered "on" for a setting the backend defaults to off, and
+  // would stay that way if the load never completed.
+  const updateChecksEnabled = getSetting("update_checks_enabled") ?? false;
 
   return (
     <ToggleSwitch

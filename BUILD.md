@@ -525,3 +525,64 @@ bun run tauri dev
 # Or compile a release binary without the installer/signing step:
 bun run tauri build --no-bundle
 ```
+
+## Release signing
+
+A release needs four repository secrets. The `Verify release secrets are
+configured` step in `.github/workflows/release.yml` checks all four before the
+first build starts, so a missing one costs seconds instead of a seven-platform
+matrix.
+
+### Updater signing key (`TAURI_SIGNING_PRIVATE_KEY`)
+
+`plugins.updater.pubkey` in `tauri.conf.json` pins the public half of a minisign
+keypair. The app installs an update only if its signature verifies against that
+key, which is what makes the endpoint URL safe: a wrong or hijacked endpoint
+cannot serve an installable build, because it cannot produce a valid signature.
+
+The keypair for this repository was generated with:
+
+```bash
+bun run tauri signer generate -w ~/.tauri/speak-updater.key -p ""
+```
+
+- `~/.tauri/speak-updater.key` — private half. **Never commit it.** Paste its
+  contents into the `TAURI_SIGNING_PRIVATE_KEY` repository secret.
+- `~/.tauri/speak-updater.key.pub` — public half, already in `tauri.conf.json`.
+- The key was generated without a password, so
+  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` can stay unset.
+
+Lose the private key and you cannot ship an update that existing installs will
+accept — everyone has to reinstall by hand. Back it up somewhere durable.
+
+### Windows code signing (`AZURE_SIGNING_*`)
+
+`bundle.windows.signCommand` in `tauri.windows.conf.json` invokes
+`scripts/sign-windows.ps1`, which needs `AZURE_SIGNING_ENDPOINT`,
+`AZURE_SIGNING_ACCOUNT` and `AZURE_SIGNING_CERT_PROFILE` (Azure Trusted
+Signing). Locally the script prints that it is leaving files unsigned and
+carries on, so `bun run tauri build` works on a developer machine. In CI the
+`verify Windows signing` step turns an unsigned artifact into a build failure.
+
+Shipping unsigned Windows binaries means SmartScreen warns every first-time
+installer, so this is not optional for a public release.
+
+### Release target
+
+`plugins.updater.endpoints` points at:
+
+```
+https://github.com/Hailin2002/Handy/releases/latest/download/latest.json
+```
+
+`tauri-action` publishes `latest.json` alongside the artifacts. Updater
+artifacts are enabled by `src-tauri/tauri.updater.conf.json`, which
+`.github/workflows/build.yml` layers on with `--config` only when
+`sign-binaries` is true. It is deliberately not in the base config: with
+`createUpdaterArtifacts` on and no private key, `bun run tauri build` writes
+both bundles and _then_ exits non-zero with "a public key has been found, but
+no private key", which would break every developer machine.
+
+**If you release from a different
+repository, change that URL** — installed builds check the URL compiled into
+them, so it cannot be corrected after the fact for anyone who already installed.

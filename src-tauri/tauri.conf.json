@@ -78,8 +78,10 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
-      "endpoints": []
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5OTNBQTY3NkE3OTdGNUMKUldSY2YzbHFaNnFUeVdHcit1QmhaUU9Yck92eWtVTDRMVXFlOUQwb09HSSsvdlVMSlJOSENNZlkK",
+      "endpoints": [
+        "https://github.com/Hailin2002/Handy/releases/latest/download/latest.json"
+      ]
     }
   }
 }

@@ -550,7 +550,12 @@ jobs:
           releaseName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
           releaseId: ${{ inputs.release-id }}
           assetNamePattern: ${{ steps.patch-release-name.outputs.platform }}
-          args: ${{ inputs.build-args }}
+          # Updater artifacts are signed with TAURI_SIGNING_PRIVATE_KEY, which
+          # only exists in a signing release. Turning them on in the base
+          # config instead would make `bun run tauri build` fail on every
+          # developer machine — the bundles get written, then the run exits
+          # non-zero with "a public key has been found, but no private key".
+          args: ${{ inputs.sign-binaries && format('{0} --config tauri.updater.conf.json', inputs.build-args) || inputs.build-args }}
 
       # scripts/sign-windows.ps1 deliberately no-ops when AZURE_SIGNING_* is
       # absent, so a local build still works. That would also let a rotated or

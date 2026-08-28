@@ -14,6 +14,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      # A release matrix is seven platform builds long. Discovering a missing
+      # secret at the bundling step means waiting through all of them to be told
+      # a string is empty — and, worse, the draft release already exists by
+      # then. Everything the release needs is checked here, before any build
+      # starts.
+      - name: Verify release secrets are configured
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_CERT_PROFILE: ${{ secrets.AZURE_SIGNING_CERT_PROFILE }}
+        run: |
+          missing=()
+          # Without this the updater artifacts cannot be signed, so
+          # createUpdaterArtifacts fails the bundler on every platform.
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] || missing+=("TAURI_SIGNING_PRIVATE_KEY")
+          # Without these three, scripts/sign-windows.ps1 leaves every Windows
+          # binary unsigned and the build's own verify step rejects the result.
+          [ -n "$AZURE_SIGNING_ENDPOINT" ] || missing+=("AZURE_SIGNING_ENDPOINT")
+          [ -n "$AZURE_SIGNING_ACCOUNT" ] || missing+=("AZURE_SIGNING_ACCOUNT")
+          [ -n "$AZURE_SIGNING_CERT_PROFILE" ] || missing+=("AZURE_SIGNING_CERT_PROFILE")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]}"
+            echo "See BUILD.md -> Release signing for how to obtain and set each one." >&2
+            exit 1
+          fi
+          echo "All release secrets are present."
+
       - name: Get version from tauri.conf.json
         id: get-version
         shell: bash

@@ -94,7 +94,52 @@ fn should_force_show_permissions_window(app: &AppHandle) -> bool {
     false
 }
 
-fn initialize_core_logic(app_handle: &AppHandle) {
+/// Reports a fatal startup failure to the user, then exits.
+///
+/// Manager construction used to `.expect(...)`. A panic there is invisible on
+/// Windows: a GUI binary has no console, so an unwritable app-data directory or
+/// a corrupt store made the process vanish between the double-click and the
+/// first window. The user sees nothing at all — not an error, not a crash
+/// dialog — and has nothing to report beyond "it doesn't start".
+///
+/// `gui` is false on the headless/CLI path, where stderr is the right channel
+/// and a modal box would hang a script.
+fn fatal_startup_error(context: &str, reason: &str, gui: bool) -> ! {
+    let message = format!(
+        "{context}
+
+{reason}"
+    );
+    log::error!("fatal startup error: {context}: {reason}");
+    eprintln!(
+        "Speak failed to start.
+{message}"
+    );
+
+    #[cfg(windows)]
+    if gui {
+        use windows::core::HSTRING;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            MessageBoxW, MB_ICONERROR, MB_OK, MB_SETFOREGROUND, MB_SYSTEMMODAL,
+        };
+        // SAFETY: a null owner window is valid and is what we want — the app
+        // has no window yet at this point in startup.
+        unsafe {
+            MessageBoxW(
+                None,
+                &HSTRING::from(message.as_str()),
+                &HSTRING::from("Speak failed to start"),
+                MB_OK | MB_ICONERROR | MB_SETFOREGROUND | MB_SYSTEMMODAL,
+            );
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = gui;
+
+    std::process::exit(1);
+}
+
+fn initialize_core_logic(app_handle: &AppHandle) -> Result<(), String> {
     // Note: Enigo (keyboard/mouse simulation) is NOT initialized here.
     // The frontend is responsible for calling the `initialize_enigo` command
     // after onboarding completes. This avoids triggering permission dialogs
@@ -104,10 +149,10 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // explicitly, so always-on microphone startup can wire live-preview frames
     // even before Tauri state is populated.
     let model_manager =
-        Arc::new(ModelManager::new(app_handle).expect("Failed to initialize model manager"));
+        Arc::new(ModelManager::new(app_handle).map_err(|e| format!("Model manager: {e}"))?);
     let transcription_manager = Arc::new(
         TranscriptionManager::new(app_handle, model_manager.clone())
-            .expect("Failed to initialize transcription manager"),
+            .map_err(|e| format!("Transcription manager: {e}"))?,
     );
     let azure_stream_manager = Arc::new(speech_pipeline::AzureSpeechStreamManager::new(app_handle));
     let recording_manager = Arc::new(
@@ -116,12 +161,12 @@ fn initialize_core_logic(app_handle: &AppHandle) {
             transcription_manager.stream_router(),
             azure_stream_manager.clone(),
         )
-        .expect("Failed to initialize recording manager"),
+        .map_err(|e| format!("Recording manager: {e}"))?,
     );
     let history_manager =
-        Arc::new(HistoryManager::new(app_handle).expect("Failed to initialize history manager"));
+        Arc::new(HistoryManager::new(app_handle).map_err(|e| format!("History manager: {e}"))?);
     let meeting_manager =
-        Arc::new(MeetingManager::new(app_handle).expect("Failed to initialize meeting manager"));
+        Arc::new(MeetingManager::new(app_handle).map_err(|e| format!("Meeting manager: {e}"))?);
     // The recorder-event pump needs the manager behind its `Arc` (it holds a
     // `Weak` back-reference), so it is attached right after construction.
     meeting_manager.attach_recorder_events();
@@ -338,6 +383,8 @@ fn initialize_core_logic(app_handle: &AppHandle) {
 
     // Create the recording overlay window (hidden by default)
     utils::create_recording_overlay(app_handle);
+
+    Ok(())
 }
 
 /// Per-request timeout for cloud meeting-STT HTTP calls (Azure Fast
@@ -707,12 +754,23 @@ pub fn run(cli_args: CliArgs) {
                 secret_store::migrate_secrets_at_startup(app.handle());
 
                 let app_handle = app.handle().clone();
-                let model_manager = Arc::new(
-                    ModelManager::new(&app_handle).expect("Failed to initialize model manager"),
-                );
+                let model_manager = Arc::new(match ModelManager::new(&app_handle) {
+                    Ok(manager) => manager,
+                    Err(e) => fatal_startup_error(
+                        "Speak could not initialise its model manager.",
+                        &e.to_string(),
+                        false,
+                    ),
+                });
                 let transcription_manager = Arc::new(
-                    TranscriptionManager::new(&app_handle, model_manager.clone())
-                        .expect("Failed to initialize transcription manager"),
+                    match TranscriptionManager::new(&app_handle, model_manager.clone()) {
+                        Ok(manager) => manager,
+                        Err(e) => fatal_startup_error(
+                            "Speak could not initialise its transcription manager.",
+                            &e.to_string(),
+                            false,
+                        ),
+                    },
                 );
                 app_handle.manage(model_manager);
                 app_handle.manage(transcription_manager);
@@ -792,7 +850,13 @@ pub fn run(cli_args: CliArgs) {
             let app_handle = app.handle().clone();
             app.manage(TranscriptionCoordinator::new(app_handle.clone()));
 
-            initialize_core_logic(&app_handle);
+            if let Err(reason) = initialize_core_logic(&app_handle) {
+                fatal_startup_error(
+                    "Speak could not initialise its core services.",
+                    &reason,
+                    true,
+                );
+            }
 
             // Secure Input monitor (macOS): detects stuck secure input that
             // silently blocks keyed shortcuts, warns the user, and activates

@@ -59,3 +59,8 @@ msbuild.log
 .vitepreview.log
 
 .playwright-browsers/
+
+# Updater signing keys. The real one lives outside the repo (see BUILD.md ->
+# Release signing); this is a guard against a stray copy being committed.
+*.key
+*.key.pub
