@@ -31,8 +31,8 @@ fn rms_i16(bytes: &[u8]) -> f64 {
     }
     let mut sum = 0.0f64;
     let mut n = 0u64;
-    for pair in bytes.chunks_exact(2) {
-        let s = i16::from_le_bytes([pair[0], pair[1]]) as f64;
+    for pair in bytes.as_chunks::<2>().0 {
+        let s = i16::from_le_bytes(*pair) as f64;
         sum += s * s;
         n += 1;
     }
@@ -200,8 +200,8 @@ fn transcribe_kept_loopback_chunks() {
         if bytes.len() <= 44 {
             continue;
         }
-        for pair in bytes[44..].chunks_exact(2) {
-            samples.push(i16::from_le_bytes([pair[0], pair[1]]) as f32 / 32768.0);
+        for pair in bytes[44..].as_chunks::<2>().0 {
+            samples.push(i16::from_le_bytes(*pair) as f32 / 32768.0);
         }
     }
     eprintln!(

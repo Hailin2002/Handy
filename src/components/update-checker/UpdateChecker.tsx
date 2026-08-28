@@ -25,6 +25,12 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
   const [isInstalling, setIsInstalling] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [showUpToDate, setShowUpToDate] = useState(false);
+  // A failed check used to be swallowed into console.error: the button went
+  // back to "check for updates" and looked exactly like a successful check
+  // that found nothing. Anyone whose updates were silently broken — an
+  // unreachable endpoint, a build with no updater endpoint configured at
+  // all — had no way to tell.
+  const [checkFailed, setCheckFailed] = useState(false);
   const [showPortableUpdateDialog, setShowPortableUpdateDialog] =
     useState(false);
   const [portableInstallerUrl, setPortableInstallerUrl] = useState<string>(
@@ -36,6 +42,9 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
   const updateChecksEnabled = settings?.update_checks_enabled ?? false;
 
   const upToDateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const failedTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
   const isManualCheckRef = useRef(false);
@@ -50,9 +59,13 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
       if (upToDateTimeoutRef.current) {
         clearTimeout(upToDateTimeoutRef.current);
       }
+      if (failedTimeoutRef.current) {
+        clearTimeout(failedTimeoutRef.current);
+      }
       setIsChecking(false);
       setUpdateAvailable(false);
       setShowUpToDate(false);
+      setCheckFailed(false);
       return;
     }
 
@@ -66,6 +79,9 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
     return () => {
       if (upToDateTimeoutRef.current) {
         clearTimeout(upToDateTimeoutRef.current);
+      }
+      if (failedTimeoutRef.current) {
+        clearTimeout(failedTimeoutRef.current);
       }
       updateUnlisten.then((fn) => fn());
     };
@@ -82,6 +98,7 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
 
     try {
       setIsChecking(true);
+      setCheckFailed(false);
       const update = await check();
 
       if (update) {
@@ -107,6 +124,13 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
       }
     } catch (error) {
       console.error("Failed to check for updates:", error);
+      setCheckFailed(true);
+      if (failedTimeoutRef.current) {
+        clearTimeout(failedTimeoutRef.current);
+      }
+      failedTimeoutRef.current = setTimeout(() => {
+        setCheckFailed(false);
+      }, 5000);
     } finally {
       setIsChecking(false);
       isManualCheckRef.current = false;
@@ -162,6 +186,13 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
       await relaunch();
     } catch (error) {
       console.error("Failed to install update:", error);
+      setCheckFailed(true);
+      if (failedTimeoutRef.current) {
+        clearTimeout(failedTimeoutRef.current);
+      }
+      failedTimeoutRef.current = setTimeout(() => {
+        setCheckFailed(false);
+      }, 5000);
     } finally {
       setIsInstalling(false);
       setDownloadProgress(0);
@@ -185,6 +216,10 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
           : t("footer.preparing");
     }
     if (isChecking) return t("footer.checkingUpdates");
+    if (checkFailed)
+      return t("footer.updateCheckFailed", {
+        defaultValue: "Update check failed",
+      });
     if (showUpToDate) return t("footer.upToDate");
     if (updateAvailable) return t("footer.updateAvailableShort");
     return t("footer.checkForUpdates");
