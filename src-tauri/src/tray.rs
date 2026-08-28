@@ -126,11 +126,23 @@ pub fn get_icon_path(theme: AppTheme, state: TrayIconState, warning: bool) -> &'
 }
 
 pub fn change_tray_icon(app: &AppHandle, icon: TrayIconState) {
-    let tray = app.state::<TrayIcon>();
     let theme = get_current_theme(app);
 
-    // Store current state
+    // Store current state. This happens whether or not a tray exists, so a
+    // tray created later still picks up the state it should be showing.
     app.state::<CurrentTrayIconState>().set(icon);
+
+    // `init_tray` failure is logged and tolerated — lib.rs says so explicitly:
+    // "the app stays usable without a tray icon". These lookups used to assume
+    // the opposite. `state::<TrayIcon>()` panics when nothing was ever managed,
+    // so a tray that failed to build turned a handled error into a startup
+    // crash on the very next call. Observed for real: a portable install whose
+    // icon resources were missing logged the failure, carried on, and then died
+    // with "state() called before manage() for tauri::tray::TrayIcon".
+    // `secure_input.rs` already reaches for the tray this way.
+    let Some(tray) = app.try_state::<TrayIcon>() else {
+        return;
+    };
 
     let warning = crate::secure_input::tray_warning_active(app);
     let icon_path = get_icon_path(theme, icon, warning);
@@ -379,7 +391,10 @@ pub fn update_tray_menu(app: &AppHandle, locale: Option<&str>) {
         tooltip = format!("{} — {}", tooltip, warning_item.text().unwrap_or_default());
     }
 
-    let tray = app.state::<TrayIcon>();
+    // See the note in `change_tray_icon`: no tray means nothing to update.
+    let Some(tray) = app.try_state::<TrayIcon>() else {
+        return;
+    };
     let _ = tray.set_menu(Some(menu));
     let _ = tray.set_tooltip(Some(tooltip));
 }
@@ -526,7 +541,11 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
 }
 
 pub fn set_tray_visibility(app: &AppHandle, visible: bool) {
-    let tray = app.state::<TrayIcon>();
+    // See the note in `change_tray_icon`: no tray is already invisible.
+    let Some(tray) = app.try_state::<TrayIcon>() else {
+        info!("No tray icon to set visibility on (visible={visible})");
+        return;
+    };
     if let Err(e) = tray.set_visible(visible) {
         error!("Failed to set tray visibility: {}", e);
     } else {
