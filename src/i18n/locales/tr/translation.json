@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Kaydedilen sesin dökümünü yeniden alır. Kaydın kendisi korunur.",
         "retranscribeWarning": "Mevcut döküm atılır ve kaydedilen sesten yeniden oluşturulur. Kayda dokunulmaz.",
         "retranscribeQueued": "Döküm yeniden sıraya alındı.",
-        "retranscribeFailed": "Döküm yeniden başlatılamadı."
+        "retranscribeFailed": "Döküm yeniden başlatılamadı.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "İzinler Gerekli",
-      "description": "Handy'nin düzgün çalışabilmesi için birkaç izne ihtiyacı var.",
+      "description": "Speak'nin düzgün çalışabilmesi için birkaç izne ihtiyacı var.",
       "microphone": {
         "title": "Mikrofon Erişimi",
         "description": "Sesinizi transkripsiyon için alabilmek için gereklidir."
@@ -651,13 +662,13 @@
       "searchPlaceholder": "Modelleri ada göre ara…",
       "rescan": {
         "label": "Yeniden Tara",
-        "tooltip": "Handy dışında modeller klasörüne veya Hugging Face önbelleğine eklenen modelleri yeniden tara"
+        "tooltip": "Speak dışında modeller klasörüne veya Hugging Face önbelleğine eklenen modelleri yeniden tara"
       }
     },
     "general": {
       "title": "Genel",
       "shortcut": {
-        "title": "Handy Kısayolları",
+        "title": "Speak Kısayolları",
         "description": "Sesle yazma kaydını başlatmak için klavye kısayollarını yapılandırın",
         "loading": "Kısayollar yükleniyor...",
         "none": "Kısayol yapılandırılmadı",
@@ -675,6 +686,14 @@
           "transcribe_with_post_process": {
             "name": "Son İşlem Kısayolu",
             "description": "İsteğe bağlı: Transkripsiyonunuza her zaman yapay zekâ ile son işlem uygulayan özel bir kısayol tuşu."
+          },
+          "assistant_fast": {
+            "name": "Hızlı Yardımcı Kısayolu",
+            "description": "Hızlı asistana soru soran klavye kısayolu. Siz atayana kadar boştur."
+          },
+          "assistant_smart": {
+            "name": "Akıllı Asistan Kısayolu",
+            "description": "Derinlemesine düşünen asistana soru soran klavye kısayolu. Siz atayana kadar boştur."
           }
         },
         "errors": {
@@ -695,6 +714,20 @@
       "pushToTalk": {
         "label": "Bas Konuş",
         "description": "Kaydetmek için basılı tutun, durdurmak için bırakın"
+      },
+      "recordingAudio": {
+        "label": "Kayıt sırasında ses",
+        "description": "Speak’in kayıt sırasında sistem ses çıkışına ne yapacağı",
+        "modes": {
+          "off": "Hiçbir şey yapma",
+          "duck": "Sesi kıs",
+          "mute": "Tamamen sessize al"
+        },
+        "volume": {
+          "label": "Kısılmış ses düzeyi",
+          "description": "Kayıt sırasındaki hedef sistem ses düzeyi",
+          "unit": "%{{percent}}"
+        }
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Başlangıçta Çalıştır",
-        "description": "Bilgisayara giriş yaptığınızda Handy otomatik olarak başlatılır."
+        "description": "Bilgisayara giriş yaptığınızda Speak otomatik olarak başlatılır."
       },
       "showTrayIcon": {
         "label": "Tepsi Simgesini Göster",
-        "description": "Handy simgesini sistem tepsisinde göster."
+        "description": "Speak simgesini sistem tepsisinde göster."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Güncellemeleri Kontrol Et",
-        "description": "Handy için yeni sürümleri otomatik olarak kontrol eder"
+        "description": "Speak için yeni sürümleri otomatik olarak kontrol eder"
       },
       "soundTheme": {
         "label": "Ses Teması",
@@ -997,10 +1030,6 @@
         "label": "Son İşlem",
         "description": "Transkripsiyon sonrası yapay zekâ destekli metin iyileştirmeyi etkinleştirir"
       },
-      "muteWhileRecording": {
-        "label": "Kayıt Sırasında Sessize Al",
-        "description": "Kayıt sırasında sistem sesini kapatır"
-      },
       "appendTrailingSpace": {
         "label": "Sonuna Boşluk Ekle",
         "description": "Yapıştırılan transkripsiyondan sonra boşluk ekler"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Klavye Tanılaması",
-        "description": "Klavye olaylarının Handy'ye ulaşıp ulaşmadığını denetler. Yalnızca olay sayıları kaydedilir — hangi tuşlara bastığınız asla kaydedilmez.",
+        "description": "Klavye olaylarının Speak'ye ulaşıp ulaşmadığını denetler. Yalnızca olay sayıları kaydedilir — hangi tuşlara bastığınız asla kaydedilmez.",
         "run": "10 sn'lik tanılamayı çalıştır",
         "running": "Dinleniyor… kısayolunuza birkaç kez basın (ör. Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "Fare",
         "verdictBlocked": "Secure Input tuş olaylarını engelliyor — normal tuş içeren kısayollar bu sorun çözülene kadar çalışamaz.",
         "verdictSuspicious": "Değiştirici olayları geldi ancak hiç tuş olayı gelmedi — Secure Input devre dışı görünmesine rağmen bir şey tuşları bastırıyor. Lütfen bunu GitHub'da bildirin.",
-        "verdictOk": "Tuş olayları Handy'ye normal şekilde ulaşıyor.",
+        "verdictOk": "Tuş olayları Speak'ye normal şekilde ulaşıyor.",
         "verdictNoEvents": "Hiç olay yakalanmadı — test sırasında herhangi bir tuşa bastınız mı?",
         "failed": "Tanılama başarısız: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "Hakkında",
       "version": {
         "title": "Sürüm",
-        "description": "Handy'nin mevcut sürümü"
+        "description": "Speak'nin mevcut sürümü"
       },
       "appDataDirectory": {
         "title": "Uygulama Veri Dizini",
-        "description": "Handy'nin verilerini sakladığı konum"
+        "description": "Speak'nin verilerini sakladığı konum"
       },
       "sourceCode": {
         "title": "Kaynak Kodu",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "Geliştirmeyi Destekle",
-        "description": "Handy'yi geliştirmeye devam etmemize yardımcı olun",
+        "description": "Speak'yi geliştirmeye devam etmemize yardımcı olun",
         "button": "Bağış Yap"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "Cihaz üzerinde makine öğrenmesi çıkarımı için yüksek performanslı tensör kütüphanesi",
-          "details": "Handy'nin yerel konuşmadan metne dönüştürme özelliği transcribe.cpp ve ggml üzerine kuruludur. Georgi Gerganov'a ve katkıda bulunanlara harika çalışmaları için teşekkür ederiz."
+          "details": "Speak'nin yerel konuşmadan metne dönüştürme özelliği transcribe.cpp ve ggml üzerine kuruludur. Georgi Gerganov'a ve katkıda bulunanlara harika çalışmaları için teşekkür ederiz."
         }
       },
       "whatsNewUpdates": {
         "label": "Yenilikleri Göster",
-        "description": "Handy güncellemelerinden sonra sürüm notlarını göster"
+        "description": "Speak güncellemelerinden sonra sürüm notlarını göster"
       }
     },
     "tabs": {
       "modelsProviders": "Modeller ve sağlayıcılar",
-      "meetingsEmptyBody": "Toplantı ayarları toplantı moduyla gelecektir."
+      "meetingsEmptyBody": "Toplantı ayarları toplantı moduyla gelecektir.",
+      "assistants": "Asistanlar"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "30 gün sakla",
           "forever": "Süresiz sakla"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "Yapay Zekâ Asistanları",
+      "description": "Kısayolla ulaşabileceğiniz iki asistan. Sorunuzu söyleyin, yanıt Speak yer paylaşımının yanındaki bir kartta gelsin.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Hızlı Yardımcı",
+          "description": "Kısa sorgular için: bir bilgi, bir dönüştürme, bir yazım, yeniden yazılmış bir cümle. Hemen gelen kısa yanıt için ayarlandı."
+        },
+        "smart_assistant": {
+          "title": "Akıllı Asistan",
+          "description": "Düşünmeye değer sorular için: analiz, karşılaştırma, taslak. Daha uzun sürebilir ve uzun yanıt verebilir."
+        }
+      },
+      "provider": {
+        "title": "Sağlayıcı",
+        "description": "Bu asistan için hangi hizmetin yanıt vereceği. İki asistan aynı sağlayıcıyı farklı anahtarlarla kullanabilir."
+      },
+      "apiKey": {
+        "configured": "{{provider}} için API anahtarı kaydedildi.",
+        "notConfigured": "{{provider}} için kayıtlı API anahtarı yok.",
+        "title": "API Anahtarı",
+        "description": "İşletim sisteminizin anahtar zincirinde, son işleme anahtarından ayrı olarak saklanır.",
+        "placeholder": "API anahtarınızı yapıştırın"
+      },
+      "model": {
+        "title": "Model",
+        "description": "Bu asistanın sorduğu model. Listeden seçin ya da tam model kimliğini yazın.",
+        "placeholder": "Bir model kimliği seçin veya girin",
+        "refresh": "Model listesini yenile",
+        "required": "Henüz model seçilmedi. Siz birini seçene kadar bu asistan devre dışı kalır.",
+        "listingHint": "Model listesi bu asistanın kendi API anahtarıyla yüklenir. Anahtar olmadan da model kimliğini elle girebilirsiniz."
+      },
+      "systemPrompt": {
+        "title": "Sistem İstemi",
+        "description": "Bu asistanın her soruda uyduğu kalıcı yönerge.",
+        "placeholder": "Bu asistanın nasıl yanıt vermesi gerektiğini açıklayın"
+      },
+      "maxOutputTokens": {
+        "title": "Yanıt Uzunluğu",
+        "description": "Yanıt için üst sınır, token cinsinden ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Zaman Aşımı",
+        "description": "Vazgeçmeden önce yanıtın ne kadar bekleneceği, saniye cinsinden ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Yanıtın İşlenmesi"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Yalnızca göster",
+          "hint": "Yanıt yalnızca kartta görünür."
+        },
+        "copy": {
+          "label": "Göster ve kopyala",
+          "hint": "Yanıt kartta görünür ve panoya kopyalanır."
+        },
+        "paste": {
+          "label": "Göster ve yapıştır",
+          "hint": "Yanıt kartta görünür ve çalıştığınız uygulamaya yapıştırılır."
+        }
+      },
+      "shortcutHint": "Her iki asistanın klavye kısayolları, Dikte bölümünde transkripsiyon kısayollarının yanında ayarlanır."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "Sıfırla"
   },
   "accessibility": {
-    "permissionsDescription": "Handy, transkribe edilen metni yazabilmek için erişilebilirlik izinlerine ihtiyaç duyar.",
+    "permissionsDescription": "Speak, transkribe edilen metni yazabilmek için erişilebilirlik izinlerine ihtiyaç duyar.",
     "openSettings": "Sistem Ayarlarını Aç"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "bilinmeyen model",
     "pasteFailedTitle": "Metin yapıştırılamadı",
     "pasteFailed": "Metin etkin uygulamaya yapıştırılamadı.",
-    "transcriptionFailedTitle": "Transkripsiyon başarısız oldu"
+    "transcriptionFailedTitle": "Transkripsiyon başarısız oldu",
+    "assistantNoticeTitle": "Asistan"
   },
   "appLanguage": {
     "title": "Uygulama Dili",
-    "description": "Handy arayüzünün dilini değiştirin"
+    "description": "Speak arayüzünün dilini değiştirin"
   },
   "theme": {
     "title": "Uygulama Teması",
-    "description": "Handy'nin sistem temasını izlemesini ya da açık veya koyu kalmasını seçin",
+    "description": "Speak'nin sistem temasını izlemesini ya da açık veya koyu kalmasını seçin",
     "options": {
       "system": "Sistem",
       "light": "Açık",
@@ -1291,10 +1413,27 @@
     "processing": "İşleniyor...",
     "cancel": "İptal",
     "meetingRecording": "Toplantı kaydediliyor",
-    "meetingPaused": "Toplantı duraklatıldı"
+    "meetingPaused": "Toplantı duraklatıldı",
+    "assistant": {
+      "label": "Asistan",
+      "smartLabel": "Akıllı Asistan",
+      "copy": "Kopyala",
+      "copied": "Panoya kopyalandı",
+      "paste": "Yapıştır",
+      "pasted": "Yapıştırıldı",
+      "replace": "Değiştir",
+      "replaced": "Değiştirildi",
+      "replaceHint": "Etkin penceredeki her şeyi seçer ve yanıtı onun üzerine yapıştırır",
+      "openLink": "Bağlantıyı aç",
+      "chooseLink": "Bağlantı aç ({{n}})",
+      "escalate": "Akıllı Asistan'a sor",
+      "asking": "Akıllı Asistan'a soruluyor...",
+      "close": "Kapat",
+      "truncated": "Yanıt uzunluk sınırında kesildi."
+    }
   },
   "whatsNew": {
-    "title": "Handy v{{version}} yenilikleri"
+    "title": "Speak v{{version}} yenilikleri"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} 1 kısayolu engelliyor olabilir",

@@ -75,8 +75,23 @@ pub struct TranscriptionCoordinator {
     tx: Sender<Command>,
 }
 
-pub fn is_transcribe_binding(id: &str) -> bool {
-    id == "transcribe" || id == "transcribe_with_post_process"
+/// Every binding whose action drives the capture pipeline and must therefore be
+/// serialised by [`Stage`].
+///
+/// This is not "the dictation bindings" — it is "the bindings that take the
+/// recorder". [`crate::managers::audio::AudioRecordingManager`] and
+/// [`crate::speech_pipeline::AzureSpeechStreamManager`] are process-wide
+/// singletons whose `start()` internally cancels whatever was running. A
+/// binding that is *not* listed here bypasses the coordinator entirely and
+/// reaches those singletons directly, so pressing it mid-dictation would kill
+/// the live session and drop the user's transcript. The assistant bindings run
+/// the exact same recording start as dictation, so they belong here for that
+/// reason alone, independently of what they later do with the transcript.
+pub fn is_pipeline_binding(id: &str) -> bool {
+    id == "transcribe"
+        || id == "transcribe_with_post_process"
+        || id == crate::settings::ASSISTANT_BINDING_FAST
+        || id == crate::settings::ASSISTANT_BINDING_SMART
 }
 
 impl TranscriptionCoordinator {
@@ -284,6 +299,60 @@ fn stop(app: &AppHandle, stage: &mut Stage, binding_id: &str, hotkey_string: &st
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The coordinator is the only thing standing between two bindings and the
+    /// recorder singleton. Every binding whose action starts a recording must
+    /// be listed, or it races the live session instead of queueing behind it.
+    #[test]
+    fn every_recording_binding_is_serialised_by_the_coordinator() {
+        assert!(is_pipeline_binding("transcribe"));
+        assert!(is_pipeline_binding("transcribe_with_post_process"));
+        assert!(is_pipeline_binding(crate::settings::ASSISTANT_BINDING_FAST));
+        assert!(is_pipeline_binding(
+            crate::settings::ASSISTANT_BINDING_SMART
+        ));
+    }
+
+    /// Bindings that never touch the recorder must stay out, otherwise the
+    /// coordinator would refuse a dictation while one of them is "busy".
+    #[test]
+    fn non_recording_bindings_are_not_pipeline_bindings() {
+        assert!(!is_pipeline_binding("cancel"));
+        assert!(!is_pipeline_binding("test"));
+        assert!(!is_pipeline_binding(
+            crate::settings::MEETING_BINDING_START_STOP
+        ));
+        assert!(!is_pipeline_binding(
+            crate::settings::MEETING_BINDING_PAUSE_RESUME
+        ));
+        assert!(!is_pipeline_binding("assistant"));
+        assert!(!is_pipeline_binding(""));
+    }
+
+    /// The four pipeline ids are exactly the four bindings that `ACTION_MAP`
+    /// answers with a recording-starting action. Catching drift here is the
+    /// point: adding a third assistant profile without listing its binding
+    /// would silently reintroduce the race this function exists to prevent.
+    #[test]
+    fn pipeline_bindings_match_the_shipped_binding_defaults() {
+        let defaults = crate::settings::get_default_settings();
+        let mut listed: Vec<&str> = defaults
+            .bindings
+            .keys()
+            .map(String::as_str)
+            .filter(|id| is_pipeline_binding(id))
+            .collect();
+        listed.sort_unstable();
+        assert_eq!(
+            listed,
+            vec![
+                "assistant_fast",
+                "assistant_smart",
+                "transcribe",
+                "transcribe_with_post_process",
+            ]
+        );
+    }
 
     #[test]
     fn push_to_talk_release_while_recording_defers_release() {

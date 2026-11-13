@@ -60,6 +60,10 @@
   --ov-open-w: 392px; /* Live panel, expanded */
   --ov-base-h: 40px; /* control-row height (.sbase) */
   --ov-cap-max-h: 64px; /* max height of the scrolling live-text region */
+  --ov-answer-w: 408px; /* assistant answer card */
+  --ov-answer-max-h: 276px; /* hard cap on the whole answer card, so a long
+                               answer can never grow past the native window */
+  --ov-answer-text-max-h: 140px; /* scrolling answer region inside that cap */
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -474,6 +478,197 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ============================================================
+   Assistant answer card — the one overlay state the user reads rather than
+   glances at, so it is the only one that stays up until dismissed.
+
+   Geometry comes from --ov-answer-* above; overlay.rs sizes the native window
+   from the same numbers and a cargo test (`overlay_window_fits_every_card`)
+   re-derives them from this file, so the two cannot drift.
+
+   No Tailwind here: the overlay bundle does not load it. Everything below is
+   plain CSS over the --s-* tokens.
+   ============================================================ */
+.scard.answer {
+  width: var(--ov-answer-w);
+  max-height: var(--ov-answer-max-h);
+  border-radius: 14px;
+  /* The pill's pop-in and width morph are for a thing that appears and
+     disappears in a second. A card that is about to be read just arrives. */
+  animation: none;
+  transition: none;
+  text-align: start;
+}
+
+.oa {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* let .oa-body actually scroll instead of stretching */
+  gap: 8px;
+  padding: 10px 14px 12px;
+}
+
+/* Header: which assistant answered, and the question it heard. The question is
+   here because the most common cause of a surprising answer is a misheard
+   question — one line, ellipsized, full text on hover. */
+.oa-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.oa-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--s-accent);
+  white-space: nowrap;
+  flex: none;
+}
+.oa-q {
+  font-size: 12px;
+  color: var(--s-faint);
+  font-style: italic;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The answer itself. `pre-wrap` because models format with blank lines and
+   indentation that carry meaning; `break-word` so an unbroken URL cannot push
+   the card wider than the window that hosts it. */
+.oa-body {
+  max-height: var(--ov-answer-text-max-h);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  scrollbar-width: thin;
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* A failure is rendered in the same place as an answer, marked by a rule and
+   the error colour rather than by colour alone — the text is a full sentence
+   naming the setting to change. */
+.oa-body.error {
+  color: var(--color-error);
+  border-inline-start: 2px solid var(--color-error);
+  padding-inline-start: 8px;
+}
+
+/* Link list, shown only when an answer carries more than one URL. */
+.oa-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 72px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.oa-link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: none;
+  padding: 3px 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--s-accent);
+  text-align: start;
+  text-decoration: underline;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oa-link:focus-visible {
+  outline: 2px solid var(--s-accent);
+  outline-offset: 2px;
+}
+
+/* Confirmation after Copy / Paste / Replace, and where a failed action reports
+   itself. Reserved height, so acknowledging a click never reflows the buttons
+   under the pointer. */
+/* A cut-off answer says so, quietly, right under the text it qualifies. */
+.oa-truncated {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--s-muted);
+  padding: 2px 0 0;
+}
+
+/* The payload-less fallback: only a Close button, so the window is never an
+   invisible click sink. */
+.oa-empty {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 40px;
+}
+
+.oa-note {
+  min-height: 15px;
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--s-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oa-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-top: 1px solid var(--s-hair);
+  padding-top: 8px;
+}
+.oa-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  background: none;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--color-text);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+.oa-btn:hover:not(:disabled) {
+  background: var(--s-accent-soft);
+}
+.oa-btn:focus-visible {
+  outline: 2px solid var(--s-accent);
+  outline-offset: 2px;
+}
+.oa-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Escalation is the one action that spends money and time, so it reads as the
+   suggestion it is rather than as another neutral chip. */
+.oa-btn.accent {
+  border-color: var(--s-accent);
+  color: var(--s-accent);
+}
+/* Close is pushed to the far end: destructive-adjacent actions (Replace) should
+   not sit next to the pointer's resting place after a dismiss. */
+.oa-btn.close {
+  margin-inline-start: auto;
 }
 
 /* ============================================================

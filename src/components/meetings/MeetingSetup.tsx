@@ -1,12 +1,25 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, HardDrive, Mic, Play } from "lucide-react";
+import {
+  ArrowLeft,
+  Cloud,
+  Cpu,
+  HardDrive,
+  Mic,
+  Play,
+  Server,
+} from "lucide-react";
 import { toast } from "sonner";
-import { commands, type MeetingSession } from "@/bindings";
+import {
+  commands,
+  type MeetingSession,
+  type SpeechInputProvider,
+} from "@/bindings";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useMeetingStore } from "@/stores/meetingStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { MeetingPreflight } from "./MeetingPreflight";
 import { meetingErrorCopy } from "./meetingErrorCopy";
 
@@ -50,9 +63,11 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
   const [summaryEnabled, setSummaryEnabled] = useState(true);
   const [consent, setConsent] = useState(false);
   const [microphoneOnly, setMicrophoneOnly] = useState(false);
-  const [sttProvider, setSttProvider] = useState<"local" | "azure" | "custom">(
-    "local",
+  const defaultSttProvider = useSettingsStore(
+    (state) => state.settings?.meeting_stt_provider ?? "local",
   );
+  const [sttProvider, setSttProvider] =
+    useState<SpeechInputProvider>(defaultSttProvider);
   const startingRef = useRef(false);
 
   const preflight = useMeetingStore((state) => state.preflight);
@@ -64,8 +79,8 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
   const errorCopy = meetingErrorCopy(error);
 
   useEffect(() => {
-    void runPreflight();
-  }, [runPreflight]);
+    void runPreflight(sttProvider);
+  }, [runPreflight, sttProvider]);
 
   const dirty = title.trim() !== session.title && title.trim().length > 0;
 
@@ -143,6 +158,54 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
         </p>
       </header>
 
+      {/* The processing location is the most consequential start choice, so
+          keep it visible at the top instead of hiding it in a closed select. */}
+      <fieldset className="rounded-lg border border-mid-gray/20 p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <legend className="text-sm font-medium">
+            {t("meeting.setup.providerLabel")}
+          </legend>
+          <Button variant="ghost" size="sm" onClick={onOpenSettings}>
+            {t("meeting.setup.moreSettings")}
+          </Button>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {(
+            [
+              ["local", "meeting.setup.providerLocal", Cpu],
+              ["azure", "meeting.setup.providerAzure", Cloud],
+              ["custom", "meeting.setup.providerCustom", Server],
+            ] as const
+          ).map(([value, labelKey, Icon]) => {
+            const selected = sttProvider === value;
+            return (
+              <label
+                key={value}
+                className={`flex min-h-16 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition-colors focus-within:ring-2 focus-within:ring-logo-primary ${
+                  selected
+                    ? "border-logo-primary bg-logo-primary/10 text-logo-primary"
+                    : "border-mid-gray/25 hover:border-logo-primary/50 hover:bg-mid-gray/5"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="meeting-stt-provider"
+                  value={value}
+                  checked={selected}
+                  onChange={() => setSttProvider(value)}
+                  className="sr-only"
+                />
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="text-sm font-medium">{t(labelKey)}</span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-text/50">
+          {t("meeting.setup.providerHint")}
+        </p>
+      </fieldset>
+
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">{t("meetings.titleInputLabel")}</span>
         <Input
@@ -166,7 +229,7 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
       <MeetingPreflight
         report={preflight}
         status={preflightStatus}
-        onRecheck={() => void runPreflight()}
+        onRecheck={() => void runPreflight(sttProvider)}
         onOpenSettings={() => onOpenSettings?.()}
         onRecordMicOnly={() => setMicrophoneOnly(true)}
         microphoneOnly={microphoneOnly}
@@ -179,25 +242,11 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
         </p>
       )}
 
-      {/* Provider picker (§13 Phase 6): per-meeting STT choice, independent
-          of the dictation provider. */}
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">{t("meeting.setup.providerLabel")}</span>
-        <select
-          className="rounded-md border border-mid-gray/30 bg-background px-2 py-1.5 text-sm"
-          value={sttProvider}
-          onChange={(event) =>
-            setSttProvider(event.target.value as "local" | "azure" | "custom")
-          }
-        >
-          <option value="local">{t("meeting.setup.providerLocal")}</option>
-          <option value="azure">{t("meeting.setup.providerAzure")}</option>
-          <option value="custom">{t("meeting.setup.providerCustom")}</option>
-        </select>
-        <span className="text-xs text-text/50">
-          {t("meeting.setup.providerHint")}
-        </span>
-      </label>
+      {!microphoneOnly && (
+        <Alert variant="warning">
+          {t("settings.meetings.devices.systemAudio.description")}
+        </Alert>
+      )}
 
       {/* Summary switch (§6.7). A plain checkbox keeps the whole dialog
           keyboard operable with a single tab order (§6.14). */}
@@ -261,9 +310,6 @@ export const MeetingSetup: React.FC<MeetingSetupProps> = ({
         </Button>
         <Button variant="secondary" onClick={onBack}>
           {t("meeting.actions.cancel")}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={() => onOpenSettings?.()}>
-          {t("meeting.setup.moreSettings")}
         </Button>
       </div>
     </section>

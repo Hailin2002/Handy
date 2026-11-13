@@ -16,7 +16,7 @@
     "postProcessing": "Naverwerking",
     "history": "Geschiedenis",
     "debug": "Probleemoplossing",
-    "about": "Over Handy"
+    "about": "Over Speak"
   },
   "nav": {
     "primaryAriaLabel": "Hoofdnavigatie",
@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Transcribeert de opgeslagen audio nog een keer. De opname zelf blijft behouden.",
         "retranscribeWarning": "Het huidige transcript wordt verwijderd en opnieuw gemaakt uit de opgeslagen audio. De opname blijft ongemoeid.",
         "retranscribeQueued": "Transcriptie opnieuw in de wachtrij.",
-        "retranscribeFailed": "Kon de transcriptie niet opnieuw starten."
+        "retranscribeFailed": "Kon de transcriptie niet opnieuw starten.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Machtigingen vereist",
-      "description": "Handy heeft een aantal machtigingen nodig om goed te kunnen werken.",
+      "description": "Speak heeft een aantal machtigingen nodig om goed te kunnen werken.",
       "microphone": {
         "title": "Microfoontoegang",
         "description": "Vereist om je stem op te nemen voor transcriptie."
@@ -655,6 +666,14 @@
           "transcribe_with_post_process": {
             "name": "Sneltoets voor naverwerking",
             "description": "Optioneel: Een specifieke sneltoets die altijd AI-naverwerking toepast op je transcriptie."
+          },
+          "assistant_fast": {
+            "name": "Sneltoets snelle helper",
+            "description": "De sneltoets die de snelle assistent bevraagt. Niet toegewezen tot je hem instelt."
+          },
+          "assistant_smart": {
+            "name": "Sneltoets slimme assistent",
+            "description": "De sneltoets die de grondige assistent bevraagt. Niet toegewezen tot je hem instelt."
           }
         },
         "errors": {
@@ -675,6 +694,20 @@
       "pushToTalk": {
         "label": "Push-to-talk",
         "description": "Ingedrukt houden om op te nemen, loslaten om te stoppen"
+      },
+      "recordingAudio": {
+        "label": "Audio tijdens opname",
+        "description": "Wat Speak tijdens de opname met de systeemaudio doet",
+        "modes": {
+          "off": "Niets doen",
+          "duck": "Volume verlagen",
+          "mute": "Volledig dempen"
+        },
+        "volume": {
+          "label": "Verlaagd volume",
+          "description": "Doelvolume van de systeemuitvoer tijdens de opname",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "models": {
@@ -693,7 +726,7 @@
       },
       "rescan": {
         "label": "Opnieuw scannen",
-        "tooltip": "Scannen naar modellen die buiten Handy om zijn toegevoegd aan de modellenmap of Hugging Face-cache"
+        "tooltip": "Scannen naar modellen die buiten Speak om zijn toegevoegd aan de modellenmap of Hugging Face-cache"
       },
       "noModelsMatch": "Geen modellen voldoen aan dit filter."
     },
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Starten bij opstarten",
-        "description": "Handy automatisch starten zodra je inlogt op je computer."
+        "description": "Speak automatisch starten zodra je inlogt op je computer."
       },
       "showTrayIcon": {
         "label": "Pictogram in systeemvak tonen",
-        "description": "Toon het Handy-pictogram in het systeemvak."
+        "description": "Toon het Speak-pictogram in het systeemvak."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Controleren op updates",
-        "description": "Automatisch controleren op nieuwe versies van Handy"
+        "description": "Automatisch controleren op nieuwe versies van Speak"
       },
       "whatsNewPreview": {
         "title": "Voorbeeld van release-notes",
@@ -1004,10 +1037,6 @@
         "label": "Naverwerking",
         "description": "Schakel AI-gestuurde tekstverfijning in na transcriptie"
       },
-      "muteWhileRecording": {
-        "label": "Dempen tijdens opname",
-        "description": "Systeemgeluid dempen tijdens het opnemen"
-      },
       "appendTrailingSpace": {
         "label": "Spatie achteraan toevoegen",
         "description": "Voeg een spatie toe na de geplakte transcriptie"
@@ -1040,7 +1069,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Toetsenborddiagnose",
-        "description": "Controleert of toetsenbordgebeurtenissen Handy bereiken. Alleen het aantal gebeurtenissen wordt vastgelegd — nooit welke toetsen je indrukt.",
+        "description": "Controleert of toetsenbordgebeurtenissen Speak bereiken. Alleen het aantal gebeurtenissen wordt vastgelegd — nooit welke toetsen je indrukt.",
         "run": "Diagnose van 10 s uitvoeren",
         "running": "Luisteren… druk je sneltoets een paar keer in (bijv. Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1054,24 +1083,24 @@
         "mouse": "Muis",
         "verdictBlocked": "Secure Input blokkeert toetsgebeurtenissen — sneltoetsen met een gewone toets kunnen pas weer werken als dit is opgelost.",
         "verdictSuspicious": "Er kwamen wel modificatiegebeurtenissen binnen, maar geen toetsgebeurtenissen — iets onderdrukt toetsen terwijl Secure Input als uitgeschakeld wordt gemeld. Meld dit op GitHub.",
-        "verdictOk": "Toetsgebeurtenissen bereiken Handy normaal.",
+        "verdictOk": "Toetsgebeurtenissen bereiken Speak normaal.",
         "verdictNoEvents": "Geen gebeurtenissen vastgelegd — heb je tijdens de test toetsen ingedrukt?",
         "failed": "Diagnose mislukt: {{error}}"
       }
     },
     "about": {
-      "title": "Over Handy",
+      "title": "Over Speak",
       "version": {
         "title": "Versie",
-        "description": "Huidige versie van Handy"
+        "description": "Huidige versie van Speak"
       },
       "whatsNewUpdates": {
         "label": "Toon 'Wat is er nieuw'",
-        "description": "Release-notes tonen nadat Handy is bijgewerkt"
+        "description": "Release-notes tonen nadat Speak is bijgewerkt"
       },
       "appDataDirectory": {
         "title": "App-datamap",
-        "description": "Locatie waar Handy de gegevens opslaat"
+        "description": "Locatie waar Speak de gegevens opslaat"
       },
       "sourceCode": {
         "title": "Broncode",
@@ -1080,7 +1109,7 @@
       },
       "supportDevelopment": {
         "title": "Ontwikkeling ondersteunen",
-        "description": "Help ons om te blijven bouwen aan Handy",
+        "description": "Help ons om te blijven bouwen aan Speak",
         "button": "Doneren"
       },
       "acknowledgments": {
@@ -1088,13 +1117,14 @@
         "ggml": {
           "title": "ggml",
           "description": "Krachtige tensorbibliotheek voor lokale AI-verwerking",
-          "details": "Handy's lokale spraak-naar-tekst is gebouwd op transcribe.cpp en ggml. Met dank aan het geweldige werk van Georgi Gerganov en alle bijdragers."
+          "details": "Speak's lokale spraak-naar-tekst is gebouwd op transcribe.cpp en ggml. Met dank aan het geweldige werk van Georgi Gerganov en alle bijdragers."
         }
       }
     },
     "tabs": {
       "modelsProviders": "Modellen en providers",
-      "meetingsEmptyBody": "Vergaderinstellingen komen met de vergadermodus."
+      "meetingsEmptyBody": "Vergaderinstellingen komen met de vergadermodus.",
+      "assistants": "Assistenten"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "30 dagen bewaren",
           "forever": "Altijd bewaren"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "AI-assistenten",
+      "description": "Twee assistenten die je met een sneltoets bereikt. Spreek je vraag in en het antwoord verschijnt op een kaart naast de Speak-overlay.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Snelle helper",
+          "description": "Voor korte vragen: een feit, een omrekening, een spelling, een herschreven zin. Gericht op een kort antwoord dat meteen komt."
+        },
+        "smart_assistant": {
+          "title": "Slimme assistent",
+          "description": "Voor vragen die nadenken verdienen: analyse, vergelijking, concepten. Mag langer doen en uitgebreid antwoorden."
+        }
+      },
+      "provider": {
+        "title": "Aanbieder",
+        "description": "Welke dienst voor deze assistent antwoordt. Beide assistenten kunnen dezelfde aanbieder met verschillende sleutels gebruiken."
+      },
+      "apiKey": {
+        "configured": "De API-sleutel voor {{provider}} is opgeslagen.",
+        "notConfigured": "Geen API-sleutel opgeslagen voor {{provider}}.",
+        "title": "API-sleutel",
+        "description": "Wordt bewaard in de sleutelhanger van je besturingssysteem, los van de sleutel voor nabewerking.",
+        "placeholder": "Plak je API-sleutel"
+      },
+      "model": {
+        "title": "Model",
+        "description": "Het model dat deze assistent bevraagt. Kies er een uit de lijst of typ de exacte model-id.",
+        "placeholder": "Kies of typ een model-id",
+        "refresh": "Modellijst vernieuwen",
+        "required": "Nog geen model gekozen. Deze assistent blijft inactief tot je er een selecteert.",
+        "listingHint": "De modellijst wordt geladen met de eigen API-sleutel van deze assistent. Zonder sleutel kun je de model-id nog steeds handmatig invoeren."
+      },
+      "systemPrompt": {
+        "title": "Systeemprompt",
+        "description": "De vaste instructie die deze assistent bij elke vraag volgt.",
+        "placeholder": "Beschrijf hoe deze assistent moet antwoorden"
+      },
+      "maxOutputTokens": {
+        "title": "Antwoordlengte",
+        "description": "Bovengrens voor het antwoord, in tokens ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Time-out",
+        "description": "Hoe lang op een antwoord wordt gewacht voordat het wordt afgebroken, in seconden ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Omgang met het antwoord"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Alleen tonen",
+          "hint": "Het antwoord verschijnt op de kaart en nergens anders."
+        },
+        "copy": {
+          "label": "Tonen en kopiëren",
+          "hint": "Het antwoord verschijnt op de kaart en wordt naar het klembord gekopieerd."
+        },
+        "paste": {
+          "label": "Tonen en plakken",
+          "hint": "Het antwoord verschijnt op de kaart en wordt geplakt in de app waarin je bezig was."
+        }
+      },
+      "shortcutHint": "De sneltoetsen van beide assistenten stel je in onder Dicteren, naast de transcriptiesneltoetsen."
     }
   },
   "footer": {
@@ -1167,7 +1288,7 @@
     "portableUpdateBrowseButton": "GitHub Releases openen"
   },
   "whatsNew": {
-    "title": "Nieuw in Handy v{{version}}"
+    "title": "Nieuw in Speak v{{version}}"
   },
   "common": {
     "add": "Toevoegen",
@@ -1184,7 +1305,7 @@
     "reset": "Opnieuw instellen"
   },
   "accessibility": {
-    "permissionsDescription": "Handy heeft toegankelijkheidsmachtigingen nodig om getranscribeerde tekst te kunnen typen.",
+    "permissionsDescription": "Speak heeft toegankelijkheidsmachtigingen nodig om getranscribeerde tekst te kunnen typen.",
     "openSettings": "Systeeminstellingen openen"
   },
   "dictation": {
@@ -1274,15 +1395,16 @@
     "modelLoadFailedUnknown": "onbekend model",
     "pasteFailedTitle": "Tekst plakken mislukt",
     "pasteFailed": "Tekst kon niet worden geplakt in de actieve applicatie.",
-    "transcriptionFailedTitle": "Transcriptie mislukt"
+    "transcriptionFailedTitle": "Transcriptie mislukt",
+    "assistantNoticeTitle": "Assistent"
   },
   "appLanguage": {
     "title": "Interfacetaal",
-    "description": "Wijzig de taal van de Handy-interface"
+    "description": "Wijzig de taal van de Speak-interface"
   },
   "theme": {
     "title": "App-thema",
-    "description": "Kies of Handy het systeemthema volgt of licht of donker blijft",
+    "description": "Kies of Speak het systeemthema volgt of licht of donker blijft",
     "options": {
       "system": "Systeem",
       "light": "Licht",
@@ -1294,7 +1416,24 @@
     "processing": "Verwerken...",
     "cancel": "Annuleren",
     "meetingRecording": "Vergadering wordt opgenomen",
-    "meetingPaused": "Vergadering gepauzeerd"
+    "meetingPaused": "Vergadering gepauzeerd",
+    "assistant": {
+      "label": "Assistent",
+      "smartLabel": "Slimme assistent",
+      "copy": "Kopiëren",
+      "copied": "Gekopieerd naar het klembord",
+      "paste": "Plakken",
+      "pasted": "Geplakt",
+      "replace": "Vervangen",
+      "replaced": "Selectie vervangen",
+      "replaceHint": "Selecteert alles in het actieve venster en plakt het antwoord eroverheen",
+      "openLink": "Link openen",
+      "chooseLink": "Link openen ({{n}})",
+      "escalate": "Slimme assistent vragen",
+      "asking": "Slimme assistent wordt geraadpleegd...",
+      "close": "Sluiten",
+      "truncated": "Het antwoord is afgekapt bij de lengtelimiet."
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokkeert mogelijk 1 sneltoets",

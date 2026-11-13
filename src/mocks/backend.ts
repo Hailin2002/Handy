@@ -236,6 +236,17 @@ export const handleCommand = (
     // --- tauri-specta readers (raw payloads; bindings add the Result) -----
     case "get_app_settings":
       return { ...backend.settings };
+    case "get_assistant_api_key_status":
+      return Object.fromEntries(
+        Object.keys(backend.settings.assistant_profiles ?? {}).map((id) => [
+          id,
+          Boolean(
+            backend.settings.assistant_api_keys?.[
+              id as keyof typeof backend.settings.assistant_api_keys
+            ],
+          ),
+        ]),
+      );
     case "get_default_settings":
       return { ...DEFAULT_MOCK_SETTINGS };
     case "get_app_dir_path":

@@ -106,6 +106,51 @@ pub struct PostProcessProvider {
     pub supports_structured_output: bool,
 }
 
+/// What an assistant does with the answer it produced.
+///
+/// `Show` only renders the result card and is the default for both shipped
+/// profiles: an assistant that types into the focused app without being asked
+/// would be destructive when the shortcut is hit by accident.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum AssistantOutputMode {
+    /// Display the answer in the overlay card and do nothing else.
+    #[default]
+    Show,
+    /// Display the answer and copy it to the clipboard.
+    Copy,
+    /// Display the answer and paste it into the focused application.
+    Paste,
+}
+
+/// One independently configured assistant.
+///
+/// Profiles deliberately do **not** share provider credentials with
+/// post-processing: the same provider can be used with a different key per
+/// profile, so keys live under [`crate::secret_store::ASSISTANT_SCOPE`] keyed
+/// by [`AssistantProfile::id`], not by `provider_id`.
+///
+/// `max_output_tokens`, `timeout_secs` and `disable_reasoning` map directly
+/// onto `llm_client::ChatOptions`; keep them in that shape so the execution
+/// path stays a plain field-for-field translation.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Type)]
+pub struct AssistantProfile {
+    /// Stable identity. Also the `assistant_profiles` map key and the secret
+    /// id — the two are kept in sync by `ensure_assistant_defaults`.
+    pub id: String,
+    /// Id of an entry in `post_process_providers`; the provider catalogue is
+    /// shared, only the credentials are not.
+    pub provider_id: String,
+    pub model: String,
+    pub system_prompt: String,
+    pub max_output_tokens: u32,
+    pub timeout_secs: u32,
+    pub output_mode: AssistantOutputMode,
+    /// Ask the endpoint to skip reasoning output — the difference between a
+    /// snappy lookup and a model that thinks for ten seconds first.
+    pub disable_reasoning: bool,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "lowercase")]
 pub enum OverlayPosition {
@@ -325,6 +370,44 @@ pub enum Theme {
     System,
     Light,
     Dark,
+}
+
+/// What Handy does to the system's audio output while it is recording.
+///
+/// Supersedes the older `mute_while_recording` bool, which is kept in the
+/// schema and write-through mirrored (`mirrors_mute_flag`) so existing UI,
+/// fixtures and the frozen-store test keep working. `recording_audio_mode` is
+/// the runtime truth; the bool is a derived shadow.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum RecordingAudioMode {
+    /// Leave system audio alone.
+    #[default]
+    Off,
+    /// Lower system output volume to `duck_volume_percent` while recording.
+    Duck,
+    /// Mute system output entirely — the pre-existing behavior.
+    Mute,
+}
+
+impl RecordingAudioMode {
+    /// The value the legacy `mute_while_recording` bool must carry for this
+    /// mode. Single source of the write-through mirror described above, so the
+    /// two fields can never drift apart by someone forgetting one side.
+    pub const fn mirrors_mute_flag(self) -> bool {
+        matches!(self, RecordingAudioMode::Mute)
+    }
+
+    /// Reconstructs a mode from the legacy bool. Used by the one-time store
+    /// migration and by the legacy `change_mute_while_recording_setting`
+    /// command, so both interpret an old store identically.
+    pub const fn from_legacy_mute_flag(mute_while_recording: bool) -> Self {
+        if mute_while_recording {
+            RecordingAudioMode::Mute
+        } else {
+            RecordingAudioMode::Off
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]

@@ -21,6 +21,8 @@ type BaseProps = {
   disabled?: boolean;
   isLoading?: boolean;
   isClearable?: boolean;
+  isSearchable?: boolean;
+  openMenuOnFocus?: boolean;
   onChange: (value: string | null, action: ActionMeta<SelectOption>) => void;
   onBlur?: () => void;
   className?: string;
@@ -127,6 +129,8 @@ export const Select: React.FC<SelectProps> = React.memo(
     disabled,
     isLoading,
     isClearable = true,
+    isSearchable = true,
+    openMenuOnFocus = false,
     onChange,
     onBlur,
     className = "",
@@ -159,6 +163,8 @@ export const Select: React.FC<SelectProps> = React.memo(
       isLoading,
       onBlur,
       isClearable,
+      isSearchable,
+      openMenuOnFocus,
       styles: selectStyles,
     };
 

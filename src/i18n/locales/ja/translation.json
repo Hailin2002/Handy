@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "保存された音声をもう一度文字起こしします。録音そのものは保持されます。",
         "retranscribeWarning": "現在の文字起こしを破棄し、保存された音声から作り直します。録音には手を加えません。",
         "retranscribeQueued": "文字起こしを再度キューに入れました。",
-        "retranscribeFailed": "文字起こしを再開できませんでした。"
+        "retranscribeFailed": "文字起こしを再開できませんでした。",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "権限が必要です",
-      "description": "Handy が正常に動作するにはいくつかの権限が必要です。",
+      "description": "Speak が正常に動作するにはいくつかの権限が必要です。",
       "microphone": {
         "title": "マイクへのアクセス",
         "description": "文字起こしのためにあなたの声を聞くために必要です。"
@@ -651,13 +662,13 @@
       "searchPlaceholder": "モデルを名前で検索…",
       "rescan": {
         "label": "再スキャン",
-        "tooltip": "Handy を使わずに models フォルダーまたは Hugging Face キャッシュに追加されたモデルを再スキャンします"
+        "tooltip": "Speak を使わずに models フォルダーまたは Hugging Face キャッシュに追加されたモデルを再スキャンします"
       }
     },
     "general": {
       "title": "一般",
       "shortcut": {
-        "title": "Handy ショートカット",
+        "title": "Speak ショートカット",
         "description": "音声録音を開始するキーボードショートカットを設定",
         "loading": "ショートカットを読み込み中…",
         "none": "ショートカットが設定されていません",
@@ -675,6 +686,14 @@
           "transcribe_with_post_process": {
             "name": "後処理のショートカット",
             "description": "文字起こしに常に AI 後処理を適用するキーボードショートカット。 (任意)"
+          },
+          "assistant_fast": {
+            "name": "高速ヘルパーのショートカット",
+            "description": "高速アシスタントに質問するキーボードショートカット。設定するまで未割り当てです。"
+          },
+          "assistant_smart": {
+            "name": "スマートアシスタントのショートカット",
+            "description": "じっくり考えるアシスタントに質問するキーボードショートカット。設定するまで未割り当てです。"
           }
         },
         "errors": {
@@ -695,6 +714,20 @@
       "pushToTalk": {
         "label": "プッシュツートーク",
         "description": "押し続けて録音、離して停止"
+      },
+      "recordingAudio": {
+        "label": "録音中のオーディオ",
+        "description": "録音中にシステムの音声再生をどう扱うか",
+        "modes": {
+          "off": "何もしない",
+          "duck": "音量を下げる",
+          "mute": "完全にミュート"
+        },
+        "volume": {
+          "label": "下げる音量",
+          "description": "録音中のシステム出力音量の目標値",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "起動時に実行",
-        "description": "コンピューターにログインしたときに Handy を自動的に起動。"
+        "description": "コンピューターにログインしたときに Speak を自動的に起動。"
       },
       "showTrayIcon": {
         "label": "トレイアイコンを表示",
-        "description": "システムトレイに Handy のアイコンを表示します。"
+        "description": "システムトレイに Speak のアイコンを表示します。"
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "アップデートを確認",
-        "description": "Handy の新しいバージョンを自動的にチェック"
+        "description": "Speak の新しいバージョンを自動的にチェック"
       },
       "soundTheme": {
         "label": "サウンドテーマ",
@@ -997,10 +1030,6 @@
         "label": "後処理",
         "description": "文字起こし後の AI によるテキスト改善を有効化"
       },
-      "muteWhileRecording": {
-        "label": "録音中にミュート",
-        "description": "録音中にシステムオーディオをミュート"
-      },
       "appendTrailingSpace": {
         "label": "末尾にスペースを追加",
         "description": "貼り付けた文字起こしの後にスペースを追加"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "キーボード診断",
-        "description": "キーボードイベントが Handy に届いているかを確認します。記録されるのはイベント数のみで、押したキーの内容は記録されません。",
+        "description": "キーボードイベントが Speak に届いているかを確認します。記録されるのはイベント数のみで、押したキーの内容は記録されません。",
         "run": "10 秒間の診断を実行",
         "running": "待機中… ショートカットを数回押してください (例: Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "マウス",
         "verdictBlocked": "Secure Input がキーイベントをブロックしています。解消されるまで、通常キーを含むショートカットは動作しません。",
         "verdictSuspicious": "修飾キーのイベントは届いていますが、キーイベントは届いていません。Secure Input は無効と報告されているのに、何かがキーを抑制しています。GitHub で報告してください。",
-        "verdictOk": "キーイベントは Handy に正常に届いています。",
+        "verdictOk": "キーイベントは Speak に正常に届いています。",
         "verdictNoEvents": "イベントを検出できませんでした。テスト中にキーを押しましたか？",
         "failed": "診断に失敗しました: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "概要",
       "version": {
         "title": "バージョン",
-        "description": "Handy の現在のバージョン"
+        "description": "Speak の現在のバージョン"
       },
       "appDataDirectory": {
         "title": "アプリデータディレクトリ",
-        "description": "Handy がデータを保存する場所"
+        "description": "Speak がデータを保存する場所"
       },
       "sourceCode": {
         "title": "ソースコード",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "開発を支援",
-        "description": "Handy の開発を支援してください",
+        "description": "Speak の開発を支援してください",
         "button": "寄付する"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "オンデバイス機械学習推論のための高性能テンソルライブラリ",
-          "details": "Handy のローカルの音声からテキストへの文字起こしは transcribe.cpp と ggml を基盤としています。Georgi Gerganov 氏と貢献者の皆様の素晴らしい仕事に感謝します。"
+          "details": "Speak のローカルの音声からテキストへの文字起こしは transcribe.cpp と ggml を基盤としています。Georgi Gerganov 氏と貢献者の皆様の素晴らしい仕事に感謝します。"
         }
       },
       "whatsNewUpdates": {
         "label": "新機能を表示",
-        "description": "Handy のアップデート後にリリースノートを表示"
+        "description": "Speak のアップデート後にリリースノートを表示"
       }
     },
     "tabs": {
       "modelsProviders": "モデルとプロバイダー",
-      "meetingsEmptyBody": "会議設定は会議モードとともに提供されます。"
+      "meetingsEmptyBody": "会議設定は会議モードとともに提供されます。",
+      "assistants": "アシスタント"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "30 日間保持",
           "forever": "ずっと保持"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "AI アシスタント",
+      "description": "ショートカットで呼び出せる 2 つのアシスタント。質問を話すと、Speak オーバーレイの隣のカードに答えが表示されます。",
+      "profiles": {
+        "fast_helper": {
+          "title": "高速ヘルパー",
+          "description": "ちょっとした確認に: 事実、単位変換、綴り、言い換え。すぐ返ってくる短い回答に合わせて調整されています。"
+        },
+        "smart_assistant": {
+          "title": "スマートアシスタント",
+          "description": "考える価値のある質問に: 分析、比較、下書き。時間をかけて長く答えることが許されています。"
+        }
+      },
+      "provider": {
+        "title": "プロバイダー",
+        "description": "このアシスタントに応答するサービス。2 つのアシスタントは同じプロバイダーを別々のキーで使えます。"
+      },
+      "apiKey": {
+        "configured": "{{provider}} の API キーは保存されています。",
+        "notConfigured": "{{provider}} の API キーは保存されていません。",
+        "title": "API キー",
+        "description": "OS のキーチェーンに、後処理用のキーとは別に保存されます。",
+        "placeholder": "API キーを貼り付け"
+      },
+      "model": {
+        "title": "モデル",
+        "description": "このアシスタントが問い合わせるモデル。一覧から選ぶか、正確なモデル ID を入力してください。",
+        "placeholder": "モデル ID を選択または入力",
+        "refresh": "モデル一覧を更新",
+        "required": "まだモデルが選ばれていません。選ぶまでこのアシスタントは動作しません。",
+        "listingHint": "モデル一覧はこのアシスタント自身の API キーで読み込まれます。キーがなくても、モデル ID を手入力できます。"
+      },
+      "systemPrompt": {
+        "title": "システムプロンプト",
+        "description": "このアシスタントがすべての質問で従う固定の指示。",
+        "placeholder": "このアシスタントの回答方針を記述してください"
+      },
+      "maxOutputTokens": {
+        "title": "回答の長さ",
+        "description": "回答の上限（トークン数、{{min}}〜{{max}}）。"
+      },
+      "timeout": {
+        "title": "タイムアウト",
+        "description": "回答を待つ時間の上限（秒、{{min}}〜{{max}}）。"
+      },
+      "outputMode": {
+        "title": "回答の扱い"
+      },
+      "outputModes": {
+        "show": {
+          "label": "表示のみ",
+          "hint": "回答はカードに表示されるだけです。"
+        },
+        "copy": {
+          "label": "表示してコピー",
+          "hint": "回答はカードに表示され、クリップボードにコピーされます。"
+        },
+        "paste": {
+          "label": "表示して貼り付け",
+          "hint": "回答はカードに表示され、作業中だったアプリに貼り付けられます。"
+        }
+      },
+      "shortcutHint": "両アシスタントのキーボードショートカットは「ディクテーション」で、文字起こしのショートカットの隣に設定します。"
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "リセット"
   },
   "accessibility": {
-    "permissionsDescription": "Handy が文字起こしテキストを入力するには、アクセシビリティ権限が必要です。",
+    "permissionsDescription": "Speak が文字起こしテキストを入力するには、アクセシビリティ権限が必要です。",
     "openSettings": "システム設定を開く"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "不明なモデル",
     "pasteFailedTitle": "テキストの貼り付けに失敗しました",
     "pasteFailed": "アクティブなアプリにテキストを貼り付けられませんでした。",
-    "transcriptionFailedTitle": "文字起こしに失敗しました"
+    "transcriptionFailedTitle": "文字起こしに失敗しました",
+    "assistantNoticeTitle": "アシスタント"
   },
   "appLanguage": {
     "title": "アプリの言語",
-    "description": "Handy インターフェースの言語を変更"
+    "description": "Speak インターフェースの言語を変更"
   },
   "theme": {
     "title": "アプリのテーマ",
-    "description": "Handy をシステムのテーマに合わせるか、ライトまたはダークで固定するかを選択します",
+    "description": "Speak をシステムのテーマに合わせるか、ライトまたはダークで固定するかを選択します",
     "options": {
       "system": "システム",
       "light": "ライト",
@@ -1291,10 +1413,27 @@
     "processing": "処理中…",
     "cancel": "キャンセル",
     "meetingRecording": "会議を録音中",
-    "meetingPaused": "会議は一時停止中"
+    "meetingPaused": "会議は一時停止中",
+    "assistant": {
+      "label": "アシスタント",
+      "smartLabel": "スマートアシスタント",
+      "copy": "コピー",
+      "copied": "クリップボードにコピーしました",
+      "paste": "貼り付け",
+      "pasted": "貼り付けました",
+      "replace": "置き換え",
+      "replaced": "置き換えました",
+      "replaceHint": "アクティブなウィンドウの内容をすべて選択し、回答で置き換えます",
+      "openLink": "リンクを開く",
+      "chooseLink": "リンクを開く ({{n}})",
+      "escalate": "スマートアシスタントに聞く",
+      "asking": "スマートアシスタントに問い合わせ中…",
+      "close": "閉じる",
+      "truncated": "回答は長さの上限で途切れました。"
+    }
   },
   "whatsNew": {
-    "title": "Handy v{{version}} の新機能"
+    "title": "Speak v{{version}} の新機能"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} が1個のショートカットをブロックしている可能性があります",

@@ -26,6 +26,15 @@ jobs:
           AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
           AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
           AZURE_SIGNING_CERT_PROFILE: ${{ secrets.AZURE_SIGNING_CERT_PROFILE }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           missing=()
           # Without this the updater artifacts cannot be signed, so
@@ -36,6 +45,17 @@ jobs:
           [ -n "$AZURE_SIGNING_ENDPOINT" ] || missing+=("AZURE_SIGNING_ENDPOINT")
           [ -n "$AZURE_SIGNING_ACCOUNT" ] || missing+=("AZURE_SIGNING_ACCOUNT")
           [ -n "$AZURE_SIGNING_CERT_PROFILE" ] || missing+=("AZURE_SIGNING_CERT_PROFILE")
+          [ -n "$AZURE_CLIENT_ID" ] || missing+=("AZURE_CLIENT_ID")
+          [ -n "$AZURE_CLIENT_SECRET" ] || missing+=("AZURE_CLIENT_SECRET")
+          [ -n "$AZURE_TENANT_ID" ] || missing+=("AZURE_TENANT_ID")
+          # macOS release bundles must be signed and notarized. Catch an empty
+          # certificate or Apple credential before the matrix starts.
+          [ -n "$APPLE_CERTIFICATE" ] || missing+=("APPLE_CERTIFICATE")
+          [ -n "$APPLE_CERTIFICATE_PASSWORD" ] || missing+=("APPLE_CERTIFICATE_PASSWORD")
+          [ -n "$KEYCHAIN_PASSWORD" ] || missing+=("KEYCHAIN_PASSWORD")
+          [ -n "$APPLE_ID" ] || missing+=("APPLE_ID")
+          [ -n "$APPLE_PASSWORD" ] || missing+=("APPLE_PASSWORD")
+          [ -n "$APPLE_TEAM_ID" ] || missing+=("APPLE_TEAM_ID")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing repository secrets: ${missing[*]}"
             echo "See BUILD.md -> Release signing for how to obtain and set each one." >&2
@@ -103,7 +123,7 @@ jobs:
       target: ${{ matrix.target }}
       build-args: ${{ matrix.args }}
       sign-binaries: true
-      asset-prefix: "handy"
+      asset-prefix: "speak"
       upload-artifacts: false
       release-id: ${{ needs.create-release.outputs.release-id }}
       # Releases always build from scratch — never restore the Rust cache, so a

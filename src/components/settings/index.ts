@@ -5,6 +5,8 @@ export { DebugSettings } from "./debug/DebugSettings";
 export { HistorySettings } from "./history/HistorySettings";
 export { AboutSettings } from "./about/AboutSettings";
 export { PostProcessingSettings } from "./post-processing/PostProcessingSettings";
+export { AssistantSettings } from "./assistants/AssistantSettings";
+export { AssistantProfileSettings } from "./assistants/AssistantProfileSettings";
 export { ModelsSettings } from "./models/ModelsSettings";
 export { SpeechPipelineSettings } from "./general/SpeechPipelineSettings";
 
@@ -40,5 +42,6 @@ export { ShowWhatsNewOnUpdate } from "./about/ShowWhatsNewOnUpdate";
 // (plan §6.3).
 export { DictationSettingsTab } from "./tabs/DictationSettingsTab";
 export { MeetingsSettingsTab } from "./tabs/MeetingsSettingsTab";
+export { AssistantsSettingsTab } from "./tabs/AssistantsSettingsTab";
 export { ModelsAndProvidersTab } from "./tabs/ModelsAndProvidersTab";
 export { AppGeneralTab } from "./tabs/AppGeneralTab";

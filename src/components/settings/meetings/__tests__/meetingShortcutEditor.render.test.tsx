@@ -112,14 +112,16 @@ describe("MeetingShortcutEditor (§6.9)", () => {
 });
 
 describe("MeetingsSettingsTab integration", () => {
-  it("embeds the shortcut editor below the tab heading and keeps the honest placeholder note", async () => {
+  it("embeds shortcuts, devices and meeting-summary configuration", async () => {
     await initI18n();
 
     const html = renderToStaticMarkup(React.createElement(MeetingsSettingsTab));
 
     expect(html).toContain(">Meetings</h2>");
     expect(html).toContain("Meeting Shortcuts");
-    expect(html).toContain("Meeting settings will arrive with meeting mode.");
+    expect(html).toContain("Meeting summary");
+    expect(html).toContain("Local GPU (Ollama)");
+    expect(html).toContain("OpenRouter");
   });
 });
 

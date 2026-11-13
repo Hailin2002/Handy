@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "सहेजे गए ऑडियो को फिर से ट्रांसक्राइब करता है। रिकॉर्डिंग बनी रहती है।",
         "retranscribeWarning": "मौजूदा ट्रांसक्रिप्ट हटा दिया जाएगा और सहेजे गए ऑडियो से फिर से बनाया जाएगा। रिकॉर्डिंग को नहीं छुआ जाता।",
         "retranscribeQueued": "ट्रांसक्रिप्शन फिर से कतार में।",
-        "retranscribeFailed": "ट्रांसक्रिप्शन फिर से शुरू नहीं किया जा सका।"
+        "retranscribeFailed": "ट्रांसक्रिप्शन फिर से शुरू नहीं किया जा सका।",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "अनुमतियों की ज़रूरत है",
-      "description": "Handy को ठीक से काम करने के लिए कुछ अनुमतियों की ज़रूरत है.",
+      "description": "Speak को ठीक से काम करने के लिए कुछ अनुमतियों की ज़रूरत है.",
       "microphone": {
         "title": "माइक्रोफ़ोन ऐक्सेस",
         "description": "आपकी आवाज़ सुनकर ट्रांसक्रिप्शन करने के लिए ज़रूरी."
@@ -637,7 +648,7 @@
     "general": {
       "title": "सामान्य",
       "shortcut": {
-        "title": "Handy शॉर्टकट",
+        "title": "Speak शॉर्टकट",
         "description": "स्पीच-टू-टेक्स्ट रिकॉर्डिंग शुरू करने के लिए कीबोर्ड शॉर्टकट सेट करें",
         "loading": "शॉर्टकट लोड हो रहे हैं...",
         "none": "कोई शॉर्टकट सेट नहीं है",
@@ -655,6 +666,14 @@
           "transcribe_with_post_process": {
             "name": "पोस्ट-प्रोसेसिंग हॉटकी",
             "description": "वैकल्पिक: एक अलग हॉटकी जो आपके ट्रांसक्रिप्शन पर हमेशा AI पोस्ट-प्रोसेसिंग लागू करती है."
+          },
+          "assistant_fast": {
+            "name": "फ़ास्ट हेल्पर शॉर्टकट",
+            "description": "वह कीबोर्ड शॉर्टकट जो तेज़ सहायक से पूछता है। जब तक आप इसे सेट नहीं करते, यह अनिर्धारित रहता है।"
+          },
+          "assistant_smart": {
+            "name": "स्मार्ट असिस्टेंट शॉर्टकट",
+            "description": "वह कीबोर्ड शॉर्टकट जो गहन सहायक से पूछता है। जब तक आप इसे सेट नहीं करते, यह अनिर्धारित रहता है।"
           }
         },
         "errors": {
@@ -675,6 +694,20 @@
       "pushToTalk": {
         "label": "पुश टू टॉक",
         "description": "रिकॉर्ड करने के लिए दबाकर रखें, रोकने के लिए छोड़ दें"
+      },
+      "recordingAudio": {
+        "label": "रिकॉर्डिंग के दौरान ऑडियो",
+        "description": "रिकॉर्डिंग के दौरान Speak सिस्टम ऑडियो प्लेबैक के साथ क्या करे",
+        "modes": {
+          "off": "कुछ न करें",
+          "duck": "वॉल्यूम कम करें",
+          "mute": "पूरी तरह म्यूट करें"
+        },
+        "volume": {
+          "label": "कम किया गया वॉल्यूम",
+          "description": "रिकॉर्डिंग के दौरान सिस्टम आउटपुट का लक्षित वॉल्यूम",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "models": {
@@ -693,7 +726,7 @@
       },
       "rescan": {
         "label": "फिर से स्कैन करें",
-        "tooltip": "Handy के बाहर, मॉडल फ़ोल्डर या Hugging Face कैश में जोड़े गए मॉडल के लिए फिर से स्कैन करें"
+        "tooltip": "Speak के बाहर, मॉडल फ़ोल्डर या Hugging Face कैश में जोड़े गए मॉडल के लिए फिर से स्कैन करें"
       },
       "noModelsMatch": "इस फ़िल्टर से मेल खाने वाला कोई मॉडल नहीं है."
     },
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "स्टार्टअप पर लॉन्च करें",
-        "description": "कंप्यूटर में लॉग इन करने पर Handy अपने आप शुरू हो जाए."
+        "description": "कंप्यूटर में लॉग इन करने पर Speak अपने आप शुरू हो जाए."
       },
       "showTrayIcon": {
         "label": "ट्रे आइकन दिखाएं",
-        "description": "सिस्टम ट्रे में Handy का आइकन दिखाएं."
+        "description": "सिस्टम ट्रे में Speak का आइकन दिखाएं."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "अपडेट जांचें",
-        "description": "Handy के नए वर्शन की अपने आप जांच करें"
+        "description": "Speak के नए वर्शन की अपने आप जांच करें"
       },
       "whatsNewPreview": {
         "title": "'नया क्या है' की झलक देखें",
@@ -1004,10 +1037,6 @@
         "label": "पोस्ट प्रोसेसिंग",
         "description": "ट्रांसक्रिप्शन के बाद AI की मदद से टेक्स्ट सुधारने की सुविधा चालू करें"
       },
-      "muteWhileRecording": {
-        "label": "रिकॉर्डिंग के दौरान म्यूट करें",
-        "description": "रिकॉर्डिंग के दौरान सिस्टम ऑडियो म्यूट करें"
-      },
       "appendTrailingSpace": {
         "label": "आखिर में स्पेस जोड़ें",
         "description": "पेस्ट किए गए ट्रांसक्रिप्शन के बाद एक स्पेस जोड़ें"
@@ -1040,7 +1069,7 @@
       },
       "keyboardDiagnostic": {
         "title": "कीबोर्ड डायग्नोस्टिक",
-        "description": "जाँचता है कि कीबोर्ड इवेंट Handy तक पहुँच रहे हैं या नहीं. सिर्फ़ इवेंट की गिनती रिकॉर्ड होती है — कभी नहीं कि आपने कौन-सी कुंजियाँ दबाईं.",
+        "description": "जाँचता है कि कीबोर्ड इवेंट Speak तक पहुँच रहे हैं या नहीं. सिर्फ़ इवेंट की गिनती रिकॉर्ड होती है — कभी नहीं कि आपने कौन-सी कुंजियाँ दबाईं.",
         "run": "10 सेकंड का डायग्नोस्टिक चलाएँ",
         "running": "सुन रहे हैं… अपना शॉर्टकट कुछ बार दबाएँ (जैसे Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1054,7 +1083,7 @@
         "mouse": "माउस",
         "verdictBlocked": "Secure Input कुंजी इवेंट ब्लॉक कर रहा है — जब तक यह हल नहीं होता, सामान्य कुंजी वाले शॉर्टकट काम नहीं कर सकते.",
         "verdictSuspicious": "मॉडिफ़ायर इवेंट आए, लेकिन कोई कुंजी इवेंट नहीं — Secure Input के बंद दिखने के बावजूद कुछ कुंजियों को दबा रहा है. कृपया इसकी रिपोर्ट GitHub पर करें.",
-        "verdictOk": "कुंजी इवेंट Handy तक सामान्य रूप से पहुँच रहे हैं.",
+        "verdictOk": "कुंजी इवेंट Speak तक सामान्य रूप से पहुँच रहे हैं.",
         "verdictNoEvents": "कोई इवेंट कैप्चर नहीं हुआ — क्या आपने टेस्ट के दौरान कोई कुंजी दबाई थी?",
         "failed": "डायग्नोस्टिक विफल: {{error}}"
       }
@@ -1063,15 +1092,15 @@
       "title": "के बारे में",
       "version": {
         "title": "वर्शन",
-        "description": "Handy का मौजूदा वर्शन"
+        "description": "Speak का मौजूदा वर्शन"
       },
       "whatsNewUpdates": {
         "label": "'नया क्या है' दिखाएं",
-        "description": "Handy अपडेट होने के बाद रिलीज़ नोट दिखाएं"
+        "description": "Speak अपडेट होने के बाद रिलीज़ नोट दिखाएं"
       },
       "appDataDirectory": {
         "title": "ऐप डेटा फ़ोल्डर",
-        "description": "वह जगह जहां Handy अपना डेटा सेव करता है"
+        "description": "वह जगह जहां Speak अपना डेटा सेव करता है"
       },
       "sourceCode": {
         "title": "सोर्स कोड",
@@ -1080,7 +1109,7 @@
       },
       "supportDevelopment": {
         "title": "डेवलपमेंट में सहयोग करें",
-        "description": "Handy को आगे बढ़ाने में हमारी मदद करें",
+        "description": "Speak को आगे बढ़ाने में हमारी मदद करें",
         "button": "दान करें"
       },
       "acknowledgments": {
@@ -1088,13 +1117,14 @@
         "ggml": {
           "title": "ggml",
           "description": "डिवाइस पर ही मशीन लर्निंग इन्फ़रेंस के लिए हाई-परफ़ॉर्मेंस टेंसर लाइब्रेरी",
-          "details": "Handy का लोकल स्पीच-टू-टेक्स्ट transcribe.cpp और ggml पर आधारित है. Georgi Gerganov और योगदान देने वालों के शानदार काम के लिए धन्यवाद."
+          "details": "Speak का लोकल स्पीच-टू-टेक्स्ट transcribe.cpp और ggml पर आधारित है. Georgi Gerganov और योगदान देने वालों के शानदार काम के लिए धन्यवाद."
         }
       }
     },
     "tabs": {
       "modelsProviders": "मॉडल और प्रदाता",
-      "meetingsEmptyBody": "मीटिंग सेटिंग्स मीटिंग मोड के साथ आएंगी।"
+      "meetingsEmptyBody": "मीटिंग सेटिंग्स मीटिंग मोड के साथ आएंगी।",
+      "assistants": "सहायक"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "30 दिन रखें",
           "forever": "हमेशा रखें"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "एआई सहायक",
+      "description": "दो सहायक जिन तक आप शॉर्टकट से पहुँच सकते हैं। अपना प्रश्न बोलें और उत्तर Speak ओवरले के बगल में एक कार्ड पर आ जाता है।",
+      "profiles": {
+        "fast_helper": {
+          "title": "फ़ास्ट हेल्पर",
+          "description": "त्वरित जानकारी के लिए: कोई तथ्य, रूपांतरण, वर्तनी, दोबारा लिखा गया वाक्य। तुरंत आने वाले संक्षिप्त उत्तर के लिए तैयार।"
+        },
+        "smart_assistant": {
+          "title": "स्मार्ट असिस्टेंट",
+          "description": "सोचने योग्य प्रश्नों के लिए: विश्लेषण, तुलना, प्रारूप लेखन। इसे अधिक समय लेने और विस्तार से उत्तर देने की छूट है।"
+        }
+      },
+      "provider": {
+        "title": "प्रदाता",
+        "description": "इस सहायक के लिए कौन-सी सेवा उत्तर देती है। दोनों सहायक अलग-अलग कुंजियों के साथ एक ही प्रदाता का उपयोग कर सकते हैं।"
+      },
+      "apiKey": {
+        "configured": "{{provider}} की API कुंजी सहेजी गई है।",
+        "notConfigured": "{{provider}} के लिए कोई API कुंजी सहेजी नहीं गई है।",
+        "title": "API कुंजी",
+        "description": "आपके ऑपरेटिंग सिस्टम के कीचेन में सहेजी जाती है, पोस्ट-प्रोसेसिंग कुंजी से अलग।",
+        "placeholder": "अपनी API कुंजी चिपकाएँ"
+      },
+      "model": {
+        "title": "मॉडल",
+        "description": "वह मॉडल जिससे यह सहायक पूछता है। सूची से चुनें या सटीक मॉडल आईडी लिखें।",
+        "placeholder": "मॉडल आईडी चुनें या दर्ज करें",
+        "refresh": "मॉडल सूची ताज़ा करें",
+        "required": "अभी तक कोई मॉडल नहीं चुना गया। जब तक आप एक नहीं चुनते, यह सहायक निष्क्रिय रहेगा।",
+        "listingHint": "मॉडल सूची इस सहायक की अपनी API कुंजी से लोड होती है। उसके बिना भी आप मॉडल आईडी हाथ से दर्ज कर सकते हैं।"
+      },
+      "systemPrompt": {
+        "title": "सिस्टम प्रॉम्प्ट",
+        "description": "स्थायी निर्देश जिसका यह सहायक हर प्रश्न पर पालन करता है।",
+        "placeholder": "बताएँ कि यह सहायक कैसे उत्तर दे"
+      },
+      "maxOutputTokens": {
+        "title": "उत्तर की लंबाई",
+        "description": "उत्तर की ऊपरी सीमा, टोकन में ({{min}}–{{max}})।"
+      },
+      "timeout": {
+        "title": "समय-सीमा",
+        "description": "उत्तर के लिए कितनी देर प्रतीक्षा करें, सेकंड में ({{min}}–{{max}})।"
+      },
+      "outputMode": {
+        "title": "उत्तर का प्रबंधन"
+      },
+      "outputModes": {
+        "show": {
+          "label": "केवल दिखाएँ",
+          "hint": "उत्तर कार्ड पर दिखता है और कहीं नहीं।"
+        },
+        "copy": {
+          "label": "दिखाएँ और कॉपी करें",
+          "hint": "उत्तर कार्ड पर दिखता है और क्लिपबोर्ड पर कॉपी हो जाता है।"
+        },
+        "paste": {
+          "label": "दिखाएँ और चिपकाएँ",
+          "hint": "उत्तर कार्ड पर दिखता है और उस ऐप में चिपका दिया जाता है जिसमें आप काम कर रहे थे।"
+        }
+      },
+      "shortcutHint": "दोनों सहायकों के कीबोर्ड शॉर्टकट डिक्टेशन में, ट्रांसक्रिप्शन शॉर्टकट के बगल में सेट किए जाते हैं।"
     }
   },
   "footer": {
@@ -1167,7 +1288,7 @@
     "portableUpdateBrowseButton": "GitHub Releases खोलें"
   },
   "whatsNew": {
-    "title": "Handy v{{version}} में नया क्या है"
+    "title": "Speak v{{version}} में नया क्या है"
   },
   "common": {
     "add": "जोड़ें",
@@ -1184,7 +1305,7 @@
     "reset": "रीसेट करें"
   },
   "accessibility": {
-    "permissionsDescription": "ट्रांसक्राइब किया गया टेक्स्ट टाइप करने के लिए, Handy को ऐक्सेसिबिलिटी अनुमतियों की ज़रूरत है.",
+    "permissionsDescription": "ट्रांसक्राइब किया गया टेक्स्ट टाइप करने के लिए, Speak को ऐक्सेसिबिलिटी अनुमतियों की ज़रूरत है.",
     "openSettings": "सिस्टम सेटिंग खोलें"
   },
   "dictation": {
@@ -1274,15 +1395,16 @@
     "modelLoadFailedUnknown": "अज्ञात मॉडल",
     "pasteFailedTitle": "टेक्स्ट पेस्ट नहीं हो सका",
     "pasteFailed": "खुले हुए ऐप्लिकेशन में टेक्स्ट पेस्ट नहीं किया जा सका.",
-    "transcriptionFailedTitle": "ट्रांसक्रिप्शन नहीं हो सका"
+    "transcriptionFailedTitle": "ट्रांसक्रिप्शन नहीं हो सका",
+    "assistantNoticeTitle": "सहायक"
   },
   "appLanguage": {
     "title": "ऐप्लिकेशन की भाषा",
-    "description": "Handy इंटरफ़ेस की भाषा बदलें"
+    "description": "Speak इंटरफ़ेस की भाषा बदलें"
   },
   "theme": {
     "title": "ऐप्लिकेशन थीम",
-    "description": "चुनें कि Handy आपकी सिस्टम थीम के हिसाब से चले या हमेशा लाइट या डार्क रहे",
+    "description": "चुनें कि Speak आपकी सिस्टम थीम के हिसाब से चले या हमेशा लाइट या डार्क रहे",
     "options": {
       "system": "सिस्टम",
       "light": "लाइट",
@@ -1294,7 +1416,24 @@
     "processing": "प्रोसेस हो रहा है...",
     "cancel": "रद्द करें",
     "meetingRecording": "मीटिंग रिकॉर्ड हो रही है",
-    "meetingPaused": "मीटिंग रोकी गई"
+    "meetingPaused": "मीटिंग रोकी गई",
+    "assistant": {
+      "label": "सहायक",
+      "smartLabel": "स्मार्ट असिस्टेंट",
+      "copy": "कॉपी करें",
+      "copied": "क्लिपबोर्ड पर कॉपी किया गया",
+      "paste": "पेस्ट करें",
+      "pasted": "पेस्ट किया गया",
+      "replace": "बदलें",
+      "replaced": "बदल दिया गया",
+      "replaceHint": "सक्रिय विंडो में सब कुछ चुनता है और उसके ऊपर उत्तर पेस्ट करता है",
+      "openLink": "लिंक खोलें",
+      "chooseLink": "लिंक खोलें ({{n}})",
+      "escalate": "स्मार्ट असिस्टेंट से पूछें",
+      "asking": "स्मार्ट असिस्टेंट से पूछा जा रहा है...",
+      "close": "बंद करें",
+      "truncated": "उत्तर लंबाई सीमा पर कट गया।"
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} शायद 1 शॉर्टकट को ब्लॉक कर रहा है",

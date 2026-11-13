@@ -38,7 +38,8 @@ use super::meeting_store::{
     SessionRepository, SqliteMeetingStore, StoreError, Uuid as StoreUuid,
 };
 use super::meeting_transcription::{
-    MeetingSttEngine, MeetingTranscriptionQueue, QueueConfig, QueueDelegate,
+    EngineSegment, JobContext, MeetingSttEngine, MeetingTranscriptionQueue, QueueConfig,
+    QueueDelegate,
 };
 use crate::audio_toolkit::audio::meeting_recorder as rec;
 use crate::managers::meeting_export as export;
@@ -54,6 +55,18 @@ pub enum DeleteScope {
     Everything,
 }
 
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MeetingAccuracyReport {
+    pub provider: String,
+    pub chunks_checked: usize,
+    pub chunks_corrected: usize,
+    pub silence_hallucinations_removed: usize,
+    pub chunks_unchanged: usize,
+    pub local_words: usize,
+    pub reference_words: usize,
+}
+
 fn string_list_of(value: &serde_json::Value) -> Vec<String> {
     serde_json::from_value(value.clone()).unwrap_or_default()
 }
@@ -64,6 +77,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use tauri::AppHandle;
@@ -956,6 +970,10 @@ impl MeetingEnvironment for AppEnvironment {
         // Meetings pick their STT provider independently of dictation
         // (plan §13 Phase 6 acceptance).
         let effective = override_provider.unwrap_or(settings.meeting_stt_provider);
+        let language = match effective {
+            crate::settings::SpeechInputProvider::Azure => settings.azure_speech_language.clone(),
+            _ => settings.selected_language.clone(),
+        };
         // `configured` must mirror the exact condition under which lib.rs
         // registers the cloud engine: otherwise a missing secret would pass
         // preflight, pin "Azure Speech" on the session and then silently
@@ -981,7 +999,7 @@ impl MeetingEnvironment for AppEnvironment {
         // The summary provider is reported separately from the STT provider:
         // the two are independent choices, and the user must be able to see
         // that a local transcription can still be summarised in the cloud.
-        let summary_provider = settings.active_post_process_provider().map(|provider| {
+        let summary_provider = settings.meeting_summary_provider().map(|provider| {
             if is_local_provider_url(&provider.base_url) {
                 format!("{} (local)", provider.label)
             } else {
@@ -991,7 +1009,7 @@ impl MeetingEnvironment for AppEnvironment {
         ProviderSnapshot {
             kind: kind.to_string(),
             name,
-            language: Some(settings.selected_language.clone()),
+            language: Some(language),
             configured,
             summary_provider,
             retention_policy: settings.meeting_retention_policy.as_token().to_string(),
@@ -1017,7 +1035,7 @@ impl MeetingEnvironment for AppEnvironment {
         // so it is not what the cloud-consent switch is about. Without this the
         // plan's local/local combination could never run.
         if settings
-            .active_post_process_provider()
+            .meeting_summary_provider()
             .is_some_and(|provider| is_local_provider_url(&provider.base_url))
         {
             return true;
@@ -1031,8 +1049,8 @@ impl MeetingEnvironment for AppEnvironment {
 
     fn summary_llm(&self) -> Option<SummaryLlmConfig> {
         let settings = crate::settings::get_settings(&self.app);
-        let provider = settings.active_post_process_provider().cloned()?;
-        let model = settings.post_process_models.get(&provider.id)?.clone();
+        let provider = settings.meeting_summary_provider().cloned()?;
+        let model = settings.meeting_summary_models.get(&provider.id)?.clone();
         if model.trim().is_empty() {
             return None;
         }
@@ -1353,6 +1371,26 @@ struct ManagerInner {
     capture_owner: Option<String>,
 }
 
+#[derive(Debug)]
+struct AccuracyWorkItem {
+    job_id: String,
+    source: String,
+    timeline_start_ms: i64,
+    timeline_end_ms: i64,
+    storage_key: String,
+    current_text: String,
+}
+
+#[derive(Debug)]
+struct AccuracyCandidate {
+    work_index: usize,
+    reference: Vec<EngineSegment>,
+    local_words: usize,
+    reference_words: usize,
+    replace: bool,
+    remove_hallucination: bool,
+}
+
 /// The meeting session state machine plus the wave-1 CRUD surface.
 pub struct MeetingManager {
     conn: Mutex<Connection>,
@@ -1367,6 +1405,7 @@ pub struct MeetingManager {
     recorder_events: Mutex<Option<mpsc::Sender<(String, rec::RecorderEvent)>>>,
     /// Local STT queue (plan §13 Phase 5); attached after construction.
     queue: Mutex<Option<Arc<MeetingTranscriptionQueue>>>,
+    stt_engine: Mutex<Option<Arc<dyn MeetingSttEngine>>>,
 }
 
 impl MeetingManager {
@@ -1444,6 +1483,7 @@ impl MeetingManager {
             recoveries: Mutex::new(Vec::new()),
             recorder_events: Mutex::new(None),
             queue: Mutex::new(None),
+            stt_engine: Mutex::new(None),
         })
     }
 
@@ -1476,6 +1516,7 @@ impl MeetingManager {
         dictation_active: Arc<dyn Fn() -> bool + Send + Sync>,
         vad_model_path: Option<PathBuf>,
     ) {
+        *lock(&self.stt_engine) = Some(Arc::clone(&engine));
         let queue = MeetingTranscriptionQueue::new(
             Arc::clone(&self.store),
             self.assets_root.clone(),
@@ -1979,9 +2020,17 @@ impl MeetingManager {
     /// Runs the full start validation and renders the compact start-dialog
     /// rows (plan §6.7). Never mutates session state.
     pub fn preflight(&self) -> MeetingPreflightReport {
+        self.preflight_for(None)
+    }
+
+    /// Runs start validation against the provider selected for this meeting.
+    pub fn preflight_for(
+        &self,
+        provider_override: Option<crate::settings::SpeechInputProvider>,
+    ) -> MeetingPreflightReport {
         let devices = self.env.device_set();
         let device_checks = self.env.device_checks(&devices);
-        let provider = self.env.provider();
+        let provider = self.env.provider_for(provider_override);
         let mut checks = Vec::new();
 
         let mic = device_checks
@@ -2152,7 +2201,7 @@ impl MeetingManager {
         self.transition(&mut inner, meeting_id, MeetingState::Starting, patch_none())?;
 
         // Step 1 of SSC §3.1: manager-owned validation before any stream opens.
-        let report = self.preflight();
+        let report = self.preflight_for(stt_provider);
         if !report.can_start {
             let code = report
                 .checks
@@ -2198,7 +2247,7 @@ impl MeetingManager {
         // opened successfully: every later STT job routes through the stored
         // snapshot, so a mid-meeting settings change cannot split a transcript
         // across backends.
-        if let Err(e) = self.persist_provider_choice(meeting_id, stt_provider) {
+        if let Err(e) = self.persist_provider_choice(meeting_id, stt_provider, summary_enabled) {
             warn!("Failed to persist meeting provider choice: {}", e);
         }
         self.snapshot(meeting_id)
@@ -2210,6 +2259,7 @@ impl MeetingManager {
         &self,
         meeting_id: &str,
         override_provider: Option<crate::settings::SpeechInputProvider>,
+        summary_enabled: bool,
     ) -> Result<()> {
         let snapshot = self.env.provider_for(override_provider);
         let kind = snapshot.kind.as_str();
@@ -2218,6 +2268,9 @@ impl MeetingManager {
             .language
             .clone()
             .filter(|l| !l.is_empty() && l != "auto");
+        let summary_provider = summary_enabled
+            .then(|| snapshot.summary_provider.clone())
+            .flatten();
         {
             let conn = lock(&self.conn);
             let updated = conn.execute(
@@ -2225,13 +2278,14 @@ impl MeetingManager {
                 // revision bump, because no state event accompanies it.
                 "UPDATE meeting_sessions
                  SET stt_provider = ?2, provider_config_snapshot = ?3, language = ?4,
-                     updated_at = ?5
+                     summary_provider = ?5, updated_at = ?6
                  WHERE id = ?1 AND deleted_at IS NULL",
                 params![
                     meeting_id,
                     name,
                     serde_json::json!({ "kind": kind }).to_string(),
                     language,
+                    summary_provider,
                     now_ms()
                 ],
             )?;
@@ -2527,6 +2581,293 @@ impl MeetingManager {
             .collect())
     }
 
+    /// Runs every stored chunk through a second STT provider and applies only
+    /// high-confidence completeness improvements. The current transcript is
+    /// left untouched until every reference request succeeds. Replaced rows
+    /// are soft-deleted, so the original remains recoverable in SQLite.
+    pub fn improve_accuracy(
+        &self,
+        meeting_id: &str,
+        reference_provider: crate::settings::SpeechInputProvider,
+    ) -> Result<MeetingAccuracyReport, String> {
+        {
+            let mut inner = lock(&self.inner);
+            self.ensure_tracked(&mut inner, meeting_id)?;
+            let runtime = inner
+                .sessions
+                .get(meeting_id)
+                .ok_or_else(|| "meetingNotFound".to_string())?;
+            if runtime.state.is_active() || inner.capture_owner.as_deref() == Some(meeting_id) {
+                return Err("meetingIsActive".to_string());
+            }
+            if !matches!(
+                runtime.state,
+                MeetingState::Completed | MeetingState::RecoverableError
+            ) {
+                return Err("meetingStillProcessing".to_string());
+            }
+        }
+
+        let provider = self.env.provider_for(Some(reference_provider));
+        if !provider.configured {
+            return Err("providerNotConfigured".to_string());
+        }
+        let engine = lock(&self.stt_engine)
+            .clone()
+            .ok_or_else(|| "transcriptionEngineUnavailable".to_string())?;
+
+        let unfinished_jobs: i64 = {
+            let conn = lock(&self.conn);
+            conn.query_row(
+                "SELECT COUNT(*) FROM meeting_stt_jobs
+                 WHERE meeting_id = ?1 AND state <> 'succeeded'",
+                params![meeting_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?
+        };
+        if unfinished_jobs > 0 {
+            return Err("meetingStillProcessing".to_string());
+        }
+
+        let base_rows: Vec<(String, String, i64, i64, String)> = {
+            let conn = lock(&self.conn);
+            let mut stmt = conn
+                .prepare(
+                    "SELECT j.id, c.source, c.timeline_start_ms, c.timeline_end_ms,
+                            c.storage_key
+                     FROM meeting_audio_chunks c
+                     JOIN meeting_stt_job_chunks jc ON jc.chunk_id = c.id
+                     JOIN meeting_stt_jobs j ON j.id = jc.job_id
+                     WHERE c.meeting_id = ?1 AND c.state = 'ready'
+                       AND c.deleted_at IS NULL AND j.state = 'succeeded'
+                     ORDER BY c.timeline_start_ms, c.source, c.sequence",
+                )
+                .map_err(|error| error.to_string())?;
+            let rows = stmt
+                .query_map(params![meeting_id], |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                })
+                .map_err(|error| error.to_string())?;
+            rows.collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(|error| error.to_string())?
+        };
+        if base_rows.is_empty() {
+            return Err("noAudioToTranscribe".to_string());
+        }
+
+        let work: Vec<AccuracyWorkItem> = {
+            let conn = lock(&self.conn);
+            let mut text_stmt = conn
+                .prepare(
+                    "SELECT text FROM meeting_transcript_segments
+                     WHERE job_id = ?1 AND deleted_at IS NULL
+                     ORDER BY start_ms, sequence, rowid",
+                )
+                .map_err(|error| error.to_string())?;
+            base_rows
+                .into_iter()
+                .map(|(job_id, source, start, end, storage_key)| {
+                    let text = text_stmt
+                        .query_map(params![&job_id], |row| row.get::<_, String>(0))
+                        .map_err(|error| error.to_string())?
+                        .collect::<rusqlite::Result<Vec<_>>>()
+                        .map_err(|error| error.to_string())?
+                        .join(" ");
+                    Ok(AccuracyWorkItem {
+                        job_id,
+                        source,
+                        timeline_start_ms: start,
+                        timeline_end_ms: end,
+                        storage_key,
+                        current_text: text,
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()?
+        };
+
+        let next = AtomicUsize::new(0);
+        let candidates = Mutex::new(Vec::<Result<AccuracyCandidate, String>>::new());
+        let worker_count = if provider.kind == "cloud" { 4 } else { 1 };
+        let context = JobContext {
+            provider_name: provider.name.clone(),
+            language: provider
+                .language
+                .clone()
+                .filter(|language| language != "auto"),
+        };
+        std::thread::scope(|scope| {
+            for _ in 0..worker_count {
+                let engine = Arc::clone(&engine);
+                let context = context.clone();
+                let candidates = &candidates;
+                let next = &next;
+                let work = &work;
+                scope.spawn(move || loop {
+                    let index = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(item) = work.get(index) else { break };
+                    let path = self.assets_root.join(meeting_id).join(&item.storage_key);
+                    let result = (|| {
+                        let audio = super::meeting_transcription::decode_wav_pcm16_mono(&path)?;
+                        let rms = audio_rms(&audio);
+                        let reference = {
+                            let mut attempt = 0_u32;
+                            loop {
+                                attempt += 1;
+                                match engine.transcribe(&context, &audio) {
+                                    Ok(segments) => break segments,
+                                    Err(super::meeting_transcription::EngineError::Permanent(
+                                        message,
+                                    )) => return Err(message),
+                                    Err(super::meeting_transcription::EngineError::Transient(
+                                        message,
+                                    )) if attempt >= 3 => return Err(message),
+                                    Err(super::meeting_transcription::EngineError::Transient(
+                                        _,
+                                    )) => {
+                                        std::thread::sleep(std::time::Duration::from_millis(
+                                            250 * u64::from(attempt),
+                                        ));
+                                    }
+                                }
+                            }
+                        };
+                        let reference_text = reference
+                            .iter()
+                            .map(|segment| segment.text.trim())
+                            .filter(|text| !text.is_empty())
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                        let (local_words, reference_words, overlap) =
+                            word_overlap(&item.current_text, &reference_text);
+                        let ratio = local_words as f32 / reference_words.max(1) as f32;
+                        let recall = overlap as f32 / reference_words.max(1) as f32;
+                        let remove_hallucination =
+                            reference_words == 0 && (1..=4).contains(&local_words) && rms < 0.0015;
+                        let replace = reference_words > 0
+                            && (local_words == 0
+                                || (reference_words >= 8 && ratio < 0.82 && recall >= 0.45));
+                        Ok(AccuracyCandidate {
+                            work_index: index,
+                            reference,
+                            local_words,
+                            reference_words,
+                            replace,
+                            remove_hallucination,
+                        })
+                    })();
+                    lock(candidates).push(result);
+                });
+            }
+        });
+
+        let mut candidates = candidates
+            .into_inner()
+            .unwrap_or_else(|error| error.into_inner());
+        let mut completed = Vec::with_capacity(candidates.len());
+        for result in candidates.drain(..) {
+            completed.push(result?);
+        }
+        completed.sort_by_key(|candidate| candidate.work_index);
+        if completed.len() != work.len() {
+            return Err("accuracyCheckIncomplete".to_string());
+        }
+
+        let corrected = completed
+            .iter()
+            .filter(|candidate| candidate.replace)
+            .count();
+        let removed = completed
+            .iter()
+            .filter(|candidate| candidate.remove_hallucination)
+            .count();
+        if corrected + removed > 0 {
+            let now = now_ms();
+            let model_label = engine.model_label();
+            let mut conn = lock(&self.conn);
+            let tx = conn.transaction().map_err(|error| error.to_string())?;
+            let mut sequence: i64 = tx
+                .query_row(
+                    "SELECT COALESCE(MAX(sequence), 0) FROM meeting_transcript_segments
+                     WHERE meeting_id = ?1",
+                    params![meeting_id],
+                    |row| row.get(0),
+                )
+                .map_err(|error| error.to_string())?;
+            for candidate in &completed {
+                if !candidate.replace && !candidate.remove_hallucination {
+                    continue;
+                }
+                let item = &work[candidate.work_index];
+                tx.execute(
+                    "UPDATE meeting_transcript_segments
+                     SET deleted_at = ?2, updated_at = ?2, revision = revision + 1
+                     WHERE job_id = ?1 AND deleted_at IS NULL",
+                    params![item.job_id, now],
+                )
+                .map_err(|error| error.to_string())?;
+                if candidate.replace {
+                    for segment in &candidate.reference {
+                        sequence += 1;
+                        let start_ms = item
+                            .timeline_start_ms
+                            .saturating_add(segment.start_ms_rel.max(0));
+                        let end_ms = item
+                            .timeline_start_ms
+                            .saturating_add(segment.end_ms_rel.max(segment.start_ms_rel))
+                            .min(item.timeline_end_ms);
+                        tx.execute(
+                            "INSERT INTO meeting_transcript_segments
+                             (id, meeting_id, job_id, source, start_ms, end_ms, text,
+                              word_timestamps, confidence, provider, model_id, sequence,
+                              revision, created_at, updated_at, deleted_at)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, NULL, ?8, ?9, ?10,
+                                     ?11, 1, ?12, ?12, NULL)",
+                            params![
+                                uuid::Uuid::new_v4().to_string(),
+                                meeting_id,
+                                item.job_id,
+                                item.source,
+                                start_ms,
+                                end_ms,
+                                segment.text,
+                                segment.confidence.map(f64::from),
+                                provider.name,
+                                model_label,
+                                sequence,
+                                now
+                            ],
+                        )
+                        .map_err(|error| error.to_string())?;
+                    }
+                }
+            }
+            tx.commit().map_err(|error| error.to_string())?;
+        }
+
+        Ok(MeetingAccuracyReport {
+            provider: provider.name,
+            chunks_checked: completed.len(),
+            chunks_corrected: corrected,
+            silence_hallucinations_removed: removed,
+            chunks_unchanged: completed.len().saturating_sub(corrected + removed),
+            local_words: completed
+                .iter()
+                .map(|candidate| candidate.local_words)
+                .sum(),
+            reference_words: completed
+                .iter()
+                .map(|candidate| candidate.reference_words)
+                .sum(),
+        })
+    }
+
     /// Discards a meeting's transcript and queues every stored chunk again.
     ///
     /// Plan §11 lists "erneute Transkription mit einem anderen Modell/Provider"
@@ -2564,6 +2905,27 @@ impl MeetingManager {
         ) {
             return Err("meetingNotTranscribable".to_string());
         }
+        let selected_provider =
+            provider_override.map(|provider| self.env.provider_for(Some(provider)));
+        if selected_provider
+            .as_ref()
+            .is_some_and(|provider| !provider.configured)
+        {
+            return Err("providerNotConfigured".to_string());
+        }
+        let audio_count: i64 = {
+            let conn = lock(&self.conn);
+            conn.query_row(
+                "SELECT COUNT(*) FROM meeting_audio_chunks
+                 WHERE meeting_id = ?1 AND state = 'ready' AND deleted_at IS NULL",
+                params![meeting_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?
+        };
+        if audio_count == 0 {
+            return Err("noAudioToTranscribe".to_string());
+        }
         {
             let mut conn = lock(&self.conn);
             let tx = conn.transaction().map_err(|e| e.to_string())?;
@@ -2584,12 +2946,21 @@ impl MeetingManager {
                 params![meeting_id],
             )
             .map_err(|e| e.to_string())?;
-            if let Some(provider) = provider_override {
-                let snapshot = self.env.provider_for(Some(provider));
+            if let Some(snapshot) = selected_provider {
                 tx.execute(
-                    "UPDATE meeting_sessions SET stt_provider = ?2, updated_at = ?3
+                    "UPDATE meeting_sessions
+                     SET stt_provider = ?2, provider_config_snapshot = ?3,
+                         language = ?4, updated_at = ?5
                      WHERE id = ?1",
-                    params![meeting_id, snapshot.name, now_ms()],
+                    params![
+                        meeting_id,
+                        snapshot.name,
+                        serde_json::json!({ "kind": snapshot.kind }).to_string(),
+                        snapshot
+                            .language
+                            .filter(|language| !language.is_empty() && language != "auto"),
+                        now_ms()
+                    ],
                 )
                 .map_err(|e| e.to_string())?;
             }
@@ -2978,7 +3349,7 @@ impl MeetingManager {
             .iter()
             .map(|s| summarize::SummarySpan {
                 start_ms: s.start_ms,
-                text: s.text.clone(),
+                text: format!("{}: {}", s.source.to_uppercase(), s.text),
             })
             .collect();
         if spans.is_empty() {
@@ -3390,6 +3761,48 @@ impl MeetingManager {
 }
 
 /// Empty patch; [`MeetingManager::transition`] fills in the state itself.
+fn audio_rms(audio: &[f32]) -> f32 {
+    if audio.is_empty() {
+        return 0.0;
+    }
+    let sum = audio
+        .iter()
+        .filter(|sample| sample.is_finite())
+        .map(|sample| sample * sample)
+        .sum::<f32>();
+    (sum / audio.len() as f32).sqrt()
+}
+
+fn transcript_words(text: &str) -> Vec<String> {
+    text.split(|character: char| !character.is_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .map(|word| word.to_lowercase())
+        .collect()
+}
+
+fn word_overlap(local: &str, reference: &str) -> (usize, usize, usize) {
+    let local = transcript_words(local);
+    let reference = transcript_words(reference);
+    let mut available = HashMap::<String, usize>::new();
+    for word in &reference {
+        *available.entry(word.clone()).or_default() += 1;
+    }
+    let overlap = local
+        .iter()
+        .filter(|word| {
+            let count = available.get_mut(*word);
+            match count {
+                Some(count) if *count > 0 => {
+                    *count -= 1;
+                    true
+                }
+                _ => false,
+            }
+        })
+        .count();
+    (local.len(), reference.len(), overlap)
+}
+
 fn patch_none() -> SessionPatch {
     SessionPatch::default()
 }

@@ -55,6 +55,9 @@ pub const TRANSCRIPTION_ERROR: &str = "transcription-error";
 
 /// Delivering the transcript to the focused application failed.
 pub const PASTE_ERROR: &str = "paste-error";
+/// An assistant message with no answer card to land in (overlay off, or a
+/// profile that copies/pastes instead of showing a card). Payload: the message.
+pub const ASSISTANT_NOTICE: &str = "assistant-notice";
 
 // -- model lifecycle ---------------------------------------------------------
 
@@ -103,6 +106,7 @@ mod tests {
         assert_eq!(super::MIC_LEVEL, "mic-level");
         assert_eq!(super::TRANSCRIPTION_ERROR, "transcription-error");
         assert_eq!(super::PASTE_ERROR, "paste-error");
+        assert_eq!(super::ASSISTANT_NOTICE, "assistant-notice");
         assert_eq!(super::MODEL_DOWNLOAD_PROGRESS, "model-download-progress");
         assert_eq!(super::MODEL_DOWNLOAD_COMPLETE, "model-download-complete");
         assert_eq!(super::MODEL_DOWNLOAD_CANCELLED, "model-download-cancelled");

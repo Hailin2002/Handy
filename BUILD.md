@@ -528,10 +528,10 @@ bun run tauri build --no-bundle
 
 ## Release signing
 
-A release needs four repository secrets. The `Verify release secrets are
-configured` step in `.github/workflows/release.yml` checks all four before the
-first build starts, so a missing one costs seconds instead of a seven-platform
-matrix.
+A release needs updater, Windows signing, and macOS signing/notarization
+secrets. The `Verify release secrets are configured` step in
+`.github/workflows/release.yml` checks the complete set before the first build
+starts, so a missing one costs seconds instead of a seven-platform matrix.
 
 ### Updater signing key (`TAURI_SIGNING_PRIVATE_KEY`)
 
@@ -560,12 +560,22 @@ accept — everyone has to reinstall by hand. Back it up somewhere durable.
 `bundle.windows.signCommand` in `tauri.windows.conf.json` invokes
 `scripts/sign-windows.ps1`, which needs `AZURE_SIGNING_ENDPOINT`,
 `AZURE_SIGNING_ACCOUNT` and `AZURE_SIGNING_CERT_PROFILE` (Azure Trusted
-Signing). Locally the script prints that it is leaving files unsigned and
-carries on, so `bun run tauri build` works on a developer machine. In CI the
-`verify Windows signing` step turns an unsigned artifact into a build failure.
+Signing), plus the service-principal credentials `AZURE_CLIENT_ID`,
+`AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID`. Locally the script prints that it
+is leaving files unsigned and carries on, so `bun run tauri build` works on a
+developer machine. In CI the `verify Windows signing` step turns an unsigned
+artifact into a build failure.
 
 Shipping unsigned Windows binaries means SmartScreen warns every first-time
 installer, so this is not optional for a public release.
+
+### macOS signing and notarization (`APPLE_*`)
+
+Both macOS targets require a base64-encoded Developer ID certificate in
+`APPLE_CERTIFICATE`, its password in `APPLE_CERTIFICATE_PASSWORD`, and a
+temporary keychain password in `KEYCHAIN_PASSWORD`. Notarization additionally
+uses `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. The release preflight
+checks all six values before creating the draft release.
 
 ### Release target
 

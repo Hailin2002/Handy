@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Ponownie transkrybuje zapisany dźwięk. Samo nagranie zostaje zachowane.",
         "retranscribeWarning": "Bieżąca transkrypcja zostanie odrzucona i utworzona ponownie z zapisanego dźwięku. Nagranie pozostaje nienaruszone.",
         "retranscribeQueued": "Transkrypcja ponownie w kolejce.",
-        "retranscribeFailed": "Nie udało się ponownie uruchomić transkrypcji."
+        "retranscribeFailed": "Nie udało się ponownie uruchomić transkrypcji.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Wymagane uprawnienia",
-      "description": "Handy potrzebuje kilku uprawnień, aby działać poprawnie.",
+      "description": "Speak potrzebuje kilku uprawnień, aby działać poprawnie.",
       "microphone": {
         "title": "Dostęp do mikrofonu",
         "description": "Wymagany do słyszenia Twojego głosu w celu transkrypcji."
@@ -651,13 +662,13 @@
       "searchPlaceholder": "Szukaj modeli według nazwy…",
       "rescan": {
         "label": "Skanuj ponownie",
-        "tooltip": "Skanuj ponownie w poszukiwaniu modeli dodanych do folderu modeli lub pamięci podręcznej Hugging Face poza Handy"
+        "tooltip": "Skanuj ponownie w poszukiwaniu modeli dodanych do folderu modeli lub pamięci podręcznej Hugging Face poza Speak"
       }
     },
     "general": {
       "title": "Ogólne",
       "shortcut": {
-        "title": "Skróty Handy",
+        "title": "Skróty Speak",
         "description": "Skonfiguruj skróty klawiaturowe do uruchamiania nagrywania mowy",
         "loading": "Wczytywanie skrótów...",
         "none": "Brak skonfigurowanych skrótów",
@@ -675,6 +686,14 @@
           "transcribe_with_post_process": {
             "name": "Skrót postprocessingu",
             "description": "Opcjonalnie: Dedykowany skrót klawiszowy, który zawsze stosuje postprocessing AI do transkrypcji."
+          },
+          "assistant_fast": {
+            "name": "Skrót szybkiego pomocnika",
+            "description": "Skrót klawiszowy pytający szybkiego asystenta. Nieprzypisany, dopóki go nie ustawisz."
+          },
+          "assistant_smart": {
+            "name": "Skrót inteligentnego asystenta",
+            "description": "Skrót klawiszowy pytający dokładnego asystenta. Nieprzypisany, dopóki go nie ustawisz."
           }
         },
         "errors": {
@@ -695,6 +714,20 @@
       "pushToTalk": {
         "label": "Naciśnij i mów",
         "description": "Przytrzymaj, aby nagrywać, puść, aby zatrzymać"
+      },
+      "recordingAudio": {
+        "label": "Dźwięk podczas nagrywania",
+        "description": "Co Speak robi z odtwarzaniem dźwięku systemowego podczas nagrywania",
+        "modes": {
+          "off": "Nic nie rób",
+          "duck": "Zmniejsz głośność",
+          "mute": "Całkowicie wycisz"
+        },
+        "volume": {
+          "label": "Obniżona głośność",
+          "description": "Docelowa głośność wyjścia systemowego podczas nagrywania",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Uruchamiaj przy starcie",
-        "description": "Automatycznie uruchamiaj Handy po zalogowaniu."
+        "description": "Automatycznie uruchamiaj Speak po zalogowaniu."
       },
       "showTrayIcon": {
         "label": "Pokaż ikonę w zasobniku",
-        "description": "Wyświetlaj ikonę Handy w zasobniku systemowym."
+        "description": "Wyświetlaj ikonę Speak w zasobniku systemowym."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Sprawdzaj aktualizacje",
-        "description": "Automatycznie sprawdzaj nowe wersje Handy"
+        "description": "Automatycznie sprawdzaj nowe wersje Speak"
       },
       "soundTheme": {
         "label": "Motyw dźwiękowy",
@@ -997,10 +1030,6 @@
         "label": "Postprocess",
         "description": "Włącz AI do ulepszania tekstu po transkrypcji"
       },
-      "muteWhileRecording": {
-        "label": "Wycisz podczas nagrywania",
-        "description": "Wycisz dźwięk systemu podczas nagrywania"
-      },
       "appendTrailingSpace": {
         "label": "Dodaj spację na końcu",
         "description": "Dodaj spację po wklejonej transkrypcji"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Diagnostyka klawiatury",
-        "description": "Sprawdza, czy zdarzenia klawiatury docierają do Handy. Zapisywana jest tylko liczba zdarzeń — nigdy to, które klawisze naciskasz.",
+        "description": "Sprawdza, czy zdarzenia klawiatury docierają do Speak. Zapisywana jest tylko liczba zdarzeń — nigdy to, które klawisze naciskasz.",
         "run": "Uruchom 10-sekundową diagnostykę",
         "running": "Nasłuchiwanie… naciśnij swój skrót kilka razy (np. Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "Mysz",
         "verdictBlocked": "Secure Input blokuje zdarzenia klawiszy — skróty zawierające zwykły klawisz nie zadziałają, dopóki nie zostanie to rozwiązane.",
         "verdictSuspicious": "Dotarły zdarzenia modyfikatorów, ale żadnych zdarzeń klawiszy — coś tłumi klawisze, mimo że Secure Input jest zgłaszany jako wyłączony. Zgłoś to na GitHubie.",
-        "verdictOk": "Zdarzenia klawiszy docierają do Handy normalnie.",
+        "verdictOk": "Zdarzenia klawiszy docierają do Speak normalnie.",
         "verdictNoEvents": "Nie przechwycono żadnych zdarzeń — czy w trakcie testu naciśnięto jakieś klawisze?",
         "failed": "Diagnostyka nie powiodła się: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "O programie",
       "version": {
         "title": "Wersja",
-        "description": "Aktualna wersja Handy"
+        "description": "Aktualna wersja Speak"
       },
       "appDataDirectory": {
         "title": "Katalog danych aplikacji",
-        "description": "Miejsce, gdzie Handy przechowuje swoje dane"
+        "description": "Miejsce, gdzie Speak przechowuje swoje dane"
       },
       "sourceCode": {
         "title": "Kod źródłowy",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "Wspieraj rozwój",
-        "description": "Pomóż nam dalej rozwijać Handy",
+        "description": "Pomóż nam dalej rozwijać Speak",
         "button": "Wesprzyj"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "Wydajne wykonywanie modelu rozpoznawania mowy Whisper od OpenAI",
-          "details": "Handy używa ggml do szybkiego, lokalnego przetwarzania mowy na tekst. Dzięki niesamowitej pracy Georgi Gerganova i współtwórców."
+          "details": "Speak używa ggml do szybkiego, lokalnego przetwarzania mowy na tekst. Dzięki niesamowitej pracy Georgi Gerganova i współtwórców."
         }
       },
       "whatsNewUpdates": {
         "label": "Pokaż nowości",
-        "description": "Pokazuj informacje o wydaniu po aktualizacjach Handy"
+        "description": "Pokazuj informacje o wydaniu po aktualizacjach Speak"
       }
     },
     "tabs": {
       "modelsProviders": "Modele i dostawcy",
-      "meetingsEmptyBody": "Ustawienia spotkań pojawią się wraz z trybem spotkań."
+      "meetingsEmptyBody": "Ustawienia spotkań pojawią się wraz z trybem spotkań.",
+      "assistants": "Asystenci"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "Przechowuj 30 dni",
           "forever": "Przechowuj bezterminowo"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "Asystenci AI",
+      "description": "Dwaj asystenci dostępni skrótem klawiszowym. Wypowiedz pytanie, a odpowiedź pojawi się na karcie obok nakładki Speak.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Szybki pomocnik",
+          "description": "Do krótkich pytań: fakt, przelicznik, pisownia, przeformułowane zdanie. Nastawiony na krótką, natychmiastową odpowiedź."
+        },
+        "smart_assistant": {
+          "title": "Inteligentny asystent",
+          "description": "Do pytań wartych namysłu: analiza, porównanie, szkic tekstu. Może pracować dłużej i odpowiadać obszernie."
+        }
+      },
+      "provider": {
+        "title": "Dostawca",
+        "description": "Która usługa odpowiada dla tego asystenta. Obaj asystenci mogą korzystać z tego samego dostawcy z różnymi kluczami."
+      },
+      "apiKey": {
+        "configured": "Klucz API dla {{provider}} jest zapisany.",
+        "notConfigured": "Brak zapisanego klucza API dla {{provider}}.",
+        "title": "Klucz API",
+        "description": "Przechowywany w pęku kluczy systemu operacyjnego, oddzielnie od klucza przetwarzania końcowego.",
+        "placeholder": "Wklej swój klucz API"
+      },
+      "model": {
+        "title": "Model",
+        "description": "Model, do którego zwraca się ten asystent. Wybierz go z listy albo wpisz dokładny identyfikator.",
+        "placeholder": "Wybierz lub wpisz identyfikator modelu",
+        "refresh": "Odśwież listę modeli",
+        "required": "Nie wybrano jeszcze modelu. Ten asystent pozostaje nieaktywny, dopóki go nie wskażesz.",
+        "listingHint": "Lista modeli jest ładowana przy użyciu własnego klucza API tego asystenta. Bez niego nadal możesz wpisać identyfikator modelu ręcznie."
+      },
+      "systemPrompt": {
+        "title": "Polecenie systemowe",
+        "description": "Stała instrukcja, którą ten asystent stosuje przy każdym pytaniu.",
+        "placeholder": "Opisz, jak ten asystent ma odpowiadać"
+      },
+      "maxOutputTokens": {
+        "title": "Długość odpowiedzi",
+        "description": "Górny limit odpowiedzi, w tokenach ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Limit czasu",
+        "description": "Jak długo czekać na odpowiedź przed przerwaniem, w sekundach ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Postępowanie z odpowiedzią"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Tylko pokaż",
+          "hint": "Odpowiedź pojawia się na karcie i nigdzie indziej."
+        },
+        "copy": {
+          "label": "Pokaż i skopiuj",
+          "hint": "Odpowiedź pojawia się na karcie i trafia do schowka."
+        },
+        "paste": {
+          "label": "Pokaż i wklej",
+          "hint": "Odpowiedź pojawia się na karcie i zostaje wklejona w aplikacji, w której pracowałeś."
+        }
+      },
+      "shortcutHint": "Skróty klawiszowe obu asystentów ustawia się w sekcji Dyktowanie, obok skrótów transkrypcji."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "Resetuj"
   },
   "accessibility": {
-    "permissionsDescription": "Handy potrzebuje uprawnień dostępności, aby wpisywać transkrybowany tekst.",
+    "permissionsDescription": "Speak potrzebuje uprawnień dostępności, aby wpisywać transkrybowany tekst.",
     "openSettings": "Otwórz ustawienia systemowe"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "nieznany model",
     "pasteFailedTitle": "Nie udało się wkleić tekstu",
     "pasteFailed": "Nie można było wkleić tekstu do aktywnej aplikacji.",
-    "transcriptionFailedTitle": "Transkrypcja nie powiodła się"
+    "transcriptionFailedTitle": "Transkrypcja nie powiodła się",
+    "assistantNoticeTitle": "Asystent"
   },
   "appLanguage": {
     "title": "Język aplikacji",
-    "description": "Zmień język interfejsu Handy"
+    "description": "Zmień język interfejsu Speak"
   },
   "theme": {
     "title": "Motyw aplikacji",
-    "description": "Wybierz, czy Handy ma podążać za motywem systemu, czy pozostać jasny lub ciemny",
+    "description": "Wybierz, czy Speak ma podążać za motywem systemu, czy pozostać jasny lub ciemny",
     "options": {
       "system": "System",
       "light": "Jasny",
@@ -1291,10 +1413,27 @@
     "processing": "Przetwarzanie...",
     "cancel": "Anuluj",
     "meetingRecording": "Trwa nagrywanie spotkania",
-    "meetingPaused": "Spotkanie wstrzymane"
+    "meetingPaused": "Spotkanie wstrzymane",
+    "assistant": {
+      "label": "Asystent",
+      "smartLabel": "Inteligentny asystent",
+      "copy": "Kopiuj",
+      "copied": "Skopiowano do schowka",
+      "paste": "Wklej",
+      "pasted": "Wklejono",
+      "replace": "Zastąp",
+      "replaced": "Zastąpiono",
+      "replaceHint": "Zaznacza wszystko w aktywnym oknie i wkleja odpowiedź w to miejsce",
+      "openLink": "Otwórz link",
+      "chooseLink": "Otwórz link ({{n}})",
+      "escalate": "Zapytaj inteligentnego asystenta",
+      "asking": "Pytam inteligentnego asystenta...",
+      "close": "Zamknij",
+      "truncated": "Odpowiedź została ucięta na limicie długości."
+    }
   },
   "whatsNew": {
-    "title": "Nowości w Handy v{{version}}"
+    "title": "Nowości w Speak v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} może blokować 1 skrót",

@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Ещё раз расшифровывает сохранённое аудио. Сама запись сохраняется.",
         "retranscribeWarning": "Текущая расшифровка будет удалена и создана заново из сохранённого аудио. Запись не затрагивается.",
         "retranscribeQueued": "Расшифровка снова в очереди.",
-        "retranscribeFailed": "Не удалось запустить расшифровку заново."
+        "retranscribeFailed": "Не удалось запустить расшифровку заново.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Требуются разрешения",
-      "description": "Handy требуются некоторые разрешения для корректной работы.",
+      "description": "Speak требуются некоторые разрешения для корректной работы.",
       "microphone": {
         "title": "Доступ к микрофону",
         "description": "Необходим для прослушивания вашего голоса для транскрипции."
@@ -651,13 +662,13 @@
       "searchPlaceholder": "Поиск моделей по имени…",
       "rescan": {
         "label": "Пересканировать",
-        "tooltip": "Пересканировать модели, добавленные в папку моделей или кэш Hugging Face вне Handy"
+        "tooltip": "Пересканировать модели, добавленные в папку моделей или кэш Hugging Face вне Speak"
       }
     },
     "general": {
       "title": "Общие",
       "shortcut": {
-        "title": "Ярлыки Handy",
+        "title": "Ярлыки Speak",
         "description": "Настройте сочетания клавиш для запуска записи речи в текст",
         "loading": "Загрузка ярлыков...",
         "none": "Ярлыки не настроены",
@@ -675,6 +686,14 @@
           "transcribe_with_post_process": {
             "name": "Горячая клавиша постобработки",
             "description": "Специальное сочетание клавиш для ИИ-постобработки вашей транскрипции."
+          },
+          "assistant_fast": {
+            "name": "Сочетание клавиш: Быстрый помощник",
+            "description": "Сочетание клавиш, которое задаёт вопрос быстрому ассистенту. Не назначено, пока вы его не зададите."
+          },
+          "assistant_smart": {
+            "name": "Сочетание клавиш: Умный ассистент",
+            "description": "Сочетание клавиш, которое задаёт вопрос вдумчивому ассистенту. Не назначено, пока вы его не зададите."
           }
         },
         "errors": {
@@ -695,6 +714,20 @@
       "pushToTalk": {
         "label": "Нажми и говори",
         "description": "Удерживайте, чтобы записать, отпустите, чтобы остановить"
+      },
+      "recordingAudio": {
+        "label": "Звук во время записи",
+        "description": "Что Speak делает с воспроизведением системного звука во время записи",
+        "modes": {
+          "off": "Ничего не делать",
+          "duck": "Снизить громкость",
+          "mute": "Полностью отключить звук"
+        },
+        "volume": {
+          "label": "Пониженная громкость",
+          "description": "Целевая громкость системного вывода во время записи",
+          "unit": "{{percent}} %"
+        }
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Запускать при старте",
-        "description": "Автоматически запускать Handy при входе в систему."
+        "description": "Автоматически запускать Speak при входе в систему."
       },
       "showTrayIcon": {
         "label": "Показать значок в трее",
-        "description": "Отображать значок Handy в системном трее."
+        "description": "Отображать значок Speak в системном трее."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Проверять наличие обновлений",
-        "description": "Автоматически проверять наличие новых версий Handy"
+        "description": "Автоматически проверять наличие новых версий Speak"
       },
       "soundTheme": {
         "label": "Звуковая тема",
@@ -997,10 +1030,6 @@
         "label": "Постобработка",
         "description": "Включить уточнение текста с помощью искусственного интеллекта после транскрипции"
       },
-      "muteWhileRecording": {
-        "label": "Отключить звук во время записи",
-        "description": "Отключение звука системы во время записи"
-      },
       "appendTrailingSpace": {
         "label": "Добавить пробел",
         "description": "Добавить пробел после вставленной транскрипции"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Диагностика клавиатуры",
-        "description": "Проверяет, доходят ли события клавиатуры до Handy. Записывается только количество событий — никогда то, какие клавиши вы нажимаете.",
+        "description": "Проверяет, доходят ли события клавиатуры до Speak. Записывается только количество событий — никогда то, какие клавиши вы нажимаете.",
         "run": "Запустить 10-секундную диагностику",
         "running": "Прослушивание… нажмите своё сочетание клавиш несколько раз (например, Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "Мышь",
         "verdictBlocked": "Secure Input блокирует события клавиш — сочетания с обычной клавишей не смогут работать, пока это не будет устранено.",
         "verdictSuspicious": "События модификаторов приходят, а события клавиш — нет: что-то подавляет клавиши, хотя Secure Input отмечен как выключенный. Пожалуйста, сообщите об этом на GitHub.",
-        "verdictOk": "События клавиш доходят до Handy нормально.",
+        "verdictOk": "События клавиш доходят до Speak нормально.",
         "verdictNoEvents": "События не зафиксированы — вы нажимали клавиши во время теста?",
         "failed": "Диагностика не удалась: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "О программе",
       "version": {
         "title": "Версия",
-        "description": "Текущая версия Handy"
+        "description": "Текущая версия Speak"
       },
       "appDataDirectory": {
         "title": "Каталог данных приложения",
-        "description": "Место, где Handy хранит свои данные"
+        "description": "Место, где Speak хранит свои данные"
       },
       "sourceCode": {
         "title": "Исходный код",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "Поддержка развития",
-        "description": "Помогите нам продолжать развитие Handy",
+        "description": "Помогите нам продолжать развитие Speak",
         "button": "Поддержать"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "Высокопроизводительная модель автоматического распознавания речи OpenAI Whisper",
-          "details": "Handy использует ggml для быстрого локального преобразования речи в текст. Спасибо великолепной работе Георгия Герганова и участников."
+          "details": "Speak использует ggml для быстрого локального преобразования речи в текст. Спасибо великолепной работе Георгия Герганова и участников."
         }
       },
       "whatsNewUpdates": {
         "label": "Показывать новинки",
-        "description": "Показывать примечания к выпуску после обновлений Handy"
+        "description": "Показывать примечания к выпуску после обновлений Speak"
       }
     },
     "tabs": {
       "modelsProviders": "Модели и провайдеры",
-      "meetingsEmptyBody": "Настройки встреч появятся вместе с режимом встреч."
+      "meetingsEmptyBody": "Настройки встреч появятся вместе с режимом встреч.",
+      "assistants": "Ассистенты"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "Хранить 30 дней",
           "forever": "Хранить всегда"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "ИИ-ассистенты",
+      "description": "Два ассистента, доступных по сочетанию клавиш. Произнесите вопрос — ответ появится на карточке рядом с оверлеем Speak.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Быстрый помощник",
+          "description": "Для коротких справок: факт, пересчёт, написание, переформулированная фраза. Настроен на краткий ответ, который приходит сразу."
+        },
+        "smart_assistant": {
+          "title": "Умный ассистент",
+          "description": "Для вопросов, над которыми стоит подумать: анализ, сравнение, черновик. Ему позволено думать дольше и отвечать развёрнуто."
+        }
+      },
+      "provider": {
+        "title": "Поставщик",
+        "description": "Какая служба отвечает за этого ассистента. Оба ассистента могут использовать одного поставщика с разными ключами."
+      },
+      "apiKey": {
+        "configured": "API-ключ для {{provider}} сохранён.",
+        "notConfigured": "API-ключ для {{provider}} не сохранён.",
+        "title": "Ключ API",
+        "description": "Хранится в связке ключей операционной системы, отдельно от ключа постобработки.",
+        "placeholder": "Вставьте ключ API"
+      },
+      "model": {
+        "title": "Модель",
+        "description": "Модель, к которой обращается этот ассистент. Выберите из списка или введите точный идентификатор модели.",
+        "placeholder": "Выберите или введите идентификатор модели",
+        "refresh": "Обновить список моделей",
+        "required": "Модель ещё не выбрана. Пока вы её не выберете, ассистент неактивен.",
+        "listingHint": "Список моделей загружается с собственным ключом API этого ассистента. Без него идентификатор модели можно ввести вручную."
+      },
+      "systemPrompt": {
+        "title": "Системный промпт",
+        "description": "Постоянная инструкция, которой этот ассистент следует при каждом вопросе.",
+        "placeholder": "Опишите, как этот ассистент должен отвечать"
+      },
+      "maxOutputTokens": {
+        "title": "Длина ответа",
+        "description": "Верхний предел ответа, в токенах ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Тайм-аут",
+        "description": "Сколько ждать ответа, прежде чем прекратить, в секундах ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Обработка ответа"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Только показать",
+          "hint": "Ответ появляется на карточке и больше нигде."
+        },
+        "copy": {
+          "label": "Показать и скопировать",
+          "hint": "Ответ появляется на карточке и копируется в буфер обмена."
+        },
+        "paste": {
+          "label": "Показать и вставить",
+          "hint": "Ответ появляется на карточке и вставляется в приложение, в котором вы работали."
+        }
+      },
+      "shortcutHint": "Сочетания клавиш обоих ассистентов задаются в разделе «Диктовка», рядом с сочетаниями для транскрибации."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "Сбросить"
   },
   "accessibility": {
-    "permissionsDescription": "Handy необходимы разрешения на доступ для ввода расшифрованного текста.",
+    "permissionsDescription": "Speak необходимы разрешения на доступ для ввода расшифрованного текста.",
     "openSettings": "Открыть настройки системы"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "неизвестная модель",
     "pasteFailedTitle": "Не удалось вставить текст",
     "pasteFailed": "Не удалось вставить текст в активное приложение.",
-    "transcriptionFailedTitle": "Ошибка транскрипции"
+    "transcriptionFailedTitle": "Ошибка транскрипции",
+    "assistantNoticeTitle": "Ассистент"
   },
   "appLanguage": {
     "title": "Язык приложения",
-    "description": "Изменить язык интерфейса Handy"
+    "description": "Изменить язык интерфейса Speak"
   },
   "theme": {
     "title": "Тема приложения",
-    "description": "Выберите, следует ли Handy системной теме или остаётся светлым либо тёмным",
+    "description": "Выберите, следует ли Speak системной теме или остаётся светлым либо тёмным",
     "options": {
       "system": "Системная",
       "light": "Светлая",
@@ -1291,10 +1413,27 @@
     "processing": "Обработка...",
     "cancel": "Отмена",
     "meetingRecording": "Идёт запись встречи",
-    "meetingPaused": "Встреча приостановлена"
+    "meetingPaused": "Встреча приостановлена",
+    "assistant": {
+      "label": "Ассистент",
+      "smartLabel": "Умный ассистент",
+      "copy": "Копировать",
+      "copied": "Скопировано в буфер обмена",
+      "paste": "Вставить",
+      "pasted": "Вставлено",
+      "replace": "Заменить",
+      "replaced": "Заменено",
+      "replaceHint": "Выделяет всё в активном окне и вставляет ответ вместо этого",
+      "openLink": "Открыть ссылку",
+      "chooseLink": "Открыть ссылку ({{n}})",
+      "escalate": "Спросить умного ассистента",
+      "asking": "Спрашиваю умного ассистента...",
+      "close": "Закрыть",
+      "truncated": "Ответ обрезан на пределе длины."
+    }
   },
   "whatsNew": {
-    "title": "Новое в Handy v{{version}}"
+    "title": "Новое в Speak v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} может блокировать 1 сочетание клавиш",

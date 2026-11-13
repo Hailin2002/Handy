@@ -8,7 +8,8 @@ use crate::managers::model::ModelManager;
 use crate::managers::transcription::StreamWorkKind;
 use crate::managers::transcription::TranscriptionManager;
 use crate::settings::{
-    get_settings, AppSettings, OverlayStyle, SpeechInputProvider, APPLE_INTELLIGENCE_PROVIDER_ID,
+    get_settings, AppSettings, AssistantOutputMode, OverlayStyle, SpeechInputProvider,
+    APPLE_INTELLIGENCE_PROVIDER_ID,
 };
 use crate::shortcut;
 use crate::tray::{change_tray_icon, TrayIconState};
@@ -64,15 +65,24 @@ struct TranscribeAction {
 const TRANSCRIPTION_FIELD: &str = "transcription";
 
 /// Strip invisible Unicode characters that some LLMs may insert
-fn strip_invisible_chars(s: &str) -> String {
+pub(crate) fn strip_invisible_chars(s: &str) -> String {
     s.replace(['\u{200B}', '\u{200C}', '\u{200D}', '\u{FEFF}'], "")
+}
+
+fn azure_recovery_is_better(streamed: &str, recovered: &str) -> bool {
+    let visible_len = |text: &str| {
+        text.chars()
+            .filter(|character| !character.is_whitespace())
+            .count()
+    };
+    visible_len(recovered) > visible_len(streamed).saturating_add(8)
 }
 
 /// Strip a leading `<think>...</think>` block. Some endpoints can't disable
 /// reasoning, and some local servers put the reasoning text into `content`
 /// instead of a separate field — without this the user would get the model's
 /// chain of thought pasted along with the cleaned transcription.
-fn strip_think_block(s: &str) -> &str {
+pub(crate) fn strip_think_block(s: &str) -> &str {
     if let Some(rest) = s.trim_start().strip_prefix("<think>") {
         if let Some(end) = rest.find("</think>") {
             return rest[end + "</think>".len()..].trim_start();
@@ -92,7 +102,7 @@ fn build_system_prompt(prompt_template: &str) -> String {
 /// LLM call when nothing was actually transcribed, which would otherwise make
 /// the model reply with an error message such as "you need to provide the
 /// transcription".
-fn is_blank_transcription(transcription: &str) -> bool {
+pub(crate) fn is_blank_transcription(transcription: &str) -> bool {
     transcription.trim().is_empty()
 }
 
@@ -494,195 +504,307 @@ pub(crate) async fn process_transcription_output_with_translation(
     }
 }
 
-impl ShortcutAction for TranscribeAction {
-    fn start(&self, app: &AppHandle, binding_id: &str, _shortcut_str: &str) {
-        let start_time = Instant::now();
-        debug!("TranscribeAction::start called for binding: {}", binding_id);
+/// The recording-start sequence shared by every action that captures audio.
+///
+/// Model-load kickoff, VAD preload, tray state, the VAD/streaming policy, the
+/// overlay, the Azure stream, `try_start_recording`, the cancel shortcut and the
+/// readiness thread that emits the ready cue and applies ducking. There is no
+/// dictation-specific branch in here — `TranscribeAction::start` never read
+/// `self.post_process` — so the assistants get a byte-identical start by calling
+/// this rather than reimplementing it.
+fn start_recording_session(app: &AppHandle, binding_id: &str) {
+    let start_time = Instant::now();
+    debug!("start_recording_session called for binding: {}", binding_id);
 
-        // Load model in the background
-        let tm = app.state::<Arc<TranscriptionManager>>();
-        let rm = app.state::<Arc<AudioRecordingManager>>();
-        let azure_stream = app.state::<Arc<crate::speech_pipeline::AzureSpeechStreamManager>>();
-        let settings = get_settings(app);
+    // Load model in the background
+    let tm = app.state::<Arc<TranscriptionManager>>();
+    let rm = app.state::<Arc<AudioRecordingManager>>();
+    let azure_stream = app.state::<Arc<crate::speech_pipeline::AzureSpeechStreamManager>>();
+    let settings = get_settings(app);
 
-        // Load ASR model and VAD model in parallel
-        let kickoff_started = Instant::now();
-        if settings.speech_input_provider == SpeechInputProvider::Local {
-            tm.initiate_model_load();
+    // Load ASR model and VAD model in parallel
+    let kickoff_started = Instant::now();
+    if settings.speech_input_provider == SpeechInputProvider::Local {
+        tm.initiate_model_load();
+    }
+    let rm_clone = Arc::clone(&rm);
+    std::thread::spawn(move || {
+        if let Err(e) = rm_clone.preload_vad() {
+            debug!("VAD pre-load failed: {}", e);
         }
-        let rm_clone = Arc::clone(&rm);
-        std::thread::spawn(move || {
-            if let Err(e) = rm_clone.preload_vad() {
-                debug!("VAD pre-load failed: {}", e);
-            }
-        });
-        let kickoff_elapsed = kickoff_started.elapsed();
+    });
+    let kickoff_elapsed = kickoff_started.elapsed();
 
-        let binding_id = binding_id.to_string();
-        let tray_started = Instant::now();
-        change_tray_icon(app, TrayIconState::Recording);
-        let tray_elapsed = tray_started.elapsed();
+    let binding_id = binding_id.to_string();
+    let tray_started = Instant::now();
+    change_tray_icon(app, TrayIconState::Recording);
+    let tray_elapsed = tray_started.elapsed();
 
-        // Get the microphone mode to determine audio feedback timing
-        let plan_started = Instant::now();
-        let is_always_on = settings.always_on_microphone;
+    // Get the microphone mode to determine audio feedback timing
+    let plan_started = Instant::now();
+    let is_always_on = settings.always_on_microphone;
 
-        let selected_model_info = if settings.speech_input_provider == SpeechInputProvider::Local {
-            app.state::<Arc<ModelManager>>()
-                .get_model_info(&settings.selected_model)
-        } else {
-            None
-        };
+    let selected_model_info = if settings.speech_input_provider == SpeechInputProvider::Local {
+        app.state::<Arc<ModelManager>>()
+            .get_model_info(&settings.selected_model)
+    } else {
+        None
+    };
 
-        // Use the app-facing model capability as the single pre-recording source
-        // for live streaming decisions. Unknown support is represented as false
-        // until the model registry is updated by discovery or runtime load.
-        let model_supports_streaming = selected_model_info
-            .as_ref()
-            .map(|m| m.supports_streaming)
-            .unwrap_or(false);
-        let azure_supports_streaming = settings.speech_input_provider == SpeechInputProvider::Azure;
-        let supports_live_stream = model_supports_streaming || azure_supports_streaming;
-        let vad_policy = if !settings.vad_enabled {
-            VadPolicy::Disabled
-        } else if azure_supports_streaming {
-            // Azure performs its own endpointing. Preserve real silence so the
-            // service can finalize phrases reliably instead of concatenating
-            // VAD-filtered speech into one artificial utterance.
-            VadPolicy::Disabled
-        } else if model_supports_streaming {
-            VadPolicy::Streaming
-        } else {
-            VadPolicy::Offline
-        };
-        if model_supports_streaming {
-            tm.start_stream();
-        }
-        let plan_elapsed = plan_started.elapsed();
+    // Use the app-facing model capability as the single pre-recording source
+    // for live streaming decisions. Unknown support is represented as false
+    // until the model registry is updated by discovery or runtime load.
+    let model_supports_streaming = selected_model_info
+        .as_ref()
+        .map(|m| m.supports_streaming)
+        .unwrap_or(false);
+    let azure_supports_streaming = settings.speech_input_provider == SpeechInputProvider::Azure;
+    let supports_live_stream = model_supports_streaming || azure_supports_streaming;
+    let vad_policy = if !settings.vad_enabled {
+        VadPolicy::Disabled
+    } else if azure_supports_streaming {
+        // Azure performs its own endpointing. Preserve real silence so the
+        // service can finalize phrases reliably instead of concatenating
+        // VAD-filtered speech into one artificial utterance.
+        VadPolicy::Disabled
+    } else if model_supports_streaming {
+        VadPolicy::Streaming
+    } else {
+        VadPolicy::Offline
+    };
+    if model_supports_streaming {
+        tm.start_stream();
+    }
+    let plan_elapsed = plan_started.elapsed();
 
-        // Sizing the overlay follows the same advertised capability. A model that
-        // doesn't stream (or whose capability is not known yet) gets the compact
-        // pill instead of an oversized transparent live window.
-        let overlay_started = Instant::now();
-        match settings.overlay_style {
-            OverlayStyle::Live if supports_live_stream => utils::show_streaming_overlay(app),
-            OverlayStyle::Live | OverlayStyle::Minimal => show_recording_overlay(app),
-            OverlayStyle::None => {} // show_overlay_state no-ops on None anyway
-        }
-        // Everything above runs before capture can begin, so each span here is
-        // added keypress->capture latency.
-        debug!(
+    // Sizing the overlay follows the same advertised capability. A model that
+    // doesn't stream (or whose capability is not known yet) gets the compact
+    // pill instead of an oversized transparent live window.
+    let overlay_started = Instant::now();
+    match settings.overlay_style {
+        OverlayStyle::Live if supports_live_stream => utils::show_streaming_overlay(app),
+        OverlayStyle::Live | OverlayStyle::Minimal => show_recording_overlay(app),
+        OverlayStyle::None => {} // show_overlay_state no-ops on None anyway
+    }
+    // Everything above runs before capture can begin, so each span here is
+    // added keypress->capture latency.
+    debug!(
             "start-path pre-recording steps: model_kickoff={:?} tray={:?} settings+stream_plan={:?} overlay={:?}",
             kickoff_elapsed,
             tray_elapsed,
             plan_elapsed,
             overlay_started.elapsed()
         );
-        debug!("Microphone mode - always_on: {}", is_always_on);
+    debug!("Microphone mode - always_on: {}", is_always_on);
 
-        let mut recording_error: Option<String> = if azure_supports_streaming {
-            azure_stream
-                .start(&settings)
-                .err()
-                .map(|error| error.to_string())
-        } else {
-            None
-        };
-        let recording_start_time = Instant::now();
-        let recording_start = if recording_error.is_none() {
-            Some(rm.try_start_recording(&binding_id, vad_policy))
-        } else {
-            None
-        };
-        match recording_start {
-            Some(Ok(readiness)) => {
-                debug!(
-                    "Recording request accepted in {:?}; waiting for first microphone samples",
-                    recording_start_time.elapsed()
-                );
-                let generation = readiness.generation();
-                let app_clone = app.clone();
-                let rm_clone = Arc::clone(&rm);
-                std::thread::spawn(move || {
-                    if !readiness.wait() {
-                        debug!("Microphone readiness wait ended without receiving samples");
-                        return;
+    let mut recording_error: Option<String> = if azure_supports_streaming {
+        azure_stream
+            .start(&settings)
+            .err()
+            .map(|error| error.to_string())
+    } else {
+        None
+    };
+    let recording_start_time = Instant::now();
+    let recording_start = if recording_error.is_none() {
+        Some(rm.try_start_recording(&binding_id, vad_policy))
+    } else {
+        None
+    };
+    match recording_start {
+        Some(Ok(readiness)) => {
+            debug!(
+                "Recording request accepted in {:?}; waiting for first microphone samples",
+                recording_start_time.elapsed()
+            );
+            let generation = readiness.generation();
+            let app_clone = app.clone();
+            let rm_clone = Arc::clone(&rm);
+            std::thread::spawn(move || {
+                if !readiness.wait() {
+                    debug!("Microphone readiness wait ended without receiving samples");
+                    return;
+                }
+
+                // Development-only preview hook for evaluating the brief
+                // arming animation on hardware that normally starts too fast
+                // to make it visible.
+                #[cfg(debug_assertions)]
+                if let Ok(delay_ms) = std::env::var("HANDY_DEBUG_MIC_READY_DELAY_MS")
+                    .unwrap_or_default()
+                    .parse::<u64>()
+                {
+                    let delay_ms = delay_ms.min(10_000);
+                    if delay_ms > 0 {
+                        debug!("Delaying microphone-ready cue by {delay_ms}ms for UI preview");
+                        std::thread::sleep(Duration::from_millis(delay_ms));
                     }
+                }
 
-                    // Development-only preview hook for evaluating the brief
-                    // arming animation on hardware that normally starts too fast
-                    // to make it visible.
-                    #[cfg(debug_assertions)]
-                    if let Ok(delay_ms) = std::env::var("HANDY_DEBUG_MIC_READY_DELAY_MS")
-                        .unwrap_or_default()
-                        .parse::<u64>()
+                if !rm_clone.is_recording_readiness_current(generation) {
+                    debug!("Microphone became ready for an inactive recording");
+                    return;
+                }
+
+                debug!("Microphone is receiving samples; recording is ready");
+                utils::emit_recording_ready(&app_clone);
+
+                // The start chime is a readiness cue, so it must follow the
+                // first real input callback rather than Stream::play() or a
+                // fixed delay. The helper returns immediately when feedback
+                // is disabled; mute still follows the same readiness point.
+                if rm_clone.is_recording_readiness_current(generation) {
+                    play_feedback_sound_blocking(&app_clone, SoundType::Start);
+                }
+                if rm_clone.is_recording_readiness_current(generation) {
+                    rm_clone.apply_recording_audio(generation);
+                }
+            });
+        }
+        Some(Err(e)) => {
+            debug!("Failed to start recording: {}", e);
+            recording_error = Some(e);
+        }
+        None => {}
+    }
+
+    if recording_error.is_none() {
+        // Dynamically register the cancel shortcut in a separate task to avoid deadlock
+        shortcut::register_cancel_shortcut(app);
+    } else {
+        // Starting failed (for example due to blocked microphone permissions).
+        // Revert UI state so we don't stay stuck in the recording overlay.
+        tm.cancel_stream();
+        azure_stream.cancel();
+        utils::hide_recording_overlay(app);
+        change_tray_icon(app, TrayIconState::Idle);
+        if let Some(err) = recording_error {
+            let error_type = if is_microphone_access_denied(&err) {
+                "microphone_permission_denied"
+            } else if is_no_input_device_error(&err) {
+                "no_input_device"
+            } else {
+                "unknown"
+            };
+            let _ = app.emit(
+                "recording-error",
+                RecordingErrorEvent {
+                    error_type: error_type.to_string(),
+                    detail: Some(err),
+                },
+            );
+        }
+    }
+
+    debug!(
+        "start_recording_session completed in {:?}",
+        start_time.elapsed()
+    );
+}
+
+/// Obtain the transcript for a finished recording.
+///
+/// This is the whole `speech_input_provider` fork — local stream finalize with
+/// batch fallback, Azure continuous recognition with its two recovery paths, and
+/// the generic cloud path — lifted verbatim out of `TranscribeAction::stop` so
+/// the assistant actions reach a transcript through the identical code rather
+/// than a second, subtly different copy of it.
+///
+/// Returns the transcript alongside any translation the live stream already
+/// produced; a recovery that replaced the streamed text also drops that
+/// translation, because it only ever covered the incomplete stream.
+async fn acquire_transcript(
+    tm: &Arc<TranscriptionManager>,
+    azure_stream: &Arc<crate::speech_pipeline::AzureSpeechStreamManager>,
+    settings: &AppSettings,
+    samples: Vec<f32>,
+) -> (anyhow::Result<String>, Option<String>) {
+    if settings.speech_input_provider == SpeechInputProvider::Local {
+        match tm.finalize_stream() {
+            // A finalized stream with usable text wins. An empty result
+            // (no active stream, produced nothing, or a finalize error
+            // after the engine was returned) falls back to a full batch
+            // transcription of the same audio. A finalize timeout is
+            // surfaced instead — the worker may still hold the engine,
+            // so a batch fallback would contend with it.
+            Ok(Some(text)) if !text.trim().is_empty() => (Ok(text), None),
+            Ok(_) => (tm.transcribe(samples), None),
+            Err(err) => (Err(err), None),
+        }
+    } else if settings.speech_input_provider == SpeechInputProvider::Azure {
+        tm.cancel_stream();
+        match azure_stream.finalize().await {
+            Ok(result) => {
+                if crate::speech_pipeline::azure_stream_needs_recovery(
+                    &samples,
+                    &result.source_text,
+                    result.recognized_audio_end_ms,
+                ) {
+                    warn!(
+                            "Azure continuous result looks incomplete ({} chars, coverage through {}ms for {:.1}s); retrying from the complete recording",
+                            result.source_text.chars().count(),
+                            result.recognized_audio_end_ms,
+                            samples.len() as f64 / 16_000.0
+                        );
+                    match crate::speech_pipeline::transcribe_azure_recording(&samples, settings)
+                        .await
                     {
-                        let delay_ms = delay_ms.min(10_000);
-                        if delay_ms > 0 {
-                            debug!("Delaying microphone-ready cue by {delay_ms}ms for UI preview");
-                            std::thread::sleep(Duration::from_millis(delay_ms));
+                        Ok(recovered)
+                            if azure_recovery_is_better(&result.source_text, &recovered) =>
+                        {
+                            debug!(
+                                    "Azure recording recovery replaced {} streamed chars with {} recovered chars",
+                                    result.source_text.chars().count(),
+                                    recovered.chars().count()
+                                );
+                            // Any live DeepL output only covers the
+                            // incomplete stream. Passing None makes the
+                            // normal output stage translate the full text.
+                            (Ok(recovered), None)
+                        }
+                        Ok(recovered) => {
+                            debug!(
+                                    "Azure recording recovery was not more complete ({} chars); keeping the streamed result",
+                                    recovered.chars().count()
+                                );
+                            (Ok(result.source_text), result.translated_text)
+                        }
+                        Err(error) => {
+                            warn!(
+                                    "Azure recording recovery failed; keeping the streamed result: {error}"
+                                );
+                            (Ok(result.source_text), result.translated_text)
                         }
                     }
-
-                    if !rm_clone.is_recording_readiness_current(generation) {
-                        debug!("Microphone became ready for an inactive recording");
-                        return;
-                    }
-
-                    debug!("Microphone is receiving samples; recording is ready");
-                    utils::emit_recording_ready(&app_clone);
-
-                    // The start chime is a readiness cue, so it must follow the
-                    // first real input callback rather than Stream::play() or a
-                    // fixed delay. The helper returns immediately when feedback
-                    // is disabled; mute still follows the same readiness point.
-                    if rm_clone.is_recording_readiness_current(generation) {
-                        play_feedback_sound_blocking(&app_clone, SoundType::Start);
-                    }
-                    if rm_clone.is_recording_readiness_current(generation) {
-                        rm_clone.apply_mute();
-                    }
-                });
-            }
-            Some(Err(e)) => {
-                debug!("Failed to start recording: {}", e);
-                recording_error = Some(e);
-            }
-            None => {}
-        }
-
-        if recording_error.is_none() {
-            // Dynamically register the cancel shortcut in a separate task to avoid deadlock
-            shortcut::register_cancel_shortcut(app);
-        } else {
-            // Starting failed (for example due to blocked microphone permissions).
-            // Revert UI state so we don't stay stuck in the recording overlay.
-            tm.cancel_stream();
-            azure_stream.cancel();
-            utils::hide_recording_overlay(app);
-            change_tray_icon(app, TrayIconState::Idle);
-            if let Some(err) = recording_error {
-                let error_type = if is_microphone_access_denied(&err) {
-                    "microphone_permission_denied"
-                } else if is_no_input_device_error(&err) {
-                    "no_input_device"
                 } else {
-                    "unknown"
-                };
-                let _ = app.emit(
-                    "recording-error",
-                    RecordingErrorEvent {
-                        error_type: error_type.to_string(),
-                        detail: Some(err),
-                    },
-                );
+                    (Ok(result.source_text), result.translated_text)
+                }
+            }
+            Err(stream_error) => {
+                warn!(
+                        "Azure continuous recognition failed; retrying from the complete recording: {stream_error}"
+                    );
+                match crate::speech_pipeline::transcribe_azure_recording(&samples, settings).await {
+                    Ok(recovered) => (Ok(recovered), None),
+                    Err(recovery_error) => {
+                        warn!("Azure recording recovery also failed: {recovery_error}");
+                        (Err(stream_error), None)
+                    }
+                }
             }
         }
+    } else {
+        tm.cancel_stream();
+        (
+            crate::speech_pipeline::transcribe_cloud(&samples, settings).await,
+            None,
+        )
+    }
+}
 
-        debug!(
-            "TranscribeAction::start completed in {:?}",
-            start_time.elapsed()
-        );
+impl ShortcutAction for TranscribeAction {
+    fn start(&self, app: &AppHandle, binding_id: &str, _shortcut_str: &str) {
+        start_recording_session(app, binding_id);
     }
 
     fn stop(&self, app: &AppHandle, binding_id: &str, _shortcut_str: &str) {
@@ -721,8 +843,10 @@ impl ShortcutAction for TranscribeAction {
             show_transcribing_overlay(app);
         }
 
-        // Unmute before playing audio feedback so the stop sound is audible
-        rm.remove_mute();
+        // Restore system audio before playing audio feedback so the stop sound
+        // is audible. The duck ramp runs on its own thread, so this returns
+        // immediately and the chime plays while the volume comes back up.
+        rm.remove_recording_audio();
 
         // Play audio feedback for recording stop
         play_feedback_sound(app, SoundType::Stop);
@@ -779,31 +903,7 @@ impl ShortcutAction for TranscribeAction {
                     // fed to the stream); otherwise batch-transcribe the samples.
                     let transcription_time = Instant::now();
                     let (transcription_result, live_translation) =
-                        if settings.speech_input_provider == SpeechInputProvider::Local {
-                            match tm.finalize_stream() {
-                                // A finalized stream with usable text wins. An empty result
-                                // (no active stream, produced nothing, or a finalize error
-                                // after the engine was returned) falls back to a full batch
-                                // transcription of the same audio. A finalize timeout is
-                                // surfaced instead — the worker may still hold the engine,
-                                // so a batch fallback would contend with it.
-                                Ok(Some(text)) if !text.trim().is_empty() => (Ok(text), None),
-                                Ok(_) => (tm.transcribe(samples), None),
-                                Err(err) => (Err(err), None),
-                            }
-                        } else if settings.speech_input_provider == SpeechInputProvider::Azure {
-                            tm.cancel_stream();
-                            match azure_stream.finalize().await {
-                                Ok(result) => (Ok(result.source_text), result.translated_text),
-                                Err(error) => (Err(error), None),
-                            }
-                        } else {
-                            tm.cancel_stream();
-                            (
-                                crate::speech_pipeline::transcribe_cloud(&samples, &settings).await,
-                                None,
-                            )
-                        };
+                        acquire_transcript(&tm, &azure_stream, &settings, samples).await;
 
                     // Await WAV save and verify
                     let wav_saved = match wav_handle.await {
@@ -973,6 +1073,381 @@ impl ShortcutAction for TranscribeAction {
     }
 }
 
+// Assistant Action
+
+/// One of the two shipped assistants, bound to a shortcut.
+///
+/// The recording half is literally the dictation path: [`start_recording_session`]
+/// and [`acquire_transcript`] are the same functions `TranscribeAction` calls.
+/// Only what happens to the finished transcript differs, and it differs in three
+/// deliberate ways:
+///
+/// - **No history entry.** A question asked of an assistant is not something the
+///   user dictated, and silently filing it under "your transcriptions" would put
+///   text the user never intended to keep into an exportable list.
+/// - **No WAV.** Nothing references the recording afterwards, so persisting it
+///   would leave audio of every question on disk with nothing to delete it.
+/// - **No post-processing or translation.** Those rewrite a transcript for
+///   *insertion*. Running a "clean up my dictation" prompt over a question would
+///   change what is being asked before it is asked.
+struct AssistantAction {
+    profile_id: &'static str,
+}
+
+/// Deliver an assistant answer according to the profile's output mode.
+///
+/// `Show` leaves the processing overlay up: Phase E renders the answer card into
+/// that same window and owns hiding it, so tearing it down here would make the
+/// card flash and vanish. `Copy` and `Paste` complete without a card, so they
+/// hide the overlay themselves.
+/// How long the frontend gets to turn the processing spinner into the card.
+///
+/// Normally the card appears within a frame or two; this only fires when the
+/// IPC call failed or the webview was mid-reload, in which case nothing else
+/// would ever hide the overlay.
+const ANSWER_CARD_WATCHDOG: std::time::Duration = std::time::Duration::from_millis(2500);
+
+const ANSWER_COPIED_FALLBACK_NOTICE: &str =
+    "The overlay is switched off, so the assistant's answer was copied to the clipboard instead.";
+
+/// Surface a message when no answer card will carry it.
+///
+/// Lands as a toast in the main window (`App.tsx` listens for it). With the
+/// main window closed to the tray this is still invisible; that limit is
+/// stated in the plan rather than hidden, and a tray notification is the next
+/// step if it matters in practice.
+fn report_without_card(app: &AppHandle, message: &str) {
+    if let Err(err) = app.emit(crate::events::ASSISTANT_NOTICE, message.to_string()) {
+        error!("Failed to emit assistant notice: {err}");
+    }
+}
+
+fn deliver_assistant_answer(
+    app: &AppHandle,
+    mut event: crate::assistant::AssistantAnswerEvent,
+    output_mode: AssistantOutputMode,
+) {
+    use tauri_specta::Event as _;
+
+    // Decided once, here, and carried in the payload. The frontend used to ask
+    // Rust to re-read the output mode at present time; a setting changed while
+    // the request was in flight, or a failed IPC call, left the processing
+    // spinner up with nothing ever replacing it.
+    let card_available = crate::overlay::answer_card_can_be_shown(app);
+    let delivery = plan_answer_delivery(output_mode, event.answer.as_deref(), card_available);
+    event.expects_card = matches!(delivery, AnswerDelivery::ShowCard);
+    let is_fallback = matches!(delivery, AnswerDelivery::CopyFallback(_));
+
+    // Emitted first and unconditionally: the event is the only report the user
+    // gets, so it must not be contingent on a clipboard or paste succeeding.
+    if let Err(err) = event.emit(app) {
+        error!("Failed to emit assistant answer event: {err}");
+    }
+
+    match delivery {
+        AnswerDelivery::ShowCard => {
+            // The frontend turns the spinner into the card. If it never does,
+            // hide the overlay ourselves. `show_overlay_state` bumps the overlay
+            // generation when the card appears, which is what makes this a
+            // no-op in the normal case and keeps it from tearing down a later,
+            // unrelated state.
+            let generation = crate::overlay::overlay_generation();
+            let app_for_watchdog = app.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(ANSWER_CARD_WATCHDOG);
+                crate::overlay::hide_overlay_if_unchanged(&app_for_watchdog, generation);
+            });
+        }
+        AnswerDelivery::NothingToDeliver => {
+            // No card will carry the error string, so say it somewhere.
+            if let Some(message) = event.error.as_deref() {
+                report_without_card(app, message);
+            }
+            utils::hide_recording_overlay(app);
+        }
+        AnswerDelivery::Copy(text) | AnswerDelivery::CopyFallback(text) => {
+            // Reuses the dictation paste machinery's clipboard writer, which
+            // owns the platform quirks (Windows delayed rendering, Wayland
+            // wl-copy). Unlike paste, the answer is meant to stay on the
+            // clipboard, so nothing is restored afterwards.
+            match crate::clipboard::write_text_to_clipboard(app, &text) {
+                Ok(()) if is_fallback => report_without_card(app, ANSWER_COPIED_FALLBACK_NOTICE),
+                Ok(()) => {}
+                Err(details) => {
+                    // Silent failure here means the user pastes the *previous*
+                    // clipboard content believing it is the answer.
+                    error!("Failed to copy assistant answer to the clipboard: {details}");
+                    let message =
+                        crate::assistant::AssistantError::ClipboardFailed { details }.message();
+                    report_without_card(app, &message);
+                }
+            }
+            utils::hide_recording_overlay(app);
+        }
+        AnswerDelivery::Paste(text) => {
+            // Same main-thread hop and same helper `TranscribeAction` uses:
+            // enigo and the clipboard are main-thread-bound on macOS.
+            let app_for_paste = app.clone();
+            app.run_on_main_thread(move || {
+                if let Err(err) = utils::paste(text, app_for_paste.clone()) {
+                    error!("Failed to paste assistant answer: {err}");
+                    let _ = app_for_paste.emit(crate::events::PASTE_ERROR, ());
+                }
+                utils::hide_recording_overlay(&app_for_paste);
+                change_tray_icon(&app_for_paste, TrayIconState::Idle);
+            })
+            .unwrap_or_else(|err| {
+                error!("Failed to run assistant paste on main thread: {err:?}");
+                utils::hide_recording_overlay(app);
+                change_tray_icon(app, TrayIconState::Idle);
+            });
+            // The queued closure owns the tray reset.
+            return;
+        }
+    }
+
+    change_tray_icon(app, TrayIconState::Idle);
+}
+
+/// What [`deliver_assistant_answer`] should do with a finished run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum AnswerDelivery {
+    /// Emit only, and leave the overlay up for the answer card.
+    ShowCard,
+    /// Emit, put the text on the clipboard, hide the overlay.
+    Copy(String),
+    /// Emit, paste into the focused application, hide the overlay.
+    Paste(String),
+    /// Emit only, and hide the overlay: a `Copy`/`Paste` run that produced no
+    /// answer to deliver.
+    NothingToDeliver,
+    /// A `Show` run whose card cannot appear (overlay switched off): copy the
+    /// answer and say so, because emitting into a void is not delivery.
+    CopyFallback(String),
+}
+
+/// Decide the delivery for one finished run.
+///
+/// Pure, so the routing rules are testable without an app handle, a clipboard,
+/// or a focused window. Two rules carry the weight:
+///
+/// - A failed run never delivers text. `answer` is `None` on every error path,
+///   and pasting an error message into whatever document the user had focused
+///   would be considerably worse than the failure it describes.
+/// - `Show` never delivers text even on success. It is the shipped default
+///   precisely because an assistant that types into the focused application
+///   unasked is destructive when the shortcut is hit by accident.
+fn plan_answer_delivery(
+    output_mode: AssistantOutputMode,
+    answer: Option<&str>,
+    card_available: bool,
+) -> AnswerDelivery {
+    let deliverable = answer.filter(|text| !text.is_empty());
+    match (output_mode, deliverable) {
+        (AssistantOutputMode::Show, _) if card_available => AnswerDelivery::ShowCard,
+        // No card can appear (the overlay is off - the shipped default on
+        // Linux). The answer still has to land somewhere the user can find it.
+        (AssistantOutputMode::Show, Some(text)) => AnswerDelivery::CopyFallback(text.to_string()),
+        (AssistantOutputMode::Show, None) => AnswerDelivery::NothingToDeliver,
+        (AssistantOutputMode::Copy, Some(text)) => AnswerDelivery::Copy(text.to_string()),
+        (AssistantOutputMode::Paste, Some(text)) => AnswerDelivery::Paste(text.to_string()),
+        (AssistantOutputMode::Copy | AssistantOutputMode::Paste, None) => {
+            AnswerDelivery::NothingToDeliver
+        }
+    }
+}
+
+/// Emit a failure that never reached the provider. Split out so every early
+/// return is one line and cannot forget the event.
+fn emit_assistant_failure(
+    app: &AppHandle,
+    profile_id: &str,
+    question: &str,
+    error: crate::assistant::AssistantError,
+) {
+    use tauri_specta::Event as _;
+
+    let message = error.message();
+    let mut event = crate::assistant::failed_answer(profile_id, question, error);
+    // A card can carry the message only for a `Show` profile with the overlay
+    // on; everywhere else the message has to travel another way or it is lost.
+    let output_mode = crate::settings::get_settings(app)
+        .assistant_profile(profile_id)
+        .map(|profile| profile.output_mode)
+        .unwrap_or_default();
+    event.expects_card =
+        output_mode == AssistantOutputMode::Show && crate::overlay::answer_card_can_be_shown(app);
+
+    if let Err(err) = event.emit(app) {
+        error!("Failed to emit assistant failure event: {err}");
+    }
+    if !event.expects_card {
+        report_without_card(app, &message);
+    }
+}
+
+impl ShortcutAction for AssistantAction {
+    fn start(&self, app: &AppHandle, binding_id: &str, _shortcut_str: &str) {
+        start_recording_session(app, binding_id);
+    }
+
+    fn stop(&self, app: &AppHandle, binding_id: &str, _shortcut_str: &str) {
+        app.state::<Arc<AudioRecordingManager>>()
+            .invalidate_recording_readiness();
+        shortcut::unregister_cancel_shortcut(app);
+
+        debug!(
+            "AssistantAction::stop called for binding: {} (profile {})",
+            binding_id, self.profile_id
+        );
+
+        let ah = app.clone();
+        let rm = Arc::clone(&app.state::<Arc<AudioRecordingManager>>());
+        let tm = Arc::clone(&app.state::<Arc<TranscriptionManager>>());
+        let azure_stream =
+            Arc::clone(&app.state::<Arc<crate::speech_pipeline::AzureSpeechStreamManager>>());
+
+        change_tray_icon(app, TrayIconState::Transcribing);
+
+        let settings = get_settings(app);
+        let use_streaming_overlay = should_use_streaming_overlay(
+            settings.overlay_style,
+            tm.is_streaming() || azure_stream.is_active(),
+        );
+        if use_streaming_overlay {
+            tm.emit_stream_working(StreamWorkKind::Transcribing);
+        } else {
+            show_transcribing_overlay(app);
+        }
+
+        rm.remove_recording_audio();
+        play_feedback_sound(app, SoundType::Stop);
+
+        let binding_id = binding_id.to_string();
+        let profile_id = self.profile_id;
+        let cancel_generation = rm.cancel_generation();
+
+        tauri::async_runtime::spawn(async move {
+            // Releases the coordinator stage on every exit path, including the
+            // early returns below and a panic.
+            let _guard = FinishGuard(ah.clone());
+
+            let Some(samples) = rm.stop_recording(&binding_id, cancel_generation) else {
+                debug!("Assistant: no samples retrieved from recording stop");
+                tm.cancel_stream();
+                azure_stream.cancel();
+                utils::hide_recording_overlay(&ah);
+                change_tray_icon(&ah, TrayIconState::Idle);
+                return;
+            };
+
+            // A cancel is the user withdrawing the question; stay silent rather
+            // than reporting an error for something they deliberately aborted.
+            if rm.was_cancelled_since(cancel_generation) {
+                debug!("Assistant cancelled after recording stop");
+                tm.cancel_stream();
+                azure_stream.cancel();
+                utils::hide_recording_overlay(&ah);
+                change_tray_icon(&ah, TrayIconState::Idle);
+                return;
+            }
+
+            if samples.is_empty() {
+                debug!("Assistant recording produced no audio samples");
+                tm.cancel_stream();
+                azure_stream.cancel();
+                emit_assistant_failure(
+                    &ah,
+                    profile_id,
+                    "",
+                    crate::assistant::AssistantError::BlankQuestion,
+                );
+                utils::hide_recording_overlay(&ah);
+                change_tray_icon(&ah, TrayIconState::Idle);
+                return;
+            }
+
+            // Identical to dictation: same provider fork, same Azure recovery.
+            // Deliberately without the WAV save that runs alongside it there.
+            let (transcription_result, _live_translation) =
+                acquire_transcript(&tm, &azure_stream, &settings, samples).await;
+
+            if rm.was_cancelled_since(cancel_generation) {
+                debug!("Assistant cancelled before asking");
+                utils::hide_recording_overlay(&ah);
+                change_tray_icon(&ah, TrayIconState::Idle);
+                return;
+            }
+
+            let question = match transcription_result {
+                Ok(question) => question,
+                Err(err) => {
+                    azure_stream.cancel();
+                    error!("Assistant transcription failed: {err}");
+                    let _ = ah.emit(crate::events::TRANSCRIPTION_ERROR, err.to_string());
+                    emit_assistant_failure(
+                        &ah,
+                        profile_id,
+                        "",
+                        // Not `Request`: this failure is speech recognition,
+                        // and calling it an assistant request failure sends the
+                        // user to the assistant's provider settings while the
+                        // broken one is the speech provider.
+                        crate::assistant::AssistantError::TranscriptionFailed {
+                            details: err.to_string(),
+                        },
+                    );
+                    utils::hide_recording_overlay(&ah);
+                    change_tray_icon(&ah, TrayIconState::Idle);
+                    return;
+                }
+            };
+
+            // Silence must never reach the provider: the model would answer the
+            // empty string with something confidently irrelevant, and the user
+            // would be billed for it.
+            if crate::assistant::is_assistant_question_blank(&question) {
+                debug!("Assistant heard nothing; not calling the provider");
+                emit_assistant_failure(
+                    &ah,
+                    profile_id,
+                    &question,
+                    crate::assistant::AssistantError::BlankQuestion,
+                );
+                utils::hide_recording_overlay(&ah);
+                change_tray_icon(&ah, TrayIconState::Idle);
+                return;
+            }
+
+            // The existing processing state, not a new one - Phase E owns the
+            // overlay file and the answer state that replaces this.
+            if use_streaming_overlay {
+                tm.emit_stream_working(StreamWorkKind::Polishing);
+            } else {
+                show_processing_overlay(&ah);
+            }
+
+            let event = crate::assistant::run_assistant(&ah, profile_id, &question).await;
+
+            if rm.was_cancelled_since(cancel_generation) {
+                debug!("Assistant cancelled before delivering the answer");
+                utils::hide_recording_overlay(&ah);
+                change_tray_icon(&ah, TrayIconState::Idle);
+                return;
+            }
+
+            // Re-read the mode: the request may have taken a minute and the
+            // user may have changed it in the meantime.
+            let output_mode = get_settings(&ah)
+                .assistant_profile(profile_id)
+                .map(|profile| profile.output_mode)
+                .unwrap_or_default();
+
+            deliver_assistant_answer(&ah, event, output_mode);
+        });
+    }
+}
+
 // Cancel Action
 struct CancelAction;
 
@@ -1023,6 +1498,18 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
         Arc::new(TranscribeAction { post_process: true }) as Arc<dyn ShortcutAction>,
     );
     map.insert(
+        crate::settings::ASSISTANT_BINDING_FAST.to_string(),
+        Arc::new(AssistantAction {
+            profile_id: crate::settings::ASSISTANT_PROFILE_FAST,
+        }) as Arc<dyn ShortcutAction>,
+    );
+    map.insert(
+        crate::settings::ASSISTANT_BINDING_SMART.to_string(),
+        Arc::new(AssistantAction {
+            profile_id: crate::settings::ASSISTANT_PROFILE_SMART,
+        }) as Arc<dyn ShortcutAction>,
+    );
+    map.insert(
         "cancel".to_string(),
         Arc::new(CancelAction) as Arc<dyn ShortcutAction>,
     );
@@ -1036,27 +1523,57 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 #[cfg(test)]
 mod tests {
     use super::{
-        complete_unless_cancelled, is_blank_transcription, should_use_streaming_overlay,
-        strip_think_block,
+        azure_recovery_is_better, complete_unless_cancelled, plan_answer_delivery,
+        should_use_streaming_overlay, strip_think_block, AnswerDelivery, ACTION_MAP,
     };
-    use crate::settings::OverlayStyle;
+    use crate::settings::{AssistantOutputMode, OverlayStyle};
     use std::future;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
 
+    /// With the overlay off there is no card; a Show run must still land.
+    #[test]
+    fn show_without_a_card_falls_back_to_the_clipboard() {
+        assert!(matches!(
+            plan_answer_delivery(AssistantOutputMode::Show, Some("42"), false),
+            AnswerDelivery::CopyFallback(text) if text == "42"
+        ));
+    }
+
+    #[test]
+    fn show_without_a_card_and_without_an_answer_delivers_nothing() {
+        assert!(matches!(
+            plan_answer_delivery(AssistantOutputMode::Show, None, false),
+            AnswerDelivery::NothingToDeliver
+        ));
+    }
+
+    /// Copy and Paste never wanted a card, so its absence changes nothing.
+    #[test]
+    fn copy_and_paste_ignore_card_availability() {
+        assert!(matches!(
+            plan_answer_delivery(AssistantOutputMode::Copy, Some("x"), false),
+            AnswerDelivery::Copy(text) if text == "x"
+        ));
+        assert!(matches!(
+            plan_answer_delivery(AssistantOutputMode::Paste, Some("x"), false),
+            AnswerDelivery::Paste(text) if text == "x"
+        ));
+    }
+
     #[test]
     fn blank_transcription_is_detected() {
-        assert!(is_blank_transcription(""));
-        assert!(is_blank_transcription("   "));
-        assert!(is_blank_transcription("\t\n  \r\n"));
+        assert!(crate::assistant::is_assistant_question_blank(""));
+        assert!(crate::assistant::is_assistant_question_blank("   "));
+        assert!(crate::assistant::is_assistant_question_blank("\t\n  \r\n"));
     }
 
     #[test]
     fn non_blank_transcription_is_kept() {
-        assert!(!is_blank_transcription("hello"));
-        assert!(!is_blank_transcription("  hello  "));
+        assert!(!crate::assistant::is_assistant_question_blank("hello"));
+        assert!(!crate::assistant::is_assistant_question_blank("  hello  "));
     }
 
     #[test]
@@ -1119,5 +1636,149 @@ mod tests {
         assert!(!should_use_streaming_overlay(OverlayStyle::Live, false));
         assert!(!should_use_streaming_overlay(OverlayStyle::Minimal, true));
         assert!(!should_use_streaming_overlay(OverlayStyle::None, true));
+    }
+
+    // -- assistant delivery routing -----------------------------------------
+
+    /// `Show` is the shipped default. It must never touch the clipboard or the
+    /// focused application, however good the answer is.
+    #[test]
+    fn show_mode_only_shows() {
+        assert_eq!(
+            plan_answer_delivery(AssistantOutputMode::Show, Some("Paris."), true),
+            AnswerDelivery::ShowCard
+        );
+        assert_eq!(
+            plan_answer_delivery(AssistantOutputMode::Show, None, true),
+            AnswerDelivery::ShowCard
+        );
+    }
+
+    #[test]
+    fn copy_and_paste_modes_deliver_the_answer() {
+        assert_eq!(
+            plan_answer_delivery(AssistantOutputMode::Copy, Some("Paris."), true),
+            AnswerDelivery::Copy("Paris.".to_string())
+        );
+        assert_eq!(
+            plan_answer_delivery(AssistantOutputMode::Paste, Some("Paris."), true),
+            AnswerDelivery::Paste("Paris.".to_string())
+        );
+    }
+
+    /// A failed run carries `answer: None`. Delivering anything then would put
+    /// an error message on the clipboard, or type it into the user's document.
+    #[test]
+    fn a_failed_run_delivers_nothing_in_any_mode() {
+        for mode in [
+            AssistantOutputMode::Copy,
+            AssistantOutputMode::Paste,
+            AssistantOutputMode::Show,
+        ] {
+            let delivery = plan_answer_delivery(mode, None, true);
+            assert!(
+                matches!(
+                    delivery,
+                    AnswerDelivery::NothingToDeliver | AnswerDelivery::ShowCard
+                ),
+                "{mode:?} delivered text for a failed run: {delivery:?}"
+            );
+        }
+        // An empty-but-present answer is treated the same way.
+        assert_eq!(
+            plan_answer_delivery(AssistantOutputMode::Paste, Some(""), true),
+            AnswerDelivery::NothingToDeliver
+        );
+    }
+
+    /// Only `Show` keeps the overlay: Phase E renders its card there. Every
+    /// other outcome finishes without a card and must clean up after itself,
+    /// or the overlay would be stranded on screen.
+    #[test]
+    fn only_show_mode_leaves_the_overlay_up() {
+        let keeps_overlay =
+            |delivery: &AnswerDelivery| matches!(delivery, AnswerDelivery::ShowCard);
+
+        assert!(keeps_overlay(&plan_answer_delivery(
+            AssistantOutputMode::Show,
+            Some("answer"),
+            true
+        )));
+        assert!(!keeps_overlay(&plan_answer_delivery(
+            AssistantOutputMode::Copy,
+            Some("answer"),
+            true
+        )));
+        assert!(!keeps_overlay(&plan_answer_delivery(
+            AssistantOutputMode::Paste,
+            Some("answer"),
+            true
+        )));
+        assert!(!keeps_overlay(&plan_answer_delivery(
+            AssistantOutputMode::Copy,
+            None,
+            true
+        )));
+    }
+
+    // -- action registration -------------------------------------------------
+
+    /// Both assistants must be reachable. A binding with no `ACTION_MAP` entry
+    /// logs "No action in ACTION_MAP" and does nothing, which looks exactly
+    /// like a broken shortcut.
+    #[test]
+    fn assistant_bindings_are_registered() {
+        assert!(ACTION_MAP.contains_key(crate::settings::ASSISTANT_BINDING_FAST));
+        assert!(ACTION_MAP.contains_key(crate::settings::ASSISTANT_BINDING_SMART));
+    }
+
+    /// Regression guard for the `TranscribeAction` refactor: extracting the
+    /// shared start/transcript helpers must not have disturbed the dictation
+    /// registrations or added a stray entry.
+    #[test]
+    fn action_map_registrations_are_unchanged_for_dictation() {
+        assert!(ACTION_MAP.contains_key("transcribe"));
+        assert!(ACTION_MAP.contains_key("transcribe_with_post_process"));
+        assert!(ACTION_MAP.contains_key("cancel"));
+        assert!(ACTION_MAP.contains_key("test"));
+
+        let mut ids: Vec<&str> = ACTION_MAP.keys().map(String::as_str).collect();
+        ids.sort_unstable();
+        assert_eq!(
+            ids,
+            vec![
+                "assistant_fast",
+                "assistant_smart",
+                "cancel",
+                "test",
+                "transcribe",
+                "transcribe_with_post_process",
+            ]
+        );
+    }
+
+    /// Every binding the app ships must resolve to an action, except the two
+    /// meeting bindings, which `handle_shortcut_event` routes to the meeting
+    /// state machine before `ACTION_MAP` is consulted.
+    #[test]
+    fn every_shipped_binding_has_an_action_or_is_a_meeting_binding() {
+        for id in crate::settings::get_default_settings().bindings.keys() {
+            assert!(
+                ACTION_MAP.contains_key(id) || crate::settings::is_meeting_binding(id),
+                "binding '{id}' has no action and is not a meeting binding"
+            );
+        }
+    }
+
+    #[test]
+    fn azure_recovery_only_replaces_meaningfully_longer_text() {
+        assert!(azure_recovery_is_better(
+            "Only the first sentence.",
+            "Only the first sentence. This is the missing second sentence."
+        ));
+        assert!(!azure_recovery_is_better(
+            "The complete sentence is here.",
+            "The complete sentence is right here."
+        ));
     }
 }

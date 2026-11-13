@@ -113,6 +113,9 @@ pub enum SummaryError {
 pub fn map_prompt(batch: &[SummarySpan]) -> String {
     let mut prompt = String::from(
         "You are summarizing one part of a longer meeting transcript.\n\
+         The transcript can contain parallel MICROPHONE and SYSTEM tracks. \
+         They often contain the same utterance with slightly different words; \
+         consolidate overlap once, but preserve distinct statements from either track.\n\
          Produce concise meeting notes in the transcript's language:\n\
          - Key points and decisions\n\
          - Action items (who, what)\n\

@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Transskriberer den gemte lyd igen. Selve optagelsen bevares.",
         "retranscribeWarning": "Den nuværende transskription kasseres og laves igen ud fra den gemte lyd. Optagelsen røres ikke.",
         "retranscribeQueued": "Transskription sat i kø igen.",
-        "retranscribeFailed": "Kunne ikke starte transskriptionen igen."
+        "retranscribeFailed": "Kunne ikke starte transskriptionen igen.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Tilladelser påkrævet",
-      "description": "Handy har brug for et par tilladelser for at fungere korrekt.",
+      "description": "Speak har brug for et par tilladelser for at fungere korrekt.",
       "microphone": {
         "title": "Mikrofonadgang",
         "description": "Påkrævet for at høre din stemme til transskription."
@@ -637,7 +648,7 @@
     "general": {
       "title": "Generelt",
       "shortcut": {
-        "title": "Handy-genveje",
+        "title": "Speak-genveje",
         "description": "Konfigurer tastaturgenveje til at udløse tale-til-tekst-optagelse",
         "loading": "Indlæser genveje...",
         "none": "Ingen genveje konfigureret",
@@ -655,6 +666,14 @@
           "transcribe_with_post_process": {
             "name": "Genvej til efterbehandling",
             "description": "Valgfrit: En dedikeret genvej, der altid anvender AI-efterbehandling på din transskription."
+          },
+          "assistant_fast": {
+            "name": "Genvej til hurtig hjælper",
+            "description": "Tastaturgenvejen, der spørger den hurtige assistent. Ikke tildelt, før du angiver den."
+          },
+          "assistant_smart": {
+            "name": "Genvej til klog assistent",
+            "description": "Tastaturgenvejen, der spørger den grundige assistent. Ikke tildelt, før du angiver den."
           }
         },
         "errors": {
@@ -675,6 +694,20 @@
       "pushToTalk": {
         "label": "Tryk-for-at-tale",
         "description": "Hold nede for at optage, slip for at stoppe"
+      },
+      "recordingAudio": {
+        "label": "Lyd under optagelse",
+        "description": "Hvad Speak gør ved systemets lydafspilning under optagelse",
+        "modes": {
+          "off": "Gør ingenting",
+          "duck": "Sænk lydstyrken",
+          "mute": "Slå lyden helt fra"
+        },
+        "volume": {
+          "label": "Sænket lydstyrke",
+          "description": "Mållydstyrke for systemets lydudgang under optagelse",
+          "unit": "{{percent}} %"
+        }
       }
     },
     "models": {
@@ -693,7 +726,7 @@
       },
       "rescan": {
         "label": "Søg igen",
-        "tooltip": "Søg igen efter modeller, der er tilføjet til modelmappen eller Hugging Face-cachen uden for Handy"
+        "tooltip": "Søg igen efter modeller, der er tilføjet til modelmappen eller Hugging Face-cachen uden for Speak"
       },
       "noModelsMatch": "Ingen modeller matcher dette filter."
     },
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Start ved opstart",
-        "description": "Start Handy automatisk, når du logger ind på din computer."
+        "description": "Start Speak automatisk, når du logger ind på din computer."
       },
       "showTrayIcon": {
         "label": "Vis proceslinjeikon",
-        "description": "Vis Handy-ikonet i meddelelsesområdet."
+        "description": "Vis Speak-ikonet i meddelelsesområdet."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Tjek for opdateringer",
-        "description": "Tjek automatisk for nye versioner af Handy"
+        "description": "Tjek automatisk for nye versioner af Speak"
       },
       "whatsNewPreview": {
         "title": "Forhåndsvisning af nyheder",
@@ -1004,10 +1037,6 @@
         "label": "Efterbehandling",
         "description": "Aktivér AI-drevet tekstforbedring efter transskription"
       },
-      "muteWhileRecording": {
-        "label": "Mute under optagelse",
-        "description": "Sluk for systemlyd under optagelse"
-      },
       "appendTrailingSpace": {
         "label": "Tilføj efterfølgende mellemrum",
         "description": "Tilføj et mellemrum efter indsat transskription"
@@ -1040,7 +1069,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Tastaturdiagnostik",
-        "description": "Kontrollerer, om tastaturhændelser når frem til Handy. Kun antallet af hændelser registreres — aldrig hvilke taster du trykker på.",
+        "description": "Kontrollerer, om tastaturhændelser når frem til Speak. Kun antallet af hændelser registreres — aldrig hvilke taster du trykker på.",
         "run": "Kør 10 s diagnostik",
         "running": "Lytter… tryk på din genvej et par gange (f.eks. Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1054,7 +1083,7 @@
         "mouse": "Mus",
         "verdictBlocked": "Secure Input blokerer tastehændelser — genveje med en almindelig tast kan ikke fungere, før det er løst.",
         "verdictSuspicious": "Der kom modifikatorhændelser, men ingen tastehændelser — noget undertrykker taster, selvom Secure Input rapporteres som deaktiveret. Rapportér det gerne på GitHub.",
-        "verdictOk": "Tastehændelser når frem til Handy som normalt.",
+        "verdictOk": "Tastehændelser når frem til Speak som normalt.",
         "verdictNoEvents": "Ingen hændelser registreret — trykkede du på nogen taster under testen?",
         "failed": "Diagnostik mislykkedes: {{error}}"
       }
@@ -1063,15 +1092,15 @@
       "title": "Om",
       "version": {
         "title": "Version",
-        "description": "Nuværende version af Handy"
+        "description": "Nuværende version af Speak"
       },
       "whatsNewUpdates": {
         "label": "Vis nyheder",
-        "description": "Vis udgivelsesnoter, efter Handy opdateres"
+        "description": "Vis udgivelsesnoter, efter Speak opdateres"
       },
       "appDataDirectory": {
         "title": "Appdatamappe",
-        "description": "Placering, hvor Handy gemmer sine data"
+        "description": "Placering, hvor Speak gemmer sine data"
       },
       "sourceCode": {
         "title": "Kildekode",
@@ -1080,7 +1109,7 @@
       },
       "supportDevelopment": {
         "title": "Støt udviklingen",
-        "description": "Hjælp os med at fortsætte udviklingen af Handy",
+        "description": "Hjælp os med at fortsætte udviklingen af Speak",
         "button": "Donér"
       },
       "acknowledgments": {
@@ -1088,13 +1117,14 @@
         "ggml": {
           "title": "ggml",
           "description": "Højtydende tensor-bibliotek til maskinlæringsinferens på enheden",
-          "details": "Handys lokale tale-til-tekst funktionalitet er bygget på transcribe.cpp og ggml. Tak for det fantastiske arbejde af Georgi Gerganov og bidragyderne."
+          "details": "Speaks lokale tale-til-tekst funktionalitet er bygget på transcribe.cpp og ggml. Tak for det fantastiske arbejde af Georgi Gerganov og bidragyderne."
         }
       }
     },
     "tabs": {
       "modelsProviders": "Modeller og udbydere",
-      "meetingsEmptyBody": "Mødeindstillinger kommer med mødetilstand."
+      "meetingsEmptyBody": "Mødeindstillinger kommer med mødetilstand.",
+      "assistants": "Assistenter"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "Behold i 30 dage",
           "forever": "Behold for altid"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "AI-assistenter",
+      "description": "To assistenter, du når med en genvej. Sig dit spørgsmål, og svaret kommer på et kort ved siden af Speak-overlayet.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Hurtig hjælper",
+          "description": "Til hurtige opslag: et faktum, en omregning, en stavemåde, en omskrevet sætning. Indstillet på et kort svar, der kommer med det samme."
+        },
+        "smart_assistant": {
+          "title": "Klog assistent",
+          "description": "Til spørgsmål, der fortjener eftertanke: analyse, sammenligning, udkast. Må tage længere tid og svare udførligt."
+        }
+      },
+      "provider": {
+        "title": "Udbyder",
+        "description": "Hvilken tjeneste der svarer for denne assistent. Begge assistenter kan bruge den samme udbyder med forskellige nøgler."
+      },
+      "apiKey": {
+        "configured": "API-nøglen til {{provider}} er gemt.",
+        "notConfigured": "Der er ikke gemt en API-nøgle til {{provider}}.",
+        "title": "API-nøgle",
+        "description": "Gemmes i operativsystemets nøglering, adskilt fra nøglen til efterbehandling.",
+        "placeholder": "Indsæt din API-nøgle"
+      },
+      "model": {
+        "title": "Model",
+        "description": "Den model, denne assistent spørger. Vælg en på listen, eller skriv det præcise model-id.",
+        "placeholder": "Vælg eller skriv et model-id",
+        "refresh": "Opdatér modellisten",
+        "required": "Ingen model valgt endnu. Denne assistent er inaktiv, indtil du vælger en.",
+        "listingHint": "Modellisten indlæses med denne assistents egen API-nøgle. Uden den kan du stadig indtaste model-id'et manuelt."
+      },
+      "systemPrompt": {
+        "title": "Systemprompt",
+        "description": "Den faste instruktion, som denne assistent følger ved hvert spørgsmål.",
+        "placeholder": "Beskriv, hvordan denne assistent skal svare"
+      },
+      "maxOutputTokens": {
+        "title": "Svarlængde",
+        "description": "Øvre grænse for svaret, i tokens ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Tidsgrænse",
+        "description": "Hvor længe der ventes på et svar, før det opgives, i sekunder ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Håndtering af svaret"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Vis kun",
+          "hint": "Svaret vises på kortet og ingen andre steder."
+        },
+        "copy": {
+          "label": "Vis og kopiér",
+          "hint": "Svaret vises på kortet og kopieres til udklipsholderen."
+        },
+        "paste": {
+          "label": "Vis og indsæt",
+          "hint": "Svaret vises på kortet og indsættes i den app, du arbejdede i."
+        }
+      },
+      "shortcutHint": "Begge assistenters tastaturgenveje indstilles under Diktering ved siden af transskriptionsgenvejene."
     }
   },
   "footer": {
@@ -1167,7 +1288,7 @@
     "portableUpdateBrowseButton": "Åbn GitHub Releases"
   },
   "whatsNew": {
-    "title": "Nyt i Handy v{{version}}"
+    "title": "Nyt i Speak v{{version}}"
   },
   "common": {
     "add": "Tilføj",
@@ -1184,7 +1305,7 @@
     "reset": "Nulstil"
   },
   "accessibility": {
-    "permissionsDescription": "Handy har brug for tilgængelighedstilladelser for at skrive den transskriberede tekst.",
+    "permissionsDescription": "Speak har brug for tilgængelighedstilladelser for at skrive den transskriberede tekst.",
     "openSettings": "Åbn systemindstillinger"
   },
   "dictation": {
@@ -1274,15 +1395,16 @@
     "modelLoadFailedUnknown": "ukendt model",
     "pasteFailedTitle": "Kunne ikke indsætte tekst",
     "pasteFailed": "Teksten kunne ikke indsættes i det aktive program.",
-    "transcriptionFailedTitle": "Transskription mislykkedes"
+    "transcriptionFailedTitle": "Transskription mislykkedes",
+    "assistantNoticeTitle": "Assistent"
   },
   "appLanguage": {
     "title": "Applikationssprog",
-    "description": "Skift sproget for Handy-grænsefladen"
+    "description": "Skift sproget for Speak-grænsefladen"
   },
   "theme": {
     "title": "Applikationstema",
-    "description": "Vælg om Handy skal følge dit systemtema eller forblive lyst eller mørkt",
+    "description": "Vælg om Speak skal følge dit systemtema eller forblive lyst eller mørkt",
     "options": {
       "system": "System",
       "light": "Lys",
@@ -1294,7 +1416,24 @@
     "processing": "Behandler...",
     "cancel": "Annuller",
     "meetingRecording": "Mødet optages",
-    "meetingPaused": "Mødet er sat på pause"
+    "meetingPaused": "Mødet er sat på pause",
+    "assistant": {
+      "label": "Assistent",
+      "smartLabel": "Klog assistent",
+      "copy": "Kopiér",
+      "copied": "Kopieret til udklipsholderen",
+      "paste": "Indsæt",
+      "pasted": "Indsat",
+      "replace": "Erstat",
+      "replaced": "Erstattet",
+      "replaceHint": "Markerer alt i det aktive vindue og indsætter svaret i stedet",
+      "openLink": "Åbn link",
+      "chooseLink": "Åbn link ({{n}})",
+      "escalate": "Spørg den kloge assistent",
+      "asking": "Spørger den kloge assistent...",
+      "close": "Luk",
+      "truncated": "Svaret blev afbrudt ved længdegrænsen."
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokerer muligvis 1 genvej",

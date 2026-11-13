@@ -7,10 +7,18 @@ interface ApiKeyFieldProps {
   disabled: boolean;
   placeholder?: string;
   className?: string;
+  clearAfterBlur?: boolean;
 }
 
 export const ApiKeyField: React.FC<ApiKeyFieldProps> = React.memo(
-  ({ value, onBlur, disabled, placeholder, className = "" }) => {
+  ({
+    value,
+    onBlur,
+    disabled,
+    placeholder,
+    className = "",
+    clearAfterBlur = false,
+  }) => {
     const [localValue, setLocalValue] = useState(value);
 
     // Sync with prop changes
@@ -23,7 +31,10 @@ export const ApiKeyField: React.FC<ApiKeyFieldProps> = React.memo(
         type="password"
         value={localValue}
         onChange={(event) => setLocalValue(event.target.value)}
-        onBlur={() => onBlur(localValue)}
+        onBlur={() => {
+          onBlur(localValue);
+          if (clearAfterBlur && localValue.trim()) setLocalValue("");
+        }}
         placeholder={placeholder}
         variant="compact"
         disabled={disabled}

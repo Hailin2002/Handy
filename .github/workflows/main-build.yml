@@ -48,5 +48,7 @@ jobs:
       target: ${{ matrix.target }}
       build-args: ${{ matrix.args }}
       upload-artifacts: true
-      sign-binaries: true
+      # Main is a verification build. Signing and updater artifacts belong to
+      # the release workflow and must not make ordinary CI depend on secrets.
+      sign-binaries: false
     secrets: inherit

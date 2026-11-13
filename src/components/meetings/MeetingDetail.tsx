@@ -435,7 +435,14 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                     >
                       {formatMeetingDuration(Math.floor(row.start_ms / 1000))}
                     </button>
-                    <span>{row.text}</span>
+                    <span>
+                      <span className="mr-1.5 rounded bg-mid-gray/10 px-1 py-0.5 text-[10px] font-medium uppercase text-text/45">
+                        {row.source === "system"
+                          ? t("meeting.detail.transcriptSourceSystem")
+                          : t("meeting.detail.transcriptSourceMicrophone")}
+                      </span>
+                      {row.text}
+                    </span>
                   </li>
                 ))}
               </ul>

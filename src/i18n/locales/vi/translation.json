@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Chép lời lại từ âm thanh đã lưu. Bản ghi vẫn được giữ nguyên.",
         "retranscribeWarning": "Bản chép lời hiện tại sẽ bị bỏ và tạo lại từ âm thanh đã lưu. Bản ghi không bị ảnh hưởng.",
         "retranscribeQueued": "Đã xếp hàng chép lời lại.",
-        "retranscribeFailed": "Không thể bắt đầu chép lời lại."
+        "retranscribeFailed": "Không thể bắt đầu chép lời lại.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Cần cấp quyền",
-      "description": "Handy cần một số quyền để hoạt động bình thường.",
+      "description": "Speak cần một số quyền để hoạt động bình thường.",
       "microphone": {
         "title": "Quyền truy cập Micrô",
         "description": "Cần thiết để nghe giọng nói của bạn để chuyển đổi."
@@ -651,13 +662,13 @@
       "searchPlaceholder": "Tìm mô hình theo tên…",
       "rescan": {
         "label": "Quét lại",
-        "tooltip": "Quét lại các mô hình được thêm vào thư mục mô hình hoặc bộ nhớ đệm Hugging Face bên ngoài Handy"
+        "tooltip": "Quét lại các mô hình được thêm vào thư mục mô hình hoặc bộ nhớ đệm Hugging Face bên ngoài Speak"
       }
     },
     "general": {
       "title": "Chung",
       "shortcut": {
-        "title": "Phím tắt Handy",
+        "title": "Phím tắt Speak",
         "description": "Cấu hình phím tắt để kích hoạt ghi âm chuyển đổi giọng nói thành văn bản",
         "loading": "Đang tải phím tắt...",
         "none": "Chưa cấu hình phím tắt",
@@ -675,6 +686,14 @@
           "transcribe_with_post_process": {
             "name": "Phím tắt xử lý sau",
             "description": "Tùy chọn: Phím tắt chuyên dụng luôn áp dụng xử lý sau bằng AI cho bản chuyển đổi của bạn."
+          },
+          "assistant_fast": {
+            "name": "Phím tắt Trợ thủ Nhanh",
+            "description": "Phím tắt để hỏi trợ lý nhanh. Chưa được gán cho đến khi bạn thiết lập."
+          },
+          "assistant_smart": {
+            "name": "Phím tắt Trợ lý Thông minh",
+            "description": "Phím tắt để hỏi trợ lý chuyên sâu. Chưa được gán cho đến khi bạn thiết lập."
           }
         },
         "errors": {
@@ -695,6 +714,20 @@
       "pushToTalk": {
         "label": "Nhấn để nói",
         "description": "Giữ để ghi âm, thả để dừng"
+      },
+      "recordingAudio": {
+        "label": "Âm thanh khi ghi âm",
+        "description": "Speak sẽ làm gì với âm thanh phát ra của hệ thống trong khi ghi âm",
+        "modes": {
+          "off": "Không làm gì",
+          "duck": "Giảm âm lượng",
+          "mute": "Tắt tiếng hoàn toàn"
+        },
+        "volume": {
+          "label": "Âm lượng đã giảm",
+          "description": "Mức âm lượng đầu ra mong muốn của hệ thống khi ghi âm",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Khởi động cùng hệ thống",
-        "description": "Tự động khởi động Handy khi bạn đăng nhập vào máy tính."
+        "description": "Tự động khởi động Speak khi bạn đăng nhập vào máy tính."
       },
       "showTrayIcon": {
         "label": "Hiển thị biểu tượng khay",
-        "description": "Hiển thị biểu tượng Handy trong khay hệ thống."
+        "description": "Hiển thị biểu tượng Speak trong khay hệ thống."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Kiểm tra cập nhật",
-        "description": "Tự động kiểm tra phiên bản mới của Handy"
+        "description": "Tự động kiểm tra phiên bản mới của Speak"
       },
       "soundTheme": {
         "label": "Chủ đề âm thanh",
@@ -997,10 +1030,6 @@
         "label": "Xử lý sau",
         "description": "Bật tinh chỉnh văn bản bằng AI sau khi chuyển đổi"
       },
-      "muteWhileRecording": {
-        "label": "Tắt tiếng khi ghi âm",
-        "description": "Tắt tiếng âm thanh hệ thống trong khi ghi âm"
-      },
       "appendTrailingSpace": {
         "label": "Thêm dấu cách cuối",
         "description": "Thêm một dấu cách sau bản ghi đã dán"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Chẩn đoán bàn phím",
-        "description": "Kiểm tra xem các sự kiện bàn phím có đến được Handy hay không. Chỉ số lượng sự kiện được ghi lại — không bao giờ ghi lại bạn bấm phím nào.",
+        "description": "Kiểm tra xem các sự kiện bàn phím có đến được Speak hay không. Chỉ số lượng sự kiện được ghi lại — không bao giờ ghi lại bạn bấm phím nào.",
         "run": "Chạy chẩn đoán 10 giây",
         "running": "Đang lắng nghe… hãy bấm phím tắt của bạn vài lần (ví dụ: Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "Chuột",
         "verdictBlocked": "Secure Input đang chặn các sự kiện phím — phím tắt có chứa phím thường không thể hoạt động cho đến khi vấn đề này được xử lý.",
         "verdictSuspicious": "Có sự kiện phím bổ trợ nhưng không có sự kiện phím nào — thứ gì đó đang chặn phím dù Secure Input báo là đang tắt. Vui lòng báo cáo việc này trên GitHub.",
-        "verdictOk": "Các sự kiện phím đang đến Handy bình thường.",
+        "verdictOk": "Các sự kiện phím đang đến Speak bình thường.",
         "verdictNoEvents": "Không ghi nhận sự kiện nào — bạn có bấm phím nào trong lúc kiểm tra không?",
         "failed": "Chẩn đoán thất bại: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "Giới thiệu",
       "version": {
         "title": "Phiên bản",
-        "description": "Phiên bản hiện tại của Handy"
+        "description": "Phiên bản hiện tại của Speak"
       },
       "appDataDirectory": {
         "title": "Thư mục dữ liệu ứng dụng",
-        "description": "Vị trí Handy lưu trữ dữ liệu"
+        "description": "Vị trí Speak lưu trữ dữ liệu"
       },
       "sourceCode": {
         "title": "Mã nguồn",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "Hỗ trợ phát triển",
-        "description": "Giúp chúng tôi tiếp tục xây dựng Handy",
+        "description": "Giúp chúng tôi tiếp tục xây dựng Speak",
         "button": "Quyên góp"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "Suy luận hiệu suất cao của mô hình nhận dạng giọng nói tự động Whisper của OpenAI",
-          "details": "Handy sử dụng ggml để xử lý chuyển đổi giọng nói thành văn bản nhanh, cục bộ. Cảm ơn công việc tuyệt vời của Georgi Gerganov và các cộng tác viên."
+          "details": "Speak sử dụng ggml để xử lý chuyển đổi giọng nói thành văn bản nhanh, cục bộ. Cảm ơn công việc tuyệt vời của Georgi Gerganov và các cộng tác viên."
         }
       },
       "whatsNewUpdates": {
         "label": "Hiển thị điểm mới",
-        "description": "Hiển thị ghi chú phát hành sau khi Handy cập nhật"
+        "description": "Hiển thị ghi chú phát hành sau khi Speak cập nhật"
       }
     },
     "tabs": {
       "modelsProviders": "Mô hình và nhà cung cấp",
-      "meetingsEmptyBody": "Cài đặt cuộc họp sẽ ra mắt cùng với chế độ họp."
+      "meetingsEmptyBody": "Cài đặt cuộc họp sẽ ra mắt cùng với chế độ họp.",
+      "assistants": "Trợ lý"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "Giữ 30 ngày",
           "forever": "Giữ mãi mãi"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "Trợ lý AI",
+      "description": "Hai trợ lý bạn có thể gọi bằng phím tắt. Nói câu hỏi của bạn và câu trả lời hiện trên một thẻ bên cạnh lớp phủ Speak.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Trợ thủ Nhanh",
+          "description": "Cho những tra cứu nhanh: một dữ kiện, một phép quy đổi, một cách viết, một câu được viết lại. Được tinh chỉnh để trả lời ngắn và đến ngay."
+        },
+        "smart_assistant": {
+          "title": "Trợ lý Thông minh",
+          "description": "Cho những câu hỏi đáng suy nghĩ: phân tích, so sánh, soạn thảo. Được phép mất nhiều thời gian hơn và trả lời dài."
+        }
+      },
+      "provider": {
+        "title": "Nhà cung cấp",
+        "description": "Dịch vụ nào trả lời cho trợ lý này. Cả hai trợ lý có thể dùng cùng một nhà cung cấp với các khoá khác nhau."
+      },
+      "apiKey": {
+        "configured": "Khóa API cho {{provider}} đã được lưu.",
+        "notConfigured": "Chưa lưu khóa API cho {{provider}}.",
+        "title": "Khoá API",
+        "description": "Được lưu trong kho khoá của hệ điều hành, tách biệt với khoá hậu xử lý.",
+        "placeholder": "Dán khoá API của bạn"
+      },
+      "model": {
+        "title": "Mô hình",
+        "description": "Mô hình mà trợ lý này hỏi. Chọn một mô hình trong danh sách hoặc nhập chính xác mã mô hình.",
+        "placeholder": "Chọn hoặc nhập mã mô hình",
+        "refresh": "Làm mới danh sách mô hình",
+        "required": "Chưa chọn mô hình nào. Trợ lý này sẽ không hoạt động cho đến khi bạn chọn một mô hình.",
+        "listingHint": "Danh sách mô hình được tải bằng khoá API riêng của trợ lý này. Không có khoá, bạn vẫn có thể nhập mã mô hình thủ công."
+      },
+      "systemPrompt": {
+        "title": "Câu lệnh hệ thống",
+        "description": "Chỉ dẫn cố định mà trợ lý này tuân theo cho mọi câu hỏi.",
+        "placeholder": "Mô tả cách trợ lý này nên trả lời"
+      },
+      "maxOutputTokens": {
+        "title": "Độ dài câu trả lời",
+        "description": "Giới hạn trên cho câu trả lời, tính bằng token ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Thời gian chờ",
+        "description": "Chờ câu trả lời bao lâu trước khi bỏ cuộc, tính bằng giây ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Xử lý câu trả lời"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Chỉ hiển thị",
+          "hint": "Câu trả lời chỉ hiện trên thẻ."
+        },
+        "copy": {
+          "label": "Hiển thị và sao chép",
+          "hint": "Câu trả lời hiện trên thẻ và được sao chép vào bảng nhớ tạm."
+        },
+        "paste": {
+          "label": "Hiển thị và dán",
+          "hint": "Câu trả lời hiện trên thẻ và được dán vào ứng dụng bạn đang làm việc."
+        }
+      },
+      "shortcutHint": "Phím tắt của cả hai trợ lý được thiết lập trong mục Đọc chính tả, bên cạnh các phím tắt phiên âm."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "Đặt lại"
   },
   "accessibility": {
-    "permissionsDescription": "Handy cần quyền truy cập để gõ văn bản đã chuyển đổi.",
+    "permissionsDescription": "Speak cần quyền truy cập để gõ văn bản đã chuyển đổi.",
     "openSettings": "Mở Cài đặt Hệ thống"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "mô hình không xác định",
     "pasteFailedTitle": "Không thể dán văn bản",
     "pasteFailed": "Không thể dán văn bản vào ứng dụng đang hoạt động.",
-    "transcriptionFailedTitle": "Phiên âm thất bại"
+    "transcriptionFailedTitle": "Phiên âm thất bại",
+    "assistantNoticeTitle": "Trợ lý"
   },
   "appLanguage": {
     "title": "Ngôn ngữ ứng dụng",
-    "description": "Thay đổi ngôn ngữ giao diện của Handy"
+    "description": "Thay đổi ngôn ngữ giao diện của Speak"
   },
   "theme": {
     "title": "Giao diện ứng dụng",
-    "description": "Chọn xem Handy theo chủ đề hệ thống hay giữ ở chế độ sáng hoặc tối",
+    "description": "Chọn xem Speak theo chủ đề hệ thống hay giữ ở chế độ sáng hoặc tối",
     "options": {
       "system": "Hệ thống",
       "light": "Sáng",
@@ -1291,10 +1413,27 @@
     "processing": "Đang xử lý...",
     "cancel": "Hủy",
     "meetingRecording": "Đang ghi cuộc họp",
-    "meetingPaused": "Cuộc họp đang tạm dừng"
+    "meetingPaused": "Cuộc họp đang tạm dừng",
+    "assistant": {
+      "label": "Trợ lý",
+      "smartLabel": "Trợ lý Thông minh",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép vào bộ nhớ tạm",
+      "paste": "Dán",
+      "pasted": "Đã dán",
+      "replace": "Thay thế",
+      "replaced": "Đã thay thế",
+      "replaceHint": "Chọn toàn bộ nội dung trong cửa sổ đang hoạt động và dán câu trả lời đè lên",
+      "openLink": "Mở liên kết",
+      "chooseLink": "Mở liên kết ({{n}})",
+      "escalate": "Hỏi Trợ lý Thông minh",
+      "asking": "Đang hỏi Trợ lý Thông minh...",
+      "close": "Đóng",
+      "truncated": "Câu trả lời bị cắt ở giới hạn độ dài."
+    }
   },
   "whatsNew": {
-    "title": "Điểm mới trong Handy v{{version}}"
+    "title": "Điểm mới trong Speak v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} có thể đang chặn 1 phím tắt",

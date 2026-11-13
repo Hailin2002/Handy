@@ -14,8 +14,11 @@ mod tests;
 mod types;
 
 pub use schema::{
-    get_default_settings, is_meeting_binding, AppSettings, MEETING_BINDING_PAUSE_RESUME,
-    MEETING_BINDING_START_STOP,
+    clamp_assistant_output_tokens, clamp_assistant_timeout_secs, clamp_duck_fade_ms,
+    clamp_duck_volume_percent, default_model_for_provider, get_default_settings,
+    is_meeting_binding, AppSettings, ASSISTANT_BINDING_FAST, ASSISTANT_BINDING_SMART,
+    ASSISTANT_PROFILE_FAST, ASSISTANT_PROFILE_SMART, LOCAL_MEETING_SUMMARY_PROVIDER_ID,
+    MEETING_BINDING_PAUSE_RESUME, MEETING_BINDING_START_STOP, OPENROUTER_PROVIDER_ID,
 };
 /// Re-exported as stable public API even though only `store.rs` consumes it today.
 #[allow(unused_imports)]

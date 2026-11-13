@@ -29,6 +29,7 @@ type PostProcessProviderState = {
 };
 
 const APPLE_PROVIDER_ID = "apple_intelligence";
+const MEETING_ONLY_LOCAL_PROVIDER_ID = "local_ollama";
 
 export const usePostProcessProviderState = (): PostProcessProviderState => {
   const {
@@ -47,7 +48,10 @@ export const usePostProcessProviderState = (): PostProcessProviderState => {
   // array identity on every render, which silently defeats every useMemo and
   // useCallback below that lists `providers` as a dependency.
   const providers = useMemo(
-    () => settings?.post_process_providers ?? [],
+    () =>
+      (settings?.post_process_providers ?? []).filter(
+        (provider) => provider.id !== MEETING_ONLY_LOCAL_PROVIDER_ID,
+      ),
     [settings?.post_process_providers],
   );
 

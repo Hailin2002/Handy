@@ -13,6 +13,8 @@ mod handler;
 pub mod handy_keys;
 pub mod tauri_impl;
 
+use std::collections::HashMap;
+
 /// Meeting bindings are declared by the settings schema; re-exported here so
 /// callers reason about "which tool owns this shortcut" in one place. The
 /// routing types are the shortcut module's public vocabulary for the tray and
@@ -30,9 +32,10 @@ use tauri::{AppHandle, Emitter, Manager};
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::settings::APPLE_INTELLIGENCE_DEFAULT_MODEL_ID;
 use crate::settings::{
-    self, get_settings, AutoSubmitKey, ClipboardHandling, KeyboardImplementation, LLMPrompt,
-    OverlayPosition, OverlayStyle, PasteMethod, ShortcutBinding, SoundTheme, SpeechInputProvider,
-    Theme, TypingTool, APPLE_INTELLIGENCE_PROVIDER_ID,
+    self, get_settings, AssistantOutputMode, AutoSubmitKey, ClipboardHandling,
+    KeyboardImplementation, LLMPrompt, OverlayPosition, OverlayStyle, PasteMethod,
+    RecordingAudioMode, ShortcutBinding, SoundTheme, SpeechInputProvider, Theme, TypingTool,
+    APPLE_INTELLIGENCE_PROVIDER_ID,
 };
 use crate::tray;
 
@@ -653,6 +656,16 @@ pub fn change_speech_input_provider_setting(
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_meeting_stt_provider_setting(
+    app: AppHandle,
+    provider: SpeechInputProvider,
+) -> Result<(), String> {
+    settings::update_settings(&app, |settings| settings.meeting_stt_provider = provider);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_azure_speech_endpoint_setting(
     app: AppHandle,
     endpoint: String,
@@ -817,6 +830,14 @@ pub fn change_overlay_style_setting(app: AppHandle, style: String) -> Result<(),
     // Keep the cached overlay-enabled flag in sync so emit_levels stops (or
     // resumes) emitting on the next audio callback.
     crate::overlay::update_overlay_enabled_cache(parsed != OverlayStyle::None);
+
+    // "Overlay off" has to mean off: an open answer card would otherwise
+    // survive the setting, because the card deliberately blocks every other
+    // hide path, and the early return for `None` in `show_overlay_state`
+    // never gets to release it.
+    if parsed == OverlayStyle::None {
+        crate::overlay::hide_answer_overlay(&app);
+    }
 
     // Reposition in case the window needs to re-center for the new style.
     crate::utils::update_overlay_position(&app);
@@ -1209,6 +1230,275 @@ pub fn set_post_process_provider(app: AppHandle, provider_id: String) -> Result<
     })
 }
 
+/* ---------- assistant profiles ------------------------------------------ */
+
+/// Generic helper to validate an assistant profile exists.
+///
+/// Every assistant command goes through this: profiles are addressed by a
+/// string from the frontend, and silently creating one on a typo would leave a
+/// profile no UI ever shows and no shortcut ever reaches.
+fn validate_profile_exists(
+    settings: &settings::AppSettings,
+    profile_id: &str,
+) -> Result<(), String> {
+    if settings.assistant_profile(profile_id).is_none() {
+        return Err(format!("Assistant profile '{}' not found", profile_id));
+    }
+    Ok(())
+}
+
+/// Points an assistant at a different provider.
+///
+/// A profile stores exactly one model id, so switching providers resets it —
+/// keeping the old one would leave a name the new endpoint rejects. Selecting
+/// the provider that is already set is a no-op and preserves the model.
+#[tauri::command]
+#[specta::specta]
+pub fn set_assistant_provider(
+    app: AppHandle,
+    profile_id: String,
+    provider_id: String,
+) -> Result<(), String> {
+    settings::try_update_settings(&app, |settings| {
+        validate_profile_exists(settings, &profile_id)?;
+        validate_provider_exists(settings, &provider_id)?;
+        let default_model = settings::default_model_for_provider(&provider_id);
+        let profile = settings
+            .assistant_profile_mut(&profile_id)
+            .ok_or_else(|| format!("Assistant profile '{}' not found", profile_id))?;
+        if profile.provider_id != provider_id {
+            profile.provider_id = provider_id;
+            profile.model = default_model;
+        }
+        Ok(())
+    })
+}
+
+/// Stores an assistant's API key in the OS keychain under
+/// [`crate::secret_store::ASSISTANT_SCOPE`], keyed by profile id — never in the
+/// settings store, and never shared with post-processing.
+#[tauri::command]
+#[specta::specta]
+pub fn change_assistant_api_key_setting(
+    app: AppHandle,
+    profile_id: String,
+    api_key: String,
+) -> Result<(), String> {
+    let settings = settings::get_settings(&app);
+    validate_profile_exists(&settings, &profile_id)?;
+    if api_key.trim().is_empty() {
+        crate::secret_store::delete_secret(crate::secret_store::ASSISTANT_SCOPE, &profile_id);
+        Ok(())
+    } else {
+        crate::secret_store::set_secret(crate::secret_store::ASSISTANT_SCOPE, &profile_id, &api_key)
+    }
+}
+
+/// Reports whether each assistant profile has a usable credential without
+/// ever serializing the credential itself across IPC.
+///
+/// `SecretMap` intentionally serializes as an empty object so secrets cannot
+/// leak into settings JSON or the webview. The UI therefore needs this
+/// separate boolean-only view to distinguish "stored securely" from "missing".
+#[tauri::command]
+#[specta::specta]
+pub fn get_assistant_api_key_status(app: AppHandle) -> Result<HashMap<String, bool>, String> {
+    let settings = settings::get_settings(&app);
+    Ok(settings
+        .assistant_profiles
+        .keys()
+        .map(|profile_id| {
+            let configured =
+                crate::secret_store::get_secret(crate::secret_store::ASSISTANT_SCOPE, profile_id)
+                    .is_some_and(|value| !value.trim().is_empty());
+            (profile_id.clone(), configured)
+        })
+        .collect())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_assistant_model_setting(
+    app: AppHandle,
+    profile_id: String,
+    model: String,
+) -> Result<(), String> {
+    settings::try_update_settings(&app, |settings| {
+        validate_profile_exists(settings, &profile_id)?;
+        let profile = settings
+            .assistant_profile_mut(&profile_id)
+            .ok_or_else(|| format!("Assistant profile '{}' not found", profile_id))?;
+        profile.model = model.trim().to_string();
+        Ok(())
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_assistant_system_prompt_setting(
+    app: AppHandle,
+    profile_id: String,
+    prompt: String,
+) -> Result<(), String> {
+    settings::try_update_settings(&app, |settings| {
+        validate_profile_exists(settings, &profile_id)?;
+        let profile = settings
+            .assistant_profile_mut(&profile_id)
+            .ok_or_else(|| format!("Assistant profile '{}' not found", profile_id))?;
+        profile.system_prompt = prompt;
+        Ok(())
+    })
+}
+
+/// Sets answer length and request deadline together — they are one decision
+/// ("how much work may this assistant do") and are clamped to the ranges the
+/// schema enforces on load, so the UI cannot store a value the repair pass
+/// would immediately rewrite.
+#[tauri::command]
+#[specta::specta]
+pub fn change_assistant_limits_setting(
+    app: AppHandle,
+    profile_id: String,
+    max_output_tokens: u32,
+    timeout_secs: u32,
+) -> Result<(), String> {
+    let tokens = settings::clamp_assistant_output_tokens(max_output_tokens);
+    let timeout = settings::clamp_assistant_timeout_secs(timeout_secs);
+    settings::try_update_settings(&app, |settings| {
+        validate_profile_exists(settings, &profile_id)?;
+        let profile = settings
+            .assistant_profile_mut(&profile_id)
+            .ok_or_else(|| format!("Assistant profile '{}' not found", profile_id))?;
+        profile.max_output_tokens = tokens;
+        profile.timeout_secs = timeout;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_assistant_output_mode(
+    app: AppHandle,
+    profile_id: String,
+    mode: AssistantOutputMode,
+) -> Result<(), String> {
+    settings::try_update_settings(&app, |settings| {
+        validate_profile_exists(settings, &profile_id)?;
+        let profile = settings
+            .assistant_profile_mut(&profile_id)
+            .ok_or_else(|| format!("Assistant profile '{}' not found", profile_id))?;
+        profile.output_mode = mode;
+        Ok(())
+    })
+}
+
+/// List the models the given assistant profile can actually reach.
+///
+/// Deliberately not `fetch_post_process_models`: that one reads the key stored
+/// under [`crate::secret_store::POST_PROCESS_SCOPE`] for the provider, while an
+/// assistant's credential lives under
+/// [`crate::secret_store::ASSISTANT_SCOPE`] keyed by *profile* id. Reusing the
+/// post-processing path made the dropdown permanently empty for anyone who had
+/// only entered an assistant key — the list was asking a different credential
+/// whether it could see any models.
+#[tauri::command]
+#[specta::specta]
+pub async fn fetch_assistant_models(
+    app: AppHandle,
+    profile_id: String,
+) -> Result<Vec<String>, String> {
+    let settings = settings::get_settings(&app);
+
+    let provider_id = settings
+        .assistant_profile(&profile_id)
+        .map(|profile| profile.provider_id.clone())
+        .ok_or_else(|| format!("Assistant profile '{}' not found", profile_id))?;
+
+    let provider = settings
+        .post_process_provider(&provider_id)
+        .ok_or_else(|| format!("Provider '{}' not found", provider_id))?;
+
+    if provider.id == APPLE_INTELLIGENCE_PROVIDER_ID {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            return Ok(vec![APPLE_INTELLIGENCE_DEFAULT_MODEL_ID.to_string()]);
+        }
+
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            return Err("Apple Intelligence is only available on Apple silicon Macs running macOS 15 or later.".to_string());
+        }
+    }
+
+    let api_key =
+        crate::secret_store::get_secret(crate::secret_store::ASSISTANT_SCOPE, &profile_id)
+            .unwrap_or_default();
+
+    // Locally hosted providers authenticate nothing; everything else needs the
+    // key before it will answer, and saying so beats an empty dropdown.
+    if api_key.trim().is_empty()
+        && provider.id != "custom"
+        && provider.id != settings::LOCAL_MEETING_SUMMARY_PROVIDER_ID
+    {
+        return Err(format!(
+            "Add this assistant's own API key for {} before listing its models.",
+            provider.label
+        ));
+    }
+
+    crate::llm_client::fetch_models(provider, api_key).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_meeting_summary_provider(app: AppHandle, provider_id: String) -> Result<(), String> {
+    settings::try_update_settings(&app, |settings| {
+        validate_provider_exists(settings, &provider_id)?;
+        if !matches!(
+            provider_id.as_str(),
+            settings::LOCAL_MEETING_SUMMARY_PROVIDER_ID | settings::OPENROUTER_PROVIDER_ID
+        ) {
+            return Err("Meeting summaries support Local GPU (Ollama) or OpenRouter".to_string());
+        }
+        settings.meeting_summary_provider_id = provider_id;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_meeting_summary_model_setting(
+    app: AppHandle,
+    provider_id: String,
+    model: String,
+) -> Result<(), String> {
+    settings::try_update_settings(&app, |settings| {
+        validate_provider_exists(settings, &provider_id)?;
+        if !matches!(
+            provider_id.as_str(),
+            settings::LOCAL_MEETING_SUMMARY_PROVIDER_ID | settings::OPENROUTER_PROVIDER_ID
+        ) {
+            return Err("Unsupported meeting summary provider".to_string());
+        }
+        settings
+            .meeting_summary_models
+            .insert(provider_id, model.trim().to_string());
+        Ok(())
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_meeting_summary_cloud_consent_setting(
+    app: AppHandle,
+    enabled: bool,
+) -> Result<(), String> {
+    settings::update_settings(&app, |settings| {
+        settings.meeting_summary_cloud_consent = enabled
+    });
+    Ok(())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn add_post_process_prompt(
@@ -1308,7 +1598,10 @@ pub async fn fetch_post_process_models(
             .unwrap_or_default();
 
     // Skip fetching if no API key for providers that typically need one
-    if api_key.trim().is_empty() && provider.id != "custom" {
+    if api_key.trim().is_empty()
+        && provider.id != "custom"
+        && provider.id != settings::LOCAL_MEETING_SUMMARY_PROVIDER_ID
+    {
         return Err(format!(
             "API key is required for {}. Please add an API key to list available models.",
             provider.label
@@ -1330,10 +1623,58 @@ pub fn set_post_process_selected_prompt(app: AppHandle, id: String) -> Result<()
     })
 }
 
+/// Legacy toggle, kept working for callers (and stores) that predate
+/// `recording_audio_mode`. It now writes *both* fields, so the bool and the
+/// mode can never disagree: enabling it means Mute, disabling it means Off.
+///
+/// Note the asymmetry this implies — turning it off from Duck also lands on
+/// Off, which is the honest reading of "don't touch my audio while recording".
 #[tauri::command]
 #[specta::specta]
 pub fn change_mute_while_recording_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
-    settings::update_settings(&app, |settings| settings.mute_while_recording = enabled);
+    settings::update_settings(&app, |settings| {
+        settings.recording_audio_mode = RecordingAudioMode::from_legacy_mute_flag(enabled);
+        settings.mute_while_recording = enabled;
+    });
+    Ok(())
+}
+
+/// Sets what happens to system audio while recording.
+///
+/// Write-through mirror (plan decision E3): `mute_while_recording` is rewritten
+/// from the new mode on every change, so the legacy field never goes stale and
+/// an older build reading the same store still behaves sanely.
+#[tauri::command]
+#[specta::specta]
+pub fn change_recording_audio_mode_setting(
+    app: AppHandle,
+    mode: RecordingAudioMode,
+) -> Result<(), String> {
+    settings::update_settings(&app, |settings| {
+        settings.recording_audio_mode = mode;
+        settings.mute_while_recording = mode.mirrors_mute_flag();
+    });
+    Ok(())
+}
+
+/// Sets the ducking target as a percentage of full output volume.
+/// Out-of-range input is clamped rather than rejected — a slider is the only
+/// caller, and silently correcting beats failing a settings write.
+#[tauri::command]
+#[specta::specta]
+pub fn change_duck_volume_percent_setting(app: AppHandle, percent: u8) -> Result<(), String> {
+    let clamped = settings::clamp_duck_volume_percent(percent);
+    settings::update_settings(&app, |settings| settings.duck_volume_percent = clamped);
+    Ok(())
+}
+
+/// Sets the duck/restore ramp length. Clamped to 1s: anything longer would
+/// still be ramping well after a short dictation has ended.
+#[tauri::command]
+#[specta::specta]
+pub fn change_duck_fade_ms_setting(app: AppHandle, ms: u16) -> Result<(), String> {
+    let clamped = settings::clamp_duck_fade_ms(ms);
+    settings::update_settings(&app, |settings| settings.duck_fade_ms = clamped);
     Ok(())
 }
 

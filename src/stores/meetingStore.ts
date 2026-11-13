@@ -106,7 +106,9 @@ export interface MeetingStoreState {
   disposeListeners: () => Promise<void>;
 
   // --- actions (FSC B6: the only mutators) ------------------------------
-  runPreflight: () => Promise<MeetingPreflightReport | null>;
+  runPreflight: (
+    sttProvider?: "local" | "azure" | "custom",
+  ) => Promise<MeetingPreflightReport | null>;
   startMeeting: (request: MeetingStartRequest) => Promise<boolean>;
   pauseMeeting: () => Promise<void>;
   resumeMeeting: () => Promise<void>;
@@ -312,12 +314,12 @@ export const useMeetingStore = create<MeetingStoreState>()((set, get) => {
     },
 
     // -------------------------------------------------------------- actions
-    runPreflight: async () => {
+    runPreflight: async (sttProvider) => {
       set({ preflightStatus: "running" });
       try {
         const report = await meetingInvoke<MeetingPreflightReport>(
           MEETING_COMMANDS.preflight,
-          {},
+          { sttProvider },
         );
         set({ preflight: report, preflightStatus: "ready" });
         return report;

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { listen } from "@tauri-apps/api/event";
 import type {
+  AssistantOutputMode,
   LogLevel,
   AppSettings as Settings,
   AudioDevice,
@@ -9,6 +10,7 @@ import type {
   OrtAcceleratorSetting,
   Result,
   SpeechInputProvider,
+  RecordingAudioMode,
 } from "@/bindings";
 import { commands } from "@/bindings";
 
@@ -21,6 +23,10 @@ interface SettingsStore {
   outputDevices: AudioDevice[];
   customSounds: { start: boolean; stop: boolean };
   postProcessModelOptions: Record<string, string[]>;
+  /** Model lists keyed by *profile* id — each assistant lists with its own key. */
+  assistantModelOptions: Record<string, string[]>;
+  /** Boolean-only keychain state; secret values never cross IPC. */
+  assistantApiKeyConfigured: Record<string, boolean>;
 
   // Actions
   initialize: () => Promise<void>;
@@ -56,6 +62,30 @@ interface SettingsStore {
   updatePostProcessModel: (providerId: string, model: string) => Promise<void>;
   fetchPostProcessModels: (providerId: string) => Promise<string[]>;
   setPostProcessModelOptions: (providerId: string, models: string[]) => void;
+
+  // Assistant-profile helpers. Every one of these is keyed by *profile* id
+  // ("fast_helper" / "smart_assistant"), never by provider id: two profiles
+  // may point at the same provider with different credentials.
+  setAssistantProvider: (
+    profileId: string,
+    providerId: string,
+  ) => Promise<void>;
+  updateAssistantApiKey: (profileId: string, apiKey: string) => Promise<void>;
+  updateAssistantModel: (profileId: string, model: string) => Promise<void>;
+  updateAssistantSystemPrompt: (
+    profileId: string,
+    prompt: string,
+  ) => Promise<void>;
+  updateAssistantLimits: (
+    profileId: string,
+    maxOutputTokens: number,
+    timeoutSecs: number,
+  ) => Promise<void>;
+  setAssistantOutputMode: (
+    profileId: string,
+    mode: AssistantOutputMode,
+  ) => Promise<void>;
+  fetchAssistantModels: (profileId: string) => Promise<string[]>;
 
   // Internal state setters
   setSettings: (settings: Settings | null) => void;
@@ -108,6 +138,34 @@ const enqueueSettingUpdate = <T>(
   return result;
 };
 
+/**
+ * Shared shape of every assistant-profile write: raise the busy flag for
+ * `updateKey`, run the command, then re-read settings so the UI shows what the
+ * backend actually stored after its clamping and repair pass — not what the
+ * form asked for.
+ *
+ * Failures are logged and swallowed, exactly like the post-processing
+ * updaters: the refresh that then never runs leaves the previous, still-valid
+ * value on screen instead of a half-applied one.
+ */
+const runAssistantWrite = async (
+  get: () => SettingsStore,
+  updateKey: string,
+  run: () => Promise<Result<null, string>>,
+): Promise<void> => {
+  const { setUpdating, refreshSettings } = get();
+
+  setUpdating(updateKey, true);
+  try {
+    requireCommandSuccess(await run());
+    await refreshSettings();
+  } catch (error) {
+    console.error(`Failed to apply ${updateKey}:`, error);
+  } finally {
+    setUpdating(updateKey, false);
+  }
+};
+
 const settingUpdaters: {
   [K in keyof Settings]?: (
     value: Settings[K],
@@ -156,6 +214,8 @@ const settingUpdaters: {
     commands.changeSelectedLanguageSetting(value as string),
   speech_input_provider: (value) =>
     commands.changeSpeechInputProviderSetting(value as SpeechInputProvider),
+  meeting_stt_provider: (value) =>
+    commands.changeMeetingSttProviderSetting(value as SpeechInputProvider),
   azure_speech_endpoint: (value) =>
     commands.changeAzureSpeechEndpointSetting(value as string),
   azure_speech_language: (value) =>
@@ -198,8 +258,15 @@ const settingUpdaters: {
     commands.changePostProcessEnabledSetting(value as boolean),
   post_process_selected_prompt_id: (value) =>
     commands.setPostProcessSelectedPrompt(value as string),
+  // Legacy bool, kept so an older call site keeps working. The backend
+  // mirrors it onto `recording_audio_mode`; new UI writes the mode instead.
   mute_while_recording: (value) =>
     commands.changeMuteWhileRecordingSetting(value as boolean),
+  recording_audio_mode: (value) =>
+    commands.changeRecordingAudioModeSetting(value as RecordingAudioMode),
+  duck_volume_percent: (value) =>
+    commands.changeDuckVolumePercentSetting(value as number),
+  duck_fade_ms: (value) => commands.changeDuckFadeMsSetting(value as number),
   append_trailing_space: (value) =>
     commands.changeAppendTrailingSpaceSetting(value as boolean),
   log_level: (value) => commands.setLogLevel(value as LogLevel),
@@ -237,6 +304,8 @@ export const useSettingsStore = create<SettingsStore>()(
     outputDevices: [],
     customSounds: { start: false, stop: false },
     postProcessModelOptions: {},
+    assistantModelOptions: {},
+    assistantApiKeyConfigured: {},
 
     // Internal setters
     setSettings: (settings) => set({ settings }),
@@ -257,7 +326,38 @@ export const useSettingsStore = create<SettingsStore>()(
     // Load settings from store
     refreshSettings: async () => {
       try {
-        const result = await commands.getAppSettings();
+        const [settingsAttempt, keyStatusAttempt] = await Promise.allSettled([
+          commands.getAppSettings(),
+          commands.getAssistantApiKeyStatus(),
+        ]);
+
+        if (keyStatusAttempt.status === "fulfilled") {
+          const keyStatus = keyStatusAttempt.value;
+          if (keyStatus.status === "ok") {
+            const configured = Object.fromEntries(
+              Object.entries(keyStatus.data).filter(
+                (entry): entry is [string, boolean] =>
+                  typeof entry[1] === "boolean",
+              ),
+            );
+            set({ assistantApiKeyConfigured: configured });
+          } else {
+            console.error(
+              "Failed to load assistant API key status:",
+              keyStatus.error,
+            );
+          }
+        } else {
+          console.error(
+            "Failed to load assistant API key status:",
+            keyStatusAttempt.reason,
+          );
+        }
+
+        if (settingsAttempt.status === "rejected") {
+          throw settingsAttempt.reason;
+        }
+        const result = settingsAttempt.value;
         if (result.status === "ok") {
           const settings = result.data;
           const normalizedSettings: Settings = {
@@ -643,6 +743,97 @@ export const useSettingsStore = create<SettingsStore>()(
           [providerId]: models,
         },
       })),
+
+    setAssistantProvider: async (profileId, providerId) => {
+      // Deliberately not optimistic, unlike `setPostProcessProvider`: the
+      // backend resets the profile's model when the provider changes, so a
+      // local guess would show a model the endpoint no longer accepts until
+      // the refresh lands. `assistant_profiles` is one nested map, so the
+      // refresh is a single read anyway.
+      await runAssistantWrite(get, `assistant_provider:${profileId}`, () =>
+        commands.setAssistantProvider(profileId, providerId),
+      );
+    },
+
+    updateAssistantApiKey: async (profileId, apiKey) => {
+      // A cached list was produced by the previous credential, so it says
+      // nothing about what the new one can reach. Drop it and let the user
+      // refresh rather than show models they may no longer have access to.
+      set((state) => ({
+        assistantModelOptions: {
+          ...state.assistantModelOptions,
+          [profileId]: [],
+        },
+      }));
+      await runAssistantWrite(get, `assistant_api_key:${profileId}`, () =>
+        commands.changeAssistantApiKeySetting(profileId, apiKey),
+      );
+    },
+
+    updateAssistantModel: async (profileId, model) => {
+      await runAssistantWrite(get, `assistant_model:${profileId}`, () =>
+        commands.changeAssistantModelSetting(profileId, model),
+      );
+    },
+
+    updateAssistantSystemPrompt: async (profileId, prompt) => {
+      await runAssistantWrite(get, `assistant_system_prompt:${profileId}`, () =>
+        commands.changeAssistantSystemPromptSetting(profileId, prompt),
+      );
+    },
+
+    updateAssistantLimits: async (profileId, maxOutputTokens, timeoutSecs) => {
+      // One command for both values: the backend clamps them together and a
+      // split would let a rejected timeout leave a persisted token count.
+      await runAssistantWrite(get, `assistant_limits:${profileId}`, () =>
+        commands.changeAssistantLimitsSetting(
+          profileId,
+          maxOutputTokens,
+          timeoutSecs,
+        ),
+      );
+    },
+
+    setAssistantOutputMode: async (profileId, mode) => {
+      await runAssistantWrite(get, `assistant_output_mode:${profileId}`, () =>
+        commands.setAssistantOutputMode(profileId, mode),
+      );
+    },
+
+    /**
+     * List the models this profile can reach, using the profile's own key.
+     *
+     * Not `fetchPostProcessModels`: that reads the post-processing credential
+     * for the provider, which is a different secret. Asking it about an
+     * assistant that only has its own key returns nothing, which is what made
+     * the dropdown look broken.
+     */
+    fetchAssistantModels: async (profileId) => {
+      const updateKey = `assistant_models_fetch:${profileId}`;
+      const { setUpdating } = get();
+
+      setUpdating(updateKey, true);
+      try {
+        const result = await commands.fetchAssistantModels(profileId);
+        if (result.status === "ok") {
+          set((state) => ({
+            assistantModelOptions: {
+              ...state.assistantModelOptions,
+              [profileId]: result.data,
+            },
+          }));
+          return result.data;
+        }
+        console.error("Failed to fetch assistant models:", result.error);
+        return [];
+      } catch (error) {
+        console.error("Failed to fetch assistant models:", error);
+        // Deliberately not cached: an error must stay retryable.
+        return [];
+      } finally {
+        setUpdating(updateKey, false);
+      }
+    },
 
     // Load default settings from Rust
     loadDefaultSettings: async () => {

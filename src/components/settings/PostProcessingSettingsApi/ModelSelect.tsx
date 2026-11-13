@@ -46,6 +46,8 @@ export const ModelSelect: React.FC<ModelSelectProps> = React.memo(
         disabled={disabled}
         isLoading={isLoading}
         isCreatable
+        isSearchable
+        openMenuOnFocus
         formatCreateLabel={(input) => `Use "${input}"`}
       />
     );

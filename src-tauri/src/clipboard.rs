@@ -108,7 +108,11 @@ fn lock_bounded<'a, T>(
     }
 }
 
-fn with_enigo<T>(
+/// Runs `f` with the shared enigo instance, under the same bounded lock the
+/// paste path uses. `pub(crate)` so the assistant's replace command can send its
+/// select-all chord through the one enigo the app owns rather than building a
+/// second, competing instance.
+pub(crate) fn with_enigo<T>(
     app_handle: &AppHandle,
     f: impl FnOnce(&mut Enigo) -> Result<T, String>,
 ) -> Result<T, String> {
@@ -125,7 +129,7 @@ fn with_enigo<T>(
     f(&mut enigo)
 }
 
-fn write_text_to_clipboard(app_handle: &AppHandle, text: &str) -> Result<(), String> {
+pub(crate) fn write_text_to_clipboard(app_handle: &AppHandle, text: &str) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     if is_wayland() && is_wl_copy_available() {
         info!("Using wl-copy for clipboard write on Wayland");

@@ -7,10 +7,12 @@ import {
   SlidersHorizontal,
   Cpu,
   FlaskConical,
+  Sparkles,
 } from "lucide-react";
 import { AdvancedSettings, DebugSettings } from "../settings";
 import {
   AppGeneralTab,
+  AssistantsSettingsTab,
   DictationSettingsTab,
   MeetingsSettingsTab,
   ModelsAndProvidersTab,
@@ -19,7 +21,12 @@ import {
 /**
  * Secondary tabs of the consolidated Einstellungen page (plan §6.3):
  *
- *   Diktieren | Meetings | Modelle & Provider | Allgemein | Erweitert
+ *   Diktieren | Meetings | Assistants | Modelle & Provider | Allgemein | Erweitert
+ *
+ * "Assistants" was added by the Speak-assistant plan (Phase F). It is its own
+ * tab, not a section of "Modelle & Provider": that tab configures speech-to-text
+ * models, while every LLM-backed tool here configures its provider inside its
+ * own tab (post-processing under Diktieren, summaries under Meetings).
  *
  * plus Debug, which stays visible only while debug mode is enabled
  * (Ctrl+Shift+D), exactly as before the consolidation.
@@ -58,6 +65,12 @@ export const SECTIONS_CONFIG = {
     component: MeetingsSettingsTab,
     enabled: () => true,
   },
+  assistants: {
+    labelKey: "settings.tabs.assistants",
+    icon: Sparkles,
+    component: AssistantsSettingsTab,
+    enabled: () => true,
+  },
   modelsProviders: {
     labelKey: "settings.tabs.modelsProviders",
     icon: Cpu,
@@ -90,6 +103,7 @@ export type SettingsSectionId = keyof typeof SECTIONS_CONFIG;
 export const SETTINGS_TAB_ORDER: readonly SettingsSectionId[] = [
   "dictate",
   "meetings",
+  "assistants",
   "modelsProviders",
   "app",
   "advanced",

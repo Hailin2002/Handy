@@ -19,12 +19,14 @@ import type { SettingsSectionId } from "./settingsSections";
  *   debug               debug
  *   dictate             dictate
  *   meetings            meetings
+ *   assistants          assistants
  */
 
 const SECTION_ALIASES: Record<string, SettingsSectionId> = {
   // canonical tab ids ("app" is the Allgemein tab)
   dictate: "dictate",
   meetings: "meetings",
+  assistants: "assistants",
   modelsproviders: "modelsProviders",
   app: "app",
   advanced: "advanced",

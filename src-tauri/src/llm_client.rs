@@ -6,6 +6,47 @@ use serde_json::Value;
 use std::collections::HashSet;
 use std::error::Error as StdError;
 use std::sync::{Mutex, OnceLock};
+use std::time::Duration;
+
+/// Prefix of every error returned because a request exceeded
+/// [`ChatOptions::timeout`].
+///
+/// The string is part of this module's contract: callers may match on it with
+/// `err.starts_with(llm_client::TIMEOUT_ERROR_PREFIX)` to tell "the model took
+/// too long" apart from a transport or API failure and show a dedicated
+/// message. Do not reword it without updating those callers.
+pub const TIMEOUT_ERROR_PREFIX: &str = "timeout: ";
+
+/// Per-request tuning for a chat completion.
+///
+/// `Default` reproduces the behaviour of the pre-existing entry points:
+/// reasoning left untouched, no `max_tokens` in the payload, and no client-side
+/// request timeout.
+/// A completion plus the one piece of metadata callers must not ignore.
+///
+/// `truncated` is `finish_reason == "length"`: the model hit the token ceiling
+/// mid-sentence rather than finishing. Without it a cut-off answer is
+/// indistinguishable from a complete one, so the user copies half a sentence
+/// and never learns why.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ChatCompletion {
+    pub content: Option<String>,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ChatOptions {
+    /// Ask the endpoint to skip reasoning/thinking output. See
+    /// [`send_chat_completion_with_schema`] for the retry behaviour this
+    /// implies.
+    pub disable_reasoning: bool,
+    /// Upper bound on generated tokens. `None` omits the field entirely, so
+    /// providers see a byte-for-byte unchanged payload.
+    pub max_tokens: Option<u32>,
+    /// Total per-request deadline applied to the underlying HTTP client. On
+    /// expiry the call fails with an error prefixed by [`TIMEOUT_ERROR_PREFIX`].
+    pub timeout: Option<Duration>,
+}
 
 #[derive(Debug, Serialize)]
 struct ChatMessage {
@@ -115,6 +156,8 @@ struct ChatCompletionRequest {
     messages: Vec<ChatMessage>,
     stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
+    max_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     response_format: Option<ResponseFormat>,
     #[serde(flatten)]
     reasoning: ReasoningParams,
@@ -128,6 +171,11 @@ struct ChatCompletionResponse {
 #[derive(Debug, Deserialize)]
 struct ChatChoice {
     message: ChatMessageResponse,
+    /// Why generation stopped. `"length"` means the answer was cut off by the
+    /// token ceiling rather than finished. Optional because not every
+    /// OpenAI-compatible provider sends it.
+    #[serde(default)]
+    finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -143,13 +191,13 @@ fn build_headers(provider: &PostProcessProvider, api_key: &str) -> Result<Header
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
     headers.insert(
         REFERER,
-        HeaderValue::from_static("https://github.com/cjpais/Handy"),
+        HeaderValue::from_static("https://github.com/Hailin2002/Handy"),
     );
     headers.insert(
         USER_AGENT,
-        HeaderValue::from_static("Handy/1.0 (+https://github.com/cjpais/Handy)"),
+        HeaderValue::from_static("Speak/1.0 (+https://github.com/Hailin2002/Handy)"),
     );
-    headers.insert("X-Title", HeaderValue::from_static("Handy"));
+    headers.insert("X-Title", HeaderValue::from_static("Speak"));
 
     // Provider-specific auth headers
     if !api_key.is_empty() {
@@ -172,11 +220,22 @@ fn build_headers(provider: &PostProcessProvider, api_key: &str) -> Result<Header
     Ok(headers)
 }
 
-/// Create an HTTP client with provider-specific headers
-fn create_client(provider: &PostProcessProvider, api_key: &str) -> Result<reqwest::Client, String> {
+/// Create an HTTP client with provider-specific headers.
+///
+/// `timeout` bounds the whole request, connection setup and body read included.
+/// `None` leaves the client without a deadline, which is what every caller did
+/// before [`ChatOptions`] existed.
+fn create_client(
+    provider: &PostProcessProvider,
+    api_key: &str,
+    timeout: Option<Duration>,
+) -> Result<reqwest::Client, String> {
     let headers = build_headers(provider, api_key)?;
-    reqwest::Client::builder()
-        .default_headers(headers)
+    let mut builder = reqwest::Client::builder().default_headers(headers);
+    if let Some(timeout) = timeout {
+        builder = builder.timeout(timeout);
+    }
+    builder
         .build()
         .map_err(|e| report_reqwest_error("Failed to build HTTP client", &e))
 }
@@ -294,6 +353,17 @@ fn report_reqwest_error(context: &str, error: &reqwest::Error) -> String {
     details
 }
 
+/// Report a request failure, tagging deadline expiry with
+/// [`TIMEOUT_ERROR_PREFIX`] so callers can special-case it.
+fn report_request_error(context: &str, error: &reqwest::Error) -> String {
+    let details = report_reqwest_error(context, error);
+    if error.is_timeout() {
+        format!("{TIMEOUT_ERROR_PREFIX}{details}")
+    } else {
+        details
+    }
+}
+
 /// Send a chat completion request to an OpenAI-compatible API
 /// Returns Ok(Some(content)) on success, Ok(None) if response has no content,
 /// or Err on actual errors (HTTP, parsing, etc.)
@@ -304,16 +374,23 @@ pub async fn send_chat_completion(
     prompt: String,
     disable_reasoning: bool,
 ) -> Result<Option<String>, String> {
-    send_chat_completion_with_schema(
+    // The legacy callers (post-processing, meeting summaries) have no place to
+    // report truncation, so the signal is dropped here rather than forced on
+    // them. Assistant answers go through `send_chat_completion_opts` directly.
+    send_chat_completion_opts(
         provider,
         api_key,
         model,
         prompt,
         None,
         None,
-        disable_reasoning,
+        ChatOptions {
+            disable_reasoning,
+            ..Default::default()
+        },
     )
     .await
+    .map(|completion| completion.content)
 }
 
 /// Send a chat completion request with structured output support.
@@ -335,6 +412,48 @@ pub async fn send_chat_completion_with_schema(
     json_schema: Option<Value>,
     disable_reasoning: bool,
 ) -> Result<Option<String>, String> {
+    // The legacy callers (post-processing, meeting summaries) have no place to
+    // report truncation, so the signal is dropped here rather than forced on
+    // them. Assistant answers go through `send_chat_completion_opts` directly.
+    send_chat_completion_opts(
+        provider,
+        api_key,
+        model,
+        user_content,
+        system_prompt,
+        json_schema,
+        ChatOptions {
+            disable_reasoning,
+            ..Default::default()
+        },
+    )
+    .await
+    .map(|completion| completion.content)
+}
+
+/// Send a chat completion request with structured output support and
+/// per-request [`ChatOptions`].
+///
+/// This is the full implementation behind [`send_chat_completion`] and
+/// [`send_chat_completion_with_schema`]; those two are thin wrappers passing
+/// `ChatOptions::default()` apart from `disable_reasoning`, so their observable
+/// behaviour is unchanged.
+///
+/// Beyond the wrappers:
+/// - `opts.max_tokens` is forwarded as the OpenAI-style `max_tokens` field and
+///   omitted from the payload entirely when `None`.
+/// - `opts.timeout` bounds the request. On expiry the call fails with an `Err`
+///   whose message starts with [`TIMEOUT_ERROR_PREFIX`]. The reasoning-rejection
+///   retry gets a fresh deadline rather than sharing one budget.
+pub async fn send_chat_completion_opts(
+    provider: &PostProcessProvider,
+    api_key: String,
+    model: &str,
+    user_content: String,
+    system_prompt: Option<String>,
+    json_schema: Option<Value>,
+    opts: ChatOptions,
+) -> Result<ChatCompletion, String> {
     let base_url = provider.base_url.trim_end_matches('/');
     let url = format!("{}/chat/completions", base_url);
 
@@ -343,7 +462,7 @@ pub async fn send_chat_completion_with_schema(
         sanitized_url_for_log(&url)
     );
 
-    let client = create_client(provider, &api_key)?;
+    let client = create_client(provider, &api_key, opts.timeout)?;
 
     // Build messages vector
     let mut messages = Vec::new();
@@ -373,7 +492,7 @@ pub async fn send_chat_completion_with_schema(
     });
 
     let key = endpoint_key(provider, model);
-    let reasoning = if disable_reasoning && !is_known_rejected(&key) {
+    let reasoning = if opts.disable_reasoning && !is_known_rejected(&key) {
         reasoning_disable_params(provider)
     } else {
         ReasoningParams::default()
@@ -383,6 +502,7 @@ pub async fn send_chat_completion_with_schema(
         model: model.to_string(),
         messages,
         stream: false,
+        max_tokens: opts.max_tokens,
         response_format,
         reasoning,
     };
@@ -392,7 +512,7 @@ pub async fn send_chat_completion_with_schema(
         .json(&request_body)
         .send()
         .await
-        .map_err(|e| report_reqwest_error("HTTP request failed", &e))?;
+        .map_err(|e| report_request_error("HTTP request failed", &e))?;
     let mut status = response.status();
     debug!(
         "Chat completion response received with status {} over {:?} from {}",
@@ -421,7 +541,7 @@ pub async fn send_chat_completion_with_schema(
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| report_reqwest_error("HTTP retry failed", &e))?;
+            .map_err(|e| report_request_error("HTTP retry failed", &e))?;
         status = response.status();
         debug!(
             "Chat completion retry response received with status {} over {:?} from {}",
@@ -453,12 +573,16 @@ pub async fn send_chat_completion_with_schema(
     let completion: ChatCompletionResponse = response
         .json()
         .await
-        .map_err(|e| report_reqwest_error("Failed to parse API response", &e))?;
+        .map_err(|e| report_request_error("Failed to parse API response", &e))?;
 
-    Ok(completion
-        .choices
-        .first()
-        .and_then(|choice| choice.message.content.clone()))
+    let Some(choice) = completion.choices.first() else {
+        return Ok(ChatCompletion::default());
+    };
+
+    Ok(ChatCompletion {
+        content: choice.message.content.clone(),
+        truncated: choice.finish_reason.as_deref() == Some("length"),
+    })
 }
 
 /// Fetch available models from an OpenAI-compatible API
@@ -472,7 +596,7 @@ pub async fn fetch_models(
 
     debug!("Fetching models from: {}", sanitized_url_for_log(&url));
 
-    let client = create_client(provider, &api_key)?;
+    let client = create_client(provider, &api_key, None)?;
 
     let response = client
         .get(&url)
@@ -564,7 +688,7 @@ mod tests {
         }
     }
 
-    fn request_json(reasoning: ReasoningParams) -> Value {
+    fn request_json_with(reasoning: ReasoningParams, max_tokens: Option<u32>) -> Value {
         let request = ChatCompletionRequest {
             model: "test-model".to_string(),
             messages: vec![ChatMessage {
@@ -572,10 +696,32 @@ mod tests {
                 content: "hi".to_string(),
             }],
             stream: false,
+            max_tokens,
             response_format: None,
             reasoning,
         };
         serde_json::to_value(&request).unwrap()
+    }
+
+    fn request_json(reasoning: ReasoningParams) -> Value {
+        request_json_with(reasoning, None)
+    }
+
+    /// A listener that accepts connections and never answers, so a client with a
+    /// timeout has something to time out against.
+    async fn serve_hanging_endpoint() -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let mut accepted = Vec::new();
+            while let Ok((stream, _)) = listener.accept().await {
+                // Hold the socket open without writing a response.
+                accepted.push(stream);
+            }
+        });
+
+        format!("http://{address}")
     }
 
     async fn serve_one_response(status: &str, body: &str) -> String {
@@ -721,6 +867,153 @@ mod tests {
     }
 
     #[test]
+    fn omitted_max_tokens_is_absent_from_the_request_payload() {
+        let json = request_json_with(ReasoningParams::default(), None);
+        assert!(
+            json.get("max_tokens").is_none(),
+            "max_tokens must not appear when unset: {json}"
+        );
+    }
+
+    #[test]
+    fn requested_max_tokens_is_sent_as_a_number() {
+        let json = request_json_with(ReasoningParams::default(), Some(256));
+        assert_eq!(json["max_tokens"], 256);
+    }
+
+    #[test]
+    fn chat_options_default_is_fully_inert() {
+        assert_eq!(
+            ChatOptions::default(),
+            ChatOptions {
+                disable_reasoning: false,
+                max_tokens: None,
+                timeout: None,
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn expired_timeout_is_reported_with_the_documented_marker() {
+        let base_url = serve_hanging_endpoint().await;
+        let error = send_chat_completion_opts(
+            &provider("custom", &base_url),
+            String::new(),
+            "test-model",
+            "hi".to_string(),
+            None,
+            None,
+            ChatOptions {
+                timeout: Some(Duration::from_millis(150)),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect_err("a hanging endpoint must not produce a completion");
+
+        assert!(
+            error.starts_with(TIMEOUT_ERROR_PREFIX),
+            "expected the timeout marker, got: {error}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_request_within_the_timeout_is_not_marked_as_a_timeout() {
+        let base_url =
+            serve_one_response("200 OK", r#"{"choices":[{"message":{"content":"ok"}}]}"#).await;
+        let content = send_chat_completion_opts(
+            &provider("custom", &base_url),
+            String::new(),
+            "test-model",
+            "hi".to_string(),
+            None,
+            None,
+            ChatOptions {
+                max_tokens: Some(16),
+                timeout: Some(Duration::from_secs(10)),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("the endpoint answered in time");
+
+        assert_eq!(content.content.as_deref(), Some("ok"));
+        assert!(!content.truncated, "no finish_reason means not truncated");
+    }
+
+    /// A cut-off answer must be distinguishable from a finished one, otherwise
+    /// the user copies half a sentence and never learns why.
+    #[tokio::test]
+    async fn a_length_finish_reason_marks_the_completion_as_truncated() {
+        let base_url = serve_one_response(
+            "200 OK",
+            r#"{"choices":[{"message":{"content":"half a sen"},"finish_reason":"length"}]}"#,
+        )
+        .await;
+        let completion = send_chat_completion_opts(
+            &provider("custom", &base_url),
+            String::new(),
+            "test-model",
+            "hi".to_string(),
+            None,
+            None,
+            ChatOptions::default(),
+        )
+        .await
+        .expect("the endpoint answered");
+
+        assert!(completion.truncated);
+        assert_eq!(completion.content.as_deref(), Some("half a sen"));
+    }
+
+    /// The reasoning-token trap: the ceiling is spent on thinking and the
+    /// content comes back empty.
+    #[tokio::test]
+    async fn a_truncated_empty_completion_is_reported_as_truncated() {
+        let base_url = serve_one_response(
+            "200 OK",
+            r#"{"choices":[{"message":{"content":""},"finish_reason":"length"}]}"#,
+        )
+        .await;
+        let completion = send_chat_completion_opts(
+            &provider("custom", &base_url),
+            String::new(),
+            "test-model",
+            "hi".to_string(),
+            None,
+            None,
+            ChatOptions::default(),
+        )
+        .await
+        .expect("the endpoint answered");
+
+        assert!(completion.truncated);
+        assert_eq!(completion.content.as_deref(), Some(""));
+    }
+
+    #[tokio::test]
+    async fn a_stop_finish_reason_is_not_truncated() {
+        let base_url = serve_one_response(
+            "200 OK",
+            r#"{"choices":[{"message":{"content":"done"},"finish_reason":"stop"}]}"#,
+        )
+        .await;
+        let completion = send_chat_completion_opts(
+            &provider("custom", &base_url),
+            String::new(),
+            "test-model",
+            "hi".to_string(),
+            None,
+            None,
+            ChatOptions::default(),
+        )
+        .await
+        .expect("the endpoint answered");
+
+        assert!(!completion.truncated);
+    }
+
+    #[test]
     fn rejection_memo_is_keyed_by_base_url_and_model() {
         let deepseek = provider("custom", "https://api.deepseek.com/");
         let key = endpoint_key(&deepseek, "deepseek-chat");
@@ -730,5 +1023,168 @@ mod tests {
         assert!(is_known_rejected(&key));
         // A different model on the same endpoint is tracked separately
         assert!(!is_known_rejected(&endpoint_key(&deepseek, "other-model")));
+    }
+
+    // -----------------------------------------------------------------------
+    // Live provider tests.
+    //
+    // `#[ignore]` on purpose, following the precedent in
+    // `tests/loopback_external_audio.rs`: these leave the machine, need a real
+    // credential and spend real tokens, so they must never run as part of
+    // `cargo test` or the gate. Run them deliberately:
+    //
+    //     cargo test --lib llm_client::tests::live_ -- --ignored --nocapture
+    //
+    // They earn their keep because every other test in this file talks to a
+    // loopback socket that answers exactly how we told it to. That proves the
+    // request we build is the request we intended — not that a real provider
+    // accepts it. `max_tokens` is the specific worry: it is a new field on the
+    // wire, and an unrecognised field is exactly what a provider answers with
+    // a 400.
+    // -----------------------------------------------------------------------
+
+    /// The shipped OpenRouter catalogue entry, not a hand-built stand-in.
+    ///
+    /// The point is to exercise the base URL, the `/models` endpoint and the
+    /// auth header that users actually get, so a typo in the shipped defaults
+    /// fails here rather than in someone's settings panel.
+    fn live_openrouter() -> PostProcessProvider {
+        crate::settings::get_default_settings()
+            .post_process_provider(crate::settings::OPENROUTER_PROVIDER_ID)
+            .expect("the shipped provider catalogue must contain OpenRouter")
+            .clone()
+    }
+
+    /// The credential, or `None` so the test skips rather than fails.
+    fn live_api_key() -> Option<String> {
+        std::env::var("OPENROUTER_API_KEY")
+            .ok()
+            .map(|key| key.trim().to_string())
+            .filter(|key| !key.is_empty())
+    }
+
+    /// A cheap model the account can actually reach.
+    ///
+    /// Resolved from the live catalogue instead of hardcoded, because model ids
+    /// are retired without notice and a test that fails because some id was
+    /// sunset would say nothing at all about this code. `SPEAK_LIVE_MODEL`
+    /// overrides it when a specific model is what you meant to test.
+    async fn live_model(provider: &PostProcessProvider, api_key: &str) -> String {
+        if let Some(model) = std::env::var("SPEAK_LIVE_MODEL")
+            .ok()
+            .map(|model| model.trim().to_string())
+            .filter(|model| !model.is_empty())
+        {
+            return model;
+        }
+
+        let models = fetch_models(provider, api_key.to_string())
+            .await
+            .expect("listing models is the first thing a wrong key breaks");
+
+        for hint in ["gpt-4o-mini", "haiku", "-mini", "flash"] {
+            if let Some(model) = models.iter().find(|model| model.contains(hint)) {
+                return model.clone();
+            }
+        }
+
+        models
+            .first()
+            .cloned()
+            .expect("OpenRouter returned an empty model list")
+    }
+
+    #[tokio::test]
+    #[ignore = "hits the real OpenRouter API and needs OPENROUTER_API_KEY; run deliberately"]
+    async fn live_openrouter_lists_models() {
+        let Some(api_key) = live_api_key() else {
+            eprintln!("skipping: OPENROUTER_API_KEY is not set");
+            return;
+        };
+
+        let models = fetch_models(&live_openrouter(), api_key)
+            .await
+            .expect("the shipped OpenRouter entry must be able to list models");
+
+        assert!(!models.is_empty(), "OpenRouter returned no models");
+        println!("OpenRouter offers {} models", models.len());
+    }
+
+    /// The whole Phase B addition, against a provider that can reject it.
+    #[tokio::test]
+    #[ignore = "hits the real OpenRouter API and spends tokens; run deliberately"]
+    async fn live_openrouter_accepts_a_capped_assistant_request() {
+        let Some(api_key) = live_api_key() else {
+            eprintln!("skipping: OPENROUTER_API_KEY is not set");
+            return;
+        };
+
+        let provider = live_openrouter();
+        let model = live_model(&provider, &api_key).await;
+        println!("asking {model}");
+
+        // Shaped exactly like the Fast Helper profile: a system prompt, a small
+        // token budget, reasoning disabled, and a deadline.
+        let answer = send_chat_completion_opts(
+            &provider,
+            api_key,
+            &model,
+            "Reply with the single word OK and nothing else.".to_string(),
+            Some("You answer in as few words as possible.".to_string()),
+            None,
+            ChatOptions {
+                disable_reasoning: true,
+                max_tokens: Some(64),
+                timeout: Some(Duration::from_secs(60)),
+            },
+        )
+        .await
+        .expect("a capped request must be accepted, not rejected as malformed");
+
+        assert!(
+            !answer.truncated,
+            "a one-word reply must not exhaust a 64-token budget"
+        );
+        let answer = answer
+            .content
+            .expect("the provider returned no message content");
+        println!("answered: {answer:?}");
+        assert!(
+            !answer.trim().is_empty(),
+            "a capped request must still produce an answer"
+        );
+    }
+
+    /// The timeout marker the answer card matches on, against a real endpoint
+    /// rather than a hanging loopback socket.
+    #[tokio::test]
+    #[ignore = "hits the real OpenRouter API; run deliberately"]
+    async fn live_openrouter_timeout_is_marked() {
+        let Some(api_key) = live_api_key() else {
+            eprintln!("skipping: OPENROUTER_API_KEY is not set");
+            return;
+        };
+
+        let error = send_chat_completion_opts(
+            &live_openrouter(),
+            api_key,
+            "openai/gpt-4o-mini",
+            "Write a long essay about the sea.".to_string(),
+            None,
+            None,
+            ChatOptions {
+                // Far below any achievable round trip, so this is deterministic
+                // without depending on how slow the provider happens to be.
+                timeout: Some(Duration::from_millis(1)),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect_err("a 1ms deadline cannot be met over the public internet");
+
+        assert!(
+            error.starts_with(TIMEOUT_ERROR_PREFIX),
+            "the card matches on this prefix; got: {error}"
+        );
     }
 }

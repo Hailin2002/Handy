@@ -10,6 +10,7 @@ vi.mock("@tauri-apps/api/event", () => ({
 vi.mock("@/bindings", () => ({
   commands: {
     getAppSettings: vi.fn(),
+    getAssistantApiKeyStatus: vi.fn(),
     getDefaultSettings: vi.fn(),
     getAvailableMicrophones: vi.fn(),
     getAvailableOutputDevices: vi.fn(),
@@ -27,6 +28,9 @@ const mockedChangeAudioFeedback = vi.mocked(
   commands.changeAudioFeedbackSetting,
 );
 const mockedGetAppSettings = vi.mocked(commands.getAppSettings);
+const mockedGetAssistantApiKeyStatus = vi.mocked(
+  commands.getAssistantApiKeyStatus,
+);
 const mockedChangeBinding = vi.mocked(commands.changeBinding);
 
 const makeSettings = (overrides: Partial<AppSettings> = {}): AppSettings => ({
@@ -42,11 +46,16 @@ const seedStore = (settings: AppSettings | null) => {
     defaultSettings: null,
     isLoading: false,
     isUpdating: {},
+    assistantApiKeyConfigured: {},
   });
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockedGetAssistantApiKeyStatus.mockResolvedValue({
+    status: "ok",
+    data: {},
+  });
   seedStore(makeSettings());
 });
 
@@ -151,6 +160,24 @@ describe("settingsStore.resetSetting", () => {
 });
 
 describe("settingsStore.refreshSettings (persisted-field hydration)", () => {
+  it("hydrates the boolean-only assistant keychain status", async () => {
+    mockedGetAppSettings.mockResolvedValue({
+      status: "ok",
+      data: makeSettings(),
+    });
+    mockedGetAssistantApiKeyStatus.mockResolvedValue({
+      status: "ok",
+      data: { fast_helper: true, smart_assistant: false },
+    });
+
+    await useSettingsStore.getState().refreshSettings();
+
+    expect(useSettingsStore.getState().assistantApiKeyConfigured).toEqual({
+      fast_helper: true,
+      smart_assistant: false,
+    });
+  });
+
   it("hydrates null persisted fields with their safe defaults", async () => {
     // The Rust side persists optional fields; legacy/partial stores surface
     // nulls here. The store must normalize them exactly like production does.
@@ -175,6 +202,27 @@ describe("settingsStore.refreshSettings (persisted-field hydration)", () => {
     expect(settings?.clamshell_microphone).toBe("Default");
     expect(settings?.selected_output_device).toBe("Default");
     expect(settings?.audio_feedback).toBe(true);
+  });
+
+  it("still loads settings when the key-status lookup fails", async () => {
+    mockedGetAppSettings.mockResolvedValue({
+      status: "ok",
+      data: makeSettings({ audio_feedback: false }),
+    });
+    mockedGetAssistantApiKeyStatus.mockResolvedValue({
+      status: "error",
+      error: "keychain unavailable",
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await useSettingsStore.getState().refreshSettings();
+
+    expect(useSettingsStore.getState().settings?.audio_feedback).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Failed to load assistant API key status:",
+      "keychain unavailable",
+    );
+    errorSpy.mockRestore();
   });
 
   it("ends loading without touching settings when the backend fails", async () => {

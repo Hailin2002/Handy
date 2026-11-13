@@ -4,6 +4,7 @@ import type {
   ClipboardHandling,
   OverlayStyle,
   PasteMethod,
+  RecordingAudioMode,
   RecordingRetentionPeriod,
   SoundTheme,
   SpeechInputProvider,
@@ -193,6 +194,29 @@ export const SETTING_WRITE_DEFS: readonly SettingWriteDef[] = [
     command: "change_mute_while_recording_setting",
     apply: (s, a) => {
       s.mute_while_recording = asBoolean(a.enabled);
+      // The real backend mirrors the legacy bool onto the mode; mirror it here
+      // too, or a test that writes the bool would leave the two disagreeing.
+      s.recording_audio_mode = asBoolean(a.enabled) ? "mute" : "off";
+    },
+  },
+  {
+    command: "change_recording_audio_mode_setting",
+    apply: (s, a) => {
+      const mode = asEnum<RecordingAudioMode>(a.mode);
+      s.recording_audio_mode = mode;
+      s.mute_while_recording = mode === "mute";
+    },
+  },
+  {
+    command: "change_duck_volume_percent_setting",
+    apply: (s, a) => {
+      s.duck_volume_percent = asNumber(a.percent);
+    },
+  },
+  {
+    command: "change_duck_fade_ms_setting",
+    apply: (s, a) => {
+      s.duck_fade_ms = asNumber(a.ms);
     },
   },
   {

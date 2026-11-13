@@ -9,7 +9,7 @@ import { SpeechPipelineSettings } from "../general/SpeechPipelineSettings";
  */
 export const ModelsAndProvidersTab: React.FC = () => (
   <>
-    <ModelsSettings />
     <SpeechPipelineSettings />
+    <ModelsSettings />
   </>
 );

@@ -12,7 +12,7 @@ use crate::actions::ACTION_MAP;
 use crate::managers::audio::AudioRecordingManager;
 use crate::managers::meeting::{MeetingManager, MeetingState};
 use crate::settings::{get_settings, MEETING_BINDING_PAUSE_RESUME, MEETING_BINDING_START_STOP};
-use crate::transcription_coordinator::is_transcribe_binding;
+use crate::transcription_coordinator::is_pipeline_binding;
 use crate::TranscriptionCoordinator;
 
 /// Which meeting action a binding addresses (plan 6.9 rows 3 and 4).
@@ -31,7 +31,9 @@ pub enum MeetingShortcutAction {
 /// verhindert kein kurzes Diktat") are unit-testable without an app handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShortcutRoute {
-    /// Handled by the dictation coordinator; never influenced by meetings.
+    /// Handled by the transcription coordinator; never influenced by meetings.
+    /// Covers both dictation bindings and the assistant bindings — they share
+    /// the recorder singleton, so they share the queue in front of it.
     Dictation,
     /// Handled by the meeting state machine.
     Meeting(MeetingShortcutAction),
@@ -43,7 +45,7 @@ pub enum ShortcutRoute {
 
 /// Classifies one binding id. The two tool families own disjoint ids.
 pub fn route_binding(binding_id: &str) -> ShortcutRoute {
-    if is_transcribe_binding(binding_id) {
+    if is_pipeline_binding(binding_id) {
         return ShortcutRoute::Dictation;
     }
     match binding_id {
@@ -226,9 +228,9 @@ pub fn handle_shortcut_event(
 ) {
     let settings = get_settings(app);
 
-    // Transcribe bindings are handled by the coordinator. This path is
-    // unchanged and never consults meeting state (plan 6.10).
-    if is_transcribe_binding(binding_id) {
+    // Every binding that takes the recorder is handled by the coordinator.
+    // This path is unchanged and never consults meeting state (plan 6.10).
+    if is_pipeline_binding(binding_id) {
         if let Some(coordinator) = app.try_state::<TranscriptionCoordinator>() {
             coordinator.send_input(binding_id, hotkey_string, is_pressed, settings.push_to_talk);
         } else {
@@ -296,8 +298,8 @@ mod tests {
         );
         // No meeting id is ever mistaken for a dictation id, in either
         // direction (plan 6.9: "nicht verwechselbar").
-        assert!(!is_transcribe_binding(MEETING_BINDING_START_STOP));
-        assert!(!is_transcribe_binding(MEETING_BINDING_PAUSE_RESUME));
+        assert!(!is_pipeline_binding(MEETING_BINDING_START_STOP));
+        assert!(!is_pipeline_binding(MEETING_BINDING_PAUSE_RESUME));
         assert!(!crate::settings::is_meeting_binding("transcribe"));
         assert!(!crate::settings::is_meeting_binding("cancel"));
     }

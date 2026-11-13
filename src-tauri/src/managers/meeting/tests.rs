@@ -4,6 +4,19 @@
 //! arrangement as settings/tests.rs and meeting_store/.
 
 use super::*;
+
+#[test]
+fn accuracy_overlap_counts_repeated_words_without_overmatching() {
+    let (local, reference, overlap) =
+        word_overlap("eins zwei zwei vier", "eins zwei drei zwei drei");
+    assert_eq!((local, reference, overlap), (4, 5, 3));
+}
+
+#[test]
+fn accuracy_rms_distinguishes_silence_from_speech() {
+    assert_eq!(audio_rms(&[0.0; 32]), 0.0);
+    assert!((audio_rms(&[0.5, -0.5]) - 0.5).abs() < f32::EPSILON);
+}
 use crate::managers::meeting_store::{
     NewProjectTask, NewTranscriptSegment, SttJobState, TaskRepository, Uuid, WorkerId,
 };
@@ -1218,11 +1231,11 @@ fn an_active_meeting_leaves_the_dictation_path_untouched() {
     );
     // The dictation shortcut ids are still routed to the dictation
     // coordinator, and the meeting ids are disjoint from them.
-    assert!(crate::transcription_coordinator::is_transcribe_binding(
+    assert!(crate::transcription_coordinator::is_pipeline_binding(
         "transcribe"
     ));
     assert!(!crate::shortcut::is_meeting_binding("transcribe"));
-    assert!(!crate::transcription_coordinator::is_transcribe_binding(
+    assert!(!crate::transcription_coordinator::is_pipeline_binding(
         crate::settings::MEETING_BINDING_START_STOP
     ));
 }
@@ -1854,6 +1867,75 @@ fn retranscribe_replaces_the_transcript_and_keeps_the_audio() {
         h.manager.snapshot(&draft.meeting_id).unwrap().state,
         MeetingState::Transcribing
     );
+}
+
+#[test]
+fn accuracy_pass_replaces_only_after_the_reference_succeeds() {
+    struct ReferenceEngine;
+    impl MeetingSttEngine for ReferenceEngine {
+        fn transcribe(
+            &self,
+            _ctx: &JobContext,
+            _audio: &[f32],
+        ) -> Result<Vec<EngineSegment>, super::super::meeting_transcription::EngineError> {
+            Ok(vec![EngineSegment {
+                start_ms_rel: 100,
+                end_ms_rel: 1_900,
+                text: "Wir einigen uns auf Montag und liefern Version am Dienstag.".to_string(),
+                confidence: Some(0.95),
+            }])
+        }
+
+        fn model_label(&self) -> String {
+            "reference-test".to_string()
+        }
+    }
+
+    let h = harness();
+    let draft = h.manager.create_draft(None).unwrap();
+    h.manager
+        .start(&draft.meeting_id, None, false, false, true)
+        .unwrap();
+    seed_ready_chunk(&h.manager, &draft.meeting_id);
+    h.manager.stop(&draft.meeting_id, false).unwrap();
+    seed_segment_for_first_job(&h.manager, &draft.meeting_id);
+    h.manager.settle_after_queue(&draft.meeting_id);
+
+    let path = h
+        .manager
+        .assets_root
+        .join(&draft.meeting_id)
+        .join(format!("audio/{}/000000-microphone.wav", draft.meeting_id));
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(
+        path,
+        super::super::meeting_cloud::encode_wav_pcm16_mono(&vec![0.1; 32_000]),
+    )
+    .unwrap();
+    *lock(&h.manager.stt_engine) = Some(Arc::new(ReferenceEngine));
+
+    let report = h
+        .manager
+        .improve_accuracy(
+            &draft.meeting_id,
+            crate::settings::SpeechInputProvider::Azure,
+        )
+        .unwrap();
+    assert_eq!(report.chunks_checked, 1);
+    assert_eq!(report.chunks_corrected, 1);
+    let transcript = h.manager.get_transcript(&draft.meeting_id).unwrap();
+    assert_eq!(transcript.len(), 1);
+    assert!(transcript[0].text.contains("Dienstag"));
+
+    let archived: i64 = lock(&h.manager.conn)
+        .query_row(
+            "SELECT COUNT(*) FROM meeting_transcript_segments
+             WHERE meeting_id = ?1 AND deleted_at IS NOT NULL",
+            params![draft.meeting_id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(archived, 1, "the original must remain recoverable");
 }
 
 /// A meeting that never finished capturing has no transcript to replace,

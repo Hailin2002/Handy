@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Znovu přepíše uložený zvuk. Samotná nahrávka zůstane zachována.",
         "retranscribeWarning": "Aktuální přepis bude zahozen a vytvořen znovu z uloženého zvuku. Nahrávka se nemění.",
         "retranscribeQueued": "Přepis znovu zařazen.",
-        "retranscribeFailed": "Přepis se nepodařilo spustit znovu."
+        "retranscribeFailed": "Přepis se nepodařilo spustit znovu.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Vyžadována oprávnění",
-      "description": "Handy potřebuje několik oprávnění pro správné fungování.",
+      "description": "Speak potřebuje několik oprávnění pro správné fungování.",
       "microphone": {
         "title": "Přístup k mikrofonu",
         "description": "Potřebný pro zachycení vašeho hlasu k přepisu."
@@ -651,13 +662,13 @@
       "searchPlaceholder": "Hledat modely podle názvu…",
       "rescan": {
         "label": "Znovu prohledat",
-        "tooltip": "Znovu prohledat modely přidané do složky modelů nebo mezipaměti Hugging Face mimo Handy"
+        "tooltip": "Znovu prohledat modely přidané do složky modelů nebo mezipaměti Hugging Face mimo Speak"
       }
     },
     "general": {
       "title": "Obecné",
       "shortcut": {
-        "title": "Zkratky Handy",
+        "title": "Zkratky Speak",
         "description": "Nastavte klávesové zkratky pro spuštění nahrávání řeči na text",
         "loading": "Načítám zkratky...",
         "none": "Žádné zkratky nejsou nastavené",
@@ -675,6 +686,14 @@
           "transcribe_with_post_process": {
             "name": "Klávesa pro následné zpracování",
             "description": "Volitelné: Vyhrazená klávesová zkratka, která vždy použije AI následné zpracování na váš přepis."
+          },
+          "assistant_fast": {
+            "name": "Zkratka rychlého pomocníka",
+            "description": "Klávesová zkratka, která se ptá rychlého asistenta. Nepřiřazená, dokud ji nenastavíte."
+          },
+          "assistant_smart": {
+            "name": "Zkratka chytrého asistenta",
+            "description": "Klávesová zkratka, která se ptá důkladného asistenta. Nepřiřazená, dokud ji nenastavíte."
           }
         },
         "errors": {
@@ -695,6 +714,20 @@
       "pushToTalk": {
         "label": "Stisk a mluv",
         "description": "Podržte pro nahrávání, uvolněte pro zastavení"
+      },
+      "recordingAudio": {
+        "label": "Zvuk během nahrávání",
+        "description": "Co Speak udělá se systémovým přehráváním zvuku během nahrávání",
+        "modes": {
+          "off": "Nedělat nic",
+          "duck": "Snížit hlasitost",
+          "mute": "Úplně ztlumit"
+        },
+        "volume": {
+          "label": "Snížená hlasitost",
+          "description": "Cílová hlasitost systémového výstupu během nahrávání",
+          "unit": "{{percent}} %"
+        }
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Spouštět při startu",
-        "description": "Automaticky spustit Handy po přihlášení do počítače."
+        "description": "Automaticky spustit Speak po přihlášení do počítače."
       },
       "showTrayIcon": {
         "label": "Zobrazit ikonu v systémové liště",
-        "description": "Zobrazit ikonu Handy v systémové liště."
+        "description": "Zobrazit ikonu Speak v systémové liště."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Kontrolovat aktualizace",
-        "description": "Automaticky kontrolovat nové verze Handy"
+        "description": "Automaticky kontrolovat nové verze Speak"
       },
       "soundTheme": {
         "label": "Zvukový motiv",
@@ -997,10 +1030,6 @@
         "label": "Následné zpracování",
         "description": "Povolit AI vylepšení textu po přepisu"
       },
-      "muteWhileRecording": {
-        "label": "Ztlumit při nahrávání",
-        "description": "Ztlumit systémový zvuk během nahrávání"
-      },
       "appendTrailingSpace": {
         "label": "Přidat koncovou mezeru",
         "description": "Přidat mezeru po vloženém přepisu"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Diagnostika klávesnice",
-        "description": "Ověří, zda události klávesnice dorazí do Handy. Zaznamenává se pouze počet událostí — nikdy to, které klávesy stisknete.",
+        "description": "Ověří, zda události klávesnice dorazí do Speak. Zaznamenává se pouze počet událostí — nikdy to, které klávesy stisknete.",
         "run": "Spustit 10s diagnostiku",
         "running": "Naslouchání… několikrát stiskněte svou zkratku (např. Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "Myš",
         "verdictBlocked": "Secure Input blokuje události kláves — zkratky obsahující běžnou klávesu nemohou fungovat, dokud se to nevyřeší.",
         "verdictSuspicious": "Dorazily události modifikátorů, ale žádné události kláves — něco klávesy potlačuje, přestože Secure Input hlásí, že je vypnutý. Nahlaste to prosím na GitHubu.",
-        "verdictOk": "Události kláves dorazí do Handy normálně.",
+        "verdictOk": "Události kláves dorazí do Speak normálně.",
         "verdictNoEvents": "Nebyly zachyceny žádné události — stiskli jste během testu nějaké klávesy?",
         "failed": "Diagnostika selhala: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "O aplikaci",
       "version": {
         "title": "Verze",
-        "description": "Aktuální verze Handy"
+        "description": "Aktuální verze Speak"
       },
       "appDataDirectory": {
         "title": "Adresář dat aplikace",
-        "description": "Umístění, kde Handy ukládá data"
+        "description": "Umístění, kde Speak ukládá data"
       },
       "sourceCode": {
         "title": "Zdrojový kód",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "Podpořte vývoj",
-        "description": "Pomozte nám pokračovat ve vývoji Handy",
+        "description": "Pomozte nám pokračovat ve vývoji Speak",
         "button": "Přispět"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "Vysoce výkonné inferenční zpracování modelu automatického rozpoznávání řeči Whisper od OpenAI",
-          "details": "Handy používá ggml pro rychlé lokální zpracování řeči na text. Díky skvělé práci Georgiho Gerganova a přispěvatelů."
+          "details": "Speak používá ggml pro rychlé lokální zpracování řeči na text. Díky skvělé práci Georgiho Gerganova a přispěvatelů."
         }
       },
       "whatsNewUpdates": {
         "label": "Zobrazovat novinky",
-        "description": "Zobrazovat poznámky k vydání po aktualizacích Handy"
+        "description": "Zobrazovat poznámky k vydání po aktualizacích Speak"
       }
     },
     "tabs": {
       "modelsProviders": "Modely a poskytovatelé",
-      "meetingsEmptyBody": "Nastavení schůzek přijdou s režimem schůzek."
+      "meetingsEmptyBody": "Nastavení schůzek přijdou s režimem schůzek.",
+      "assistants": "Asistenti"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "Uchovat 30 dní",
           "forever": "Uchovat trvale"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "Asistenti s AI",
+      "description": "Dva asistenti dostupní klávesovou zkratkou. Vyslovte dotaz a odpověď se objeví na kartě vedle překryvu Speak.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Rychlý pomocník",
+          "description": "Na krátké dotazy: údaj, převod, pravopis, přeformulovaná věta. Nastavený na krátkou odpověď, která přijde hned."
+        },
+        "smart_assistant": {
+          "title": "Chytrý asistent",
+          "description": "Na otázky, které stojí za rozmyšlenou: analýza, srovnání, návrh textu. Smí trvat déle a odpovědět obšírně."
+        }
+      },
+      "provider": {
+        "title": "Poskytovatel",
+        "description": "Která služba za tohoto asistenta odpovídá. Oba asistenti mohou používat stejného poskytovatele s různými klíči."
+      },
+      "apiKey": {
+        "configured": "API klíč pro {{provider}} je uložen.",
+        "notConfigured": "Pro {{provider}} není uložen žádný API klíč.",
+        "title": "Klíč API",
+        "description": "Uloží se do klíčenky operačního systému, odděleně od klíče pro dodatečné zpracování.",
+        "placeholder": "Vložte svůj klíč API"
+      },
+      "model": {
+        "title": "Model",
+        "description": "Model, na který se tento asistent obrací. Vyberte jej ze seznamu, nebo zadejte přesné ID modelu.",
+        "placeholder": "Vyberte nebo zadejte ID modelu",
+        "refresh": "Obnovit seznam modelů",
+        "required": "Zatím není zvolen žádný model. Tento asistent zůstane neaktivní, dokud nějaký nevyberete.",
+        "listingHint": "Seznam modelů se načítá vlastním API klíčem tohoto asistenta. Bez něj můžete id modelu stále zadat ručně."
+      },
+      "systemPrompt": {
+        "title": "Systémový prompt",
+        "description": "Trvalý pokyn, kterým se tento asistent řídí u každého dotazu.",
+        "placeholder": "Popište, jak má tento asistent odpovídat"
+      },
+      "maxOutputTokens": {
+        "title": "Délka odpovědi",
+        "description": "Horní hranice odpovědi, v tokenech ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Časový limit",
+        "description": "Jak dlouho čekat na odpověď, než se to vzdá, v sekundách ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Naložení s odpovědí"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Pouze zobrazit",
+          "hint": "Odpověď se objeví na kartě a nikde jinde."
+        },
+        "copy": {
+          "label": "Zobrazit a zkopírovat",
+          "hint": "Odpověď se objeví na kartě a zkopíruje se do schránky."
+        },
+        "paste": {
+          "label": "Zobrazit a vložit",
+          "hint": "Odpověď se objeví na kartě a vloží se do aplikace, ve které jste pracovali."
+        }
+      },
+      "shortcutHint": "Klávesové zkratky obou asistentů se nastavují v části Diktování vedle zkratek pro přepis."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "Resetovat"
   },
   "accessibility": {
-    "permissionsDescription": "Handy potřebuje oprávnění usnadnění přístupu, aby mohlo psát přepsaný text.",
+    "permissionsDescription": "Speak potřebuje oprávnění usnadnění přístupu, aby mohlo psát přepsaný text.",
     "openSettings": "Otevřít Nastavení systému"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "neznámý model",
     "pasteFailedTitle": "Vložení textu se nezdařilo",
     "pasteFailed": "Text nebylo možné vložit do aktivní aplikace.",
-    "transcriptionFailedTitle": "Přepis selhal"
+    "transcriptionFailedTitle": "Přepis selhal",
+    "assistantNoticeTitle": "Asistent"
   },
   "appLanguage": {
     "title": "Jazyk aplikace",
-    "description": "Změňte jazyk rozhraní Handy"
+    "description": "Změňte jazyk rozhraní Speak"
   },
   "theme": {
     "title": "Motiv aplikace",
-    "description": "Zvolte, zda má Handy sledovat motiv systému, nebo zůstat světlý či tmavý",
+    "description": "Zvolte, zda má Speak sledovat motiv systému, nebo zůstat světlý či tmavý",
     "options": {
       "system": "Systém",
       "light": "Světlý",
@@ -1291,10 +1413,27 @@
     "processing": "Zpracovávám...",
     "cancel": "Zrušit",
     "meetingRecording": "Probíhá nahrávání schůzky",
-    "meetingPaused": "Schůzka pozastavena"
+    "meetingPaused": "Schůzka pozastavena",
+    "assistant": {
+      "label": "Asistent",
+      "smartLabel": "Chytrý asistent",
+      "copy": "Kopírovat",
+      "copied": "Zkopírováno do schránky",
+      "paste": "Vložit",
+      "pasted": "Vloženo",
+      "replace": "Nahradit",
+      "replaced": "Nahrazeno",
+      "replaceHint": "Označí vše v aktivním okně a vloží odpověď místo toho",
+      "openLink": "Otevřít odkaz",
+      "chooseLink": "Otevřít odkaz ({{n}})",
+      "escalate": "Zeptat se chytrého asistenta",
+      "asking": "Ptám se chytrého asistenta...",
+      "close": "Zavřít",
+      "truncated": "Odpověď byla na limitu délky oříznuta."
+    }
   },
   "whatsNew": {
-    "title": "Novinky v Handy v{{version}}"
+    "title": "Novinky v Speak v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} může blokovat 1 zkratku",

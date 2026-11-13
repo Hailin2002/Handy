@@ -34,7 +34,13 @@ import { MeetingSetup } from "./MeetingSetup";
  * `MeetingRecoveryBanner`, so a crashed recording is offered for processing
  * instead of silently disappearing.
  */
-export const MeetingsPage: React.FC = () => {
+export interface MeetingsPageProps {
+  onOpenSettings?: () => void;
+}
+
+export const MeetingsPage: React.FC<MeetingsPageProps> = ({
+  onOpenSettings,
+}) => {
   const { t, i18n } = useTranslation();
   const [sessions, setSessions] = useState<MeetingSession[] | null>(null);
   const [query, setQuery] = useState("");
@@ -164,6 +170,7 @@ export const MeetingsPage: React.FC = () => {
           setSetupSession(updated);
           void refresh();
         }}
+        onOpenSettings={onOpenSettings}
       />
     );
   }

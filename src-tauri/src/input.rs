@@ -12,10 +12,11 @@ mod macos {
     type CfDataRef = *const c_void;
     type CfStringRef = *const c_void;
 
-    // kVK_ANSI_V. This is the behavior Handy used before layout-aware
-    // resolution and remains the safest fallback if macOS cannot expose the
-    // active layout.
+    // kVK_ANSI_V / kVK_ANSI_A. These are the behavior Handy used before
+    // layout-aware resolution and remain the safest fallback if macOS cannot
+    // expose the active layout.
     const ANSI_V_KEYCODE: u16 = 9;
+    const ANSI_A_KEYCODE: u16 = 0;
     const KEYCODE_COUNT: u16 = 128;
     const UC_KEY_ACTION_DISPLAY: u16 = 3;
     const UC_KEY_TRANSLATE_NO_DEAD_KEYS_MASK: u32 = 1;
@@ -68,13 +69,15 @@ mod macos {
         (0..KEYCODE_COUNT).find(|&keycode| matches(keycode))
     }
 
-    /// Resolves the physical key that macOS interprets as `v` while Command is
-    /// held. Including Command is important: non-Latin layouts commonly map
-    /// Cmd shortcuts to their ANSI equivalents, while standard Dvorak does not.
+    /// Resolves the physical key that macOS interprets as `target` while
+    /// Command is held. Including Command is important: non-Latin layouts
+    /// commonly map Cmd shortcuts to their ANSI equivalents, while standard
+    /// Dvorak does not.
     ///
     /// TIS APIs must run on the main thread. Handy's paste path already enters
-    /// through `AppHandle::run_on_main_thread` before reaching this function.
-    fn resolve_command_v_keycode() -> Result<u16, String> {
+    /// through `AppHandle::run_on_main_thread` before reaching this function,
+    /// and so does the assistant's replace path.
+    fn resolve_command_keycode(target: char) -> Result<u16, String> {
         // SAFETY: This function is called on the macOS main thread. The returned
         // source follows the Create Rule and is released by InputSource::drop.
         let source = InputSource(unsafe { TISCopyCurrentKeyboardLayoutInputSource() });
@@ -123,26 +126,38 @@ mod macos {
                 )
             };
 
-            status == 0 && length == 1 && chars[0] == u16::from(b'v')
+            status == 0 && length == 1 && chars[0] == target as u16
         })
-        .ok_or_else(|| "could not map Cmd+V in the current macOS keyboard layout".to_string())?;
+        .ok_or_else(|| {
+            format!("could not map Cmd+{target} in the current macOS keyboard layout")
+        })?;
 
         Ok(keycode)
     }
 
-    pub(super) fn command_v_key() -> Key {
-        match resolve_command_v_keycode() {
+    /// Resolves `target` for the active layout, falling back to its ANSI
+    /// keycode. Never fails: a plausible key beats sending nothing at all.
+    fn command_key(target: char, ansi_fallback: u16) -> Key {
+        match resolve_command_keycode(target) {
             Ok(keycode) => {
-                debug!("Resolved Cmd+V for the active macOS layout to keycode {keycode}");
+                debug!("Resolved Cmd+{target} for the active macOS layout to keycode {keycode}");
                 Key::Other(u32::from(keycode))
             }
             Err(error) => {
                 warn!(
-                    "Could not resolve Cmd+V for the active macOS layout ({error}); using ANSI V keycode {ANSI_V_KEYCODE}"
+                    "Could not resolve Cmd+{target} for the active macOS layout ({error}); using ANSI keycode {ansi_fallback}"
                 );
-                Key::Other(u32::from(ANSI_V_KEYCODE))
+                Key::Other(u32::from(ansi_fallback))
             }
         }
+    }
+
+    pub(super) fn command_v_key() -> Key {
+        command_key('v', ANSI_V_KEYCODE)
+    }
+
+    pub(super) fn command_a_key() -> Key {
+        command_key('a', ANSI_A_KEYCODE)
     }
 }
 
@@ -259,6 +274,46 @@ pub fn send_paste_shift_insert(enigo: &mut Enigo, hold_ms: u64) -> Result<(), St
     enigo
         .key(Key::Shift, enigo::Direction::Release)
         .map_err(|e| format!("Failed to release Shift key: {}", e))?;
+
+    Ok(())
+}
+
+/// Sends Ctrl+A / Cmd+A ("select all") to the focused application.
+///
+/// Built the same way as the paste chords above, and carrying the same caveats:
+/// it is a synthetic key chord, so it goes wherever the OS thinks focus is, and
+/// on Wayland it may not arrive at all.
+///
+/// What it means is entirely up to the receiving application. "Select
+/// everything in the focused text field" is only the most common reading of
+/// Ctrl+A — a file manager selects every file, some editors bind it to
+/// beginning-of-line, and an application with nothing focused may do nothing.
+/// The caller is responsible for deciding whether that risk is acceptable; see
+/// `commands::assistant::assistant_replace`, which is the only caller.
+///
+/// `hold_ms` matches `send_paste_ctrl_v`: how long the modifier stays down after
+/// the A click, for applications that poll global keyboard state rather than
+/// reading the modifier off the key event.
+pub fn send_select_all(enigo: &mut Enigo, hold_ms: u64) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    let (modifier_key, a_key_code) = (Key::Meta, macos::command_a_key());
+    #[cfg(target_os = "windows")]
+    let (modifier_key, a_key_code) = (Key::Control, Key::Other(0x41)); // VK_A
+    #[cfg(target_os = "linux")]
+    let (modifier_key, a_key_code) = (Key::Control, Key::Unicode('a'));
+
+    enigo
+        .key(modifier_key, enigo::Direction::Press)
+        .map_err(|e| format!("Failed to press modifier key: {}", e))?;
+    enigo
+        .key(a_key_code, enigo::Direction::Click)
+        .map_err(|e| format!("Failed to click A key: {}", e))?;
+
+    std::thread::sleep(std::time::Duration::from_millis(hold_ms));
+
+    enigo
+        .key(modifier_key, enigo::Direction::Release)
+        .map_err(|e| format!("Failed to release modifier key: {}", e))?;
 
     Ok(())
 }

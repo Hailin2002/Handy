@@ -1,9 +1,11 @@
 import { listen } from "@tauri-apps/api/event";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./RecordingOverlay.css";
 import { commands, events } from "@/bindings";
 import type {
+  AssistantAnswerEvent,
   StreamPhase,
   StreamPhaseEvent,
   StreamTextEvent,
@@ -21,11 +23,285 @@ type OverlayState =
   // tools must never be confusable (plan §6.10), and the meeting form shows a
   // duration where dictation shows a waveform.
   | "meeting"
-  | "meeting_paused";
+  | "meeting_paused"
+  // The assistant result card. Unlike every other state this one is read rather
+  // than glanced at, and it stays up until the user dismisses it — see
+  // ANSWER_CARD_OPEN in overlay.rs.
+  | "answer";
 
 // Number of reactive bars in the waveform (the simple, smoothed style shared by
 // every overlay form). Mic levels arrive as 16 FFT buckets; we take the first N.
 const WAVE_BARS = 9;
+
+// Profile id of the smart assistant, mirroring ASSISTANT_PROFILE_SMART in
+// src-tauri/src/settings/types.rs. The card hides its "ask the smart assistant"
+// button when the answer already came from there — offering to escalate an
+// answer to the model that just produced it is a dead end.
+const SMART_PROFILE_ID = "smart_assistant";
+
+// How long a Copy / Paste / Replace confirmation stays on the card.
+const NOTICE_MS = 2400;
+
+/** The shape every generated `commands.*` call resolves to. */
+type CommandResult<T> =
+  { status: "ok"; data: T } | { status: "error"; error: string };
+
+/**
+ * The assistant result card.
+ *
+ * Exported and kept separate from the overlay shell for two reasons: it is the
+ * only overlay form with enough state of its own to be worth isolating, and it
+ * is the only one that can be asserted in a test — the shell renders `null`
+ * until an event listener fires, which never happens under `react-dom/server`.
+ *
+ * Every action goes through a Tauri command rather than a browser API. Only the
+ * Windows answer state becomes focusable, and the native command path keeps
+ * clipboard behavior consistent while restoring the original target before a
+ * paste. The visible Close button stays as the cross-platform exit. See
+ * `commands/assistant.rs`.
+ */
+export const AssistantAnswerCard: React.FC<{
+  answer: AssistantAnswerEvent;
+}> = ({ answer }) => {
+  const { t } = useTranslation();
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [escalating, setEscalating] = useState(false);
+  const [linksOpen, setLinksOpen] = useState(false);
+
+  // A fresh event — an escalation landing — replaces the card contents, so every
+  // piece of per-answer UI state has to start over with it. Without this, an
+  // escalated answer would arrive under the previous answer's "Copied"
+  // confirmation and a still-pending escalate button.
+  useEffect(() => {
+    setNotice(null);
+    setBusy(false);
+    setEscalating(false);
+    setLinksOpen(false);
+  }, [answer]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const id = setTimeout(() => setNotice(null), NOTICE_MS);
+    return () => clearTimeout(id);
+  }, [notice]);
+
+  const text = answer.answer ?? "";
+  const links = answer.links;
+  const isSmart = answer.profile_id === SMART_PROFILE_ID;
+
+  // Confirmations are the point: a clipboard or synthetic-key action can have
+  // no visible effect inside the card, so a click that produced no feedback is
+  // indistinguishable from a click that missed.
+  const runAction = async (
+    invoke: () => Promise<CommandResult<null>>,
+    confirmation: string,
+  ) => {
+    setBusy(true);
+    try {
+      const result = await invoke();
+      setNotice(result.status === "ok" ? confirmation : result.error);
+    } catch (error) {
+      setNotice(String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openLink = async (url: string) => {
+    try {
+      await openUrl(url);
+    } catch (error) {
+      setNotice(String(error));
+    }
+  };
+
+  const escalate = async () => {
+    setEscalating(true);
+    setNotice(null);
+    try {
+      const result = await commands.assistantEscalate(answer.question);
+      if (result.status === "error") {
+        setNotice(result.error);
+        setEscalating(false);
+      }
+      // On success the answer arrives as a fresh event and resets this
+      // component through the effect above. A `false` payload means the click
+      // was coalesced into a request already in flight, which does the same.
+    } catch (error) {
+      setNotice(String(error));
+      setEscalating(false);
+    }
+  };
+
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (text.length === 0 || !(event.ctrlKey || event.metaKey)) return;
+
+    const key = event.key.toLowerCase();
+    if (key === "c") {
+      event.preventDefault();
+      void runAction(
+        () => commands.assistantCopy(text),
+        t("overlay.assistant.copied"),
+      );
+    } else if (key === "v") {
+      event.preventDefault();
+      void runAction(
+        () => commands.assistantPaste(text),
+        t("overlay.assistant.pasted"),
+      );
+    }
+  };
+
+  return (
+    <div
+      className="scard answer"
+      tabIndex={0}
+      aria-keyshortcuts="Control+C Meta+C Control+V Meta+V"
+      onKeyDown={handleCardKeyDown}
+    >
+      <div className="oa">
+        <div className="oa-head">
+          <span className="oa-kicker">
+            {isSmart
+              ? t("overlay.assistant.smartLabel")
+              : t("overlay.assistant.label")}
+          </span>
+          {/* The question is shown because the most common cause of a
+              surprising answer is a misheard question. */}
+          <span className="oa-q" title={answer.question}>
+            {answer.question}
+          </span>
+        </div>
+
+        {answer.error ? (
+          <div className="oa-body error" role="alert">
+            {answer.error}
+          </div>
+        ) : (
+          <div className="oa-body" role="status" aria-live="polite">
+            {text}
+          </div>
+        )}
+
+        {answer.truncated && (
+          <div className="oa-truncated" role="note">
+            {t("overlay.assistant.truncated")}
+          </div>
+        )}
+
+        {linksOpen && links.length > 1 && (
+          <div className="oa-links">
+            {links.map((url) => (
+              <button
+                key={url}
+                type="button"
+                className="oa-link"
+                title={url}
+                onClick={() => openLink(url)}
+              >
+                {url}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="oa-note" role="status" aria-live="polite">
+          {escalating ? t("overlay.assistant.asking") : notice}
+        </div>
+
+        <div className="oa-actions">
+          {text.length > 0 && (
+            <>
+              <button
+                type="button"
+                className="oa-btn"
+                disabled={busy}
+                onClick={() =>
+                  runAction(
+                    () => commands.assistantCopy(text),
+                    t("overlay.assistant.copied"),
+                  )
+                }
+              >
+                {t("overlay.assistant.copy")}
+              </button>
+              <button
+                type="button"
+                className="oa-btn"
+                disabled={busy}
+                onClick={() =>
+                  runAction(
+                    () => commands.assistantPaste(text),
+                    t("overlay.assistant.pasted"),
+                  )
+                }
+              >
+                {t("overlay.assistant.paste")}
+              </button>
+              {/* Replace overwrites the selection in whatever window happens to
+                  be focused, so it is its own explicitly labelled button and
+                  never a default. */}
+              <button
+                type="button"
+                className="oa-btn"
+                disabled={busy}
+                title={t("overlay.assistant.replaceHint")}
+                onClick={() =>
+                  runAction(
+                    () => commands.assistantReplace(text),
+                    t("overlay.assistant.replaced"),
+                  )
+                }
+              >
+                {t("overlay.assistant.replace")}
+              </button>
+            </>
+          )}
+
+          {links.length === 1 && (
+            <button
+              type="button"
+              className="oa-btn"
+              onClick={() => openLink(links[0])}
+            >
+              {t("overlay.assistant.openLink")}
+            </button>
+          )}
+          {links.length > 1 && (
+            <button
+              type="button"
+              className="oa-btn"
+              aria-expanded={linksOpen}
+              onClick={() => setLinksOpen((shown) => !shown)}
+            >
+              {t("overlay.assistant.chooseLink", { n: links.length })}
+            </button>
+          )}
+
+          {!isSmart && (
+            <button
+              type="button"
+              className="oa-btn accent"
+              disabled={busy || escalating}
+              onClick={escalate}
+            >
+              {t("overlay.assistant.escalate")}
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="oa-btn close"
+            onClick={() => commands.assistantDismiss()}
+          >
+            {t("overlay.assistant.close")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const RecordingOverlay: React.FC = () => {
   const { t } = useTranslation();
@@ -52,6 +328,11 @@ const RecordingOverlay: React.FC = () => {
   // True once live text overflows the cap. A top overlay fades its top edge only
   // while overflowing, so the resting first line stays crisp flush under the pill.
   const [overflowing, setOverflowing] = useState(false);
+  // The assistant answer currently on the card, if any.
+  const [answer, setAnswer] = useState<AssistantAnswerEvent | null>(null);
+  // Mirrors "a card is on screen" for the answer listener, which is registered
+  // once on mount and would otherwise close over the initial state forever.
+  const cardOpenRef = useRef(false);
 
   const smoothedLevelsRef = useRef<number[]>(Array(16).fill(0));
   // Live-text scroll-back: the text region "sticks" to the newest line while the
@@ -73,6 +354,12 @@ const RecordingOverlay: React.FC = () => {
           smoothedLevelsRef.current = Array(16).fill(0);
           setLevels(Array(WAVE_BARS).fill(0));
           setStreamText({ committed: "", tentative: "" });
+        }
+        // Any other state supersedes an open card (overlay.rs releases the
+        // card's hold on the window at the same moment), so drop the payload
+        // rather than leaving a stale answer to reappear later.
+        if (overlayState !== "answer") {
+          setAnswer(null);
         }
 
         await syncLanguageFromSettings();
@@ -101,6 +388,7 @@ const RecordingOverlay: React.FC = () => {
       const unlistenHide = await listen("hide-overlay", () => {
         setIsVisible(false);
         setCaptureReady(false);
+        setAnswer(null);
       });
 
       const unlistenReady = await listen("recording-ready", () => {
@@ -130,6 +418,38 @@ const RecordingOverlay: React.FC = () => {
         if (payload.kind) setWorkKind(payload.kind);
       });
 
+      // Every assistant run emits this, including the Copy and Paste modes that
+      // deliver without a card and hide the overlay themselves. Whether a card
+      // is warranted is therefore the backend's call, not a rule duplicated
+      // here: `assistantPresentAnswer` resizes and shows the overlay and reports
+      // back whether it did.
+      const unlistenAnswer = await events.assistantAnswerEvent.listen(
+        async (event) => {
+          const payload = event.payload;
+          if (cardOpenRef.current) {
+            // An escalation refreshing the card the user is already reading.
+            // The window is already the right size and already visible.
+            setAnswer(payload);
+            return;
+          }
+          // Deliberately set only once the backend confirms a card. The
+          // assistant failure paths emit this event and then hide the overlay,
+          // so a `hide-overlay` is usually already on its way and would clear an
+          // answer stored before it. Presenting first orders the two correctly:
+          // `show-overlay` re-raises the window, and the payload lands after.
+          // The emitter decided whether a card is warranted and said so in
+          // the payload. A Copy/Paste run, or one with the overlay switched
+          // off, is delivered elsewhere and hides the overlay itself.
+          if (!payload.expects_card) return;
+          try {
+            const shown = await commands.assistantPresentAnswer();
+            if (shown) setAnswer(payload);
+          } catch {
+            // Nothing was stored, so there is nothing to roll back.
+          }
+        },
+      );
+
       return () => {
         unlistenShow();
         unlistenHide();
@@ -137,6 +457,7 @@ const RecordingOverlay: React.FC = () => {
         unlistenLevel();
         unlistenStream();
         unlistenPhase();
+        unlistenAnswer();
       };
     };
 
@@ -165,6 +486,10 @@ const RecordingOverlay: React.FC = () => {
     pinnedRef.current = true;
     setOverflowing(false);
   }, [session]);
+
+  useEffect(() => {
+    cardOpenRef.current = isVisible && state === "answer";
+  }, [isVisible, state]);
 
   if (!isVisible) return null;
 
@@ -258,6 +583,36 @@ const RecordingOverlay: React.FC = () => {
       <div className="sbase-r">{showCancel && cancelBtn}</div>
     </div>
   );
+
+  // ---- Assistant answer card: prose plus actions, no waveform, no timer ----
+  if (state === "answer") {
+    // The show-overlay event can land a beat before the payload does, and a
+    // stray hide-overlay can clear the payload while the native window is
+    // still up. Never render nothing here: an empty, transparent,
+    // always-on-top window eats clicks and offers no way to close it.
+    if (!answer) {
+      return (
+        <div dir={direction} className={`ov-stage ${position} ov-fade show`}>
+          <div className="scard answer">
+            <div className="oa oa-empty">
+              <button
+                type="button"
+                className="oa-btn close"
+                onClick={() => commands.assistantDismiss()}
+              >
+                {t("overlay.assistant.close")}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div dir={direction} className={`ov-stage ${position} ov-fade show`}>
+        <AssistantAnswerCard answer={answer} />
+      </div>
+    );
+  }
 
   // ---- Live overlay: a pill that sculpts open into a panel ----
   if (state === "streaming") {

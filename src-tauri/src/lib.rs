@@ -1,6 +1,8 @@
 mod actions;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod apple_intelligence;
+mod assistant;
+mod audio_ducking;
 mod audio_feedback;
 pub mod audio_toolkit;
 mod autostart;
@@ -304,6 +306,9 @@ fn initialize_core_logic(app_handle: &AppHandle) -> Result<(), String> {
 
     // Add managers to Tauri's managed state
     app_handle.manage(recording_manager.clone());
+    // If a previous run died mid-duck, the machine is still quiet and only the
+    // persisted snapshot knows what to put it back to.
+    recording_manager.restore_pending_duck_snapshot();
     app_handle.manage(model_manager.clone());
     app_handle.manage(transcription_manager.clone());
     app_handle.manage(azure_stream_manager);
@@ -415,6 +420,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             shortcut::change_translate_to_english_setting,
             shortcut::change_selected_language_setting,
             shortcut::change_speech_input_provider_setting,
+            shortcut::change_meeting_stt_provider_setting,
             shortcut::change_azure_speech_endpoint_setting,
             shortcut::change_azure_speech_language_setting,
             shortcut::change_azure_stable_partial_threshold_setting,
@@ -452,6 +458,17 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             shortcut::change_post_process_api_key_setting,
             shortcut::change_post_process_model_setting,
             shortcut::set_post_process_provider,
+            shortcut::set_assistant_provider,
+            shortcut::change_assistant_api_key_setting,
+            shortcut::get_assistant_api_key_status,
+            shortcut::change_assistant_model_setting,
+            shortcut::change_assistant_system_prompt_setting,
+            shortcut::change_assistant_limits_setting,
+            shortcut::set_assistant_output_mode,
+            shortcut::fetch_assistant_models,
+            shortcut::set_meeting_summary_provider,
+            shortcut::change_meeting_summary_model_setting,
+            shortcut::change_meeting_summary_cloud_consent_setting,
             shortcut::fetch_post_process_models,
             shortcut::add_post_process_prompt,
             shortcut::update_post_process_prompt,
@@ -461,6 +478,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             shortcut::suspend_all_bindings,
             shortcut::resume_all_bindings,
             shortcut::change_mute_while_recording_setting,
+            shortcut::change_recording_audio_mode_setting,
+            shortcut::change_duck_volume_percent_setting,
+            shortcut::change_duck_fade_ms_setting,
             shortcut::change_append_trailing_space_setting,
             shortcut::change_lazy_stream_close_setting,
             shortcut::change_vad_enabled_setting,
@@ -493,6 +513,12 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::open_log_dir,
             commands::open_app_data_dir,
             commands::check_apple_intelligence_available,
+            commands::assistant::assistant_copy,
+            commands::assistant::assistant_paste,
+            commands::assistant::assistant_replace,
+            commands::assistant::assistant_dismiss,
+            commands::assistant::assistant_present_answer,
+            commands::assistant::assistant_escalate,
             commands::initialize_enigo,
             commands::initialize_shortcuts,
             commands::models::get_available_models,
@@ -585,6 +611,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::tasks::snapshot_list,
             commands::meetings::meeting_audio_files,
             commands::meetings::retranscribe_meeting,
+            commands::meetings::improve_meeting_accuracy,
             commands::meetings::meeting_list_recoveries,
             commands::meetings::meeting_resolve_recovery,
             helpers::clamshell::is_laptop,
@@ -593,6 +620,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             managers::history::HistoryUpdatePayload,
             managers::transcription::StreamTextEvent,
             managers::transcription::StreamPhaseEvent,
+            assistant::AssistantAnswerEvent,
         ])
 }
 
@@ -938,7 +966,13 @@ pub fn run(cli_args: CliArgs) {
                 utils::show_main_window(app);
             }
             // Teardown transcribe.cpp before exit
-            tauri::RunEvent::Exit => {
+            tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
+                // Before anything else: a duck engaged for a recording must not
+                // outlive the process. The fade thread that normally restores is
+                // detached and dies with us, so this is a synchronous write.
+                if let Some(rm) = app.try_state::<Arc<AudioRecordingManager>>() {
+                    rm.remove_recording_audio_immediately();
+                }
                 if let Some(tm) = app.try_state::<Arc<TranscriptionManager>>() {
                     let _ = tm.unload_model();
                 }

@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "सुरक्षित अडियोलाई फेरि ट्रान्सक्राइब गर्छ। रेकर्डिङ आफैं रहिरहन्छ।",
         "retranscribeWarning": "हालको ट्रान्सक्रिप्ट हटाइनेछ र सुरक्षित अडियोबाट पुनः बनाइनेछ। रेकर्डिङ छोइँदैन।",
         "retranscribeQueued": "ट्रान्सक्रिप्शन पुनः लाममा राखियो।",
-        "retranscribeFailed": "ट्रान्सक्रिप्शन पुनः सुरु गर्न सकिएन।"
+        "retranscribeFailed": "ट्रान्सक्रिप्शन पुनः सुरु गर्न सकिएन।",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "अनुमतिहरू आवश्यक छन्",
-      "description": "Handy लाई राम्रोसँग काम गर्न केही अनुमतिहरू चाहिन्छ।",
+      "description": "Speak लाई राम्रोसँग काम गर्न केही अनुमतिहरू चाहिन्छ।",
       "microphone": {
         "title": "माइक्रोफोन पहुँच",
         "description": "ट्रान्सक्रिप्सनका लागि तपाईंको आवाज सुन्न आवश्यक छ।"
@@ -637,7 +648,7 @@
     "general": {
       "title": "सामान्य",
       "shortcut": {
-        "title": "Handy सर्टकटहरू",
+        "title": "Speak सर्टकटहरू",
         "description": "स्पिच-टु-टेक्स्ट रेकर्डिङ सुरु गर्न किबोर्ड सर्टकटहरू सेट अप गर्नुहोस्",
         "loading": "सर्टकटहरू लोड गरिँदैछन्...",
         "none": "कुनै सर्टकट सेट गरिएको छैन",
@@ -655,6 +666,14 @@
           "transcribe_with_post_process": {
             "name": "पोस्ट-प्रोसेसिङ हटकी",
             "description": "वैकल्पिक: तपाईंको ट्रान्सक्रिप्सनमा सधैँ AI पोस्ट-प्रोसेसिङ लागू गर्ने छुट्टै हटकी।"
+          },
+          "assistant_fast": {
+            "name": "Fast Helper Shortcut",
+            "description": "The keyboard shortcut that asks the fast assistant. Unassigned until you set it."
+          },
+          "assistant_smart": {
+            "name": "Smart Assistant Shortcut",
+            "description": "The keyboard shortcut that asks the thorough assistant. Unassigned until you set it."
           }
         },
         "errors": {
@@ -675,6 +694,20 @@
       "pushToTalk": {
         "label": "पुश टु टक",
         "description": "रेकर्ड गर्न थिचिराख्नुहोस्, रोक्न छोड्नुहोस्"
+      },
+      "recordingAudio": {
+        "label": "Audio While Recording",
+        "description": "What Speak does to system audio playback while it is recording",
+        "modes": {
+          "off": "Do nothing",
+          "duck": "Lower volume",
+          "mute": "Mute completely"
+        },
+        "volume": {
+          "label": "Ducking Volume",
+          "description": "Target system output volume while recording",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "models": {
@@ -693,7 +726,7 @@
       },
       "rescan": {
         "label": "फेरि स्क्यान गर्नुहोस्",
-        "tooltip": "Handy बाहिरबाट मोडेल फोल्डर वा Hugging Face क्यासमा थपिएका मोडेलहरू फेरि स्क्यान गर्नुहोस्"
+        "tooltip": "Speak बाहिरबाट मोडेल फोल्डर वा Hugging Face क्यासमा थपिएका मोडेलहरू फेरि स्क्यान गर्नुहोस्"
       },
       "noModelsMatch": "यो फिल्टरसँग कुनै मोडेल मिल्दैन।"
     },
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "स्टार्टअपमा सुरु गर्नुहोस्",
-        "description": "कम्प्युटरमा लगइन गर्दा Handy स्वतः सुरु गर्नुहोस्।"
+        "description": "कम्प्युटरमा लगइन गर्दा Speak स्वतः सुरु गर्नुहोस्।"
       },
       "showTrayIcon": {
         "label": "ट्रे आइकन देखाउनुहोस्",
-        "description": "सिस्टम ट्रेमा Handy आइकन देखाउनुहोस्।"
+        "description": "सिस्टम ट्रेमा Speak आइकन देखाउनुहोस्।"
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "अपडेटहरू जाँच गर्नुहोस्",
-        "description": "Handy को नयाँ संस्करण स्वतः जाँच गर्नुहोस्"
+        "description": "Speak को नयाँ संस्करण स्वतः जाँच गर्नुहोस्"
       },
       "whatsNewPreview": {
         "title": "नयाँ के छ पूर्वावलोकन",
@@ -1004,10 +1037,6 @@
         "label": "पोस्ट प्रोसेसिङ",
         "description": "ट्रान्सक्रिप्सनपछि AI-आधारित टेक्स्ट परिष्करण अन गर्नुहोस्"
       },
-      "muteWhileRecording": {
-        "label": "रेकर्डिङ गर्दा म्युट गर्नुहोस्",
-        "description": "रेकर्डिङका बेला सिस्टम अडियो म्युट गर्नुहोस्"
-      },
       "appendTrailingSpace": {
         "label": "अन्त्यमा खाली ठाउँ थप्नुहोस्",
         "description": "पेस्ट गरिएको ट्रान्सक्रिप्सनपछि खाली ठाउँ थप्नुहोस्"
@@ -1040,7 +1069,7 @@
       },
       "keyboardDiagnostic": {
         "title": "किबोर्ड डायग्नोस्टिक",
-        "description": "किबोर्ड इभेन्टहरू Handy सम्म पुग्छन् कि पुग्दैनन् भनी जाँच्छ। इभेन्टको संख्या मात्र रेकर्ड हुन्छ — तपाईंले कुन कुञ्जी थिच्नुभयो भन्ने कहिल्यै होइन।",
+        "description": "किबोर्ड इभेन्टहरू Speak सम्म पुग्छन् कि पुग्दैनन् भनी जाँच्छ। इभेन्टको संख्या मात्र रेकर्ड हुन्छ — तपाईंले कुन कुञ्जी थिच्नुभयो भन्ने कहिल्यै होइन।",
         "run": "१० सेकेन्डको डायग्नोस्टिक चलाउनुहोस्",
         "running": "सुनिरहेको छ… आफ्नो सर्टकट केही पटक थिच्नुहोस् (जस्तै Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1054,7 +1083,7 @@
         "mouse": "माउस",
         "verdictBlocked": "Secure Input ले कुञ्जी इभेन्टहरू रोकिरहेको छ — यो समाधान नभएसम्म सामान्य कुञ्जी भएका सर्टकटहरूले काम गर्न सक्दैनन्।",
         "verdictSuspicious": "मोडिफायर इभेन्टहरू आए तर कुञ्जी इभेन्ट आएनन् — Secure Input अक्षम देखिए पनि केहीले कुञ्जीहरू दबाइरहेको छ। कृपया यसको रिपोर्ट GitHub मा गर्नुहोस्।",
-        "verdictOk": "कुञ्जी इभेन्टहरू Handy सम्म सामान्य रूपमा पुगिरहेका छन्।",
+        "verdictOk": "कुञ्जी इभेन्टहरू Speak सम्म सामान्य रूपमा पुगिरहेका छन्।",
         "verdictNoEvents": "कुनै इभेन्ट कैद भएन — के तपाईंले परीक्षणको क्रममा कुनै कुञ्जी थिच्नुभयो?",
         "failed": "डायग्नोस्टिक असफल: {{error}}"
       }
@@ -1063,15 +1092,15 @@
       "title": "बारेमा",
       "version": {
         "title": "संस्करण",
-        "description": "Handy को हालको संस्करण"
+        "description": "Speak को हालको संस्करण"
       },
       "whatsNewUpdates": {
         "label": "नयाँ के छ देखाउनुहोस्",
-        "description": "Handy अपडेट भएपछि रिलिज नोटहरू देखाउनुहोस्"
+        "description": "Speak अपडेट भएपछि रिलिज नोटहरू देखाउनुहोस्"
       },
       "appDataDirectory": {
         "title": "एप डेटा डाइरेक्टरी",
-        "description": "Handy ले आफ्नो डेटा भण्डारण गर्ने स्थान"
+        "description": "Speak ले आफ्नो डेटा भण्डारण गर्ने स्थान"
       },
       "sourceCode": {
         "title": "स्रोत कोड",
@@ -1080,7 +1109,7 @@
       },
       "supportDevelopment": {
         "title": "विकासलाई सहयोग गर्नुहोस्",
-        "description": "Handy निर्माण जारी राख्न हामीलाई सहयोग गर्नुहोस्",
+        "description": "Speak निर्माण जारी राख्न हामीलाई सहयोग गर्नुहोस्",
         "button": "दान गर्नुहोस्"
       },
       "acknowledgments": {
@@ -1088,13 +1117,14 @@
         "ggml": {
           "title": "ggml",
           "description": "अन-डिभाइस मेसिन लर्निङ अनुमानका लागि उच्च-प्रदर्शन टेन्सर लाइब्रेरी",
-          "details": "Handy को स्थानीय स्पिच-टु-टेक्स्ट transcribe.cpp र ggml मा आधारित छ। Georgi Gerganov र योगदानकर्ताहरूको उत्कृष्ट कामका लागि धन्यवाद।"
+          "details": "Speak को स्थानीय स्पिच-टु-टेक्स्ट transcribe.cpp र ggml मा आधारित छ। Georgi Gerganov र योगदानकर्ताहरूको उत्कृष्ट कामका लागि धन्यवाद।"
         }
       }
     },
     "tabs": {
       "modelsProviders": "मोडेलहरू र प्रदायकहरू",
-      "meetingsEmptyBody": "बैठक सेटिङहरू बैठक मोडसँगै आउनेछन्।"
+      "meetingsEmptyBody": "बैठक सेटिङहरू बैठक मोडसँगै आउनेछन्।",
+      "assistants": "Assistants"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "३० दिन राख्नुहोस्",
           "forever": "सधैँ राख्नुहोस्"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "AI Assistants",
+      "description": "Two assistants you can reach with a shortcut. Speak your question and the answer comes back on a card next to the Speak overlay.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Fast Helper",
+          "description": "For quick lookups: a fact, a conversion, a spelling, a rewritten sentence. Tuned for a short answer that arrives right away."
+        },
+        "smart_assistant": {
+          "title": "Smart Assistant",
+          "description": "For questions worth thinking about: analysis, comparison, drafting. Allowed to take longer and to answer at length."
+        }
+      },
+      "provider": {
+        "title": "Provider",
+        "description": "Which service answers for this assistant. Both assistants can use the same provider with different keys."
+      },
+      "apiKey": {
+        "configured": "{{provider}} को API कुञ्जी सुरक्षित छ।",
+        "notConfigured": "{{provider}} का लागि कुनै API कुञ्जी सुरक्षित छैन।",
+        "title": "API Key",
+        "description": "Kept in your operating system keychain, separately from the post-processing key.",
+        "placeholder": "Paste your API key"
+      },
+      "model": {
+        "title": "Model",
+        "description": "The model this assistant asks. Choose one from the list or type the exact model id.",
+        "placeholder": "Select or enter a model id",
+        "refresh": "Refresh model list",
+        "required": "No model chosen yet. This assistant stays inactive until you pick one.",
+        "listingHint": "The model list is loaded with this assistant's own API key. Without one you can still enter the model id by hand."
+      },
+      "systemPrompt": {
+        "title": "System Prompt",
+        "description": "The standing instruction this assistant follows for every question.",
+        "placeholder": "Describe how this assistant should answer"
+      },
+      "maxOutputTokens": {
+        "title": "Answer Length",
+        "description": "Upper limit for the answer, in tokens ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Timeout",
+        "description": "How long to wait for an answer before giving up, in seconds ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Answer Handling"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Show only",
+          "hint": "The answer appears on the card and nowhere else."
+        },
+        "copy": {
+          "label": "Show and copy",
+          "hint": "The answer appears on the card and is copied to the clipboard."
+        },
+        "paste": {
+          "label": "Show and paste",
+          "hint": "The answer appears on the card and is pasted into the app you were working in."
+        }
+      },
+      "shortcutHint": "Both assistants' keyboard shortcuts are set under Dictation, next to the transcription shortcuts."
     }
   },
   "footer": {
@@ -1167,7 +1288,7 @@
     "portableUpdateBrowseButton": "GitHub Releases खोल्नुहोस्"
   },
   "whatsNew": {
-    "title": "Handy v{{version}} मा नयाँ"
+    "title": "Speak v{{version}} मा नयाँ"
   },
   "common": {
     "add": "थप्नुहोस्",
@@ -1184,7 +1305,7 @@
     "reset": "रिसेट"
   },
   "accessibility": {
-    "permissionsDescription": "ट्रान्सक्राइब गरिएको टेक्स्ट टाइप गर्न Handy लाई एक्सेसिबिलिटी अनुमति चाहिन्छ।",
+    "permissionsDescription": "ट्रान्सक्राइब गरिएको टेक्स्ट टाइप गर्न Speak लाई एक्सेसिबिलिटी अनुमति चाहिन्छ।",
     "openSettings": "सिस्टम सेटिङहरू खोल्नुहोस्"
   },
   "dictation": {
@@ -1274,15 +1395,16 @@
     "modelLoadFailedUnknown": "अज्ञात मोडेल",
     "pasteFailedTitle": "टेक्स्ट पेस्ट गर्न सकिएन",
     "pasteFailed": "सक्रिय एपमा टेक्स्ट पेस्ट गर्न सकिएन।",
-    "transcriptionFailedTitle": "ट्रान्सक्रिप्सन गर्न सकिएन"
+    "transcriptionFailedTitle": "ट्रान्सक्रिप्सन गर्न सकिएन",
+    "assistantNoticeTitle": "Assistant"
   },
   "appLanguage": {
     "title": "एपको भाषा",
-    "description": "Handy इन्टरफेसको भाषा परिवर्तन गर्नुहोस्"
+    "description": "Speak इन्टरफेसको भाषा परिवर्तन गर्नुहोस्"
   },
   "theme": {
     "title": "अनुप्रयोगको थिम",
-    "description": "Handy ले तपाईंको सिस्टम थिम अनुसरण गर्ने वा उज्यालो वा अँध्यारो रहने छान्नुहोस्",
+    "description": "Speak ले तपाईंको सिस्टम थिम अनुसरण गर्ने वा उज्यालो वा अँध्यारो रहने छान्नुहोस्",
     "options": {
       "system": "सिस्टम",
       "light": "उज्यालो",
@@ -1294,7 +1416,24 @@
     "processing": "प्रशोधन गरिँदैछ...",
     "cancel": "रद्द गर्नुहोस्",
     "meetingRecording": "बैठक रेकर्ड हुँदै",
-    "meetingPaused": "बैठक रोकिएको"
+    "meetingPaused": "बैठक रोकिएको",
+    "assistant": {
+      "label": "Assistant",
+      "smartLabel": "Smart Assistant",
+      "copy": "Copy",
+      "copied": "Copied to clipboard",
+      "paste": "Paste",
+      "pasted": "Pasted",
+      "replace": "Replace",
+      "replaced": "Replaced",
+      "replaceHint": "Selects everything in the focused window and pastes the answer over it",
+      "openLink": "Open link",
+      "chooseLink": "Open link ({{n}})",
+      "escalate": "Ask Smart Assistant",
+      "asking": "Asking Smart Assistant...",
+      "close": "Close",
+      "truncated": "The answer was cut off at the length limit."
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} ले 1 सर्टकट रोकिरहेको हुन सक्छ",

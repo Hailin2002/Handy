@@ -104,6 +104,23 @@ test.describe("Einstellungen page tabs", () => {
     );
   });
 
+  test("Meetings exposes local and OpenRouter summary configuration", async ({
+    page,
+  }) => {
+    await gotoSettings(page);
+
+    await page.getByRole("tab", { name: "Meetings" }).click();
+    await expect(
+      page.getByText("Meeting summary", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Local GPU (Ollama)", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Local summaries use Ollama at 127\.0\.0\.1/),
+    ).toBeVisible();
+  });
+
   test("arrow keys move focus and selection; Home/End jump (G3)", async ({
     page,
   }) => {

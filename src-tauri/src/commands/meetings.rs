@@ -105,8 +105,9 @@ pub async fn create_meeting_draft(
 #[specta::specta]
 pub async fn preflight_meeting(
     meeting_manager: State<'_, Arc<MeetingManager>>,
+    stt_provider: Option<crate::settings::SpeechInputProvider>,
 ) -> Result<MeetingPreflightReport, String> {
-    Ok(meeting_manager.preflight())
+    Ok(meeting_manager.preflight_for(stt_provider))
 }
 
 /// T02/T03 — consent gate, validation, device opening. `stt_provider` pins
@@ -425,4 +426,23 @@ pub async fn retranscribe_meeting(
     provider: Option<crate::settings::SpeechInputProvider>,
 ) -> Result<MeetingSnapshot, String> {
     meeting_manager.retranscribe(&meeting_id, provider)
+}
+
+/// Compares every stored chunk with a second provider and applies only clear
+/// completeness improvements. The original segment rows remain tombstoned in
+/// SQLite, and no transcript changes are committed if any reference call
+/// fails.
+#[tauri::command]
+#[specta::specta]
+pub async fn improve_meeting_accuracy(
+    meeting_manager: State<'_, Arc<MeetingManager>>,
+    meeting_id: String,
+    reference_provider: crate::settings::SpeechInputProvider,
+) -> Result<crate::managers::meeting::MeetingAccuracyReport, String> {
+    let manager = Arc::clone(meeting_manager.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        manager.improve_accuracy(&meeting_id, reference_provider)
+    })
+    .await
+    .map_err(|error| format!("accuracy worker failed: {error}"))?
 }

@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "重新轉錄已儲存的音訊。錄音本身會保留。",
         "retranscribeWarning": "目前的逐字稿將被捨棄，並依據已儲存的音訊重新產生。錄音不受影響。",
         "retranscribeQueued": "轉錄已重新排入佇列。",
-        "retranscribeFailed": "無法重新開始轉錄。"
+        "retranscribeFailed": "無法重新開始轉錄。",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "需要權限",
-      "description": "Handy 需要一些權限才能正常運作",
+      "description": "Speak 需要一些權限才能正常運作",
       "microphone": {
         "title": "麥克風存取",
         "description": "需要聽取您的語音進行轉錄"
@@ -637,7 +648,7 @@
     "general": {
       "title": "一般",
       "shortcut": {
-        "title": "Handy 快捷鍵",
+        "title": "Speak 快捷鍵",
         "description": "設定啟動語音轉文字錄製的鍵盤快捷鍵",
         "loading": "載入快捷鍵中...",
         "none": "未設定快捷鍵",
@@ -655,6 +666,14 @@
           "transcribe_with_post_process": {
             "name": "後處理快捷鍵",
             "description": "可選：專用快捷鍵，使用時一律對轉錄結果套用 AI 後處理"
+          },
+          "assistant_fast": {
+            "name": "快速助手快速鍵",
+            "description": "向快速助理提問的鍵盤快速鍵。在你設定之前未指派。"
+          },
+          "assistant_smart": {
+            "name": "智慧助理快速鍵",
+            "description": "向深入思考的助理提問的鍵盤快速鍵。在你設定之前未指派。"
           }
         },
         "errors": {
@@ -675,6 +694,20 @@
       "pushToTalk": {
         "label": "按住說話",
         "description": "按住錄製，放開停止"
+      },
+      "recordingAudio": {
+        "label": "錄製時的音訊",
+        "description": "錄製期間 Speak 如何處理系統音訊播放",
+        "modes": {
+          "off": "不做處理",
+          "duck": "降低音量",
+          "mute": "完全靜音"
+        },
+        "volume": {
+          "label": "降低後的音量",
+          "description": "錄製期間系統輸出音量的目標值",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "models": {
@@ -694,7 +727,7 @@
       "searchPlaceholder": "依名稱搜尋模型…",
       "rescan": {
         "label": "重新掃描",
-        "tooltip": "重新掃描在 Handy 之外新增到模型資料夾或 Hugging Face 快取中的模型"
+        "tooltip": "重新掃描在 Speak 之外新增到模型資料夾或 Hugging Face 快取中的模型"
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "開機啟動",
-        "description": "登入電腦時自動啟動 Handy"
+        "description": "登入電腦時自動啟動 Speak"
       },
       "showTrayIcon": {
         "label": "顯示系統匣圖示",
-        "description": "在系統匣中顯示 Handy 圖示"
+        "description": "在系統匣中顯示 Speak 圖示"
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "檢查更新",
-        "description": "自動檢查 Handy 的新版本"
+        "description": "自動檢查 Speak 的新版本"
       },
       "soundTheme": {
         "label": "聲音主題",
@@ -997,10 +1030,6 @@
         "label": "後處理",
         "description": "啟用轉錄後的 AI 文字最佳化"
       },
-      "muteWhileRecording": {
-        "label": "錄製時靜音",
-        "description": "錄製期間靜音系統音訊"
-      },
       "appendTrailingSpace": {
         "label": "附加尾部空格",
         "description": "在貼上的轉錄後新增空格"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "鍵盤診斷",
-        "description": "檢查鍵盤事件是否能送達 Handy。只會記錄事件數量，絕不記錄您按了哪些按鍵。",
+        "description": "檢查鍵盤事件是否能送達 Speak。只會記錄事件數量，絕不記錄您按了哪些按鍵。",
         "run": "執行 10 秒診斷",
         "running": "正在監聽… 請按幾次您的快捷鍵（例如 Option+Space）",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "滑鼠",
         "verdictBlocked": "Secure Input 正在阻擋按鍵事件——在問題解決前，包含一般按鍵的快捷鍵無法運作。",
         "verdictSuspicious": "收到了修飾鍵事件，但沒有按鍵事件——即使 Secure Input 回報為已停用，仍有程式在抑制按鍵。請在 GitHub 上回報此問題。",
-        "verdictOk": "按鍵事件正常送達 Handy。",
+        "verdictOk": "按鍵事件正常送達 Speak。",
         "verdictNoEvents": "未擷取到任何事件——測試期間您有按鍵嗎？",
         "failed": "診斷失敗：{{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "關於",
       "version": {
         "title": "版本",
-        "description": "Handy 的目前版本"
+        "description": "Speak 的目前版本"
       },
       "appDataDirectory": {
         "title": "應用程式資料目錄",
-        "description": "Handy 儲存資料的位置"
+        "description": "Speak 儲存資料的位置"
       },
       "sourceCode": {
         "title": "原始碼",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "支持開發",
-        "description": "幫助我們繼續開發 Handy",
+        "description": "幫助我們繼續開發 Speak",
         "button": "捐贈"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "針對 OpenAI Whisper 自動語音辨識模型的高效能推理引擎",
-          "details": "Handy 使用 ggml 進行快速的本機語音轉文字處理。感謝 Georgi Gerganov 和貢獻者們的傑出工作"
+          "details": "Speak 使用 ggml 進行快速的本機語音轉文字處理。感謝 Georgi Gerganov 和貢獻者們的傑出工作"
         }
       },
       "whatsNewUpdates": {
         "label": "顯示新功能",
-        "description": "Handy 更新後顯示版本資訊"
+        "description": "Speak 更新後顯示版本資訊"
       }
     },
     "tabs": {
       "modelsProviders": "模型與供應商",
-      "meetingsEmptyBody": "會議設定將隨會議模式一起推出。"
+      "meetingsEmptyBody": "會議設定將隨會議模式一起推出。",
+      "assistants": "助理"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "保留 30 天",
           "forever": "永久保留"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "AI 助理",
+      "description": "兩個可用快速鍵呼叫的助理。說出你的問題，答案會顯示在 Speak 浮層旁的卡片上。",
+      "profiles": {
+        "fast_helper": {
+          "title": "快速助手",
+          "description": "用於快速查詢：一項事實、一次換算、一種拼寫、一句改寫。針對立即返回的簡短回答進行調整。"
+        },
+        "smart_assistant": {
+          "title": "智慧助理",
+          "description": "用於值得思考的問題：分析、比較、草擬。允許花更長時間並詳盡作答。"
+        }
+      },
+      "provider": {
+        "title": "供應商",
+        "description": "由哪項服務為此助理作答。兩個助理可以使用同一供應商的不同金鑰。"
+      },
+      "apiKey": {
+        "configured": "已儲存 {{provider}} 的 API 金鑰。",
+        "notConfigured": "尚未儲存 {{provider}} 的 API 金鑰。",
+        "title": "API 金鑰",
+        "description": "儲存在作業系統的鑰匙圈中，與後處理金鑰分開存放。",
+        "placeholder": "貼上你的 API 金鑰"
+      },
+      "model": {
+        "title": "模型",
+        "description": "此助理呼叫的模型。從清單中選擇，或輸入準確的模型 ID。",
+        "placeholder": "選擇或輸入模型 ID",
+        "refresh": "重新整理模型清單",
+        "required": "尚未選擇模型。在你選擇之前，此助理不會運作。",
+        "listingHint": "模型清單會使用此助理自己的 API 金鑰載入。沒有金鑰時，你仍可手動輸入模型 ID。"
+      },
+      "systemPrompt": {
+        "title": "系統提示詞",
+        "description": "此助理在每次提問時都會遵循的固定指令。",
+        "placeholder": "描述此助理應如何作答"
+      },
+      "maxOutputTokens": {
+        "title": "回答長度",
+        "description": "回答的上限，以 token 計（{{min}}–{{max}}）。"
+      },
+      "timeout": {
+        "title": "逾時",
+        "description": "放棄前等待回答的時長，以秒計（{{min}}–{{max}}）。"
+      },
+      "outputMode": {
+        "title": "回答處理方式"
+      },
+      "outputModes": {
+        "show": {
+          "label": "僅顯示",
+          "hint": "答案只顯示在卡片上。"
+        },
+        "copy": {
+          "label": "顯示並複製",
+          "hint": "答案顯示在卡片上，並複製到剪貼簿。"
+        },
+        "paste": {
+          "label": "顯示並貼上",
+          "hint": "答案顯示在卡片上，並貼到你先前使用的應用程式中。"
+        }
+      },
+      "shortcutHint": "兩個助理的鍵盤快速鍵在「聽寫」中、轉錄快速鍵旁邊設定。"
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "重設"
   },
   "accessibility": {
-    "permissionsDescription": "Handy 需要輔助使用權限才能輸入轉錄的文字",
+    "permissionsDescription": "Speak 需要輔助使用權限才能輸入轉錄的文字",
     "openSettings": "開啟系統設定"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "未知模型",
     "pasteFailedTitle": "貼上文字失敗",
     "pasteFailed": "無法將文字貼上至目前作用中的應用程式。",
-    "transcriptionFailedTitle": "轉錄失敗"
+    "transcriptionFailedTitle": "轉錄失敗",
+    "assistantNoticeTitle": "助理"
   },
   "appLanguage": {
     "title": "應用程式語言",
-    "description": "變更 Handy 介面的語言"
+    "description": "變更 Speak 介面的語言"
   },
   "theme": {
     "title": "應用程式主題",
-    "description": "選擇 Handy 跟隨系統主題，或維持淺色或深色",
+    "description": "選擇 Speak 跟隨系統主題，或維持淺色或深色",
     "options": {
       "system": "跟隨系統",
       "light": "淺色",
@@ -1291,10 +1413,27 @@
     "processing": "處理中...",
     "cancel": "取消",
     "meetingRecording": "正在錄製會議",
-    "meetingPaused": "會議已暫停"
+    "meetingPaused": "會議已暫停",
+    "assistant": {
+      "label": "助理",
+      "smartLabel": "智慧助理",
+      "copy": "複製",
+      "copied": "已複製到剪貼簿",
+      "paste": "貼上",
+      "pasted": "已貼上",
+      "replace": "取代",
+      "replaced": "已取代",
+      "replaceHint": "選取目前視窗中的所有內容，並以回答取代",
+      "openLink": "開啟連結",
+      "chooseLink": "開啟連結 ({{n}})",
+      "escalate": "問智慧助理",
+      "asking": "正在詢問智慧助理...",
+      "close": "關閉",
+      "truncated": "回答在長度上限處被截斷。"
+    }
   },
   "whatsNew": {
-    "title": "Handy v{{version}} 新功能"
+    "title": "Speak v{{version}} 新功能"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} 可能正在阻擋 1 個快捷鍵",

@@ -27,6 +27,13 @@ interface AzureRuntime {
   stopRequested: boolean;
   stopping: boolean;
   cleanupPromise: Promise<void> | null;
+  receivedAudioBytes: number;
+  receivedAudioChunks: number;
+  writtenAudioBytes: number;
+  writtenAudioChunks: number;
+  recognizedAudioEndMs: number;
+  keepAliveRelease: (() => void) | null;
+  tailPaddingWritten: boolean;
 }
 
 const decodeBase64 = (encoded: string): ArrayBuffer => {
@@ -46,7 +53,25 @@ const commandError = (
 
 const TOKEN_REFRESH_INTERVAL_MS = 8 * 60 * 1_000;
 const TOKEN_REFRESH_RETRY_MS = 60 * 1_000;
-const STOP_FALLBACK_MS = 3_000;
+// Rust already owns every committed phrase plus the latest interim. Do not let
+// a delayed browser SDK stop callback turn an otherwise-live Azure dictation
+// into a multi-second wait when translation is disabled.
+const STOP_FALLBACK_MS = 700;
+const TRANSLATED_STOP_FALLBACK_MS = 3_000;
+const FINAL_SILENCE_MS = 300;
+
+export const retainListenerUnlessDisposed = async (
+  registration: Promise<UnlistenFn>,
+  isDisposed: () => boolean,
+  retain: (unlisten: UnlistenFn) => void,
+) => {
+  const unlisten = await registration;
+  if (isDisposed()) {
+    unlisten();
+    return;
+  }
+  retain(unlisten);
+};
 
 /**
  * Hosts Microsoft's official continuous Speech SDK in the always-running main
@@ -59,9 +84,43 @@ export const useAzureSpeechStream = () => {
 
   useEffect(() => {
     const unlisteners: UnlistenFn[] = [];
+    let disposed = false;
 
     const reportStatus = (runtime: AzureRuntime, status: string) => {
       void commands.azureSpeechStatus(runtime.sessionId, status);
+    };
+
+    const acquireBackgroundKeepAlive = (runtime: AzureRuntime) => {
+      if (!("locks" in navigator)) {
+        reportStatus(runtime, "background-keepalive-unavailable");
+        return;
+      }
+      void navigator.locks
+        .request(`speak-azure-${runtime.sessionId}`, async () => {
+          reportStatus(runtime, "background-keepalive-acquired");
+          await new Promise<void>((resolve) => {
+            runtime.keepAliveRelease = resolve;
+            if (runtime.stopping) resolve();
+          });
+        })
+        .catch((error) => {
+          reportStatus(runtime, "background-keepalive-failed");
+          console.warn(
+            "Failed to keep Azure Speech active in background",
+            error,
+          );
+        });
+    };
+
+    const recognitionEndMs = (result: SpeechSDK.SpeechRecognitionResult) =>
+      Math.max(0, Math.round((result.offset + result.duration) / 10_000));
+
+    const writeAudio = (runtime: AzureRuntime, chunk: ArrayBuffer) => {
+      if (!runtime.pushStream || runtime.stopping) return false;
+      runtime.pushStream.write(chunk);
+      runtime.writtenAudioBytes += chunk.byteLength;
+      runtime.writtenAudioChunks += 1;
+      return true;
     };
 
     const waitForCallback = (
@@ -97,6 +156,8 @@ export const useAzureSpeechStream = () => {
             clearTimeout(runtime.stopFallbackTimer);
           runtime.stopFallbackTimer = null;
           runtime.pendingAudio = [];
+          runtime.keepAliveRelease?.();
+          runtime.keepAliveRelease = null;
           try {
             runtime.pushStream?.close();
           } catch {
@@ -196,6 +257,11 @@ export const useAzureSpeechStream = () => {
         finalError = error instanceof Error ? error.message : String(error);
       }
 
+      reportStatus(
+        runtime,
+        `audio-stats-rx-${runtime.receivedAudioBytes}-bytes-${runtime.receivedAudioChunks}-chunks-written-${runtime.writtenAudioBytes}-bytes-${runtime.writtenAudioChunks}-chunks-pending-${runtime.pendingAudio.length}-coverage-${runtime.recognizedAudioEndMs}-ms`,
+      );
+
       const completed = await commands.azureSpeechComplete(
         runtime.sessionId,
         finalError ?? null,
@@ -221,10 +287,19 @@ export const useAzureSpeechStream = () => {
         return;
       }
 
+      if (!runtime.tailPaddingWritten) {
+        // A synthetic silence tail gives Azure a clean phrase boundary when
+        // the shortcut is released in the middle of a word. It is pushed
+        // immediately, so it adds no wall-clock recording delay.
+        runtime.pushStream.write(
+          new ArrayBuffer((16_000 * 2 * FINAL_SILENCE_MS) / 1_000),
+        );
+        runtime.tailPaddingWritten = true;
+      }
       runtime.pushStream.close();
       runtime.stopFallbackTimer = setTimeout(
         () => void finishRuntime(runtime),
-        STOP_FALLBACK_MS,
+        runtime.deeplEnabled ? TRANSLATED_STOP_FALLBACK_MS : STOP_FALLBACK_MS,
       );
       runtime.recognizer.stopContinuousRecognitionAsync(
         () => void finishRuntime(runtime),
@@ -257,9 +332,17 @@ export const useAzureSpeechStream = () => {
         stopRequested: false,
         stopping: false,
         cleanupPromise: null,
+        receivedAudioBytes: 0,
+        receivedAudioChunks: 0,
+        writtenAudioBytes: 0,
+        writtenAudioChunks: 0,
+        recognizedAudioEndMs: 0,
+        keepAliveRelease: null,
+        tailPaddingWritten: false,
       };
       runtimeRef.current = runtime;
       reportStatus(runtime, "start-received");
+      acquireBackgroundKeepAlive(runtime);
 
       try {
         const authResult = await commands.getAzureSpeechAuth();
@@ -286,7 +369,7 @@ export const useAzureSpeechStream = () => {
         );
         speechConfig.setProperty(
           SpeechSDK.PropertyId.Recognizer_StopTimeoutMs,
-          "2500",
+          auth.deepl_enabled ? "2500" : "600",
         );
 
         const format = SpeechSDK.AudioStreamFormat.getWaveFormatPCM(
@@ -318,7 +401,15 @@ export const useAzureSpeechStream = () => {
         runtime.recognizer.recognizing = (_sender, event) => {
           const text = event.result.text?.trim();
           if (!text || runtimeRef.current !== runtime) return;
-          void commands.azureSpeechInterim(runtime.sessionId, text);
+          runtime.recognizedAudioEndMs = Math.max(
+            runtime.recognizedAudioEndMs,
+            recognitionEndMs(event.result),
+          );
+          void commands.azureSpeechInterim(
+            runtime.sessionId,
+            text,
+            runtime.recognizedAudioEndMs,
+          );
         };
 
         runtime.recognizer.recognized = (_sender, event) => {
@@ -326,11 +417,19 @@ export const useAzureSpeechStream = () => {
             return;
           const text = event.result.text?.trim();
           if (!text || runtimeRef.current !== runtime) return;
+          runtime.recognizedAudioEndMs = Math.max(
+            runtime.recognizedAudioEndMs,
+            recognitionEndMs(event.result),
+          );
           runtime.segmentChain = runtime.segmentChain.then(async () => {
             // azure_speech_final is a fire-and-forget command (returns void,
             // no Result envelope) — errors are surfaced server-side via
             // transcription-error events.
-            await commands.azureSpeechFinal(runtime.sessionId, text);
+            await commands.azureSpeechFinal(
+              runtime.sessionId,
+              text,
+              runtime.recognizedAudioEndMs,
+            );
           });
           queueTranslation(runtime);
         };
@@ -352,7 +451,7 @@ export const useAzureSpeechStream = () => {
         runtime.recognizer.startContinuousRecognitionAsync(
           () => {
             for (const chunk of runtime.pendingAudio)
-              runtime.pushStream?.write(chunk);
+              writeAudio(runtime, chunk);
             runtime.pendingAudio = [];
             if (runtime.stopRequested) stopRuntime(runtime);
           },
@@ -367,53 +466,63 @@ export const useAzureSpeechStream = () => {
     };
 
     const setup = async () => {
-      unlisteners.push(
-        await listen<AzureStreamControlPayload>(
-          "azure-speech-start",
-          (event) => {
+      await Promise.all([
+        retainListenerUnlessDisposed(
+          listen<AzureStreamControlPayload>("azure-speech-start", (event) => {
             void startRuntime(event.payload.session_id);
-          },
+          }),
+          () => disposed,
+          (unlisten) => unlisteners.push(unlisten),
         ),
-      );
-      unlisteners.push(
-        await listen<AzureAudioChunkPayload>("azure-speech-audio", (event) => {
-          const runtime = runtimeRef.current;
-          if (!runtime || runtime.sessionId !== event.payload.session_id)
-            return;
-          const chunk = decodeBase64(event.payload.pcm_base64);
-          if (runtime.pushStream && runtime.recognizer)
-            runtime.pushStream.write(chunk);
-          else runtime.pendingAudio.push(chunk);
-        }),
-      );
-      unlisteners.push(
-        await listen<AzureStreamControlPayload>(
-          "azure-speech-stop",
-          (event) => {
+        retainListenerUnlessDisposed(
+          listen<AzureAudioChunkPayload>("azure-speech-audio", (event) => {
+            const runtime = runtimeRef.current;
+            if (
+              !runtime ||
+              runtime.stopping ||
+              runtime.sessionId !== event.payload.session_id
+            )
+              return;
+            const chunk = decodeBase64(event.payload.pcm_base64);
+            runtime.receivedAudioBytes += chunk.byteLength;
+            runtime.receivedAudioChunks += 1;
+            if (!runtime.recognizer || !writeAudio(runtime, chunk))
+              runtime.pendingAudio.push(chunk);
+          }),
+          () => disposed,
+          (unlisten) => unlisteners.push(unlisten),
+        ),
+        retainListenerUnlessDisposed(
+          listen<AzureStreamControlPayload>("azure-speech-stop", (event) => {
             const runtime = runtimeRef.current;
             if (!runtime || runtime.sessionId !== event.payload.session_id)
               return;
             stopRuntime(runtime);
-          },
+          }),
+          () => disposed,
+          (unlisten) => unlisteners.push(unlisten),
         ),
-      );
-      unlisteners.push(
-        await listen<AzureStreamControlPayload>(
-          "azure-speech-cancel",
-          (event) => {
+        retainListenerUnlessDisposed(
+          listen<AzureStreamControlPayload>("azure-speech-cancel", (event) => {
             const runtime = runtimeRef.current;
             if (!runtime || runtime.sessionId !== event.payload.session_id)
               return;
             runtimeRef.current = null;
             void cleanup(runtime);
-          },
+          }),
+          () => disposed,
+          (unlisten) => unlisteners.push(unlisten),
         ),
-      );
+      ]);
     };
 
-    void setup();
+    void setup().catch((error) => {
+      console.warn("Failed to register Azure Speech listeners", error);
+    });
     return () => {
+      disposed = true;
       for (const unlisten of unlisteners) unlisten();
+      unlisteners.length = 0;
       if (runtimeRef.current) void cleanup(runtimeRef.current);
       runtimeRef.current = null;
     };

@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Runs the stored audio through transcription once more. The recording itself is kept.",
         "retranscribeWarning": "The current transcript is discarded and created again from the stored audio. The recording is not touched.",
         "retranscribeQueued": "Transcription queued again.",
-        "retranscribeFailed": "Could not start transcription again."
+        "retranscribeFailed": "Could not start transcription again.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audio…",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Permissions Required",
-      "description": "Handy needs a couple of permissions to work properly.",
+      "description": "Speak needs a couple of permissions to work properly.",
       "microphone": {
         "title": "Microphone Access",
         "description": "Required to hear your voice for transcription."
@@ -655,6 +666,14 @@
           "transcribe_with_post_process": {
             "name": "Post-Processing Hotkey",
             "description": "Optional: A dedicated hotkey that always applies AI post-processing to your transcription."
+          },
+          "assistant_fast": {
+            "name": "Fast Helper Shortcut",
+            "description": "The keyboard shortcut that asks the fast assistant. Unassigned until you set it."
+          },
+          "assistant_smart": {
+            "name": "Smart Assistant Shortcut",
+            "description": "The keyboard shortcut that asks the thorough assistant. Unassigned until you set it."
           }
         },
         "errors": {
@@ -675,6 +694,20 @@
       "pushToTalk": {
         "label": "Push To Talk",
         "description": "Hold to record, release to stop"
+      },
+      "recordingAudio": {
+        "label": "Audio While Recording",
+        "description": "What Speak does to system audio playback while it is recording",
+        "modes": {
+          "off": "Do nothing",
+          "duck": "Lower volume",
+          "mute": "Mute completely"
+        },
+        "volume": {
+          "label": "Ducking Volume",
+          "description": "Target system output volume while recording",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "models": {
@@ -693,7 +726,7 @@
       },
       "rescan": {
         "label": "Rescan",
-        "tooltip": "Rescan for models added to the models folder or Hugging Face cache outside Handy"
+        "tooltip": "Rescan for models added to the models folder or Hugging Face cache outside Speak"
       },
       "noModelsMatch": "No models match this filter."
     },
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Launch on Startup",
-        "description": "Automatically start Handy when you log in to your computer."
+        "description": "Automatically start Speak when you log in to your computer."
       },
       "showTrayIcon": {
         "label": "Show Tray Icon",
-        "description": "Display the Handy icon in the system tray."
+        "description": "Display the Speak icon in the system tray."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Check for Updates",
-        "description": "Automatically check for new versions of Handy"
+        "description": "Automatically check for new versions of Speak"
       },
       "whatsNewPreview": {
         "title": "Preview What's New",
@@ -1004,10 +1037,6 @@
         "label": "Post Processing",
         "description": "Enable AI-powered text refinement after transcription"
       },
-      "muteWhileRecording": {
-        "label": "Mute While Recording",
-        "description": "Mute system audio during recording"
-      },
       "appendTrailingSpace": {
         "label": "Append Trailing Space",
         "description": "Add a space after pasted transcription"
@@ -1040,7 +1069,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Keyboard Diagnostic",
-        "description": "Checks whether keyboard events reach Handy. Only event counts are recorded — never which keys you press.",
+        "description": "Checks whether keyboard events reach Speak. Only event counts are recorded — never which keys you press.",
         "run": "Run 10s diagnostic",
         "running": "Listening… press your shortcut a few times (e.g. Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1054,7 +1083,7 @@
         "mouse": "Mouse",
         "verdictBlocked": "Secure Input is blocking key events — keyed shortcuts cannot work until it is resolved.",
         "verdictSuspicious": "Modifier events arrived but no key events — something is suppressing keys even though Secure Input reports disabled. Please report this on GitHub.",
-        "verdictOk": "Key events are reaching Handy normally.",
+        "verdictOk": "Key events are reaching Speak normally.",
         "verdictNoEvents": "No events captured — did you press any keys during the test?",
         "failed": "Diagnostic failed: {{error}}"
       }
@@ -1063,15 +1092,15 @@
       "title": "About",
       "version": {
         "title": "Version",
-        "description": "Current version of Handy"
+        "description": "Current version of Speak"
       },
       "whatsNewUpdates": {
         "label": "Show What's New",
-        "description": "Show release notes after Handy updates"
+        "description": "Show release notes after Speak updates"
       },
       "appDataDirectory": {
         "title": "App Data Directory",
-        "description": "Location where Handy stores its data"
+        "description": "Location where Speak stores its data"
       },
       "sourceCode": {
         "title": "Source Code",
@@ -1080,7 +1109,7 @@
       },
       "supportDevelopment": {
         "title": "Support Development",
-        "description": "Help us continue building Handy",
+        "description": "Help us continue building Speak",
         "button": "Donate"
       },
       "acknowledgments": {
@@ -1088,13 +1117,14 @@
         "ggml": {
           "title": "ggml",
           "description": "High-performance tensor library for on-device machine learning inference",
-          "details": "Handy's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
+          "details": "Speak's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
         }
       }
     },
     "tabs": {
       "modelsProviders": "Models & Providers",
-      "meetingsEmptyBody": "Meeting settings will arrive with meeting mode."
+      "meetingsEmptyBody": "Meeting settings will arrive with meeting mode.",
+      "assistants": "Assistants"
     },
     "meetings": {
       "shortcut": {
@@ -1135,7 +1165,7 @@
         },
         "systemAudio": {
           "title": "System audio source",
-          "description": "Output device whose sound is recorded as the other participants' audio. Separate from the device used for feedback sounds."
+          "description": "Every sound from this output device is recorded, including the other participants, music and notifications. Pause music before starting."
         }
       },
       "retention": {
@@ -1148,7 +1178,98 @@
           "days30": "Keep for 30 days",
           "forever": "Keep forever"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "AI Assistants",
+      "description": "Two assistants you can reach with a shortcut. Speak your question and the answer comes back on a card next to the Speak overlay.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Fast Helper",
+          "description": "For quick lookups: a fact, a conversion, a spelling, a rewritten sentence. Tuned for a short answer that arrives right away."
+        },
+        "smart_assistant": {
+          "title": "Smart Assistant",
+          "description": "For questions worth thinking about: analysis, comparison, drafting. Allowed to take longer and to answer at length."
+        }
+      },
+      "provider": {
+        "title": "Provider",
+        "description": "Which service answers for this assistant. Both assistants can use the same provider with different keys."
+      },
+      "apiKey": {
+        "configured": "API key for {{provider}} is stored.",
+        "notConfigured": "No API key stored for {{provider}}.",
+        "title": "API Key",
+        "description": "Kept in your operating system keychain, separately from the post-processing key.",
+        "placeholder": "Paste your API key"
+      },
+      "model": {
+        "title": "Model",
+        "description": "The model this assistant asks. Choose one from the list or type the exact model id.",
+        "placeholder": "Search, select, or enter a model id",
+        "refresh": "Refresh model list",
+        "required": "No model chosen yet. This assistant stays inactive until you pick one.",
+        "listingHint": "The model list is loaded with this assistant's own API key. Without one you can still enter the model id by hand."
+      },
+      "systemPrompt": {
+        "title": "System Prompt",
+        "description": "The standing instruction this assistant follows for every question.",
+        "placeholder": "Describe how this assistant should answer"
+      },
+      "maxOutputTokens": {
+        "title": "Answer Length",
+        "description": "Upper limit for the answer, in tokens ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Timeout",
+        "description": "How long to wait for an answer before giving up, in seconds ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Answer Handling"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Show only",
+          "hint": "The answer appears on the card and nowhere else."
+        },
+        "copy": {
+          "label": "Show and copy",
+          "hint": "The answer appears on the card and is copied to the clipboard."
+        },
+        "paste": {
+          "label": "Show and paste",
+          "hint": "The answer appears on the card and is pasted into the app you were working in."
+        }
+      },
+      "shortcutHint": "Both assistants' keyboard shortcuts are set under Dictation, next to the transcription shortcuts."
     }
   },
   "footer": {
@@ -1167,7 +1288,7 @@
     "portableUpdateBrowseButton": "Open GitHub Releases"
   },
   "whatsNew": {
-    "title": "New in Handy v{{version}}"
+    "title": "New in Speak v{{version}}"
   },
   "common": {
     "add": "Add",
@@ -1184,7 +1305,7 @@
     "reset": "Reset"
   },
   "accessibility": {
-    "permissionsDescription": "Handy needs accessibility permissions to type transcribed text.",
+    "permissionsDescription": "Speak needs accessibility permissions to type transcribed text.",
     "openSettings": "Open System Settings"
   },
   "dictation": {
@@ -1274,15 +1395,16 @@
     "modelLoadFailedUnknown": "unknown model",
     "pasteFailedTitle": "Failed to Paste Text",
     "pasteFailed": "Text could not be pasted into the active application.",
-    "transcriptionFailedTitle": "Transcription Failed"
+    "transcriptionFailedTitle": "Transcription Failed",
+    "assistantNoticeTitle": "Assistant"
   },
   "appLanguage": {
     "title": "Application Language",
-    "description": "Change the language of the Handy interface"
+    "description": "Change the language of the Speak interface"
   },
   "theme": {
     "title": "Application Theme",
-    "description": "Choose whether Handy follows your system theme or stays light or dark",
+    "description": "Choose whether Speak follows your system theme or stays light or dark",
     "options": {
       "system": "System",
       "light": "Light",
@@ -1294,7 +1416,24 @@
     "processing": "Processing...",
     "cancel": "Cancel",
     "meetingRecording": "Meeting recording",
-    "meetingPaused": "Meeting paused"
+    "meetingPaused": "Meeting paused",
+    "assistant": {
+      "label": "Assistant",
+      "smartLabel": "Smart Assistant",
+      "copy": "Copy",
+      "copied": "Copied to clipboard",
+      "paste": "Paste",
+      "pasted": "Pasted",
+      "replace": "Replace",
+      "replaced": "Replaced",
+      "replaceHint": "Selects everything in the focused window and pastes the answer over it",
+      "openLink": "Open link",
+      "chooseLink": "Open link ({{n}})",
+      "escalate": "Ask Smart Assistant",
+      "asking": "Asking Smart Assistant...",
+      "close": "Close",
+      "truncated": "The answer was cut off at the length limit."
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} may be blocking 1 shortcut",

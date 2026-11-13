@@ -23,6 +23,52 @@ fn empty_store_parses_with_defaults() {
     assert!(settings.bindings.is_empty());
 }
 
+#[test]
+fn meeting_summaries_default_to_a_small_local_model() {
+    let settings = get_default_settings();
+    assert_eq!(
+        settings.meeting_summary_provider_id,
+        LOCAL_MEETING_SUMMARY_PROVIDER_ID
+    );
+    assert_eq!(
+        settings
+            .meeting_summary_models
+            .get(LOCAL_MEETING_SUMMARY_PROVIDER_ID)
+            .map(String::as_str),
+        Some("qwen2.5:3b")
+    );
+    let provider = settings
+        .meeting_summary_provider()
+        .expect("local meeting summary provider must exist");
+    assert_eq!(provider.base_url, "http://127.0.0.1:11434/v1");
+    assert!(!settings.meeting_summary_cloud_consent);
+}
+
+#[test]
+fn meeting_summary_models_keep_local_and_openrouter_choices_separate() {
+    let mut settings = get_default_settings();
+    settings.meeting_summary_models.insert(
+        OPENROUTER_PROVIDER_ID.to_string(),
+        "vendor/model".to_string(),
+    );
+    settings.meeting_summary_provider_id = OPENROUTER_PROVIDER_ID.to_string();
+
+    assert_eq!(
+        settings
+            .meeting_summary_models
+            .get(LOCAL_MEETING_SUMMARY_PROVIDER_ID)
+            .map(String::as_str),
+        Some("qwen2.5:3b")
+    );
+    assert_eq!(
+        settings
+            .meeting_summary_models
+            .get(OPENROUTER_PROVIDER_ID)
+            .map(String::as_str),
+        Some("vendor/model")
+    );
+}
+
 /// Frozen snapshot of a real v0.9.0-era settings store, as written to
 /// disk. This pins backwards compatibility: it must always parse strictly
 /// (no salvage). Schema migrations may then rewrite fields whose native
@@ -377,6 +423,9 @@ fn gpu_device_migration_keeps_current_stable_selection() {
         "onboarding_completed": false,
         "whats_new_last_seen_version": default_whats_new_last_seen_version(),
         "overlay_style": "live",
+        // Present so the audio-ducking migration sees an already-migrated
+        // store: this fixture stands for "nothing left to do".
+        "recording_audio_mode": "off",
         "transcribe_accelerator": "gpu",
         "transcribe_gpu_device": settings.transcribe_gpu_device
     });
@@ -471,4 +520,339 @@ fn flushed_update_is_immediately_visible_to_a_freshly_opened_handle() {
         reread.selected_model, marker,
         "a freshly opened store handle must observe the acknowledged update"
     );
+}
+
+/* ---------- audio ducking ---------------------------------------------- */
+
+/// Building the migration input the way the real load path does: serialize a
+/// settings object, then remove the key we want to look "not yet written".
+fn stored_without(settings: &AppSettings, key: &str) -> serde_json::Value {
+    let mut value = serde_json::to_value(settings).unwrap();
+    value.as_object_mut().unwrap().remove(key);
+    value
+}
+
+/// An upgrading user who had muting on must keep it. Losing it silently would
+/// be the whole point of the migration.
+#[test]
+fn absent_recording_audio_mode_migrates_from_a_true_legacy_mute_flag() {
+    let mut settings = get_default_settings();
+    settings.mute_while_recording = true;
+    settings.recording_audio_mode = RecordingAudioMode::Off;
+    let stored = stored_without(&settings, "recording_audio_mode");
+
+    assert!(apply_settings_migrations(&mut settings, &stored));
+    assert_eq!(settings.recording_audio_mode, RecordingAudioMode::Mute);
+    assert!(settings.mute_while_recording);
+}
+
+/// The other direction: a user who never enabled muting must not suddenly get
+/// their audio touched.
+#[test]
+fn absent_recording_audio_mode_migrates_from_a_false_legacy_mute_flag() {
+    let mut settings = get_default_settings();
+    settings.mute_while_recording = false;
+    settings.recording_audio_mode = RecordingAudioMode::Mute;
+    let stored = stored_without(&settings, "recording_audio_mode");
+
+    assert!(apply_settings_migrations(&mut settings, &stored));
+    assert_eq!(settings.recording_audio_mode, RecordingAudioMode::Off);
+    assert!(!settings.mute_while_recording);
+}
+
+/// Once the key exists, the mode is authoritative — the migration must not
+/// re-derive it from the legacy bool and clobber a deliberate `Duck` choice.
+#[test]
+fn present_recording_audio_mode_wins_over_the_legacy_flag() {
+    let mut settings = get_default_settings();
+    settings.recording_audio_mode = RecordingAudioMode::Duck;
+    settings.mute_while_recording = true; // stale/drifted shadow
+    let stored = serde_json::to_value(&settings).unwrap();
+
+    apply_settings_migrations(&mut settings, &stored);
+    assert_eq!(settings.recording_audio_mode, RecordingAudioMode::Duck);
+    // The write-through mirror repairs the drift instead of preserving it.
+    assert!(!settings.mute_while_recording);
+}
+
+/// A store already carrying a consistent pair must not be reported as changed
+/// — a spurious `updated = true` means a disk write on every single load.
+#[test]
+fn consistent_recording_audio_settings_do_not_report_a_migration() {
+    let mut settings = get_default_settings();
+    settings.recording_audio_mode = RecordingAudioMode::Mute;
+    settings.mute_while_recording = true;
+    settings.onboarding_completed = true;
+    settings.whats_new_last_seen_version = "1.0.0".into();
+    settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
+    let stored = serde_json::to_value(&settings).unwrap();
+
+    assert!(!apply_settings_migrations(&mut settings, &stored));
+}
+
+#[test]
+fn recording_audio_defaults_are_off_with_a_usable_duck_preset() {
+    let settings = get_default_settings();
+    assert_eq!(settings.recording_audio_mode, RecordingAudioMode::Off);
+    assert!(!settings.mute_while_recording);
+    assert_eq!(settings.duck_volume_percent, 20);
+    assert_eq!(settings.duck_fade_ms, 120);
+}
+
+#[test]
+fn duck_settings_are_clamped_to_their_valid_ranges() {
+    assert_eq!(clamp_duck_volume_percent(0), 0);
+    assert_eq!(clamp_duck_volume_percent(20), 20);
+    assert_eq!(clamp_duck_volume_percent(100), 100);
+    assert_eq!(clamp_duck_volume_percent(255), 100);
+
+    assert_eq!(clamp_duck_fade_ms(0), 0);
+    assert_eq!(clamp_duck_fade_ms(120), 120);
+    assert_eq!(clamp_duck_fade_ms(1000), 1000);
+    assert_eq!(clamp_duck_fade_ms(u16::MAX), 1000);
+}
+
+/// The legacy bool is a derived shadow; both helpers must agree on the mapping
+/// so the migration and the legacy command can never disagree.
+#[test]
+fn legacy_mute_flag_round_trips_through_the_mode() {
+    assert!(RecordingAudioMode::Mute.mirrors_mute_flag());
+    assert!(!RecordingAudioMode::Duck.mirrors_mute_flag());
+    assert!(!RecordingAudioMode::Off.mirrors_mute_flag());
+
+    assert_eq!(
+        RecordingAudioMode::from_legacy_mute_flag(true),
+        RecordingAudioMode::Mute
+    );
+    assert_eq!(
+        RecordingAudioMode::from_legacy_mute_flag(false),
+        RecordingAudioMode::Off
+    );
+}
+
+/// Ducking is a new capability, so an unknown mode written by a newer build
+/// must degrade to the untouched-audio default rather than failing the load.
+#[test]
+fn unknown_recording_audio_mode_is_salvaged_to_a_safe_default() {
+    let mut stored = default_settings_json();
+    stored.as_object_mut().unwrap().insert(
+        "recording_audio_mode".into(),
+        serde_json::json!("sidechain"),
+    );
+
+    let settings = salvage_settings(&stored);
+    assert_eq!(settings.recording_audio_mode, RecordingAudioMode::Off);
+}
+
+/* ---------- assistant profiles ------------------------------------------ */
+
+/// Both shipped profiles must exist, be internally consistent, and point at a
+/// provider that is actually in the catalogue — a profile is unusable the
+/// moment any of those is false.
+#[test]
+fn default_assistant_profiles_are_present_and_valid() {
+    let settings = get_default_settings();
+    assert_eq!(settings.assistant_profiles.len(), 2);
+
+    for id in [ASSISTANT_PROFILE_FAST, ASSISTANT_PROFILE_SMART] {
+        let profile = settings
+            .assistant_profile(id)
+            .unwrap_or_else(|| panic!("profile '{id}' must ship by default"));
+        assert_eq!(profile.id, id, "map key and inner id must agree");
+        assert!(
+            settings
+                .post_process_provider(&profile.provider_id)
+                .is_some(),
+            "profile '{id}' points at unknown provider '{}'",
+            profile.provider_id
+        );
+        assert!(!profile.system_prompt.is_empty());
+        assert_eq!(
+            clamp_assistant_output_tokens(profile.max_output_tokens),
+            profile.max_output_tokens
+        );
+        assert_eq!(
+            clamp_assistant_timeout_secs(profile.timeout_secs),
+            profile.timeout_secs
+        );
+        // Neither assistant may touch the user's document unasked.
+        assert_eq!(profile.output_mode, AssistantOutputMode::Show);
+    }
+}
+
+/// The fast/smart split is carried by the budgets and the reasoning flag, not
+/// by a model id — so it has to actually be a split.
+#[test]
+fn fast_and_smart_profiles_differ_in_budget_and_reasoning() {
+    let settings = get_default_settings();
+    let fast = settings.assistant_profile(ASSISTANT_PROFILE_FAST).unwrap();
+    let smart = settings.assistant_profile(ASSISTANT_PROFILE_SMART).unwrap();
+
+    assert_eq!(fast.max_output_tokens, 512);
+    assert_eq!(fast.timeout_secs, 15);
+    assert!(fast.disable_reasoning);
+
+    // Sized for reasoning *plus* answer: providers count thinking tokens
+    // against this ceiling and bill them as output, so a reply-sized budget
+    // returns empty content after a long, paid wait.
+    assert_eq!(smart.max_output_tokens, 4096);
+    assert_eq!(smart.timeout_secs, 90);
+    assert!(!smart.disable_reasoning);
+
+    assert_ne!(fast.system_prompt, smart.system_prompt);
+}
+
+/// An existing store written before assistants existed has no
+/// `assistant_profiles` key at all. It must parse, and the repair pass must
+/// seed both profiles — that is what an upgrading user gets.
+#[test]
+fn seeding_repairs_a_store_without_assistant_profiles() {
+    let mut stored = default_settings_json();
+    stored
+        .as_object_mut()
+        .unwrap()
+        .remove("assistant_profiles")
+        .expect("fixture must have had the key");
+
+    let mut settings: AppSettings =
+        serde_json::from_value(stored).expect("a store predating assistants must still parse");
+    settings.assistant_profiles.clear();
+
+    assert!(
+        ensure_assistant_defaults(&mut settings),
+        "seeding must report a change so the repaired store is persisted"
+    );
+    assert!(settings.assistant_profile(ASSISTANT_PROFILE_FAST).is_some());
+    assert!(settings
+        .assistant_profile(ASSISTANT_PROFILE_SMART)
+        .is_some());
+
+    // Idempotent: a second pass must not report another change, or every
+    // settings read would rewrite the store.
+    assert!(!ensure_assistant_defaults(&mut settings));
+}
+
+/// A profile whose provider was removed from the catalogue must be repaired to
+/// a real provider. Leaving it dangling would fail every request with an
+/// error the settings UI cannot even explain.
+#[test]
+fn a_profile_pointing_at_a_removed_provider_is_repaired() {
+    let mut settings = get_default_settings();
+    let profile = settings
+        .assistant_profile_mut(ASSISTANT_PROFILE_FAST)
+        .unwrap();
+    profile.provider_id = "provider_that_was_deleted".to_string();
+    profile.model = "model-of-the-deleted-provider".to_string();
+
+    assert!(ensure_assistant_defaults(&mut settings));
+
+    let repaired = settings.assistant_profile(ASSISTANT_PROFILE_FAST).unwrap();
+    assert!(
+        settings
+            .post_process_provider(&repaired.provider_id)
+            .is_some(),
+        "repair left provider '{}' dangling",
+        repaired.provider_id
+    );
+    assert_eq!(
+        repaired.model,
+        default_model_for_provider(&repaired.provider_id),
+        "the model belonged to the provider that vanished and must not survive it"
+    );
+}
+
+/// Out-of-range budgets from a hand-edited store are clamped on load rather
+/// than reaching the LLM client.
+#[test]
+fn assistant_limits_are_clamped_on_load() {
+    let mut settings = get_default_settings();
+    {
+        let fast = settings
+            .assistant_profile_mut(ASSISTANT_PROFILE_FAST)
+            .unwrap();
+        fast.max_output_tokens = 0;
+        fast.timeout_secs = 0;
+    }
+    {
+        let smart = settings
+            .assistant_profile_mut(ASSISTANT_PROFILE_SMART)
+            .unwrap();
+        smart.max_output_tokens = u32::MAX;
+        smart.timeout_secs = u32::MAX;
+    }
+
+    assert!(ensure_assistant_defaults(&mut settings));
+
+    let fast = settings.assistant_profile(ASSISTANT_PROFILE_FAST).unwrap();
+    assert_eq!(fast.max_output_tokens, MIN_ASSISTANT_OUTPUT_TOKENS);
+    assert_eq!(fast.timeout_secs, MIN_ASSISTANT_TIMEOUT_SECS);
+
+    let smart = settings.assistant_profile(ASSISTANT_PROFILE_SMART).unwrap();
+    assert_eq!(smart.max_output_tokens, MAX_ASSISTANT_OUTPUT_TOKENS);
+    assert_eq!(smart.timeout_secs, MAX_ASSISTANT_TIMEOUT_SECS);
+}
+
+#[test]
+fn assistant_clamp_helpers_cover_their_boundaries() {
+    assert_eq!(
+        clamp_assistant_output_tokens(0),
+        MIN_ASSISTANT_OUTPUT_TOKENS
+    );
+    assert_eq!(clamp_assistant_output_tokens(512), 512);
+    assert_eq!(
+        clamp_assistant_output_tokens(u32::MAX),
+        MAX_ASSISTANT_OUTPUT_TOKENS
+    );
+
+    assert_eq!(clamp_assistant_timeout_secs(0), MIN_ASSISTANT_TIMEOUT_SECS);
+    assert_eq!(clamp_assistant_timeout_secs(90), 90);
+    assert_eq!(
+        clamp_assistant_timeout_secs(u32::MAX),
+        MAX_ASSISTANT_TIMEOUT_SECS
+    );
+}
+
+/// Assistant keys must be as unspillable as the post-processing ones: the
+/// `SecretMap` serializer writes `{}` no matter what is held in memory.
+#[test]
+fn assistant_api_keys_never_serialize_a_secret_to_disk() {
+    let mut settings = get_default_settings();
+    settings.assistant_api_keys.insert(
+        ASSISTANT_PROFILE_FAST.to_string(),
+        "sk-assistant-secret-abcdef".to_string(),
+    );
+
+    let serialized = serde_json::to_string(&settings).unwrap();
+    assert!(!serialized.contains("sk-assistant-secret-abcdef"));
+    assert!(serialized.contains("\"assistant_api_keys\":{}"));
+
+    let debug_output = format!("{:?}", settings);
+    assert!(!debug_output.contains("sk-assistant-secret-abcdef"));
+    assert!(debug_output.contains("[REDACTED]"));
+}
+
+/// The two bindings must exist in the defaults — `get_stored_binding` panics
+/// on an unknown id — and must ship unbound, because a shortcut that fires a
+/// paid LLM request has to be opted into.
+#[test]
+fn assistant_bindings_ship_present_but_unbound() {
+    let settings = get_default_settings();
+
+    for id in [ASSISTANT_BINDING_FAST, ASSISTANT_BINDING_SMART] {
+        let binding = settings
+            .bindings
+            .get(id)
+            .unwrap_or_else(|| panic!("binding '{id}' must exist in the defaults"));
+        assert_eq!(binding.id, id);
+        assert!(
+            binding.current_binding.is_empty(),
+            "binding '{id}' must ship unbound"
+        );
+        assert!(
+            !binding.default_binding.is_empty(),
+            "binding '{id}' needs a suggested default for the reset button"
+        );
+        assert!(!binding.name.is_empty());
+        assert!(!binding.description.is_empty());
+    }
 }

@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "מתמלל שוב את השמע השמור. ההקלטה עצמה נשמרת.",
         "retranscribeWarning": "התמליל הנוכחי יימחק וייווצר מחדש מהשמע השמור. ההקלטה אינה מושפעת.",
         "retranscribeQueued": "התמלול הוחזר לתור.",
-        "retranscribeFailed": "לא ניתן היה להתחיל את התמלול מחדש."
+        "retranscribeFailed": "לא ניתן היה להתחיל את התמלול מחדש.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "נדרשות הרשאות",
-      "description": "Handy צריך כמה הרשאות כדי לעבוד כמו שצריך.",
+      "description": "Speak צריך כמה הרשאות כדי לעבוד כמו שצריך.",
       "microphone": {
         "title": "גישה למיקרופון",
         "description": "נדרש כדי לשמוע את הקול שלך לצורך תמלול."
@@ -637,7 +648,7 @@
     "general": {
       "title": "כללי",
       "shortcut": {
-        "title": "קיצורי מקשים של Handy",
+        "title": "קיצורי מקשים של Speak",
         "description": "הגדר קיצורי מקשים כדי להפעיל הקלטה ותמלול דיבור",
         "loading": "טוען קיצורי מקשים...",
         "none": "לא הוגדרו קיצורי מקשים",
@@ -655,6 +666,14 @@
           "transcribe_with_post_process": {
             "name": "קיצור לעיבוד משלים",
             "description": "אופציונלי: קיצור מקשים ייעודי שתמיד מפעיל עיבוד AI על התמלול."
+          },
+          "assistant_fast": {
+            "name": "קיצור מקשים: עוזר מהיר",
+            "description": "קיצור המקשים ששואל את העוזר המהיר. לא מוקצה עד שתגדיר אותו."
+          },
+          "assistant_smart": {
+            "name": "קיצור מקשים: עוזר חכם",
+            "description": "קיצור המקשים ששואל את העוזר המעמיק. לא מוקצה עד שתגדיר אותו."
           }
         },
         "errors": {
@@ -675,6 +694,20 @@
       "pushToTalk": {
         "label": "לחץ כדי לדבר",
         "description": "החזק כדי להקליט, שחרר כדי לעצור"
+      },
+      "recordingAudio": {
+        "label": "אודיו בזמן הקלטה",
+        "description": "מה Speak עושה להשמעת האודיו של המערכת בזמן הקלטה",
+        "modes": {
+          "off": "לא לעשות דבר",
+          "duck": "להנמיך את עוצמת הקול",
+          "mute": "להשתיק לגמרי"
+        },
+        "volume": {
+          "label": "עוצמת קול מונמכת",
+          "description": "עוצמת הפלט הרצויה של המערכת בזמן הקלטה",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "models": {
@@ -694,7 +727,7 @@
       "searchPlaceholder": "חיפוש מודלים לפי שם…",
       "rescan": {
         "label": "סריקה מחדש",
-        "tooltip": "סריקה מחדש לאיתור מודלים שנוספו לתיקיית המודלים או למטמון של Hugging Face מחוץ ל-Handy"
+        "tooltip": "סריקה מחדש לאיתור מודלים שנוספו לתיקיית המודלים או למטמון של Hugging Face מחוץ ל-Speak"
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "הפעל עם עליית המערכת",
-        "description": "הפעל את Handy אוטומטית כשאתה מתחבר למחשב."
+        "description": "הפעל את Speak אוטומטית כשאתה מתחבר למחשב."
       },
       "showTrayIcon": {
         "label": "הצג אייקון במגש",
-        "description": "הצג את האייקון של Handy במגש המערכת."
+        "description": "הצג את האייקון של Speak במגש המערכת."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "בדוק עדכונים",
-        "description": "בדוק אוטומטית אם קיימות גרסאות חדשות של Handy"
+        "description": "בדוק אוטומטית אם קיימות גרסאות חדשות של Speak"
       },
       "soundTheme": {
         "label": "ערכת צלילים",
@@ -997,10 +1030,6 @@
         "label": "עיבוד משלים",
         "description": "הפעל שיפור טקסט מבוסס AI אחרי התמלול"
       },
-      "muteWhileRecording": {
-        "label": "השתק בזמן הקלטה",
-        "description": "השתק את שמע המערכת בזמן הקלטה"
-      },
       "appendTrailingSpace": {
         "label": "הוסף רווח בסוף",
         "description": "הוסף רווח אחרי התמלול המודבק"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "אבחון מקלדת",
-        "description": "בודק אם אירועי מקלדת מגיעים ל-Handy. נרשם רק מספר האירועים — לעולם לא אילו מקשים הקשת.",
+        "description": "בודק אם אירועי מקלדת מגיעים ל-Speak. נרשם רק מספר האירועים — לעולם לא אילו מקשים הקשת.",
         "run": "הרצת אבחון של 10 שניות",
         "running": "מאזין… הקש על קיצור המקשים שלך כמה פעמים (למשל Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "עכבר",
         "verdictBlocked": "Secure Input חוסם אירועי מקשים — קיצורים הכוללים מקש רגיל לא יוכלו לפעול עד שהבעיה תיפתר.",
         "verdictSuspicious": "הגיעו אירועים של מקשי החלפה אך לא אירועי מקשים — משהו מדכא מקשים למרות ש-Secure Input מדווח כמושבת. אנא דווח על כך ב-GitHub.",
-        "verdictOk": "אירועי מקשים מגיעים ל-Handy כרגיל.",
+        "verdictOk": "אירועי מקשים מגיעים ל-Speak כרגיל.",
         "verdictNoEvents": "לא נקלטו אירועים — האם הקשת על מקשים במהלך הבדיקה?",
         "failed": "האבחון נכשל: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "אודות",
       "version": {
         "title": "גרסה",
-        "description": "הגרסה הנוכחית של Handy"
+        "description": "הגרסה הנוכחית של Speak"
       },
       "appDataDirectory": {
         "title": "תיקיית נתוני אפליקציה",
-        "description": "המיקום שבו Handy שומר את הנתונים שלו"
+        "description": "המיקום שבו Speak שומר את הנתונים שלו"
       },
       "sourceCode": {
         "title": "קוד מקור",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "תמיכה בפיתוח",
-        "description": "עזור לנו להמשיך לבנות את Handy",
+        "description": "עזור לנו להמשיך לבנות את Speak",
         "button": "תרומה"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "הסקה מהירה לביצועים גבוהים עבור מודל זיהוי הדיבור Whisper של OpenAI",
-          "details": "Handy משתמש ב-ggml לתמלול מהיר ומקומי. תודה לעבודה המדהימה של Georgi Gerganov וכל התורמים."
+          "details": "Speak משתמש ב-ggml לתמלול מהיר ומקומי. תודה לעבודה המדהימה של Georgi Gerganov וכל התורמים."
         }
       },
       "whatsNewUpdates": {
         "label": "הצג מה חדש",
-        "description": "הצג הערות גרסה לאחר עדכוני Handy"
+        "description": "הצג הערות גרסה לאחר עדכוני Speak"
       }
     },
     "tabs": {
       "modelsProviders": "מודלים וספקים",
-      "meetingsEmptyBody": "הגדרות פגישות יגיעו עם מצב הפגישות."
+      "meetingsEmptyBody": "הגדרות פגישות יגיעו עם מצב הפגישות.",
+      "assistants": "עוזרים"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "שמירה ל-30 ימים",
           "forever": "שמירה לתמיד"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "עוזרי בינה מלאכותית",
+      "description": "שני עוזרים שאפשר להגיע אליהם בקיצור מקשים. אמור את שאלתך והתשובה מופיעה בכרטיס לצד שכבת Speak.",
+      "profiles": {
+        "fast_helper": {
+          "title": "עוזר מהיר",
+          "description": "לבירורים קצרים: עובדה, המרה, איות, ניסוח מחדש של משפט. מכוון לתשובה קצרה שמגיעה מיד."
+        },
+        "smart_assistant": {
+          "title": "עוזר חכם",
+          "description": "לשאלות שראויות למחשבה: ניתוח, השוואה, ניסוח. רשאי לקחת יותר זמן ולהשיב בהרחבה."
+        }
+      },
+      "provider": {
+        "title": "ספק",
+        "description": "איזה שירות עונה עבור העוזר הזה. שני העוזרים יכולים להשתמש באותו ספק עם מפתחות שונים."
+      },
+      "apiKey": {
+        "configured": "מפתח ה-API עבור {{provider}} נשמר.",
+        "notConfigured": "לא נשמר מפתח API עבור {{provider}}.",
+        "title": "מפתח API",
+        "description": "נשמר במחזיק המפתחות של מערכת ההפעלה, בנפרד ממפתח העיבוד המאוחר.",
+        "placeholder": "הדבק את מפתח ה-API שלך"
+      },
+      "model": {
+        "title": "מודל",
+        "description": "המודל שהעוזר הזה פונה אליו. בחר אחד מהרשימה או הקלד את מזהה המודל המדויק.",
+        "placeholder": "בחר או הזן מזהה מודל",
+        "refresh": "רענן את רשימת המודלים",
+        "required": "עדיין לא נבחר מודל. העוזר הזה יישאר לא פעיל עד שתבחר אחד.",
+        "listingHint": "רשימת המודלים נטענת עם מפתח ה-API של העוזר הזה. בלעדיו עדיין אפשר להזין את מזהה המודל ידנית."
+      },
+      "systemPrompt": {
+        "title": "הנחיית מערכת",
+        "description": "ההוראה הקבועה שהעוזר הזה פועל לפיה בכל שאלה.",
+        "placeholder": "תאר כיצד על העוזר הזה להשיב"
+      },
+      "maxOutputTokens": {
+        "title": "אורך התשובה",
+        "description": "גבול עליון לתשובה, בטוקנים ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "פסק זמן",
+        "description": "כמה זמן להמתין לתשובה לפני ויתור, בשניות ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "טיפול בתשובה"
+      },
+      "outputModes": {
+        "show": {
+          "label": "הצגה בלבד",
+          "hint": "התשובה מופיעה בכרטיס ובשום מקום אחר."
+        },
+        "copy": {
+          "label": "הצגה והעתקה",
+          "hint": "התשובה מופיעה בכרטיס ומועתקת ללוח."
+        },
+        "paste": {
+          "label": "הצגה והדבקה",
+          "hint": "התשובה מופיעה בכרטיס ומודבקת ביישום שבו עבדת."
+        }
+      },
+      "shortcutHint": "קיצורי המקשים של שני העוזרים מוגדרים תחת הכתבה, לצד קיצורי התעתוק."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "איפוס"
   },
   "accessibility": {
-    "permissionsDescription": "Handy צריך הרשאות נגישות כדי להקליד את הטקסט המתומלל.",
+    "permissionsDescription": "Speak צריך הרשאות נגישות כדי להקליד את הטקסט המתומלל.",
     "openSettings": "פתח את הגדרות המערכת"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "מודל לא ידוע",
     "pasteFailedTitle": "ההדבקה נכשלה",
     "pasteFailed": "לא ניתן היה להדביק את הטקסט ביישום הפעיל.",
-    "transcriptionFailedTitle": "התמלול נכשל"
+    "transcriptionFailedTitle": "התמלול נכשל",
+    "assistantNoticeTitle": "עוזר"
   },
   "appLanguage": {
     "title": "שפת האפליקציה",
-    "description": "שנה את שפת הממשק של Handy"
+    "description": "שנה את שפת הממשק של Speak"
   },
   "theme": {
     "title": "ערכת נושא של האפליקציה",
-    "description": "בחר אם Handy יעקוב אחר ערכת הנושא של המערכת או יישאר בהיר או כהה",
+    "description": "בחר אם Speak יעקוב אחר ערכת הנושא של המערכת או יישאר בהיר או כהה",
     "options": {
       "system": "מערכת",
       "light": "בהיר",
@@ -1291,10 +1413,27 @@
     "processing": "מעבד...",
     "cancel": "ביטול",
     "meetingRecording": "הפגישה מוקלטת",
-    "meetingPaused": "הפגישה מושהית"
+    "meetingPaused": "הפגישה מושהית",
+    "assistant": {
+      "label": "עוזר",
+      "smartLabel": "עוזר חכם",
+      "copy": "העתק",
+      "copied": "הועתק ללוח",
+      "paste": "הדבק",
+      "pasted": "הודבק",
+      "replace": "החלף",
+      "replaced": "הוחלף",
+      "replaceHint": "בוחר את כל התוכן בחלון הפעיל ומדביק את התשובה במקומו",
+      "openLink": "פתח קישור",
+      "chooseLink": "פתח קישור ({{n}})",
+      "escalate": "שאל את העוזר החכם",
+      "asking": "שואל את העוזר החכם...",
+      "close": "סגור",
+      "truncated": "התשובה נקטעה במגבלת האורך."
+    }
   },
   "whatsNew": {
-    "title": "חדש ב-Handy v{{version}}"
+    "title": "חדש ב-Speak v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "ייתכן ש-{{name}} חוסם קיצור דרך אחד",

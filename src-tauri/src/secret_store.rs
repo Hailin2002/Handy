@@ -18,14 +18,30 @@
 //! serializes `SecretMap`s as `{}`).
 
 use log::{error, info};
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
 use tauri::AppHandle;
 
 /// Scope prefix for cloud speech pipeline providers (azure / deepl / custom).
 pub const SPEECH_PIPELINE_SCOPE: &str = "speech-pipeline";
 /// Scope prefix for LLM post-processing providers.
 pub const POST_PROCESS_SCOPE: &str = "post-process";
+/// Scope prefix for assistant profiles, keyed by *profile* id rather than
+/// provider id (accounts read `speak:assistant/fast_helper`). Both assistants
+/// may point at the same provider while using different credentials, so they
+/// must not share the post-processing entries.
+pub const ASSISTANT_SCOPE: &str = "assistant";
 
 const SERVICE: &str = "speak";
+
+// OS credential APIs are synchronous and comparatively expensive. Settings
+// are read from several UI/backend paths, so hydrating every read directly
+// from Credential Manager/Keychain caused hundreds of blocking calls during
+// startup and severe intermittent stalls during live speech recognition.
+// Cache both present and absent values for this process; every in-process
+// mutation updates the cache immediately.
+static SECRET_CACHE: LazyLock<Mutex<HashMap<String, Option<String>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn account(scope: &str, id: &str) -> String {
     format!("{SERVICE}:{scope}/{id}")
@@ -130,18 +146,51 @@ fn fallback_file() -> Option<std::path::PathBuf> {
 }
 
 /// Reads a stored API key. Returns `None` when unset or unreadable.
+fn get_secret_cached_with(
+    scope: &str,
+    id: &str,
+    load: impl FnOnce() -> Option<String>,
+) -> Option<String> {
+    let cache_key = account(scope, id);
+    if let Some(cached) = SECRET_CACHE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .get(&cache_key)
+        .cloned()
+    {
+        return cached;
+    }
+
+    let value = load();
+    SECRET_CACHE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .insert(cache_key, value.clone());
+    value
+}
+
+/// Reads a stored API key. Returns `None` when unset or unreadable.
 pub fn get_secret(scope: &str, id: &str) -> Option<String> {
-    imp::get_secret(scope, id)
+    get_secret_cached_with(scope, id, || imp::get_secret(scope, id))
 }
 
 /// Creates or overwrites an API key.
 pub fn set_secret(scope: &str, id: &str, value: &str) -> Result<(), String> {
-    imp::set_secret(scope, id, value)
+    imp::set_secret(scope, id, value)?;
+    SECRET_CACHE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .insert(account(scope, id), Some(value.to_string()));
+    Ok(())
 }
 
 /// Removes a stored API key (used when a provider is cleared).
 pub fn delete_secret(scope: &str, id: &str) {
     imp::delete_secret(scope, id);
+    SECRET_CACHE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .insert(account(scope, id), None);
 }
 
 /// Moves plain-text API keys out of a loaded [`AppSettings`] into the secret
@@ -151,7 +200,7 @@ pub fn delete_secret(scope: &str, id: &str) {
 /// already present in the secret store are not overwritten, and emptied maps
 /// make subsequent calls no-ops.
 pub fn migrate_legacy_settings_secrets(settings: &mut crate::settings::AppSettings) -> bool {
-    migrate_legacy_settings_secrets_with(settings, imp::get_secret, imp::set_secret)
+    migrate_legacy_settings_secrets_with(settings, get_secret, set_secret)
 }
 
 /// Backend-injected core of [`migrate_legacy_settings_secrets`], so tests can
@@ -237,7 +286,7 @@ pub fn hydrate_secret_maps(settings: &mut crate::settings::AppSettings) {
             .get(id)
             .is_none_or(|v| v.is_empty())
         {
-            if let Some(value) = imp::get_secret(SPEECH_PIPELINE_SCOPE, id) {
+            if let Some(value) = get_secret(SPEECH_PIPELINE_SCOPE, id) {
                 settings.speech_pipeline_api_keys.insert(id.into(), value);
             }
         }
@@ -254,8 +303,23 @@ pub fn hydrate_secret_maps(settings: &mut crate::settings::AppSettings) {
             .get(&id)
             .is_none_or(|v| v.is_empty())
         {
-            if let Some(value) = imp::get_secret(POST_PROCESS_SCOPE, &id) {
+            if let Some(value) = get_secret(POST_PROCESS_SCOPE, &id) {
                 settings.post_process_api_keys.insert(id, value);
+            }
+        }
+    }
+
+    // Keyed by profile id — see `ASSISTANT_SCOPE`. Without this the assistant
+    // settings UI would show an empty key field for a configured assistant.
+    let profile_ids: Vec<String> = settings.assistant_profiles.keys().cloned().collect();
+    for id in profile_ids {
+        if settings
+            .assistant_api_keys
+            .get(&id)
+            .is_none_or(|v| v.is_empty())
+        {
+            if let Some(value) = get_secret(ASSISTANT_SCOPE, &id) {
+                settings.assistant_api_keys.insert(id, value);
             }
         }
     }
@@ -264,6 +328,21 @@ pub fn hydrate_secret_maps(settings: &mut crate::settings::AppSettings) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn secret_cache_avoids_repeated_backend_reads_including_misses() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let reads = AtomicUsize::new(0);
+        let load = || {
+            reads.fetch_add(1, Ordering::Relaxed);
+            None
+        };
+
+        assert_eq!(get_secret_cached_with("cache-test", "missing", load), None);
+        assert_eq!(get_secret_cached_with("cache-test", "missing", load), None);
+        assert_eq!(reads.load(Ordering::Relaxed), 1);
+    }
 
     /// The migration must leave empty-string entries untouched (they mean "not
     /// configured") and report no changes for an already-clean settings map.

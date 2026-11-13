@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
-import type { AppSettings as Settings, AudioDevice } from "@/bindings";
+import type {
+  AssistantOutputMode,
+  AppSettings as Settings,
+  AudioDevice,
+} from "@/bindings";
 
 interface UseSettingsReturn {
   // State
@@ -11,6 +15,7 @@ interface UseSettingsReturn {
   outputDevices: AudioDevice[];
   audioFeedbackEnabled: boolean;
   postProcessModelOptions: Record<string, string[]>;
+  assistantApiKeyConfigured: Record<string, boolean>;
 
   // Actions
   updateSetting: <K extends keyof Settings>(
@@ -41,6 +46,29 @@ interface UseSettingsReturn {
   ) => Promise<void>;
   updatePostProcessModel: (providerId: string, model: string) => Promise<void>;
   fetchPostProcessModels: (providerId: string) => Promise<string[]>;
+
+  // Assistant-profile helpers (keyed by profile id, not provider id)
+  setAssistantProvider: (
+    profileId: string,
+    providerId: string,
+  ) => Promise<void>;
+  updateAssistantApiKey: (profileId: string, apiKey: string) => Promise<void>;
+  updateAssistantModel: (profileId: string, model: string) => Promise<void>;
+  updateAssistantSystemPrompt: (
+    profileId: string,
+    prompt: string,
+  ) => Promise<void>;
+  updateAssistantLimits: (
+    profileId: string,
+    maxOutputTokens: number,
+    timeoutSecs: number,
+  ) => Promise<void>;
+  setAssistantOutputMode: (
+    profileId: string,
+    mode: AssistantOutputMode,
+  ) => Promise<void>;
+  fetchAssistantModels: (profileId: string) => Promise<string[]>;
+  assistantModelOptions: Record<string, string[]>;
 }
 
 export const useSettings = (): UseSettingsReturn => {
@@ -66,6 +94,7 @@ export const useSettings = (): UseSettingsReturn => {
     outputDevices: store.outputDevices,
     audioFeedbackEnabled: store.settings?.audio_feedback || false,
     postProcessModelOptions: store.postProcessModelOptions,
+    assistantApiKeyConfigured: store.assistantApiKeyConfigured,
     updateSetting: store.updateSetting,
     resetSetting: store.resetSetting,
     refreshSettings: store.refreshSettings,
@@ -79,5 +108,13 @@ export const useSettings = (): UseSettingsReturn => {
     updatePostProcessApiKey: store.updatePostProcessApiKey,
     updatePostProcessModel: store.updatePostProcessModel,
     fetchPostProcessModels: store.fetchPostProcessModels,
+    setAssistantProvider: store.setAssistantProvider,
+    updateAssistantApiKey: store.updateAssistantApiKey,
+    updateAssistantModel: store.updateAssistantModel,
+    updateAssistantSystemPrompt: store.updateAssistantSystemPrompt,
+    updateAssistantLimits: store.updateAssistantLimits,
+    setAssistantOutputMode: store.setAssistantOutputMode,
+    fetchAssistantModels: store.fetchAssistantModels,
+    assistantModelOptions: store.assistantModelOptions,
   };
 };

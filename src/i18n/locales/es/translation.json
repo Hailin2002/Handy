@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Vuelve a transcribir el audio guardado. La grabación se conserva.",
         "retranscribeWarning": "La transcripción actual se descarta y se crea de nuevo a partir del audio guardado. La grabación no se toca.",
         "retranscribeQueued": "Transcripción puesta en cola de nuevo.",
-        "retranscribeFailed": "No se pudo iniciar la transcripción de nuevo."
+        "retranscribeFailed": "No se pudo iniciar la transcripción de nuevo.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Permisos requeridos",
-      "description": "Handy necesita algunos permisos para funcionar correctamente.",
+      "description": "Speak necesita algunos permisos para funcionar correctamente.",
       "microphone": {
         "title": "Acceso al micrófono",
         "description": "Necesario para escuchar tu voz para la transcripción."
@@ -651,13 +662,13 @@
       "searchPlaceholder": "Buscar modelos por nombre…",
       "rescan": {
         "label": "Volver a escanear",
-        "tooltip": "Vuelve a escanear en busca de modelos añadidos a la carpeta de modelos o a la caché de Hugging Face fuera de Handy"
+        "tooltip": "Vuelve a escanear en busca de modelos añadidos a la carpeta de modelos o a la caché de Hugging Face fuera de Speak"
       }
     },
     "general": {
       "title": "General",
       "shortcut": {
-        "title": "Atajos de Handy",
+        "title": "Atajos de Speak",
         "description": "Configura atajos de teclado para activar la grabación de voz a texto",
         "loading": "Cargando atajos...",
         "none": "No hay atajos configurados",
@@ -675,6 +686,14 @@
           "transcribe_with_post_process": {
             "name": "Tecla de post procesamiento",
             "description": "Opcional: Una tecla de acceso rápido dedicada que siempre aplica post procesamiento con IA a tu transcripción."
+          },
+          "assistant_fast": {
+            "name": "Atajo del ayudante rápido",
+            "description": "El atajo de teclado que pregunta al asistente rápido. Sin asignar hasta que lo definas."
+          },
+          "assistant_smart": {
+            "name": "Atajo del asistente avanzado",
+            "description": "El atajo de teclado que pregunta al asistente detallado. Sin asignar hasta que lo definas."
           }
         },
         "errors": {
@@ -695,6 +714,20 @@
       "pushToTalk": {
         "label": "Presionar para hablar",
         "description": "Mantén presionado para grabar, suelta para detener"
+      },
+      "recordingAudio": {
+        "label": "Audio durante la grabación",
+        "description": "Qué hace Speak con la reproducción de audio del sistema mientras graba",
+        "modes": {
+          "off": "No hacer nada",
+          "duck": "Bajar el volumen",
+          "mute": "Silenciar por completo"
+        },
+        "volume": {
+          "label": "Volumen reducido",
+          "description": "Volumen de salida del sistema durante la grabación",
+          "unit": "{{percent}} %"
+        }
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Iniciar al arranque",
-        "description": "Iniciar Handy automáticamente cuando inicies sesión en tu computadora."
+        "description": "Iniciar Speak automáticamente cuando inicies sesión en tu computadora."
       },
       "showTrayIcon": {
         "label": "Mostrar icono de bandeja",
-        "description": "Mostrar el icono de Handy en la bandeja del sistema."
+        "description": "Mostrar el icono de Speak en la bandeja del sistema."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Buscar actualizaciones",
-        "description": "Buscar automáticamente nuevas versiones de Handy"
+        "description": "Buscar automáticamente nuevas versiones de Speak"
       },
       "soundTheme": {
         "label": "Tema de sonido",
@@ -997,10 +1030,6 @@
         "label": "Post procesamiento",
         "description": "Habilitar refinamiento de texto impulsado por IA después de la transcripción"
       },
-      "muteWhileRecording": {
-        "label": "Silenciar durante la grabación",
-        "description": "Silenciar el audio del sistema durante la grabación"
-      },
       "appendTrailingSpace": {
         "label": "Agregar espacio final",
         "description": "Agregar un espacio después de la transcripción pegada"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Diagnóstico del teclado",
-        "description": "Comprueba si los eventos de teclado llegan a Handy. Solo se registra el número de eventos, nunca qué teclas pulsas.",
+        "description": "Comprueba si los eventos de teclado llegan a Speak. Solo se registra el número de eventos, nunca qué teclas pulsas.",
         "run": "Ejecutar diagnóstico de 10 s",
         "running": "Escuchando… pulsa tu atajo varias veces (p. ej. Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "Ratón",
         "verdictBlocked": "Secure Input está bloqueando los eventos de teclado: los atajos que incluyen una tecla normal no pueden funcionar hasta que se resuelva.",
         "verdictSuspicious": "Llegaron eventos de modificadores, pero ningún evento de tecla: algo está suprimiendo las teclas aunque Secure Input aparezca como desactivado. Por favor, repórtalo en GitHub.",
-        "verdictOk": "Los eventos de teclado llegan a Handy con normalidad.",
+        "verdictOk": "Los eventos de teclado llegan a Speak con normalidad.",
         "verdictNoEvents": "No se capturó ningún evento: ¿pulsaste alguna tecla durante la prueba?",
         "failed": "El diagnóstico falló: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "Acerca de",
       "version": {
         "title": "Versión",
-        "description": "Versión actual de Handy"
+        "description": "Versión actual de Speak"
       },
       "appDataDirectory": {
         "title": "Directorio de datos de la aplicación",
-        "description": "Ubicación donde Handy almacena sus datos"
+        "description": "Ubicación donde Speak almacena sus datos"
       },
       "sourceCode": {
         "title": "Código fuente",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "Apoyar el desarrollo",
-        "description": "Ayúdanos a continuar construyendo Handy",
+        "description": "Ayúdanos a continuar construyendo Speak",
         "button": "Donar"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "Biblioteca de tensores de alto rendimiento para inferencia de aprendizaje automático en el dispositivo",
-          "details": "El habla a texto local de Handy está construido sobre transcribe.cpp y ggml. Gracias al increíble trabajo de Georgi Gerganov y colaboradores."
+          "details": "El habla a texto local de Speak está construido sobre transcribe.cpp y ggml. Gracias al increíble trabajo de Georgi Gerganov y colaboradores."
         }
       },
       "whatsNewUpdates": {
         "label": "Mostrar novedades",
-        "description": "Mostrar notas de la versión después de las actualizaciones de Handy"
+        "description": "Mostrar notas de la versión después de las actualizaciones de Speak"
       }
     },
     "tabs": {
       "modelsProviders": "Modelos y proveedores",
-      "meetingsEmptyBody": "Los ajustes de reuniones llegarán con el modo de reuniones."
+      "meetingsEmptyBody": "Los ajustes de reuniones llegarán con el modo de reuniones.",
+      "assistants": "Asistentes"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "Conservar 30 días",
           "forever": "Conservar siempre"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "Asistentes de IA",
+      "description": "Dos asistentes a los que llegas con un atajo. Formula tu pregunta en voz alta y la respuesta aparece en una tarjeta junto al overlay de Speak.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Ayudante rápido",
+          "description": "Para consultas breves: un dato, una conversión, una ortografía, una frase reescrita. Pensado para una respuesta corta e inmediata."
+        },
+        "smart_assistant": {
+          "title": "Asistente avanzado",
+          "description": "Para preguntas que merecen reflexión: análisis, comparación, redacción. Puede tardar más y responder con detalle."
+        }
+      },
+      "provider": {
+        "title": "Proveedor",
+        "description": "Qué servicio responde para este asistente. Ambos asistentes pueden usar el mismo proveedor con claves distintas."
+      },
+      "apiKey": {
+        "configured": "La clave API de {{provider}} está guardada.",
+        "notConfigured": "No hay ninguna clave API guardada para {{provider}}.",
+        "title": "Clave API",
+        "description": "Se guarda en el llavero de tu sistema operativo, aparte de la clave del post procesamiento.",
+        "placeholder": "Pega tu clave API"
+      },
+      "model": {
+        "title": "Modelo",
+        "description": "El modelo al que pregunta este asistente. Elige uno de la lista o escribe el identificador exacto.",
+        "placeholder": "Selecciona o escribe un identificador de modelo",
+        "refresh": "Actualizar lista de modelos",
+        "required": "Aún no has elegido un modelo. Este asistente permanece inactivo hasta que selecciones uno.",
+        "listingHint": "La lista de modelos se carga con la clave API propia de este asistente. Sin ella, aún puedes introducir el id del modelo a mano."
+      },
+      "systemPrompt": {
+        "title": "Instrucción del sistema",
+        "description": "La instrucción permanente que este asistente sigue en cada pregunta.",
+        "placeholder": "Describe cómo debe responder este asistente"
+      },
+      "maxOutputTokens": {
+        "title": "Longitud de la respuesta",
+        "description": "Límite máximo de la respuesta, en tokens ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Tiempo de espera",
+        "description": "Cuánto esperar una respuesta antes de desistir, en segundos ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Tratamiento de la respuesta"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Solo mostrar",
+          "hint": "La respuesta aparece en la tarjeta y en ningún otro sitio."
+        },
+        "copy": {
+          "label": "Mostrar y copiar",
+          "hint": "La respuesta aparece en la tarjeta y se copia al portapapeles."
+        },
+        "paste": {
+          "label": "Mostrar y pegar",
+          "hint": "La respuesta aparece en la tarjeta y se pega en la aplicación en la que estabas."
+        }
+      },
+      "shortcutHint": "Los atajos de teclado de ambos asistentes se configuran en Dictado, junto a los atajos de transcripción."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "Restablecer"
   },
   "accessibility": {
-    "permissionsDescription": "Handy necesita permisos de accesibilidad para escribir texto transcrito.",
+    "permissionsDescription": "Speak necesita permisos de accesibilidad para escribir texto transcrito.",
     "openSettings": "Abrir Ajustes del Sistema"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "modelo desconocido",
     "pasteFailedTitle": "Error al pegar el texto",
     "pasteFailed": "No se pudo pegar el texto en la aplicación activa.",
-    "transcriptionFailedTitle": "Error de transcripción"
+    "transcriptionFailedTitle": "Error de transcripción",
+    "assistantNoticeTitle": "Asistente"
   },
   "appLanguage": {
     "title": "Idioma de la aplicación",
-    "description": "Cambia el idioma de la interfaz de Handy"
+    "description": "Cambia el idioma de la interfaz de Speak"
   },
   "theme": {
     "title": "Tema de la aplicación",
-    "description": "Elige si Handy sigue el tema del sistema o permanece claro u oscuro",
+    "description": "Elige si Speak sigue el tema del sistema o permanece claro u oscuro",
     "options": {
       "system": "Sistema",
       "light": "Claro",
@@ -1291,10 +1413,27 @@
     "processing": "Procesando...",
     "cancel": "Cancelar",
     "meetingRecording": "Grabando reunión",
-    "meetingPaused": "Reunión en pausa"
+    "meetingPaused": "Reunión en pausa",
+    "assistant": {
+      "label": "Asistente",
+      "smartLabel": "Asistente avanzado",
+      "copy": "Copiar",
+      "copied": "Copiado al portapapeles",
+      "paste": "Pegar",
+      "pasted": "Pegado",
+      "replace": "Reemplazar",
+      "replaced": "Reemplazado",
+      "replaceHint": "Selecciona todo en la ventana activa y pega la respuesta encima",
+      "openLink": "Abrir enlace",
+      "chooseLink": "Abrir enlace ({{n}})",
+      "escalate": "Preguntar al asistente avanzado",
+      "asking": "Consultando al asistente avanzado...",
+      "close": "Cerrar",
+      "truncated": "La respuesta se cortó en el límite de longitud."
+    }
   },
   "whatsNew": {
-    "title": "Nuevo en Handy v{{version}}"
+    "title": "Nuevo en Speak v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} puede estar bloqueando 1 atajo",

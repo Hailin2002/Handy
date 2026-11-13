@@ -1,6 +1,8 @@
 use crate::input;
 use crate::settings;
 use crate::settings::{OverlayPosition, OverlayStyle};
+#[cfg(target_os = "windows")]
+use std::sync::atomic::AtomicIsize;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
@@ -50,10 +52,32 @@ const OVERLAY_HEIGHT: f64 = 46.0;
 const OVERLAY_STREAM_WIDTH: f64 = 400.0;
 const OVERLAY_STREAM_HEIGHT: f64 = 120.0;
 
+// Assistant answer card (--ov-answer-w / --ov-answer-max-h). This is the only
+// overlay state the user reads rather than glances at, so it carries prose plus
+// a wrapping row of actions, and it is the only one that stays up until it is
+// dismissed. Same rule as the states above: the window is at least the card's
+// max footprint. `overlay_window_fits_every_card` in the tests below re-derives
+// these numbers from the CSS, so the two cannot drift apart silently.
+const OVERLAY_ANSWER_WIDTH: f64 = 420.0;
+const OVERLAY_ANSWER_HEIGHT: f64 = 288.0;
+
+/// The overlay state name for the assistant answer card.
+///
+/// Shared verbatim with `RecordingOverlay.tsx`, which switches on the same
+/// string arriving in the `show-overlay` payload.
+const ANSWER_STATE: &str = "answer";
+
+/// Foreground window that owned the caret before the interactive answer card
+/// was clicked. Stored as an integer because Win32 HWND pointers are not Send.
+#[cfg(target_os = "windows")]
+static ANSWER_PASTE_TARGET: AtomicIsize = AtomicIsize::new(0);
+
 /// Overlay window size (logical) for a given UI state.
 fn overlay_dimensions(state: &str) -> (f64, f64) {
     if state == "streaming" {
         (OVERLAY_STREAM_WIDTH, OVERLAY_STREAM_HEIGHT)
+    } else if state == ANSWER_STATE {
+        (OVERLAY_ANSWER_WIDTH, OVERLAY_ANSWER_HEIGHT)
     } else {
         (OVERLAY_WIDTH, OVERLAY_HEIGHT)
     }
@@ -187,6 +211,41 @@ fn force_overlay_topmost(overlay_window: &tauri::webview::WebviewWindow) {
     });
 }
 
+#[cfg(target_os = "windows")]
+fn remember_answer_paste_target(overlay_window: &tauri::webview::WebviewWindow) {
+    use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+
+    let Ok(overlay_hwnd) = overlay_window.hwnd() else {
+        return;
+    };
+    let foreground = unsafe { GetForegroundWindow() };
+    if !foreground.0.is_null() && foreground != overlay_hwnd {
+        ANSWER_PASTE_TARGET.store(foreground.0 as isize, Ordering::SeqCst);
+    }
+}
+
+/// Restore the application that owned the caret before the answer card took
+/// focus. Card-native Paste/Replace and Ctrl+V call this before injecting keys.
+#[cfg(target_os = "windows")]
+pub fn restore_answer_paste_target() -> Result<(), String> {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::{IsWindow, SetForegroundWindow};
+
+    let raw = ANSWER_PASTE_TARGET.load(Ordering::SeqCst);
+    if raw == 0 {
+        return Err("The application that should receive the answer is no longer available. Click the target field, then paste with Ctrl+V.".to_string());
+    }
+    let target = HWND(raw as *mut std::ffi::c_void);
+    if !unsafe { IsWindow(Some(target)) }.as_bool() {
+        ANSWER_PASTE_TARGET.store(0, Ordering::SeqCst);
+        return Err("The application that should receive the answer was closed. Click a target field, then paste with Ctrl+V.".to_string());
+    }
+    if !unsafe { SetForegroundWindow(target) }.as_bool() {
+        return Err("Windows could not return focus to the target application. Click the target field, then paste with Ctrl+V.".to_string());
+    }
+    Ok(())
+}
+
 fn get_monitor_with_cursor(app_handle: &AppHandle) -> Option<tauri::Monitor> {
     if let Some(mouse_location) = input::get_cursor_position(app_handle) {
         if let Ok(monitors) = app_handle.available_monitors() {
@@ -298,8 +357,43 @@ fn current_overlay_logical_size(window: &tauri::webview::WebviewWindow) -> Optio
     Some((size.width as f64 / scale, size.height as f64 / scale))
 }
 
+// Which of the three window sizes the overlay currently wears. Windows
+// repositions without being told the state (`update_overlay_position_on_main`),
+// so the last size class is cached here. An integer rather than the previous
+// is-streaming bool because there are now three sizes, and a reposition that
+// guesses wrong resizes the window out from under a visible card.
 #[cfg(target_os = "windows")]
-static WINDOWS_OVERLAY_IS_STREAMING: AtomicBool = AtomicBool::new(false);
+static WINDOWS_OVERLAY_SIZE_CLASS: std::sync::atomic::AtomicU8 =
+    std::sync::atomic::AtomicU8::new(SIZE_CLASS_COMPACT);
+
+#[cfg(target_os = "windows")]
+const SIZE_CLASS_COMPACT: u8 = 0;
+#[cfg(target_os = "windows")]
+const SIZE_CLASS_STREAMING: u8 = 1;
+#[cfg(target_os = "windows")]
+const SIZE_CLASS_ANSWER: u8 = 2;
+
+#[cfg(target_os = "windows")]
+fn windows_size_class(state: &str) -> u8 {
+    if state == "streaming" {
+        SIZE_CLASS_STREAMING
+    } else if state == ANSWER_STATE {
+        SIZE_CLASS_ANSWER
+    } else {
+        SIZE_CLASS_COMPACT
+    }
+}
+
+/// A state name in the cached size class, for re-deriving dimensions on a
+/// reposition that carries no state of its own.
+#[cfg(target_os = "windows")]
+fn windows_cached_state() -> &'static str {
+    match WINDOWS_OVERLAY_SIZE_CLASS.load(Ordering::Relaxed) {
+        SIZE_CLASS_STREAMING => "streaming",
+        SIZE_CLASS_ANSWER => ANSWER_STATE,
+        _ => "recording",
+    }
+}
 
 /// Overlay rectangle in the destination monitor's physical pixels, so nothing
 /// is converted through the window's previous-monitor DPI.
@@ -487,6 +581,17 @@ fn show_overlay_state(app_handle: &AppHandle, state: &str) {
         return;
     }
 
+    // Claim or release the answer card's hold on the window. Deliberately after
+    // the early return above: with overlays switched off nothing is ever shown,
+    // and a flag set for a window that never appears would suppress every later
+    // hide forever. Any other state supersedes an open card, which is what makes
+    // starting a new dictation a way out of one.
+    set_answer_card_open(state == ANSWER_STATE);
+
+    // A state was raised, so anything that was waiting on the *previous* state
+    // (the answer-card watchdog in `actions.rs`) must not act on it any more.
+    OVERLAY_GENERATION.fetch_add(1, Ordering::SeqCst);
+
     // The rest queries monitors and the cursor and mutates window geometry. On
     // Linux the monitor/cursor lookups hit GDK/Xlib on the process's shared X11
     // connection, which is only safe from the GTK main thread — running them on
@@ -504,6 +609,19 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, state: &str) {
     // Size the overlay for this state (compact vs. streaming), then position it.
     let (width, height) = overlay_dimensions(state);
     if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+        // Recording overlays must never steal the caret from the target app.
+        // The answer card is different: the user explicitly wants to interact
+        // with its text and use Ctrl/Cmd+C. It still opens with NOACTIVATE on
+        // Windows; focus moves only when the user clicks the card.
+        #[cfg(target_os = "windows")]
+        {
+            if state == ANSWER_STATE {
+                remember_answer_paste_target(&overlay_window);
+            }
+            if let Err(error) = overlay_window.set_focusable(state == ANSWER_STATE) {
+                log::warn!("Failed to update overlay focusability for '{state}': {error}");
+            }
+        }
         #[cfg(target_os = "linux")]
         let shown_with_layer_shell = if LAYER_SHELL_ACTIVE.load(Ordering::SeqCst) {
             let position = settings::get_settings(app_handle).overlay_position;
@@ -527,7 +645,7 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, state: &str) {
             let _ =
                 overlay_window.set_size(tauri::Size::Logical(tauri::LogicalSize { width, height }));
             #[cfg(target_os = "windows")]
-            WINDOWS_OVERLAY_IS_STREAMING.store(state == "streaming", Ordering::Relaxed);
+            WINDOWS_OVERLAY_SIZE_CLASS.store(windows_size_class(state), Ordering::Relaxed);
             let size_elapsed = size_started.elapsed();
 
             let pos_started = std::time::Instant::now();
@@ -638,6 +756,47 @@ pub fn show_processing_overlay(app_handle: &AppHandle) {
     show_overlay_state(app_handle, "processing");
 }
 
+/// Shows the assistant answer card in the overlay window.
+///
+/// Returns whether the overlay could be shown at all. It cannot when the user
+/// has turned the overlay off entirely (`OverlayStyle::None`), and the caller
+/// needs to know: the card is the whole output of an assistant run in `Show`
+/// mode, so a caller that assumed it appeared would report a delivered answer
+/// the user never saw.
+///
+/// Unlike every other state, this one does not end when the flow that started it
+/// ends — see [`ANSWER_CARD_OPEN`].
+pub fn show_answer_overlay(app_handle: &AppHandle) -> bool {
+    if !answer_card_can_be_shown(app_handle) {
+        return false;
+    }
+    show_overlay_state(app_handle, ANSWER_STATE);
+    true
+}
+
+/// Whether an answer card could be put on screen right now.
+///
+/// The one thing that makes it impossible is the user having turned the overlay
+/// off (`OverlayStyle::None`, which is also the shipped default on Linux). This
+/// has to be answerable *before* a run decides how to deliver its answer:
+/// `actions.rs` routes a `Show` run to the clipboard instead when the card that
+/// was supposed to carry it cannot appear, and the alternative — planning a card
+/// and discovering at present time that there is none — is how an answer ends up
+/// delivered nowhere at all.
+pub fn answer_card_can_be_shown(app_handle: &AppHandle) -> bool {
+    settings::get_settings(app_handle).overlay_style != OverlayStyle::None
+}
+
+/// Dismisses an open assistant answer card and hides the overlay.
+///
+/// The only way to close a card other than superseding it with another overlay
+/// state, and therefore the only caller that is allowed past the guard in
+/// [`hide_recording_overlay`].
+pub fn hide_answer_overlay(app_handle: &AppHandle) {
+    set_answer_card_open(false);
+    hide_recording_overlay(app_handle);
+}
+
 /// Updates the overlay window position based on current settings
 pub fn update_overlay_position(app_handle: &AppHandle) {
     // Positioning queries monitors/cursor (GDK/Xlib on Linux) and moves the
@@ -660,11 +819,7 @@ fn update_overlay_position_on_main(app_handle: &AppHandle) {
 
         #[cfg(target_os = "windows")]
         {
-            let state = if WINDOWS_OVERLAY_IS_STREAMING.load(Ordering::Relaxed) {
-                "streaming"
-            } else {
-                "recording"
-            };
+            let state = windows_cached_state();
             let (width, height) = overlay_dimensions(state);
             if let Err(error) = place_windows_overlay(app_handle, &overlay_window, width, height) {
                 log::error!("Failed to update recording overlay position: {error}");
@@ -687,18 +842,119 @@ fn update_overlay_position_on_main(app_handle: &AppHandle) {
 
 /// Hides the recording overlay window with fade-out animation
 pub fn hide_recording_overlay(app_handle: &AppHandle) {
+    // An open answer card outlives the flow that put the overlay on screen, so
+    // this is a no-op while one is up. See [`ANSWER_CARD_OPEN`] for the full
+    // list of callers this protects the card from.
+    if ANSWER_CARD_OPEN.load(Ordering::SeqCst) {
+        return;
+    }
+
     // Always hide the overlay regardless of settings - if setting was changed while recording,
     // we still want to hide it properly
     if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+        // Re-read the flag immediately before emitting rather than trusting the
+        // check at the top of the function. `get_webview_window` is a lookup
+        // through the app's window map, and a card raised in between would get
+        // its `answer` payload cleared by the `hide-overlay` listener while the
+        // native window stays up — a transparent, click-eating panel.
+        if ANSWER_CARD_OPEN.load(Ordering::SeqCst) {
+            return;
+        }
         // Emit event to trigger fade-out animation
         let _ = overlay_window.emit(crate::events::HIDE_OVERLAY, ());
         // Hide the window after a short delay to allow animation to complete
         let window_clone = overlay_window.clone();
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(300));
+            // Re-checked, not just checked on the way in. 300 ms is long enough
+            // for a card to be raised inside this fade, and one call site does
+            // exactly that: the assistant failure paths in `actions.rs` emit the
+            // event and *then* hide, so the frontend raises the error card while
+            // this thread is still sleeping. Without this second look the card
+            // would appear and vanish a quarter-second later, which reads as a
+            // flicker rather than as an error message.
+            if ANSWER_CARD_OPEN.load(Ordering::SeqCst) {
+                return;
+            }
             let _ = window_clone.hide();
         });
     }
+}
+
+/// True while an assistant answer card owns the overlay window.
+///
+/// Every other overlay state is transient and is torn down by the flow that
+/// raised it: dictation finishing (`actions.rs`), a meeting stopping
+/// (`managers/meeting.rs`), a cancel (`utils::cancel_current_operation`). All of
+/// them funnel into [`hide_recording_overlay`]. An answer card is different — it
+/// is prose the user is in the middle of reading, and any of those firing
+/// underneath it (a meeting ending on a timer, a late paste callback from the
+/// dictation that preceded the question) would make the answer vanish
+/// mid-sentence with no way to get it back, because assistant runs are
+/// deliberately kept out of the history.
+///
+/// So the ordinary hide becomes a no-op for as long as this is set. A card is
+/// closed either by [`hide_answer_overlay`] — the card's own Close button, via
+/// the `assistant_dismiss` command — or by being superseded, since
+/// [`show_overlay_state`] clears the flag for every state that is not the card.
+static ANSWER_CARD_OPEN: AtomicBool = AtomicBool::new(false);
+
+/// Incremented on every open/close transition of [`ANSWER_CARD_OPEN`].
+///
+/// Identity for a card, which the boolean alone cannot give. An escalation
+/// started from a card takes up to its profile's timeout (90 s by default) to
+/// come back, and by then "is a card open?" is the wrong question — the right
+/// one is "is *the* card still open?". Without this, closing a card and
+/// starting a second question would let the first card's escalation land in the
+/// second card, and closing it and doing nothing would let the escalation raise
+/// a card the user had already dismissed, minutes later, over whatever they had
+/// moved on to.
+static ANSWER_CARD_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+/// Set the card's hold on the window, bumping [`ANSWER_CARD_GENERATION`] when
+/// that actually changes. The single writer for both, so the two can never drift.
+fn set_answer_card_open(open: bool) {
+    if ANSWER_CARD_OPEN.swap(open, Ordering::SeqCst) != open {
+        ANSWER_CARD_GENERATION.fetch_add(1, Ordering::SeqCst);
+    }
+}
+
+/// A token identifying the card that is open (or the absence of one).
+///
+/// Capture it before a long operation started from a card and compare
+/// afterwards: a different value means the card that asked is gone, and the
+/// result belongs to nobody.
+pub fn answer_card_generation() -> u64 {
+    ANSWER_CARD_GENERATION.load(Ordering::SeqCst)
+}
+
+/// Incremented every time any overlay state is raised.
+///
+/// Lets a deadline armed for one state tell "still mine" from "something else
+/// owns the overlay now" — see [`hide_overlay_if_unchanged`].
+static OVERLAY_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+/// A token identifying the overlay state that is currently up.
+pub fn overlay_generation() -> u64 {
+    OVERLAY_GENERATION.load(Ordering::SeqCst)
+}
+
+/// Hide the overlay, but only if nothing has raised a new state since
+/// `generation` was taken.
+///
+/// The escape hatch for a state whose owner never arrives. `Show` runs hand the
+/// overlay to the frontend, which is expected to turn the processing spinner
+/// into an answer card; if that never happens — the IPC call failed, the webview
+/// was reloading, the card was refused — the spinner would otherwise stay on
+/// screen until the next dictation. The generation check is what keeps that
+/// safety net from tearing down a *different* state that legitimately started in
+/// the meantime.
+pub fn hide_overlay_if_unchanged(app_handle: &AppHandle, generation: u64) {
+    if overlay_generation() != generation {
+        return;
+    }
+    log::debug!("Overlay watchdog: no answer card was confirmed, hiding the overlay");
+    hide_recording_overlay(app_handle);
 }
 
 // Cached "overlay is enabled" flag, kept in sync with overlay_style. Avoids
@@ -761,6 +1017,113 @@ pub fn emit_levels(app_handle: &AppHandle, levels: &[f32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The overlay stylesheet, read at compile time so a CSS edit rebuilds and
+    /// re-runs the geometry assertions below.
+    const OVERLAY_CSS: &str = include_str!("../../src/overlay/RecordingOverlay.css");
+
+    /// Reads a `--ov-*` pixel custom property out of the stylesheet.
+    ///
+    /// Deliberately strict: an unparseable or renamed variable fails loudly
+    /// rather than defaulting to something that would make the assertion pass.
+    fn css_px(name: &str) -> f64 {
+        let needle = format!("{name}:");
+        let start = OVERLAY_CSS
+            .find(&needle)
+            .unwrap_or_else(|| panic!("{name} is not defined in RecordingOverlay.css"))
+            + needle.len();
+        let value = OVERLAY_CSS[start..]
+            .split(';')
+            .next()
+            .unwrap_or_default()
+            .trim();
+        let digits = value
+            .strip_suffix("px")
+            .unwrap_or_else(|| panic!("{name} is not a px value: {value}"));
+        digits
+            .trim()
+            .parse::<f64>()
+            .unwrap_or_else(|_| panic!("{name} is not a number: {value}"))
+    }
+
+    /// The native window must be at least as large as the card CSS draws into
+    /// it, for every state. Both files carry a comment naming the CSS as the
+    /// single source of truth; this is what makes that more than a comment.
+    ///
+    /// A window that is too small does not clip visibly — the card is simply cut
+    /// off at the window edge, which on the answer card would silently swallow
+    /// the action buttons.
+    #[test]
+    fn overlay_window_fits_every_card() {
+        // Compact pill: widest at the working width, one control row tall.
+        let (w, h) = overlay_dimensions("recording");
+        assert!(
+            w >= css_px("--ov-work-w"),
+            "compact overlay {w} is narrower than --ov-work-w"
+        );
+        assert!(
+            h >= css_px("--ov-base-h"),
+            "compact overlay {h} is shorter than --ov-base-h"
+        );
+
+        // Live panel: the opened width, and a control row above the text cap.
+        let (w, h) = overlay_dimensions("streaming");
+        assert!(
+            w >= css_px("--ov-open-w"),
+            "streaming overlay {w} is narrower than --ov-open-w"
+        );
+        assert!(
+            h >= css_px("--ov-base-h") + css_px("--ov-cap-max-h"),
+            "streaming overlay {h} is shorter than the control row plus the text cap"
+        );
+
+        // Answer card: its own width and its own hard max height.
+        let (w, h) = overlay_dimensions(ANSWER_STATE);
+        assert!(
+            w >= css_px("--ov-answer-w"),
+            "answer overlay {w} is narrower than --ov-answer-w"
+        );
+        assert!(
+            h >= css_px("--ov-answer-max-h"),
+            "answer overlay {h} is shorter than --ov-answer-max-h"
+        );
+    }
+
+    /// The card must not accidentally inherit the compact pill's geometry: it is
+    /// selected by an exact string that also has to match `RecordingOverlay.tsx`.
+    #[test]
+    fn answer_state_has_its_own_dimensions() {
+        assert_eq!(ANSWER_STATE, "answer");
+        assert_ne!(
+            overlay_dimensions(ANSWER_STATE),
+            overlay_dimensions("recording")
+        );
+        assert_ne!(
+            overlay_dimensions(ANSWER_STATE),
+            overlay_dimensions("streaming")
+        );
+        // Anything unrecognised still falls back to the compact pill.
+        assert_eq!(
+            overlay_dimensions("meeting_paused"),
+            overlay_dimensions("recording")
+        );
+    }
+
+    /// The whole point of the flag: an ordinary hide must not close a card, and
+    /// the next overlay state must release it so the window is never stuck.
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn windows_size_class_round_trips_every_state() {
+        for state in ["recording", "streaming", ANSWER_STATE] {
+            WINDOWS_OVERLAY_SIZE_CLASS.store(windows_size_class(state), Ordering::Relaxed);
+            assert_eq!(
+                overlay_dimensions(windows_cached_state()),
+                overlay_dimensions(state),
+                "reposition would resize the overlay away from the {state} state"
+            );
+        }
+        WINDOWS_OVERLAY_SIZE_CLASS.store(SIZE_CLASS_COMPACT, Ordering::Relaxed);
+    }
 
     #[test]
     fn monitor_hit_test_uses_half_open_physical_bounds() {

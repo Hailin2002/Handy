@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const DEV_BASE_URL = "http://localhost:1420";
-const PREVIEW_BASE_URL = "http://localhost:4173";
+// Keep production-preview tests isolated from the conventional Vite preview
+// port. Reusing an unrelated server here makes a green local preview look like
+// the E2E mock is broken and produces misleading failures.
+const PREVIEW_BASE_URL = "http://localhost:4174";
 
 const DEV_PROJECT = "chromium";
 const PROD_PROJECT = "chromium-production-preview";
@@ -56,9 +59,9 @@ const devServer = {
  */
 const prodPreviewServer = {
   command:
-    "npx tsc && npx vite build --config vite.e2e-mock.config.ts && npx vite preview --port 4173 --strictPort",
+    "npx tsc && npx vite build --config vite.e2e-mock.config.ts && npx vite preview --port 4174 --strictPort",
   url: PREVIEW_BASE_URL,
-  reuseExistingServer: !process.env.CI,
+  reuseExistingServer: false,
   timeout: 180000,
 };
 

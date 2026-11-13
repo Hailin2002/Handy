@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw, RotateCcw } from "lucide-react";
+import { RefreshCw, RotateCcw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
   commands,
+  type MeetingAccuracyReport,
   type MeetingSnapshot,
   type MeetingSession,
 } from "@/bindings";
@@ -39,6 +40,22 @@ export const MeetingProcessingPanel: React.FC<MeetingProcessingPanelProps> = ({
   const [redoOpen, setRedoOpen] = useState(false);
   const [redoing, setRedoing] = useState(false);
   const [provider, setProvider] = useState<Provider>("local");
+  const [accuracyOpen, setAccuracyOpen] = useState(false);
+  const [accuracyRunning, setAccuracyRunning] = useState(false);
+  const [accuracyProvider, setAccuracyProvider] = useState<Provider>("azure");
+  const [accuracyReport, setAccuracyReport] =
+    useState<MeetingAccuracyReport | null>(null);
+
+  useEffect(() => {
+    const name = snapshot?.provider_name?.toLowerCase() ?? "";
+    const current: Provider = name.includes("azure")
+      ? "azure"
+      : name.includes("custom")
+        ? "custom"
+        : "local";
+    setProvider(current);
+    setAccuracyProvider(current === "azure" ? "local" : "azure");
+  }, [snapshot?.provider_name]);
 
   const jobs = snapshot?.jobs ?? null;
   const failed = jobs?.oldest_failed ?? null;
@@ -114,6 +131,36 @@ export const MeetingProcessingPanel: React.FC<MeetingProcessingPanelProps> = ({
     }
   };
 
+  const handleImproveAccuracy = async () => {
+    if (accuracyRunning) return;
+    setAccuracyRunning(true);
+    setAccuracyReport(null);
+    try {
+      const result = await commands.improveMeetingAccuracy(
+        session.id,
+        accuracyProvider,
+      );
+      if (result.status === "ok") {
+        setAccuracyReport(result.data);
+        toast.success(
+          t("meeting.detail.processing.accuracyDone", {
+            count: result.data.chunksCorrected,
+          }),
+        );
+        onChanged();
+      } else {
+        toast.error(t("meeting.detail.processing.accuracyFailed"), {
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      console.error("Accuracy improvement failed:", error);
+      toast.error(t("meeting.detail.processing.accuracyFailed"));
+    } finally {
+      setAccuracyRunning(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -158,6 +205,42 @@ export const MeetingProcessingPanel: React.FC<MeetingProcessingPanelProps> = ({
         </div>
       </div>
 
+      <div className="flex flex-col gap-2 rounded-lg border border-logo-primary/25 bg-logo-primary/5 p-3">
+        <h3 className="flex items-center gap-2 text-sm font-medium">
+          <ShieldCheck
+            className="h-4 w-4 text-logo-primary"
+            aria-hidden="true"
+          />
+          {t("meeting.detail.processing.accuracyHeading")}
+        </h3>
+        <p className="text-xs text-text/60">
+          {t("meeting.detail.processing.accuracyBody")}
+        </p>
+        {accuracyReport && (
+          <p className="text-xs text-text/80">
+            {t("meeting.detail.processing.accuracyResult", {
+              checked: accuracyReport.chunksChecked,
+              corrected: accuracyReport.chunksCorrected,
+              removed: accuracyReport.silenceHallucinationsRemoved,
+            })}
+          </p>
+        )}
+        <div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setAccuracyOpen(true)}
+            disabled={
+              snapshot?.state !== "completed" &&
+              snapshot?.state !== "recoverable_error"
+            }
+          >
+            <ShieldCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+            {t("meeting.detail.processing.accuracyAction")}
+          </Button>
+        </div>
+      </div>
+
       <Dialog
         open={redoOpen}
         title={t("meeting.detail.processing.retranscribeHeading")}
@@ -190,6 +273,54 @@ export const MeetingProcessingPanel: React.FC<MeetingProcessingPanelProps> = ({
             value={provider}
             onChange={(event) => setProvider(event.target.value as Provider)}
             disabled={redoing}
+          >
+            <option value="local">{t("meeting.setup.providerLocal")}</option>
+            <option value="azure">{t("meeting.setup.providerAzure")}</option>
+            <option value="custom">{t("meeting.setup.providerCustom")}</option>
+          </select>
+        </label>
+      </Dialog>
+
+      <Dialog
+        open={accuracyOpen}
+        title={t("meeting.detail.processing.accuracyHeading")}
+        description={t("meeting.detail.processing.accuracyWarning")}
+        closeLabel={t("common.close")}
+        onOpenChange={(open) => !accuracyRunning && setAccuracyOpen(open)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setAccuracyOpen(false)}
+              disabled={accuracyRunning}
+            >
+              {t("common.close")}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleImproveAccuracy}
+              disabled={accuracyRunning}
+            >
+              <ShieldCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              {accuracyRunning
+                ? t("meeting.detail.processing.accuracyRunning")
+                : t("meeting.detail.processing.accuracyAction")}
+            </Button>
+          </div>
+        }
+      >
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium">
+            {t("meeting.detail.processing.accuracyProvider")}
+          </span>
+          <select
+            className="rounded-md border border-mid-gray/30 bg-background px-2 py-1.5 text-sm"
+            value={accuracyProvider}
+            onChange={(event) =>
+              setAccuracyProvider(event.target.value as Provider)
+            }
+            disabled={accuracyRunning}
           >
             <option value="local">{t("meeting.setup.providerLocal")}</option>
             <option value="azure">{t("meeting.setup.providerAzure")}</option>

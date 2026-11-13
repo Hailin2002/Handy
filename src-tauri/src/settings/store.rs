@@ -25,7 +25,9 @@ use std::sync::{LazyLock, Mutex, MutexGuard};
 
 use super::schema::AppSettings;
 use super::schema::{default_transcribe_gpu_device, CURRENT_SETTINGS_SCHEMA_VERSION};
-use super::schema::{ensure_post_process_defaults, get_default_settings};
+use super::schema::{
+    ensure_assistant_defaults, ensure_post_process_defaults, get_default_settings,
+};
 use super::types::*;
 
 pub const SETTINGS_STORE_PATH: &str = "settings_store.json";
@@ -123,7 +125,11 @@ fn get_settings_unlocked<T: Runtime>(app: &AppHandle<T>) -> AppSettings {
         default_settings
     };
 
-    if ensure_post_process_defaults(&mut settings) {
+    // Non-short-circuiting on purpose: the assistant repair must run even when
+    // post-processing already reported a change.
+    let mut repaired = ensure_post_process_defaults(&mut settings);
+    repaired |= ensure_assistant_defaults(&mut settings);
+    if repaired {
         store.set("settings", serde_json::to_value(&settings).unwrap());
         flush_settings_store(&store);
     }
@@ -244,6 +250,27 @@ pub(super) fn apply_settings_migrations(
         } else {
             OverlayStyle::Live
         };
+        updated = true;
+    }
+
+    // One-time audio-ducking migration (only while the new key is absent):
+    // `recording_audio_mode` supersedes the `mute_while_recording` bool, so an
+    // upgrading user's existing choice has to carry over — otherwise everyone
+    // who had muting on would silently lose it. Absent key → derive from the
+    // legacy bool; present key → the mode is already authoritative, leave it.
+    if settings_value.get("recording_audio_mode").is_none() {
+        settings.recording_audio_mode =
+            RecordingAudioMode::from_legacy_mute_flag(settings.mute_while_recording);
+        updated = true;
+    }
+
+    // Write-through mirror: the legacy bool is a derived shadow of the mode
+    // (see `RecordingAudioMode::mirrors_mute_flag`). Re-deriving it here repairs
+    // any store where the two drifted apart — e.g. a downgrade that wrote the
+    // bool while an older build ignored the mode.
+    let mirrored_mute = settings.recording_audio_mode.mirrors_mute_flag();
+    if settings.mute_while_recording != mirrored_mute {
+        settings.mute_while_recording = mirrored_mute;
         updated = true;
     }
 

@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "يعيد تحويل الصوت المحفوظ إلى نص. يتم الاحتفاظ بالتسجيل نفسه.",
         "retranscribeWarning": "يُحذف النص الحالي ويُنشأ من جديد من الصوت المحفوظ. لا يُمسّ التسجيل.",
         "retranscribeQueued": "أُعيد التحويل إلى قائمة الانتظار.",
-        "retranscribeFailed": "تعذّر بدء التحويل من جديد."
+        "retranscribeFailed": "تعذّر بدء التحويل من جديد.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "الأذونات المطلوبة",
-      "description": ".يحتاج Handy إلى بعض الأذونات ليعمل بشكل صحيح",
+      "description": ".يحتاج Speak إلى بعض الأذونات ليعمل بشكل صحيح",
       "microphone": {
         "title": "الوصول إلى الميكروفون",
         "description": ".مطلوب لسماع صوتك من أجل التفريغ الصوتي"
@@ -634,7 +645,7 @@
     "general": {
       "title": "عام",
       "shortcut": {
-        "title": "اختصارات Handy",
+        "title": "اختصارات Speak",
         "description": "إعداد اختصارات لوحة المفاتيح لبدء تسجيل التفريغ الصوتي",
         "loading": "...جاري تحميل الاختصارات",
         "none": "لا توجد اختصارات مجهزة",
@@ -652,6 +663,14 @@
           "transcribe_with_post_process": {
             "name": "مفتاح المعالجة اللاحقة",
             "description": "اختياري: مفتاح اختصار مخصص يطبق دائماً المعالجة اللاحقة بالذكاء الاصطناعي على التفريغ الصوتي."
+          },
+          "assistant_fast": {
+            "name": "اختصار المساعد السريع",
+            "description": "اختصار لوحة المفاتيح الذي يسأل المساعد السريع. غير معيَّن حتى تحدده."
+          },
+          "assistant_smart": {
+            "name": "اختصار المساعد الذكي",
+            "description": "اختصار لوحة المفاتيح الذي يسأل المساعد المتعمق. غير معيَّن حتى تحدده."
           }
         },
         "errors": {
@@ -672,6 +691,20 @@
       "pushToTalk": {
         "label": "اضغط للتحدث",
         "description": "استمر في الضغط للتسجيل، واترك للتوقف"
+      },
+      "recordingAudio": {
+        "label": "الصوت أثناء التسجيل",
+        "description": "ما يفعله Speak بتشغيل صوت النظام أثناء التسجيل",
+        "modes": {
+          "off": "لا تفعل شيئًا",
+          "duck": "خفض مستوى الصوت",
+          "mute": "كتم الصوت تمامًا"
+        },
+        "volume": {
+          "label": "مستوى الصوت المنخفض",
+          "description": "مستوى صوت خرج النظام المستهدف أثناء التسجيل",
+          "unit": "{{percent}}%"
+        }
       }
     },
     "sound": {
@@ -738,11 +771,11 @@
       },
       "autostart": {
         "label": "التشغيل عند بدء التشغيل",
-        "description": ".بدء تشغيل Handy تلقائياً عند تسجيل الدخول إلى جهاز الكمبيوتر الخاص بك"
+        "description": ".بدء تشغيل Speak تلقائياً عند تسجيل الدخول إلى جهاز الكمبيوتر الخاص بك"
       },
       "showTrayIcon": {
         "label": "إظهار أيقونة شريط النظام",
-        "description": ".عرض أيقونة Handy في شريط النظام"
+        "description": ".عرض أيقونة Speak في شريط النظام"
       },
       "overlay": {
         "style": {
@@ -937,7 +970,7 @@
       },
       "updateChecks": {
         "label": "التحقق من وجود تحديثات",
-        "description": "التحقق تلقائياً من وجود إصدارات جديدة من Handy"
+        "description": "التحقق تلقائياً من وجود إصدارات جديدة من Speak"
       },
       "soundTheme": {
         "label": "سمة الصوت",
@@ -974,10 +1007,6 @@
         "label": "معالجة لاحقة",
         "description": "تمكين تحسين النص المدعوم بالذكاء الاصطناعي بعد التفريغ الصوتي"
       },
-      "muteWhileRecording": {
-        "label": "كتم الصوت أثناء التسجيل",
-        "description": "كتم صوت النظام أثناء التسجيل"
-      },
       "appendTrailingSpace": {
         "label": "إضافة مسافة تابعة",
         "description": "إضافة مسافة بعد التفريغ الملصق"
@@ -1010,7 +1039,7 @@
       },
       "keyboardDiagnostic": {
         "title": "تشخيص لوحة المفاتيح",
-        "description": "يتحقق مما إذا كانت أحداث لوحة المفاتيح تصل إلى Handy. يُسجَّل عدد الأحداث فقط — ولا تُسجَّل أبدًا المفاتيح التي تضغط عليها.",
+        "description": "يتحقق مما إذا كانت أحداث لوحة المفاتيح تصل إلى Speak. يُسجَّل عدد الأحداث فقط — ولا تُسجَّل أبدًا المفاتيح التي تضغط عليها.",
         "run": "تشغيل تشخيص لمدة 10 ثوانٍ",
         "running": "جارٍ الاستماع… اضغط اختصارك عدة مرات (مثل Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1024,7 +1053,7 @@
         "mouse": "الماوس",
         "verdictBlocked": "يحجب Secure Input أحداث المفاتيح — لا يمكن للاختصارات التي تتضمن مفتاحًا عاديًا أن تعمل حتى تُحلّ المشكلة.",
         "verdictSuspicious": "وصلت أحداث مفاتيح التعديل لكن لم يصل أي حدث مفتاح — هناك شيء يمنع المفاتيح رغم أن Secure Input يظهر معطلاً. يُرجى الإبلاغ عن ذلك على GitHub.",
-        "verdictOk": "أحداث المفاتيح تصل إلى Handy بشكل طبيعي.",
+        "verdictOk": "أحداث المفاتيح تصل إلى Speak بشكل طبيعي.",
         "verdictNoEvents": "لم يُسجَّل أي حدث — هل ضغطت أي مفاتيح أثناء الاختبار؟",
         "failed": "فشل التشخيص: {{error}}"
       },
@@ -1040,11 +1069,11 @@
       "title": "حول",
       "version": {
         "title": "الإصدار",
-        "description": "الإصدار الحالي من Handy"
+        "description": "الإصدار الحالي من Speak"
       },
       "appDataDirectory": {
         "title": "مجلد بيانات التطبيق",
-        "description": "الموقع الذي يخزن فيه Handy بياناته"
+        "description": "الموقع الذي يخزن فيه Speak بياناته"
       },
       "sourceCode": {
         "title": "كود المصدر",
@@ -1053,7 +1082,7 @@
       },
       "supportDevelopment": {
         "title": "دعم التطوير",
-        "description": "ساعدنا في مواصلة بناء Handy",
+        "description": "ساعدنا في مواصلة بناء Speak",
         "button": "تبرع"
       },
       "acknowledgments": {
@@ -1061,12 +1090,12 @@
         "ggml": {
           "title": "ggml",
           "description": "استنتاج عالي الأداء لنموذج التعرف التلقائي على الكلام Whisper من OpenAI",
-          "details": ".يستخدم Handy برنامج ggml لمعالجة سريعة ومحلية لتحويل الكلام إلى نص. شكراً للعمل الرائع الذي قام به Georgi Gerganov والمساهمون"
+          "details": ".يستخدم Speak برنامج ggml لمعالجة سريعة ومحلية لتحويل الكلام إلى نص. شكراً للعمل الرائع الذي قام به Georgi Gerganov والمساهمون"
         }
       },
       "whatsNewUpdates": {
         "label": "إظهار الجديد",
-        "description": "إظهار ملاحظات الإصدار بعد تحديثات Handy"
+        "description": "إظهار ملاحظات الإصدار بعد تحديثات Speak"
       }
     },
     "modelSettings": {
@@ -1089,12 +1118,13 @@
       "searchPlaceholder": "ابحث عن النماذج بالاسم…",
       "rescan": {
         "label": "إعادة الفحص",
-        "tooltip": "إعادة الفحص بحثًا عن النماذج المضافة إلى مجلد النماذج أو ذاكرة Hugging Face التخزينية المؤقتة خارج Handy"
+        "tooltip": "إعادة الفحص بحثًا عن النماذج المضافة إلى مجلد النماذج أو ذاكرة Hugging Face التخزينية المؤقتة خارج Speak"
       }
     },
     "tabs": {
       "modelsProviders": "النماذج والمزودون",
-      "meetingsEmptyBody": "ستتوفر إعدادات الاجتماعات مع وضع الاجتماعات."
+      "meetingsEmptyBody": "ستتوفر إعدادات الاجتماعات مع وضع الاجتماعات.",
+      "assistants": "المساعدون"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "الاحتفاظ 30 يومًا",
           "forever": "الاحتفاظ دائمًا"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "مساعدو الذكاء الاصطناعي",
+      "description": "مساعدان يمكنك الوصول إليهما باختصار. انطق سؤالك وتظهر الإجابة على بطاقة بجانب واجهة Speak.",
+      "profiles": {
+        "fast_helper": {
+          "title": "المساعد السريع",
+          "description": "للاستفسارات السريعة: معلومة، تحويل، طريقة كتابة، إعادة صياغة جملة. مضبوط لإجابة قصيرة تصل فورًا."
+        },
+        "smart_assistant": {
+          "title": "المساعد الذكي",
+          "description": "للأسئلة التي تستحق التفكير: تحليل، مقارنة، صياغة. مسموح له بأخذ وقت أطول والإجابة بإسهاب."
+        }
+      },
+      "provider": {
+        "title": "المزوّد",
+        "description": "الخدمة التي تجيب عن هذا المساعد. يمكن للمساعدَين استخدام المزوّد نفسه بمفاتيح مختلفة."
+      },
+      "apiKey": {
+        "configured": "تم حفظ مفتاح API لـ {{provider}}.",
+        "notConfigured": "لم يتم حفظ مفتاح API لـ {{provider}}.",
+        "title": "مفتاح API",
+        "description": "يُحفظ في سلسلة مفاتيح نظام التشغيل، منفصلًا عن مفتاح المعالجة اللاحقة.",
+        "placeholder": "الصق مفتاح API"
+      },
+      "model": {
+        "title": "النموذج",
+        "description": "النموذج الذي يسأله هذا المساعد. اختر واحدًا من القائمة أو اكتب معرّف النموذج بدقة.",
+        "placeholder": "اختر معرّف نموذج أو أدخله",
+        "refresh": "تحديث قائمة النماذج",
+        "required": "لم يتم اختيار نموذج بعد. يبقى هذا المساعد غير نشط حتى تختار واحدًا.",
+        "listingHint": "تُحمَّل قائمة النماذج بمفتاح API الخاص بهذا المساعد. بدونه لا يزال بإمكانك إدخال معرّف النموذج يدويًا."
+      },
+      "systemPrompt": {
+        "title": "موجّه النظام",
+        "description": "التعليمات الثابتة التي يتبعها هذا المساعد في كل سؤال.",
+        "placeholder": "صف كيف ينبغي أن يجيب هذا المساعد"
+      },
+      "maxOutputTokens": {
+        "title": "طول الإجابة",
+        "description": "الحد الأقصى للإجابة، بالرموز ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "المهلة",
+        "description": "مدة انتظار الإجابة قبل التوقف، بالثواني ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "التعامل مع الإجابة"
+      },
+      "outputModes": {
+        "show": {
+          "label": "العرض فقط",
+          "hint": "تظهر الإجابة على البطاقة ولا شيء غير ذلك."
+        },
+        "copy": {
+          "label": "العرض والنسخ",
+          "hint": "تظهر الإجابة على البطاقة وتُنسخ إلى الحافظة."
+        },
+        "paste": {
+          "label": "العرض واللصق",
+          "hint": "تظهر الإجابة على البطاقة وتُلصق في التطبيق الذي كنت تعمل فيه."
+        }
+      },
+      "shortcutHint": "تُضبط اختصارات لوحة المفاتيح لكلا المساعدَين ضمن الإملاء، بجانب اختصارات النسخ."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "إعادة تعيين"
   },
   "accessibility": {
-    "permissionsDescription": ".يحتاج Handy إلى أذونات إمكانية الوصول لكتابة النص المفرغ",
+    "permissionsDescription": ".يحتاج Speak إلى أذونات إمكانية الوصول لكتابة النص المفرغ",
     "openSettings": "فتح إعدادات النظام"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "modelLoadFailedUnknown": "نموذج غير معروف",
     "pasteFailedTitle": "فشل لصق النص",
     "pasteFailed": "تعذر لصق النص في التطبيق النشط.",
-    "transcriptionFailedTitle": "فشل التفريغ النصي"
+    "transcriptionFailedTitle": "فشل التفريغ النصي",
+    "assistantNoticeTitle": "المساعد"
   },
   "appLanguage": {
     "title": "لغة التطبيق",
-    "description": "تغيير لغة واجهة Handy"
+    "description": "تغيير لغة واجهة Speak"
   },
   "theme": {
     "title": "سمة التطبيق",
-    "description": "اختر ما إذا كان Handy يتبع مظهر النظام أو يبقى فاتحًا أو داكنًا",
+    "description": "اختر ما إذا كان Speak يتبع مظهر النظام أو يبقى فاتحًا أو داكنًا",
     "options": {
       "system": "النظام",
       "light": "فاتح",
@@ -1291,10 +1413,27 @@
     "processing": "...جاري المعالجة",
     "cancel": "إلغاء",
     "meetingRecording": "جارٍ تسجيل الاجتماع",
-    "meetingPaused": "الاجتماع متوقف مؤقتًا"
+    "meetingPaused": "الاجتماع متوقف مؤقتًا",
+    "assistant": {
+      "label": "المساعد",
+      "smartLabel": "المساعد الذكي",
+      "copy": "نسخ",
+      "copied": "تم النسخ إلى الحافظة",
+      "paste": "لصق",
+      "pasted": "تم اللصق",
+      "replace": "استبدال",
+      "replaced": "تم الاستبدال",
+      "replaceHint": "يحدد كل شيء في النافذة النشطة ويلصق الإجابة مكانه",
+      "openLink": "فتح الرابط",
+      "chooseLink": "فتح رابط ({{n}})",
+      "escalate": "اسأل المساعد الذكي",
+      "asking": "جارٍ سؤال المساعد الذكي...",
+      "close": "إغلاق",
+      "truncated": "تم قطع الإجابة عند حد الطول."
+    }
   },
   "whatsNew": {
-    "title": "الجديد في Handy v{{version}}"
+    "title": "الجديد في Speak v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "قد يحظر {{name}} اختصارًا واحدًا",

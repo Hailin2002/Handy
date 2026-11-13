@@ -22,9 +22,11 @@ import Onboarding, { AccessibilityOnboarding } from "./components/onboarding";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
 import {
+  buildSettingsHash,
   MEETING_MODE_ENABLED,
   SettingsPage,
   hashTargetsSettingsView,
+  type SettingsSectionId,
   type ProductViewId,
 } from "./components/shell";
 import { AboutSettings, HistorySettings } from "./components/settings";
@@ -43,16 +45,18 @@ type OnboardingStep = "accessibility" | "model" | "done";
 // meeting affordance. The global shortcut start/stop flow is untouched.
 const renderProductContent = (
   view: ProductViewId,
-  onOpenDictationSettings: () => void,
+  onOpenSettings: (section: SettingsSectionId) => void,
 ) => {
   switch (view) {
     case "dictate":
-      return <DictationHome onOpenSettings={onOpenDictationSettings} />;
+      return <DictationHome onOpenSettings={() => onOpenSettings("dictate")} />;
     case "meetings":
       // Real meetings journey (plan §6.5): live list from the Rust
       // MeetingManager, create/open/save/delete backed by SQLite. The flag
       // only stays for emergency-rollback builds (defaults to ON).
-      return MEETING_MODE_ENABLED ? <MeetingsPage /> : null;
+      return MEETING_MODE_ENABLED ? (
+        <MeetingsPage onOpenSettings={() => onOpenSettings("meetings")} />
+      ) : null;
     case "projects":
       return <ProjectsPage />;
     case "history":
@@ -88,6 +92,14 @@ function App() {
     (state) => state.refreshOutputDevices,
   );
   const hasCompletedPostOnboardingInit = useRef(false);
+
+  const openSettings = (section: SettingsSectionId) => {
+    // SettingsPage reads the hash during its first render. Writing it before
+    // switching views makes every in-product settings link land on the
+    // intended tab instead of whatever tab happened to be open previously.
+    window.history.replaceState(null, "", buildSettingsHash(section));
+    setCurrentView("settings");
+  };
 
   // Mount-only by design: the onboarding decision is taken once, from the
   // persisted settings, before the user sees anything. Re-running it on any
@@ -194,6 +206,18 @@ function App() {
       toast.error(t("errors.transcriptionFailedTitle"), {
         description: event.payload,
       });
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [t]);
+
+  // Assistant messages with no answer card to land in: the overlay is switched
+  // off, or the profile copies/pastes instead of showing a card. Without this
+  // those runs - and their errors - were emitted into a void.
+  useEffect(() => {
+    const unlisten = listen<string>("assistant-notice", (event) => {
+      toast(t("errors.assistantNoticeTitle"), { description: event.payload });
     });
     return () => {
       unlisten.then((fn) => fn());
@@ -353,9 +377,7 @@ function App() {
               <div className="flex flex-col items-center p-4 gap-4">
                 <AccessibilityPermissions />
                 <SecureInputWarning />
-                {renderProductContent(currentView, () =>
-                  setCurrentView("settings"),
-                )}
+                {renderProductContent(currentView, openSettings)}
               </div>
             </div>
           </div>

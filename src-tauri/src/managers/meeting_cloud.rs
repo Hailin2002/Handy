@@ -271,7 +271,7 @@ pub struct AzureFastTranscriptionClient {
 }
 
 impl AzureFastTranscriptionClient {
-    const API_VERSION: &str = "2024-11-15";
+    const API_VERSION: &str = "2025-10-15";
 
     pub fn new(endpoint: String, key: String, timeout: Duration) -> Result<Self, CloudJobError> {
         Ok(Self {
@@ -290,15 +290,45 @@ impl AzureFastTranscriptionClient {
     }
 }
 
+/// Fast transcription accepts full Azure locales (`de-DE`), not the bare
+/// language intents (`de`) used by local models. Older meeting rows stored the
+/// latter, so normalize known languages and let Azure auto-detect unknown bare
+/// values instead of turning an otherwise valid recording into HTTP 400.
+fn azure_fast_locale(language: &str) -> Option<String> {
+    let language = language.trim();
+    if language.is_empty() || language.eq_ignore_ascii_case("auto") {
+        return None;
+    }
+    if language.contains('-') {
+        return Some(language.to_string());
+    }
+    match language.to_ascii_lowercase().as_str() {
+        "de" => Some("de-DE".to_string()),
+        "en" => Some("en-US".to_string()),
+        "es" => Some("es-ES".to_string()),
+        "fr" => Some("fr-FR".to_string()),
+        "hi" => Some("hi-IN".to_string()),
+        "it" => Some("it-IT".to_string()),
+        "ja" => Some("ja-JP".to_string()),
+        "ko" => Some("ko-KR".to_string()),
+        "pt" => Some("pt-BR".to_string()),
+        "zh" | "yue" => Some("zh-CN".to_string()),
+        _ => None,
+    }
+}
+
 impl CloudTranscriber for AzureFastTranscriptionClient {
     fn transcribe_wav(
         &self,
         wav: Vec<u8>,
         language: Option<&str>,
     ) -> Result<Vec<CloudPhrase>, CloudJobError> {
-        let mut definition = serde_json::json!({ "channels": [0] });
-        if let Some(language) = language {
-            definition["language"] = Value::String(language.to_string());
+        let mut definition = serde_json::json!({
+            "channels": [0],
+            "profanityFilterMode": "None"
+        });
+        if let Some(locale) = language.and_then(azure_fast_locale) {
+            definition["locales"] = serde_json::json!([locale]);
         }
 
         let url = self.url();
@@ -381,6 +411,9 @@ where
 pub fn parse_azure_response(body: &str) -> Result<Vec<CloudPhrase>, String> {
     let root: Value =
         serde_json::from_str(body).map_err(|e| format!("azure payload is not JSON: {e}"))?;
+    let has_transcription_shape = ["phrases", "recognizedPhrases", "combinedPhrases"]
+        .iter()
+        .any(|key| root.get(key).is_some_and(Value::is_array));
 
     // Current generation: phrases[] with millisecond offsets and plain text.
     if let Some(phrases) = root.get("phrases").and_then(Value::as_array) {
@@ -492,7 +525,15 @@ pub fn parse_azure_response(body: &str) -> Result<Vec<CloudPhrase>, String> {
         }
     }
 
-    Err("azure payload has no recognized phrases".to_string())
+    // A valid Azure response may intentionally contain no phrases when a
+    // meeting track is silence, music, or background noise only. That track
+    // is complete, not broken: returning an empty result lets the queue mark
+    // it succeeded while preserving speech recognized on the other track.
+    if has_transcription_shape {
+        Ok(Vec::new())
+    } else {
+        Err("azure payload has no recognized phrases".to_string())
+    }
 }
 
 /// Generic custom-endpoint client: POSTs the same multipart package with a
@@ -649,6 +690,34 @@ pub fn encode_wav_pcm16_mono(samples: &[f32]) -> Vec<u8> {
     cursor.into_inner()
 }
 
+/// Raises quiet meeting tracks before cloud recognition without changing the
+/// stored recording. Loopback and microphone levels often differ by 20 dB or
+/// more; a peak-targeted, clamped gain recovered otherwise missing words in
+/// the long-meeting corpus while leaving already-loud audio untouched.
+fn normalize_for_cloud(samples: &[f32]) -> Vec<f32> {
+    let peak = samples
+        .iter()
+        .filter(|sample| sample.is_finite())
+        .fold(0.0_f32, |peak, sample| peak.max(sample.abs()));
+    if peak <= f32::EPSILON {
+        return samples.to_vec();
+    }
+    let gain = (0.75 / peak).clamp(1.0, 8.0);
+    if gain <= 1.01 {
+        return samples.to_vec();
+    }
+    samples
+        .iter()
+        .map(|sample| {
+            if sample.is_finite() {
+                (*sample * gain).clamp(-1.0, 1.0)
+            } else {
+                0.0
+            }
+        })
+        .collect()
+}
+
 // ---------------------------------------------------------------------------
 // MeetingSttEngine adapters — the queue only ever sees these
 // ---------------------------------------------------------------------------
@@ -702,7 +771,8 @@ impl MeetingSttEngine for AzureMeetingEngine {
         ctx: &JobContext,
         audio: &[f32],
     ) -> Result<Vec<EngineSegment>, EngineError> {
-        let wav = encode_wav_pcm16_mono(audio);
+        let normalized = normalize_for_cloud(audio);
+        let wav = encode_wav_pcm16_mono(&normalized);
         let phrases = self
             .client
             .transcribe_wav(wav, ctx.language.as_deref())
@@ -838,6 +908,15 @@ mod tests {
         assert_eq!(segments[0].start_ms_rel, 250);
         assert_eq!(segments[0].end_ms_rel, 750);
         assert!((segments[0].confidence.unwrap() - 0.9).abs() < 1e-6);
+    }
+
+    #[test]
+    fn azure_fast_locale_upgrades_legacy_bare_language_codes() {
+        assert_eq!(azure_fast_locale("de").as_deref(), Some("de-DE"));
+        assert_eq!(azure_fast_locale("en").as_deref(), Some("en-US"));
+        assert_eq!(azure_fast_locale("de-DE").as_deref(), Some("de-DE"));
+        assert_eq!(azure_fast_locale("auto"), None);
+        assert_eq!(azure_fast_locale("unknown"), None);
     }
 
     #[test]
@@ -978,6 +1057,14 @@ mod tests {
     }
 
     #[test]
+    fn quiet_cloud_audio_is_amplified_but_loud_audio_is_not() {
+        let quiet = normalize_for_cloud(&[0.01, -0.02, 0.0]);
+        assert!(quiet[1].abs() > 0.15);
+        let loud = vec![0.8, -0.7];
+        assert_eq!(normalize_for_cloud(&loud), loud);
+    }
+
+    #[test]
     fn azure_parser_handles_the_live_2024_11_15_response_shape() {
         // Verbatim shape from a real call against germanywestcentral
         // (api-version=2024-11-15): phrases with millisecond offsets plus a
@@ -1028,6 +1115,18 @@ mod tests {
             phrases[0].confidence, None,
             "non-numeric confidence dropped"
         );
+    }
+
+    #[test]
+    fn azure_parser_accepts_a_valid_music_or_silence_only_result() {
+        let body = r#"{
+            "durationMilliseconds": 11469,
+            "combinedPhrases": [],
+            "phrases": []
+        }"#;
+        assert!(parse_azure_response(body)
+            .expect("valid empty result")
+            .is_empty());
     }
 
     #[test]

@@ -101,6 +101,14 @@ async changeSpeechInputProviderSetting(provider: SpeechInputProvider) : Promise<
     else return { status: "error", error: e  as any };
 }
 },
+async changeMeetingSttProviderSetting(provider: SpeechInputProvider) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_meeting_stt_provider_setting", { provider }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async changeAzureSpeechEndpointSetting(endpoint: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_azure_speech_endpoint_setting", { endpoint }) };
@@ -171,11 +179,11 @@ async getAzureSpeechAuth() : Promise<Result<AzureSpeechAuth, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async azureSpeechInterim(sessionId: number, text: string) : Promise<void> {
-    await TAURI_INVOKE("azure_speech_interim", { sessionId, text });
+async azureSpeechInterim(sessionId: number, text: string, audioEndMs: number) : Promise<void> {
+    await TAURI_INVOKE("azure_speech_interim", { sessionId, text, audioEndMs });
 },
-async azureSpeechFinal(sessionId: number, text: string) : Promise<void> {
-    await TAURI_INVOKE("azure_speech_final", { sessionId, text });
+async azureSpeechFinal(sessionId: number, text: string, audioEndMs: number) : Promise<void> {
+    await TAURI_INVOKE("azure_speech_final", { sessionId, text, audioEndMs });
 },
 async azureSpeechTranslatePending(sessionId: number) : Promise<Result<null, string>> {
     try {
@@ -383,6 +391,131 @@ async setPostProcessProvider(providerId: string) : Promise<Result<null, string>>
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Points an assistant at a different provider.
+ * 
+ * A profile stores exactly one model id, so switching providers resets it —
+ * keeping the old one would leave a name the new endpoint rejects. Selecting
+ * the provider that is already set is a no-op and preserves the model.
+ */
+async setAssistantProvider(profileId: string, providerId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_assistant_provider", { profileId, providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stores an assistant's API key in the OS keychain under
+ * [`crate::secret_store::ASSISTANT_SCOPE`], keyed by profile id — never in the
+ * settings store, and never shared with post-processing.
+ */
+async changeAssistantApiKeySetting(profileId: string, apiKey: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_assistant_api_key_setting", { profileId, apiKey }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Reports whether each assistant profile has a usable credential without
+ * ever serializing the credential itself across IPC.
+ * 
+ * `SecretMap` intentionally serializes as an empty object so secrets cannot
+ * leak into settings JSON or the webview. The UI therefore needs this
+ * separate boolean-only view to distinguish "stored securely" from "missing".
+ */
+async getAssistantApiKeyStatus() : Promise<Result<Partial<{ [key in string]: boolean }>, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_assistant_api_key_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeAssistantModelSetting(profileId: string, model: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_assistant_model_setting", { profileId, model }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeAssistantSystemPromptSetting(profileId: string, prompt: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_assistant_system_prompt_setting", { profileId, prompt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Sets answer length and request deadline together — they are one decision
+ * ("how much work may this assistant do") and are clamped to the ranges the
+ * schema enforces on load, so the UI cannot store a value the repair pass
+ * would immediately rewrite.
+ */
+async changeAssistantLimitsSetting(profileId: string, maxOutputTokens: number, timeoutSecs: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_assistant_limits_setting", { profileId, maxOutputTokens, timeoutSecs }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async setAssistantOutputMode(profileId: string, mode: AssistantOutputMode) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_assistant_output_mode", { profileId, mode }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * List the models the given assistant profile can actually reach.
+ * 
+ * Deliberately not `fetch_post_process_models`: that one reads the key stored
+ * under [`crate::secret_store::POST_PROCESS_SCOPE`] for the provider, while an
+ * assistant's credential lives under
+ * [`crate::secret_store::ASSISTANT_SCOPE`] keyed by *profile* id. Reusing the
+ * post-processing path made the dropdown permanently empty for anyone who had
+ * only entered an assistant key — the list was asking a different credential
+ * whether it could see any models.
+ */
+async fetchAssistantModels(profileId: string) : Promise<Result<string[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("fetch_assistant_models", { profileId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async setMeetingSummaryProvider(providerId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_meeting_summary_provider", { providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeMeetingSummaryModelSetting(providerId: string, model: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_meeting_summary_model_setting", { providerId, model }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeMeetingSummaryCloudConsentSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_meeting_summary_cloud_consent_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async fetchPostProcessModels(providerId: string) : Promise<Result<string[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("fetch_post_process_models", { providerId }) };
@@ -454,9 +587,57 @@ async resumeAllBindings() : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Legacy toggle, kept working for callers (and stores) that predate
+ * `recording_audio_mode`. It now writes *both* fields, so the bool and the
+ * mode can never disagree: enabling it means Mute, disabling it means Off.
+ * 
+ * Note the asymmetry this implies — turning it off from Duck also lands on
+ * Off, which is the honest reading of "don't touch my audio while recording".
+ */
 async changeMuteWhileRecordingSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_mute_while_recording_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Sets what happens to system audio while recording.
+ * 
+ * Write-through mirror (plan decision E3): `mute_while_recording` is rewritten
+ * from the new mode on every change, so the legacy field never goes stale and
+ * an older build reading the same store still behaves sanely.
+ */
+async changeRecordingAudioModeSetting(mode: RecordingAudioMode) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_recording_audio_mode_setting", { mode }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Sets the ducking target as a percentage of full output volume.
+ * Out-of-range input is clamped rather than rejected — a slider is the only
+ * caller, and silently correcting beats failing a settings write.
+ */
+async changeDuckVolumePercentSetting(percent: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_duck_volume_percent_setting", { percent }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Sets the duck/restore ramp length. Clamped to 1s: anything longer would
+ * still be ramping well after a short dictation has ended.
+ */
+async changeDuckFadeMsSetting(ms: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_duck_fade_ms_setting", { ms }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -714,6 +895,114 @@ async openAppDataDir() : Promise<Result<null, string>> {
  */
 async checkAppleIntelligenceAvailable() : Promise<boolean> {
     return await TAURI_INVOKE("check_apple_intelligence_available");
+},
+/**
+ * Put an assistant answer on the clipboard.
+ * 
+ * Uses the dictation clipboard writer, which owns the platform quirks (Windows
+ * delayed rendering, `wl-copy` on Wayland). Nothing is restored afterwards: the
+ * answer is meant to stay on the clipboard so the user can paste it themselves.
+ */
+async assistantCopy(text: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("assistant_copy", { text }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Insert an assistant answer into the focused application.
+ * 
+ * Delegates wholesale to [`crate::clipboard::paste`], so the card obeys every
+ * paste setting the user has already made — paste method, delays, clipboard
+ * handling, trailing space, auto-submit.
+ */
+async assistantPaste(text: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("assistant_paste", { text }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Select everything in the focused application, then paste the answer over it.
+ * 
+ * # What this actually does, and what it cannot promise
+ * 
+ * It sends two synthetic key chords to whatever the operating system currently
+ * considers focused: Ctrl+A (Cmd+A on macOS), then the user's configured paste.
+ * It does not know, and cannot find out, what has focus or what that
+ * application will do with Ctrl+A.
+ * 
+ * The consequences are worth stating plainly, because this is the one command
+ * in the feature that destroys data:
+ * 
+ * - **The target is whatever is focused, not whatever was focused when the
+ * question was asked.** The overlay is non-focusable, so focus never moved to
+ * the card — but the user is free to click into a different window while
+ * reading the answer, and the replace will land there instead.
+ * - **Ctrl+A is not universally "select all text in this field".** In a file
+ * manager it selects every file; in some editors it is bound to
+ * beginning-of-line; in a browser with no field focused it selects the whole
+ * page and the paste then goes nowhere.
+ * - **It is not undoable by this app.** Recovery is the target application's
+ * own undo, if it has one.
+ * 
+ * Nothing here can be verified before acting, so the command is kept
+ * deliberately dumb and the decision is left with the user: it is a separate,
+ * explicitly labelled button on the card, never a default and never automatic.
+ * It refuses empty text, so a misfire cannot silently blank a document.
+ */
+async assistantReplace(text: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("assistant_replace", { text }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Close the answer card and hide the overlay.
+ * 
+ * The card's Close button. The overlay has no keyboard focus, so there is no
+ * Escape key to press inside it, which makes this the only way a user can
+ * dismiss a card short of starting another dictation.
+ */
+async assistantDismiss() : Promise<void> {
+    await TAURI_INVOKE("assistant_dismiss");
+},
+/**
+ * Raise the overlay's answer card for an event whose `expects_card` is set.
+ * 
+ * Returns whether a card is now on screen. Whether a card is *warranted* is no
+ * longer decided here: it travels in the event payload, decided once at emit
+ * time. Re-reading the output mode at present time meant a setting changed
+ * mid-request could leave the processing spinner up with nothing replacing it.
+ */
+async assistantPresentAnswer() : Promise<boolean> {
+    return await TAURI_INVOKE("assistant_present_answer");
+},
+/**
+ * Ask the same question again, against the smart assistant.
+ * 
+ * Returns `true` when this call ran the request and `false` when it was
+ * coalesced into one already in flight.
+ * 
+ * The answer is emitted as an ordinary [`AssistantAnswerEvent`] and nothing
+ * else: no clipboard write, no paste, whatever the smart profile's output mode
+ * happens to be. Escalation is a request for a better answer *in the card the
+ * user is already looking at*, and it would be a surprising place to have text
+ * typed into the document behind it.
+ */
+async assistantEscalate(question: string) : Promise<Result<boolean, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("assistant_escalate", { question }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 /**
  * Try to initialize Enigo (keyboard/mouse simulation).
@@ -1084,9 +1373,9 @@ async createMeetingDraft(title: string | null) : Promise<Result<MeetingSnapshot,
 /**
  * Runs the full Startvalidierung and returns the compact start-dialog rows.
  */
-async preflightMeeting() : Promise<Result<MeetingPreflightReport, string>> {
+async preflightMeeting(sttProvider: SpeechInputProvider | null) : Promise<Result<MeetingPreflightReport, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("preflight_meeting") };
+    return { status: "ok", data: await TAURI_INVOKE("preflight_meeting", { sttProvider }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1605,6 +1894,20 @@ async retranscribeMeeting(meetingId: string, provider: SpeechInputProvider | nul
 }
 },
 /**
+ * Compares every stored chunk with a second provider and applies only clear
+ * completeness improvements. The original segment rows remain tombstoned in
+ * SQLite, and no transcript changes are committed if any reference call
+ * fails.
+ */
+async improveMeetingAccuracy(meetingId: string, referenceProvider: SpeechInputProvider) : Promise<Result<MeetingAccuracyReport, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("improve_meeting_accuracy", { meetingId, referenceProvider }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Pending crash-recovery offers produced by the startup reconciliation.
  */
 async meetingListRecoveries() : Promise<Result<MeetingRecoveryOffer[], string>> {
@@ -1644,10 +1947,12 @@ async isLaptop() : Promise<Result<boolean, string>> {
 
 
 export const events = __makeEvents__<{
+assistantAnswerEvent: AssistantAnswerEvent,
 historyUpdatePayload: HistoryUpdatePayload,
 streamPhaseEvent: StreamPhaseEvent,
 streamTextEvent: StreamTextEvent
 }>({
+assistantAnswerEvent: "assistant-answer-event",
 historyUpdatePayload: "history-update-payload",
 streamPhaseEvent: "stream-phase-event",
 streamTextEvent: "stream-text-event"
@@ -1702,6 +2007,16 @@ meeting_stt_provider?: SpeechInputProvider;
  */
 meeting_summary_cloud_consent?: boolean; 
 /**
+ * LLM provider used only for meeting summaries. This is deliberately
+ * independent from dictation post-processing.
+ */
+meeting_summary_provider_id?: string; 
+/**
+ * Per-provider meeting model choices so switching Local/OpenRouter never
+ * carries an incompatible model id across providers.
+ */
+meeting_summary_models?: Partial<{ [key in string]: string }>; 
+/**
  * Microphone captured by meetings. `None` follows the dictation
  * microphone, which is the sensible default for a single-mic desk.
  * Retention rule for meeting audio (plan §12). Defaults to
@@ -1720,7 +2035,61 @@ meeting_retention_policy?: MeetingRetentionPolicy; meeting_microphone?: string |
  * otherwise changing where a beep plays silently changes what a meeting
  * records.
  */
-meeting_output_device?: string | null; azure_speech_endpoint?: string; azure_speech_language?: string; azure_stable_partial_threshold?: number; azure_segmentation_silence_ms?: number; custom_stt_endpoint?: string; speech_pipeline_api_keys?: SecretMap; deepl_translation_enabled?: boolean; deepl_target_language?: string; deepl_sentence_delay_ms?: number; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; paste_delay_after_ms?: number; 
+meeting_output_device?: string | null; azure_speech_endpoint?: string; azure_speech_language?: string; azure_stable_partial_threshold?: number; azure_segmentation_silence_ms?: number; custom_stt_endpoint?: string; speech_pipeline_api_keys?: SecretMap; deepl_translation_enabled?: boolean; deepl_target_language?: string; deepl_sentence_delay_ms?: number; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; 
+/**
+ * The configured assistants, keyed by [`AssistantProfile::id`].
+ * 
+ * Seeded and repaired on every settings read by
+ * [`ensure_assistant_defaults`], so an existing store that predates the
+ * feature gains both shipped profiles without a versioned migration.
+ */
+assistant_profiles?: Partial<{ [key in string]: AssistantProfile }>; 
+/**
+ * Assistant API keys, keyed by *profile* id — not provider id. Both
+ * profiles may target the same provider with different credentials.
+ * 
+ * Like every [`SecretMap`] this serializes as `{}`; the real values live
+ * in the OS keychain under [`crate::secret_store::ASSISTANT_SCOPE`] and
+ * are hydrated into the in-memory copy on read.
+ */
+assistant_api_keys?: SecretMap; 
+/**
+ * Legacy "mute system audio while recording" flag. Superseded by
+ * `recording_audio_mode`, but kept and write-through mirrored: every path
+ * that changes the mode also rewrites this bool from
+ * [`RecordingAudioMode::mirrors_mute_flag`], so a downgrade to an older
+ * build still behaves the way the user configured it here.
+ */
+mute_while_recording?: boolean; 
+/**
+ * Runtime truth for what happens to system audio while recording.
+ */
+recording_audio_mode?: RecordingAudioMode; 
+/**
+ * Target output volume while ducking, as a percentage of full scale.
+ */
+duck_volume_percent?: number; 
+/**
+ * Duration of the duck-down / restore-up ramp in milliseconds. `0` sets
+ * the volume in one step.
+ */
+duck_fade_ms?: number; 
+/**
+ * Crash-safety net for ducking: the system output volume as it was
+ * *before* we ducked, written to disk while a duck is engaged and cleared
+ * the moment it is restored.
+ * 
+ * This is not a user preference and has no UI. It exists because
+ * `DuckState` lives in process memory only: if the process dies while
+ * ducked — quit, panic, SIGKILL, power loss — the machine comes back up
+ * at the duck level with nothing left to restore from. A value here means
+ * exactly that happened, and the next start puts the volume back (see
+ * `AudioRecordingManager::restore_pending_duck_snapshot`).
+ * 
+ * `None` is the normal, steady state; a stale `Some` is self-healing
+ * because startup consumes it.
+ */
+pending_duck_restore?: number | null; append_trailing_space?: boolean; app_language?: string; theme?: Theme; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; paste_delay_after_ms?: number; 
 /**
  * Debug-gated ("beta") receipt-sequenced paste: restore the clipboard only
  * after the target app actually reads the transcript, instead of after a
@@ -1739,6 +2108,89 @@ transcribe_gpu_device?: string | null; extra_recording_buffer_ms?: number; vad_e
  * `overlay_position` (position `none` → style `None`).
  */
 overlay_style?: OverlayStyle }
+/**
+ * The result of one assistant run, in the shape Phase E renders.
+ * 
+ * Exactly one of `answer` and `error` is `Some`. `question` is echoed back so
+ * the card can show what was actually heard — the most common cause of a
+ * surprising answer is a misheard question.
+ */
+export type AssistantAnswerEvent = { 
+/**
+ * [`crate::settings::ASSISTANT_PROFILE_FAST`] or
+ * [`crate::settings::ASSISTANT_PROFILE_SMART`].
+ */
+profile_id: string; 
+/**
+ * The transcript that was asked, verbatim.
+ */
+question: string; answer: string | null; 
+/**
+ * User-facing, actionable, and always set when `answer` is `None`.
+ */
+error: string | null; 
+/**
+ * URLs extracted from `answer`, in the order they appeared.
+ */
+links: string[]; elapsed_ms: number; 
+/**
+ * Whether the overlay is expected to turn into the answer card for this
+ * event. Decided once by the emitter, so the frontend never re-asks and a
+ * setting changed mid-request cannot strand the processing spinner.
+ */
+expects_card: boolean; 
+/**
+ * The answer hit the token ceiling mid-sentence rather than finishing.
+ */
+truncated: boolean }
+/**
+ * What an assistant does with the answer it produced.
+ * 
+ * `Show` only renders the result card and is the default for both shipped
+ * profiles: an assistant that types into the focused app without being asked
+ * would be destructive when the shortcut is hit by accident.
+ */
+export type AssistantOutputMode = 
+/**
+ * Display the answer in the overlay card and do nothing else.
+ */
+"show" | 
+/**
+ * Display the answer and copy it to the clipboard.
+ */
+"copy" | 
+/**
+ * Display the answer and paste it into the focused application.
+ */
+"paste"
+/**
+ * One independently configured assistant.
+ * 
+ * Profiles deliberately do **not** share provider credentials with
+ * post-processing: the same provider can be used with a different key per
+ * profile, so keys live under [`crate::secret_store::ASSISTANT_SCOPE`] keyed
+ * by [`AssistantProfile::id`], not by `provider_id`.
+ * 
+ * `max_output_tokens`, `timeout_secs` and `disable_reasoning` map directly
+ * onto `llm_client::ChatOptions`; keep them in that shape so the execution
+ * path stays a plain field-for-field translation.
+ */
+export type AssistantProfile = { 
+/**
+ * Stable identity. Also the `assistant_profiles` map key and the secret
+ * id — the two are kept in sync by `ensure_assistant_defaults`.
+ */
+id: string; 
+/**
+ * Id of an entry in `post_process_providers`; the provider catalogue is
+ * shared, only the credentials are not.
+ */
+provider_id: string; model: string; system_prompt: string; max_output_tokens: number; timeout_secs: number; output_mode: AssistantOutputMode; 
+/**
+ * Ask the endpoint to skip reasoning output — the difference between a
+ * snappy lookup and a model that thinks for ten seconds first.
+ */
+disable_reasoning: boolean }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AvailableAccelerators = { transcribe: string[]; ort: string[]; gpu_devices: GpuDeviceOption[] }
@@ -1846,6 +2298,7 @@ key_down: number; key_up: number; flags_changed: number; mouse: number; duration
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
+export type MeetingAccuracyReport = { provider: string; chunksChecked: number; chunksCorrected: number; silenceHallucinationsRemoved: number; chunksUnchanged: number; localWords: number; referenceWords: number }
 /**
  * One playable audio chunk of a meeting (plan §6.13 `Audio` tab).
  */
@@ -2382,6 +2835,27 @@ state: string;
  * `ai | manual` — who created it first.
  */
 origin: string; human_edited_at: number | null }
+/**
+ * What Handy does to the system's audio output while it is recording.
+ * 
+ * Supersedes the older `mute_while_recording` bool, which is kept in the
+ * schema and write-through mirrored (`mirrors_mute_flag`) so existing UI,
+ * fixtures and the frozen-store test keep working. `recording_audio_mode` is
+ * the runtime truth; the bool is a derived shadow.
+ */
+export type RecordingAudioMode = 
+/**
+ * Leave system audio alone.
+ */
+"off" | 
+/**
+ * Lower system output volume to `duck_volume_percent` while recording.
+ */
+"duck" | 
+/**
+ * Mute system output entirely — the pre-existing behavior.
+ */
+"mute"
 export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" | "weeks_2" | "months_3"
 /**
  * One full-text hit, always carrying where it came from.

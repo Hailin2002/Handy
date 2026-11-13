@@ -359,6 +359,8 @@
     "detail": {
       "summaryHeading": "Summary",
       "transcriptHeading": "Transcript",
+      "transcriptSourceMicrophone": "You",
+      "transcriptSourceSystem": "Meeting",
       "decisions": "Decisions",
       "actionItems": "Action items",
       "openQuestions": "Open questions",
@@ -401,7 +403,16 @@
         "retranscribeBody": "Transkriberar det sparade ljudet en gång till. Själva inspelningen behålls.",
         "retranscribeWarning": "Den nuvarande transkriptionen kastas och skapas igen från det sparade ljudet. Inspelningen rörs inte.",
         "retranscribeQueued": "Transkription köad igen.",
-        "retranscribeFailed": "Det gick inte att starta transkriptionen igen."
+        "retranscribeFailed": "Det gick inte att starta transkriptionen igen.",
+        "accuracyHeading": "Improve accuracy",
+        "accuracyBody": "Checks the complete stored recording with a second provider and only replaces sections that are clearly more complete.",
+        "accuracyAction": "Run accuracy check",
+        "accuracyWarning": "This can take several minutes and may use cloud credits. The current transcript stays unchanged if the check fails. Replaced originals remain recoverable.",
+        "accuracyProvider": "Reference provider",
+        "accuracyRunning": "Checking complete audioâ€¦",
+        "accuracyDone": "Accuracy check finished: {{count}} section(s) improved.",
+        "accuracyFailed": "The accuracy check could not be completed.",
+        "accuracyResult": "{{checked}} sections checked, {{corrected}} improved, {{removed}} silence hallucination(s) removed."
       }
     }
   },
@@ -488,7 +499,7 @@
     },
     "permissions": {
       "title": "Behörigheter krävs",
-      "description": "Handy behöver ett par behörigheter för att fungera korrekt.",
+      "description": "Speak behöver ett par behörigheter för att fungera korrekt.",
       "microphone": {
         "title": "Mikrofonåtkomst",
         "description": "Krävs för att höra din röst för transkription."
@@ -637,7 +648,7 @@
     "general": {
       "title": "Allmänt",
       "shortcut": {
-        "title": "Handy-kortkommandon",
+        "title": "Speak-kortkommandon",
         "description": "Konfigurera kortkommandon för att starta tal-till-text-inspelning",
         "loading": "Laddar kortkommandon...",
         "none": "Inga kortkommandon konfigurerade",
@@ -655,6 +666,14 @@
           "transcribe_with_post_process": {
             "name": "Snabbkommando för efterbearbetning",
             "description": "Valfritt: En dedikerad snabbknapp som alltid tillämpar AI-efterbearbetning på din transkription."
+          },
+          "assistant_fast": {
+            "name": "Kortkommando för snabb hjälpare",
+            "description": "Kortkommandot som frågar den snabba assistenten. Otilldelat tills du ställer in det."
+          },
+          "assistant_smart": {
+            "name": "Kortkommando för smart assistent",
+            "description": "Kortkommandot som frågar den grundliga assistenten. Otilldelat tills du ställer in det."
           }
         },
         "errors": {
@@ -675,6 +694,20 @@
       "pushToTalk": {
         "label": "Tryck för att tala",
         "description": "Håll ned för att spela in, släpp för att stoppa"
+      },
+      "recordingAudio": {
+        "label": "Ljud under inspelning",
+        "description": "Vad Speak gör med systemets ljuduppspelning under inspelning",
+        "modes": {
+          "off": "Gör ingenting",
+          "duck": "Sänk volymen",
+          "mute": "Stäng av ljudet helt"
+        },
+        "volume": {
+          "label": "Sänkt volym",
+          "description": "Målvolym för systemets ljudutgång under inspelning",
+          "unit": "{{percent}} %"
+        }
       }
     },
     "models": {
@@ -694,7 +727,7 @@
       "searchPlaceholder": "Sök modeller efter namn…",
       "rescan": {
         "label": "Skanna om",
-        "tooltip": "Skanna om efter modeller som lagts till i modellmappen eller Hugging Face-cachen utanför Handy"
+        "tooltip": "Skanna om efter modeller som lagts till i modellmappen eller Hugging Face-cachen utanför Speak"
       }
     },
     "sound": {
@@ -761,11 +794,11 @@
       },
       "autostart": {
         "label": "Starta vid uppstart",
-        "description": "Starta Handy automatiskt när du loggar in på din dator."
+        "description": "Starta Speak automatiskt när du loggar in på din dator."
       },
       "showTrayIcon": {
         "label": "Visa ikon i systemfältet",
-        "description": "Visa Handy-ikonen i systemfältet."
+        "description": "Visa Speak-ikonen i systemfältet."
       },
       "overlay": {
         "style": {
@@ -960,7 +993,7 @@
       },
       "updateChecks": {
         "label": "Sök efter uppdateringar",
-        "description": "Sök automatiskt efter nya versioner av Handy"
+        "description": "Sök automatiskt efter nya versioner av Speak"
       },
       "soundTheme": {
         "label": "Ljudtema",
@@ -997,10 +1030,6 @@
         "label": "Efterbearbetning",
         "description": "Aktivera AI-driven textförfining efter transkription"
       },
-      "muteWhileRecording": {
-        "label": "Ljudlös under inspelning",
-        "description": "Stäng av systemljudet under inspelning"
-      },
       "appendTrailingSpace": {
         "label": "Lägg till avslutande mellanslag",
         "description": "Lägg till ett mellanslag efter klistrad transkription"
@@ -1033,7 +1062,7 @@
       },
       "keyboardDiagnostic": {
         "title": "Tangentbordsdiagnostik",
-        "description": "Kontrollerar om tangentbordshändelser når Handy. Endast antalet händelser registreras — aldrig vilka tangenter du trycker på.",
+        "description": "Kontrollerar om tangentbordshändelser når Speak. Endast antalet händelser registreras — aldrig vilka tangenter du trycker på.",
         "run": "Kör 10 s diagnostik",
         "running": "Lyssnar… tryck på ditt kortkommando några gånger (t.ex. Option+Space)",
         "secureInputLabel": "Secure Input",
@@ -1047,7 +1076,7 @@
         "mouse": "Mus",
         "verdictBlocked": "Secure Input blockerar tangenthändelser — kortkommandon med en vanlig tangent kan inte fungera förrän det är löst.",
         "verdictSuspicious": "Modifierarhändelser kom fram men inga tangenthändelser — något undertrycker tangenter trots att Secure Input rapporteras som inaktiverat. Rapportera gärna detta på GitHub.",
-        "verdictOk": "Tangenthändelser når Handy som vanligt.",
+        "verdictOk": "Tangenthändelser når Speak som vanligt.",
         "verdictNoEvents": "Inga händelser fångades — tryckte du på några tangenter under testet?",
         "failed": "Diagnostiken misslyckades: {{error}}"
       },
@@ -1063,11 +1092,11 @@
       "title": "Om",
       "version": {
         "title": "Version",
-        "description": "Nuvarande version av Handy"
+        "description": "Nuvarande version av Speak"
       },
       "appDataDirectory": {
         "title": "Mapp för appdata",
-        "description": "Plats där Handy lagrar sina data"
+        "description": "Plats där Speak lagrar sina data"
       },
       "sourceCode": {
         "title": "Källkod",
@@ -1076,7 +1105,7 @@
       },
       "supportDevelopment": {
         "title": "Stöd utvecklingen",
-        "description": "Hjälp oss att fortsätta bygga Handy",
+        "description": "Hjälp oss att fortsätta bygga Speak",
         "button": "Donera"
       },
       "acknowledgments": {
@@ -1084,17 +1113,18 @@
         "ggml": {
           "title": "ggml",
           "description": "Högpresterande inferens av OpenAI:s Whisper-modell för automatisk taligenkänning",
-          "details": "Handy använder ggml för snabb, lokal tal-till-text-behandling. Tack till det fantastiska arbete som utförts av Georgi Gerganov med medarbetare."
+          "details": "Speak använder ggml för snabb, lokal tal-till-text-behandling. Tack till det fantastiska arbete som utförts av Georgi Gerganov med medarbetare."
         }
       },
       "whatsNewUpdates": {
         "label": "Visa nyheter",
-        "description": "Visa versionsinformation efter Handy-uppdateringar"
+        "description": "Visa versionsinformation efter Speak-uppdateringar"
       }
     },
     "tabs": {
       "modelsProviders": "Modeller och leverantörer",
-      "meetingsEmptyBody": "Mötesinställningar kommer med mötesläget."
+      "meetingsEmptyBody": "Mötesinställningar kommer med mötesläget.",
+      "assistants": "Assistenter"
     },
     "meetings": {
       "shortcut": {
@@ -1148,7 +1178,98 @@
           "days30": "Behåll i 30 dagar",
           "forever": "Behåll för alltid"
         }
+      },
+      "summary": {
+        "groupTitle": "Meeting summary",
+        "groupDescription": "Choose the language model that turns completed meeting transcripts into summaries.",
+        "provider": {
+          "title": "Summary provider",
+          "description": "Use a small model on your computer or any model available through OpenRouter.",
+          "local": "Local GPU (Ollama)",
+          "openrouter": "OpenRouter"
+        },
+        "localHint": "Local summaries use Ollama at 127.0.0.1 and stay on this computer. Install Ollama, run qwen2.5:3b (or another model), then refresh the model list. Ollama uses the GPU when supported.",
+        "apiKey": {
+          "title": "OpenRouter API key",
+          "description": "Used only when OpenRouter is selected for meeting summaries.",
+          "placeholder": "Enter OpenRouter API key"
+        },
+        "cloudConsent": {
+          "title": "Allow external meeting summaries",
+          "description": "Send the completed meeting transcript to the selected OpenRouter model for summarization."
+        },
+        "model": {
+          "title": "Summary model",
+          "description": "Select a detected model or enter any valid model ID.",
+          "placeholder": "Select or enter a model",
+          "use": "Use \"{{model}}\"",
+          "refresh": "Refresh available summary models"
+        }
       }
+    },
+    "assistants": {
+      "title": "AI-assistenter",
+      "description": "Två assistenter som du når med ett kortkommando. Säg din fråga så kommer svaret på ett kort bredvid Speak-överlägget.",
+      "profiles": {
+        "fast_helper": {
+          "title": "Snabb hjälpare",
+          "description": "För snabba uppslag: ett faktum, en omräkning, en stavning, en omskriven mening. Inställd på ett kort svar som kommer direkt."
+        },
+        "smart_assistant": {
+          "title": "Smart assistent",
+          "description": "För frågor som förtjänar eftertanke: analys, jämförelse, utkast. Får ta längre tid och svara utförligt."
+        }
+      },
+      "provider": {
+        "title": "Leverantör",
+        "description": "Vilken tjänst som svarar för den här assistenten. Båda assistenterna kan använda samma leverantör med olika nycklar."
+      },
+      "apiKey": {
+        "configured": "API-nyckeln för {{provider}} är sparad.",
+        "notConfigured": "Ingen API-nyckel har sparats för {{provider}}.",
+        "title": "API-nyckel",
+        "description": "Sparas i operativsystemets nyckelring, skilt från nyckeln för efterbearbetning.",
+        "placeholder": "Klistra in din API-nyckel"
+      },
+      "model": {
+        "title": "Modell",
+        "description": "Modellen som den här assistenten frågar. Välj en i listan eller skriv exakt modell-id.",
+        "placeholder": "Välj eller skriv ett modell-id",
+        "refresh": "Uppdatera modellistan",
+        "required": "Ingen modell vald ännu. Assistenten är inaktiv tills du väljer en.",
+        "listingHint": "Modellistan läses in med den här assistentens egen API-nyckel. Utan den kan du fortfarande ange modell-id:t för hand."
+      },
+      "systemPrompt": {
+        "title": "Systemprompt",
+        "description": "Den stående instruktionen som assistenten följer vid varje fråga.",
+        "placeholder": "Beskriv hur den här assistenten ska svara"
+      },
+      "maxOutputTokens": {
+        "title": "Svarslängd",
+        "description": "Övre gräns för svaret, i token ({{min}}–{{max}})."
+      },
+      "timeout": {
+        "title": "Tidsgräns",
+        "description": "Hur länge ett svar inväntas innan det avbryts, i sekunder ({{min}}–{{max}})."
+      },
+      "outputMode": {
+        "title": "Hantering av svaret"
+      },
+      "outputModes": {
+        "show": {
+          "label": "Visa endast",
+          "hint": "Svaret visas på kortet och ingen annanstans."
+        },
+        "copy": {
+          "label": "Visa och kopiera",
+          "hint": "Svaret visas på kortet och kopieras till urklipp."
+        },
+        "paste": {
+          "label": "Visa och klistra in",
+          "hint": "Svaret visas på kortet och klistras in i appen du arbetade i."
+        }
+      },
+      "shortcutHint": "Båda assistenternas kortkommandon ställs in under Diktering, bredvid transkriberingskommandona."
     }
   },
   "footer": {
@@ -1181,7 +1302,7 @@
     "reset": "Återställ"
   },
   "accessibility": {
-    "permissionsDescription": "Handy behöver behörighet för hjälpmedel för att kunna skriva transkriberad text.",
+    "permissionsDescription": "Speak behöver behörighet för hjälpmedel för att kunna skriva transkriberad text.",
     "openSettings": "Öppna systeminställningar"
   },
   "dictation": {
@@ -1271,15 +1392,16 @@
     "noInputDevice": "Ingen ljudenhet hittades. Anslut en mikrofon eller ett headset och försök igen.",
     "pasteFailedTitle": "Det gick inte att klistra in texten",
     "pasteFailed": "Texten kunde inte klistras in i det aktiva programmet.",
-    "transcriptionFailedTitle": "Transkriptionen misslyckades"
+    "transcriptionFailedTitle": "Transkriptionen misslyckades",
+    "assistantNoticeTitle": "Assistent"
   },
   "appLanguage": {
     "title": "Applikationsspråk",
-    "description": "Ändra språket i Handy-gränssnittet"
+    "description": "Ändra språket i Speak-gränssnittet"
   },
   "theme": {
     "title": "Apptema",
-    "description": "Välj om Handy ska följa systemets tema eller förbli ljust eller mörkt",
+    "description": "Välj om Speak ska följa systemets tema eller förbli ljust eller mörkt",
     "options": {
       "system": "System",
       "light": "Ljust",
@@ -1291,10 +1413,27 @@
     "processing": "Bearbetar...",
     "cancel": "Avbryt",
     "meetingRecording": "Mötet spelas in",
-    "meetingPaused": "Mötet är pausat"
+    "meetingPaused": "Mötet är pausat",
+    "assistant": {
+      "label": "Assistent",
+      "smartLabel": "Smart assistent",
+      "copy": "Kopiera",
+      "copied": "Kopierat till urklipp",
+      "paste": "Klistra in",
+      "pasted": "Inklistrat",
+      "replace": "Ersätt",
+      "replaced": "Ersatt",
+      "replaceHint": "Markerar allt i det aktiva fönstret och klistrar in svaret över det",
+      "openLink": "Öppna länk",
+      "chooseLink": "Öppna länk ({{n}})",
+      "escalate": "Fråga den smarta assistenten",
+      "asking": "Frågar den smarta assistenten...",
+      "close": "Stäng",
+      "truncated": "Svaret klipptes av vid längdgränsen."
+    }
   },
   "whatsNew": {
-    "title": "Nytt i Handy v{{version}}"
+    "title": "Nytt i Speak v{{version}}"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} kanske blockerar 1 kortkommando",
